@@ -10,7 +10,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_data={
-        "scustomtkinter": ["assets/*.json"],
+        "scustomtkinter": ["assets/*.json","assets/images/*.png"],
     },
     install_packages=[
         "customtkinter",
