@@ -1,0 +1,234 @@
+#!/usr/bin/python3
+"""
+sCTkSeparator - Piece 1 of 2
+
+An advanced Separator widget supporting custom section header text,
+dashed line patterns, corner roundness, and responsive orientation modes.
+Inherits cleanly and directly from ctk.CTkBaseClass to preserve native canvas draw engines.
+
+Derived from Selector class by Fastattack, 2024.
+https://github.com
+"""
+import customtkinter as ctk
+from typing import Literal, Union, Tuple, Optional
+from ThemeableWidget import ThemeableWidget
+
+
+class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
+    """Advanced Separator supporting headers, dashed lines, and themes.json matrices."""
+
+    def __init__(self, master=None, **kwargs):
+        # 1. Fire our shared theme logic first. It automatically finds "sCTkSeparator" in themes.json
+        ThemeableWidget.__init__(self, kwargs)
+
+        # 2. 🛠️ THE MUTATION SAFEGUARD DEEP COPY SHIELD:
+        self._local_defaults = dict(self.final_kw)
+        self._custom_disabled_map = dict(self._widget_disabled_map)
+
+        # Extract structural parameters safely out of the resolved theme dictionary
+        self._orientation = str(self.final_kw.pop("orientation", "vertical")).lower()
+        length = int(self.final_kw.pop("length", 100))
+        width = float(self.final_kw.pop("width", 4))
+
+        self._text = str(self.final_kw.pop("text", ""))
+        self._dash = self.final_kw.pop("dash", None)
+        self._font = self.final_kw.pop("font", ("Arial", 11, "bold"))
+
+        # 🔑 VERTICAL HOUSING REMAP: Programmatically upscale horizontal bounds to fit text
+        if self._text and width <= 4:
+            width = 28
+
+        if self._orientation == "vertical":
+            height = length
+        elif self._orientation == "horizontal":
+            height = width
+            width = length
+        else:
+            raise ValueError(
+                f"The value for orientation is incorrect: \"{self._orientation}\". Should be \"vertical\" or \"horizontal\"")
+
+        # 3. Initialize CustomTkinter's base structure using finalized parameters
+        ctk.CTkBaseClass.__init__(
+            self,
+            master=master,
+            width=width,
+            height=height,
+            bg_color=self.final_kw.get("bg_color", "transparent")
+        )
+
+        self._custom_current_state = "normal"
+        self._corner_radius = self.final_kw.get("corner_radius", 6)
+        self._fg_color = self._check_color_type(self.final_kw.get("fg_color"))
+
+        # Map text color vectors safely out of the extracted dictionary layout layers
+        fallback_text = self.final_kw.get("text_color") or ctk.ThemeManager.theme["CTkLabel"]["text_color"]
+        self._text_color = self._check_color_type(fallback_text)
+
+        # 4. Canvas and render configurations
+        self._canvas = ctk.CTkCanvas(self, highlightthickness=0)
+        self._canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        self._draw_engine = ctk.DrawEngine(self._canvas)
+
+        # 5. Bind layout adjustments to bypass CTkBaseClass strict bind filters safely
+        super(ctk.CTkBaseClass, self).bind("<Configure>", lambda e: self._draw(), add="+")
+
+        # 6. Trigger the initial render loop pass
+        self._draw(no_color_updates=True)
+
+        # 🔑 7. REGISTER LIFECYCLE HANDSHAKE HOOK: Pushes notifications up to Pygubu systems cleanly.
+        self._finalize_themeable_lifecycle()
+
+    def _set_appearance_mode(self, mode_string: str):
+        """Native look catcher ensuring active or disabled tracks repaint fluidly on theme shifts."""
+        if hasattr(super(), "_set_appearance_mode"):
+            try:
+                super()._set_appearance_mode(mode_string)
+            except Exception:
+                pass
+        self._update_current_visual_state()
+    def _update_current_visual_state(self):
+        """Forwards global theme preference swipes directly to our core draw layout routine."""
+        self._draw()
+
+    def _draw(self, no_color_updates=False):
+        if hasattr(super(), "_draw"):
+            try: super()._draw(no_color_updates)
+            except Exception: pass
+        current_w = self.winfo_width() if self.winfo_width() > 1 else self._current_width
+        current_h = self.winfo_height() if self.winfo_height() > 1 else self._current_height
+        self._canvas.delete("all")
+
+        detected_bg = self._detect_color_of_master()
+        if detected_bg == "transparent" or detected_bg is None:
+            detected_bg = ctk.ThemeManager.theme["CTk"]["fg_color"]
+
+        is_disabled = getattr(self, "_custom_current_state", "normal") == "disabled"
+        target_fg = self._custom_disabled_map.get("fg_color", ["#CBD5E1", "#475569"]) if is_disabled else self._fg_color
+        target_txt = self._custom_disabled_map.get("text_color", ["#94A3B8", "gray50"]) if is_disabled else self._text_color
+
+        fg_rendered = self._apply_appearance_mode(self._check_color_type(target_fg))
+        txt_rendered = self._apply_appearance_mode(self._check_color_type(target_txt))
+        self._canvas.configure(bg=self._apply_appearance_mode(detected_bg))
+
+        if self._orientation == "horizontal":
+            line_thickness = self._current_height if self._current_height < current_h else 4
+            if line_thickness > 10: line_thickness = 4
+        else:
+            line_thickness = self._current_width if self._current_width < current_w else 4
+            if line_thickness > 10: line_thickness = 4
+
+        if self._text:
+            t_id = self._canvas.create_text(current_w / 2, current_h / 2, text=self._text, font=self._font, fill=txt_rendered)
+            bbox = self._canvas.bbox(t_id)
+            if bbox:
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+                tw, th = text_width + 16, text_height + 8
+                x1 = (current_w / 2) - (tw / 2)
+                x2 = (current_w / 2) + (tw / 2)
+
+                if self._orientation == "horizontal":
+                    y1, y2 = 1, current_h - 1
+                    self._canvas.create_line(x1, y1, x1, y2, fill=fg_rendered, width=2)
+                    self._canvas.create_line(x2, y1, x2, y2, fill=fg_rendered, width=2)
+                    mid_y = current_h / 2
+                    self._canvas.create_line(0, mid_y, x1, mid_y, fill=fg_rendered, width=line_thickness, dash=self._dash)
+                    self._canvas.create_line(x2, mid_y, current_w, mid_y, fill=fg_rendered, width=line_thickness, dash=self._dash)
+                else:
+                    x1_v, x2_v = 1, current_w - 1
+                    y1 = (current_h / 2) - (th / 2)
+                    y2 = (current_h / 2) + (th / 2)
+                    self._canvas.create_line(x1_v, y1, x2_v, y1, fill=fg_rendered, width=2)
+                    self._canvas.create_line(x1_v, y2, x2_v, y2, fill=fg_rendered, width=2)
+                    mid_x = current_w / 2
+                    self._canvas.create_line(mid_x, 0, mid_x, y1, fill=fg_rendered, width=line_thickness, dash=self._dash)
+                    self._canvas.create_line(mid_x, y2, mid_x, current_h, fill=fg_rendered, width=line_thickness, dash=self._dash)
+        else:
+            if self._dash:
+                if self._orientation == "horizontal":
+                    self._canvas.create_line(0, current_h / 2, current_w, current_h / 2, fill=fg_rendered, width=line_thickness, dash=self._dash)
+                else:
+                    self._canvas.create_line(current_w / 2, 0, current_w / 2, current_h, fill=fg_rendered, width=line_thickness, dash=self._dash)
+            else:
+                self._draw_engine.draw_rounded_rect_with_border(current_w, current_h, self._apply_widget_scaling(self._corner_radius), 0)
+                self._canvas.itemconfig("inner_parts", outline=fg_rendered, fill=fg_rendered)
+
+    def configure(self, *args, **kwargs):
+        """Processes Pygubu designer workspace queries and manages theme state updates cleanly."""
+        if args and len(args) == 1:
+            pname = args[0]
+            if pname == "state": return ("state", "state", "state", "normal", self.get_state())
+            if pname in ["fg_color", "text_color"]:
+                val = self._custom_disabled_map.get(pname) if self.get_state() == "disabled" else self._local_defaults.get(pname)
+                return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
+            return super().configure(pname)
+
+        if args and isinstance(args, dict): kwargs = args | kwargs
+        if "state" in kwargs: self.state(kwargs.pop("state"))
+        if "text" in kwargs: self._text = str(kwargs.pop("text"))
+        if "dash" in kwargs: self._dash = kwargs.pop("dash")
+
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
+        if kwargs: super().configure(**kwargs)
+        self._draw()
+
+    config = configure
+    def get_state(self) -> str: return str(getattr(self, "_custom_current_state", "normal")).lower()
+    def state(self, mode: str = None) -> str:
+        if mode is None: return self.get_state()
+        self._custom_current_state = mode.lower()
+        self._draw()
+        return self._custom_current_state
+
+    def cget(self, attribute_name: str):
+        if attribute_name == "height": raise ValueError("Use length and width arguments instead.")
+        if attribute_name == "state": return self.get_state()
+        mapping = {"corner_radius": self._corner_radius, "fg_color": self._fg_color, "orientation": self._orientation, "text": self._text, "dash": self._dash}
+        return mapping.get(attribute_name, super().cget(attribute_name))
+
+    def bind(self, sequence=None, command=None, add=True): self._canvas.bind(sequence, command, add=True)
+    def unbind(self, sequence=None, funcid=None): self._canvas.unbind(sequence, None)
+
+# ==========================================
+#   MAIN TESTING RUNNER CODE BLOCK
+# ==========================================
+import sCTkThemes
+if __name__ == "__main__":
+    sCTkThemes.apply_sCTkThemes()
+    root = ctk.CTk()
+    root.title("sCTkSeparator Production Test Environment")
+    root.geometry("600x450")
+
+    grid_Frame = ctk.CTkFrame(root)
+    grid_Frame.pack(side="top", fill="both", expand=True, padx=20, pady=15)
+    grid_Frame.grid_columnconfigure(0, weight=1); grid_Frame.grid_columnconfigure(1, weight=1); grid_Frame.grid_columnconfigure(2, weight=1); grid_Frame.grid_rowconfigure(0, weight=1)
+
+    lbl_left = ctk.CTkLabel(grid_Frame, text="Left Sub-Panel Group Data")
+    lbl_left.grid(row=0, column=0, sticky="nswe")
+
+    sep_vertical_text = sCTkSeparator(grid_Frame, orientation="vertical", text="CORE API", width=4)
+    sep_vertical_text.grid(row=0, column=1, sticky="nswe", padx=10, pady=10)
+
+    lbl_right = ctk.CTkLabel(grid_Frame, text="Right Sub-Panel Group Data")
+    lbl_right.grid(row=0, column=2, sticky="nswe")
+
+    sep_horizontal_text = sCTkSeparator(root, orientation="horizontal", text="SYSTEM DASH SEPARATOR SECTION", width=4)
+    sep_horizontal_text.pack(side="top", fill="x", padx=20, pady=10)
+
+    def toggle_separator_lock():
+        target = "disabled" if sep_vertical_text.get_state() == "normal" else "normal"
+        sep_vertical_text.configure(state=target)
+        sep_horizontal_text.configure(state=target)
+        btn_lock.configure(text="Lock Separators" if target == "normal" else "Unlock Separators")
+
+    def toggle_skin_mode():
+        current_skin = ctk.get_appearance_mode()
+        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
+
+    btn_lock = ctk.CTkButton(root, text="Lock Separators", command=toggle_separator_lock)
+    btn_lock.pack(pady=5)
+    btn_theme = ctk.CTkButton(root, text="Simulate Global Theme Shift", command=toggle_skin_mode)
+    btn_theme.pack(pady=(5, 20))
+
+    root.mainloop()

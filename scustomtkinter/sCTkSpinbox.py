@@ -1,0 +1,430 @@
+#!/usr/bin/python3
+"""
+sCTkSpinbox - Piece 1 of 3
+
+A theme-compliant, highly configurable custom spinbox wrapper component.
+Operates entirely programmatically via get() and set() methods, bypassing
+textvariable trace conflicts to guarantee pristine placeholder rendering.
+"""
+import shlex
+import customtkinter as ctk
+from ThemeableWidget import ThemeableWidget
+from sCTkEntryPrimary import sCTkEntryPrimary
+
+class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
+    def __init__(self, master=None, from_=0.0, to=100.0, step_size=1.0, command=None,
+                 state="normal", wrap=False, justify="left", show=None,
+                 placeholder_text=None, exportselection=True, width=140, height=32, **kw):
+
+        ThemeableWidget.__init__(self, kw)
+        self._local_defaults = dict(self.final_kw)
+        self._custom_disabled_map = self._local_defaults.get("disabled_map", {})
+
+        button_width = self._local_defaults.pop("button_width", 22)
+        button_height = self._local_defaults.pop("button_height", None)
+        button_side = self._local_defaults.pop("button_side", "right")
+        orientation = self._local_defaults.pop("orientation", "vertical")
+        arrow_font_size = self._local_defaults.pop("arrow_font_size", 11)
+        format_str = self._local_defaults.pop("format", None)
+        values = self._local_defaults.pop("values", None)
+        wrap_val = kw.pop("wrap", wrap)
+
+        self.final_kw.pop("state", None)
+        for pop_key in ["fg_color", "text_color", "entry_color", "border_color", "border_width",
+                        "corner_radius", "font", "placeholder_text_color", "button_color",
+                        "button_hover_color", "disabled_text_color", "disabled_entry_color",
+                        "disabled_border_color", "disabled_button_color",
+                        "arrow_font", "arrow_up_char", "arrow_down_char", "arrow_right_char", "arrow_left_char",
+                        "button_width", "button_height", "button_side", "orientation", "format", "values", "wrap"]:
+            self.final_kw.pop(pop_key, None)
+
+        super().__init__(master, width=width, height=height, fg_color="transparent", **self.final_kw)
+
+        self._arrow_font_family = "Arial"
+        self._arrow_font_size = int(arrow_font_size)
+        self._from, self._to, self._step_size = float(from_), float(to), float(step_size)
+        self._wrap = wrap_val if isinstance(wrap_val, bool) else (str(wrap_val).lower() in ("true", "1", "yes"))
+        self._command, self._placeholder_text, self._format = command, placeholder_text, (str(format_str) if format_str else "")
+        self._current_numeric_value = self._from
+
+        self._values = self._parse_string_list(values) if values else []
+        self._current_index = 0 if self._values else -1
+        self._button_width, self._button_side, self._orientation = int(button_width), str(button_side).lower(), str(orientation).lower()
+        self._state = "normal" if str(state).lower() == "normal" else "disabled"
+        self._button_height = int(button_height) if button_height is not None else ((height // 2) - 1 if self._orientation == "vertical" else height)
+
+        used_buttons = 2 if self._button_side == "split" or self._orientation == "horizontal" else 1
+        self.entry = sCTkEntryPrimary(self, width=width - (self._button_width * used_buttons), height=height, justify=justify, show=show, placeholder_text=self._placeholder_text, exportselection=exportselection)
+        self.up_button = ctk.CTkButton(self, text="▲" if self._orientation == "vertical" else "▶", width=self._button_width, height=self._button_height, corner_radius=2, command=self._increment_callback)
+        self.down_button = ctk.CTkButton(self, text="▼" if self._orientation == "vertical" else "◀", width=self._button_width, height=self._button_height, corner_radius=2, command=self._decrement_callback)
+
+        if not self._placeholder_text or str(self._placeholder_text).strip() == "":
+            self.entry.insert(0, str(self._values) if self._values else self._format_value(self._from))
+
+        self.entry.bind("<FocusOut>", lambda e: self._validate_and_sanitize_input())
+        self.entry.bind("<Return>", lambda e: self._validate_and_sanitize_input())
+
+        self._rebuild_grid_layout()
+        self._apply_custom_theme_colors()
+        if self._state == "disabled": super().configure(state="disabled")
+        self._finalize_themeable_lifecycle()
+
+    def _parse_string_list(self, input_data) -> list:
+        if isinstance(input_data, (list, tuple)): return [str(x).strip() for x in input_data]
+        raw_str = str(input_data).strip()
+        if not raw_str: return []
+        try: return shlex.split(raw_str) if "," not in raw_str else [item.strip().strip('"').strip("'") for item in raw_str.split(',') if item.strip()]
+        except Exception: return [item.strip() for item in raw_str.split() if item.strip()]
+
+    def set_values(self, list_of_strings):
+        self._values = self._parse_string_list(list_of_strings)
+        self._current_index = 0 if self._values else -1
+        self.set(self._values if self._values else getattr(self, "_from", 0.0))
+
+    def _rebuild_grid_layout(self):
+        if not hasattr(self, "entry") or not self.entry.winfo_exists(): return
+        for i in range(3): self.grid_columnconfigure(i, weight=0, minsize=0)
+        for i in range(2): self.grid_rowconfigure(i, weight=0, minsize=0)
+        self.entry.grid_forget(); self.up_button.grid_forget(); self.down_button.grid_forget()
+
+        up_char = self._local_defaults.get("arrow_right_char", "▶") if self._orientation == "horizontal" else self._local_defaults.get("arrow_up_char", "▲")
+        down_char = self._local_defaults.get("arrow_left_char", "◀") if self._orientation == "horizontal" else self._local_defaults.get("arrow_down_char", "▼")
+        self.up_button.configure(text=up_char, font=(self._arrow_font_family, self._arrow_font_size))
+        self.down_button.configure(text=down_char, font=(self._arrow_font_family, self._arrow_font_size))
+
+        if self._orientation == "horizontal":
+            self.grid_rowconfigure(0, weight=1); self.grid_columnconfigure(1, weight=1)
+            if self._button_side == "left":
+                self.down_button.grid(row=0, column=0, padx=(0, 1), sticky="nsew"); self.up_button.grid(row=0, column=1, padx=(1, 1), sticky="nsew"); self.entry.grid(row=0, column=2, padx=(1, 0), sticky="nsew")
+            elif self._button_side == "split":
+                self.down_button.grid(row=0, column=0, padx=(0, 2), sticky="nsew"); self.entry.grid(row=0, column=1, padx=(2, 2), sticky="nsew"); self.up_button.grid(row=0, column=2, padx=(2, 0), sticky="nsew")
+            else:
+                self.entry.grid(row=0, column=0, padx=(0, 1), sticky="nsew"); self.down_button.grid(row=0, column=1, padx=(1, 1), sticky="nsew"); self.up_button.grid(row=0, column=2, padx=(1, 0), sticky="nsew")
+        else:
+            self.grid_rowconfigure((0, 1), weight=1); self.grid_columnconfigure(0, weight=1)
+            if self._button_side == "left":
+                self.grid_columnconfigure(1, weight=1); self.up_button.grid(row=0, column=0, padx=(0, 1), pady=(0, 1), sticky="nsew"); self.down_button.grid(row=1, column=0, padx=(0, 1), pady=(1, 0), sticky="nsew"); self.entry.grid(row=0, column=1, rowspan=2, padx=(1, 0), sticky="nsew")
+            elif self._button_side == "split":
+                self.grid_columnconfigure(1, weight=1); self.down_button.grid(row=0, column=0, rowspan=2, padx=(0, 2), sticky="nsew"); self.entry.grid(row=0, column=1, rowspan=2, padx=(2, 2), sticky="nsew"); self.up_button.grid(row=0, column=2, rowspan=2, padx=(2, 0), sticky="nsew")
+            else:
+                self.entry.grid(row=0, column=0, rowspan=2, padx=(0, 2), sticky="nsew"); self.up_button.grid(row=0, column=1, padx=(1, 0), pady=(0, 1), sticky="nsew"); self.down_button.grid(row=1, column=1, padx=(1, 0), pady=(1, 0), sticky="nsew")
+        self.update_idletasks()
+    def configure(self, require_redraw=None, **kwargs):
+        """Standardized configuration handler supporting Pygubu workspace properties switches."""
+        if require_redraw is not None and not kwargs and isinstance(require_redraw, str):
+            mapping = {
+                "state": ("state", "state", "state", "normal", str(getattr(self, "_state", "normal"))),
+                "from_": ("from_", "from_", "from_", "0.0", str(getattr(self, "_from", 0.0))),
+                "to": ("to", "to", "to", "100.0", str(getattr(self, "_to", 100.0))),
+                "step_size": ("step_size", "step_size", "step_size", "1.0", str(getattr(self, "_step_size", 1.0))),
+                "button_width": ("button_width", "button_width", "button_width", "22", str(getattr(self, "_button_width", 22))),
+                "button_height": ("button_height", "button_height", "button_height", "", str(getattr(self, "_button_height", ""))),
+                "button_side": ("button_side", "button_side", "button_side", "right", str(getattr(self, "_button_side", "right"))),
+                "orientation": ("orientation", "orientation", "orientation", "vertical", str(getattr(self, "_orientation", "vertical"))),
+                "justify": ("justify", "justify", "justify", "left", str(self.entry.cget("justify"))),
+                "placeholder_text": ("placeholder_text", "placeholder_text", "placeholder_text", "", str(getattr(self, "_placeholder_text", ""))),
+                "format": ("format", "format", "format", "", str(getattr(self, "_format", ""))),
+                "wrap": ("wrap", "wrap", "wrap", "False", str(getattr(self, "_wrap", False))),
+                "values": ("values", "values", "values", "", " ".join([f'"{v}"' if ' ' in v else v for v in getattr(self, "_values", [])]))
+            }
+            if require_redraw in mapping: return mapping[require_redraw]
+            return super().configure(require_redraw)
+
+        if isinstance(require_redraw, dict): kwargs.update(require_redraw)
+        if "wrap" in kwargs: self._wrap = kwargs.pop("wrap") if isinstance(kwargs["wrap"], bool) else (str(kwargs.pop("wrap")).lower() in ("true", "1", "yes"))
+        if "values" in kwargs:
+            self._values = self._parse_string_list(kwargs.pop("values"))
+            self._current_index = 0 if self._values else -1
+            if self._values: self.set(self._values)
+
+        for key in ["from_", "to", "step_size"]:
+            if key in kwargs: setattr(self, f"_{key}", float(kwargs.pop(key) or (0.0 if key == 'from_' else 100.0 if key == 'to' else 1.0)))
+
+        if "command" in kwargs: self._command = kwargs.pop("command")
+        if "format" in kwargs:
+            self._format = str(kwargs.pop("format") or "")
+            if not self._values: self.set(self._current_numeric_value)
+
+        rebuild_grid = False
+        if "button_width" in kwargs: self._button_width = int(kwargs.pop("button_width")); self.up_button.configure(width=self._button_width); self.down_button.configure(width=self._button_width); rebuild_grid = True
+        if "button_height" in kwargs: self._button_height = int(kwargs.pop("button_height")); self.up_button.configure(width=self._button_width, height=self._button_height); self.down_button.configure(width=self._button_width, height=self._button_height); rebuild_grid = True
+        if "button_side" in kwargs: self._button_side = str(kwargs.pop("button_side") or "right").strip().lower(); rebuild_grid = True
+        if "orientation" in kwargs:
+            self._orientation = str(kwargs.pop("orientation") or "vertical").strip().lower()
+            if not kwargs.get("button_height") and hasattr(self, "cget"):
+                self._button_height = (int(self.cget("height")) // 2) - 1 if self._orientation == "vertical" else int(self.cget("height"))
+                self.up_button.configure(height=self._button_height); self.down_button.configure(height=self._button_height)
+            rebuild_grid = True
+
+        if "arrow_font_size" in kwargs: self._arrow_font_size = int(kwargs.pop("arrow_font_size")); rebuild_grid = True
+        if "placeholder_text" in kwargs:
+            self._placeholder_text = kwargs["placeholder_text"]
+            if self._placeholder_text and str(self._placeholder_text).strip() != "" and hasattr(self, "entry") and self.entry.winfo_exists():
+                if str(self.entry.get()).strip() in ("", "0", "0.0", str(getattr(self, "_from", 0.0))):
+                    old = self.entry.cget("state"); self.entry.configure(state="normal"); self.entry.delete(0, "end"); self.entry.configure(state=old)
+
+        for entry_attr in ["justify", "show", "placeholder_text", "exportselection"]:
+            if entry_attr in kwargs:
+                if hasattr(self, "entry") and self.entry.winfo_exists(): self.entry.configure(**{entry_attr: kwargs[entry_attr]})
+                kwargs.pop(entry_attr)
+
+        if rebuild_grid and hasattr(self, "cget") and hasattr(self, "entry"):
+            self.entry.configure(width=int(self.cget("width")) - (self._button_width * (2 if self._button_side == "split" or self._orientation == "horizontal" else 1)))
+            self._rebuild_grid_layout()
+
+        if "state" in kwargs:
+            self._state = str(kwargs.pop("state")).lower()
+            for child in [self.entry, self.up_button, self.down_button]:
+                if hasattr(child, "winfo_exists") and child.winfo_exists(): child.configure(state=self._state)
+
+        for pop_custom_key in ["from_", "to", "step_size", "button_width", "button_height", "button_side", "orientation", "arrow_font_size", "format", "values", "wrap"]: kwargs.pop(pop_custom_key, None)
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
+
+        if kwargs: super().configure(**kwargs)
+        self._apply_custom_theme_colors()
+
+    config = configure
+
+    def cget(self, attribute_name):
+        pname = str(attribute_name).lower()
+        if pname in ["state", "from_", "to", "step_size", "button_width", "button_height", "button_side", "orientation",
+                     "arrow_font_size", "format", "wrap", "values"]: return getattr(self, f"_{pname}")
+        return super().cget(attribute_name)
+
+    def _format_value(self, val: float) -> str:
+        fmt = self._format.strip() if hasattr(self, "_format") and self._format else ""
+        if fmt:
+            if "{" in fmt and "}" in fmt:
+                try:
+                    return fmt.format(val)
+                except Exception:
+                    pass
+            elif ":" in fmt and not "{" in fmt:
+                try:
+                    return ("{" + fmt + "}").format(val)
+                except Exception:
+                    pass
+            elif "%" in fmt:
+                try:
+                    return fmt % val
+                except Exception:
+                    pass
+        dec_places = len(str(self._step_size).split('.')) if '.' in str(self._step_size) else 0
+        return f"{val:.{dec_places}f}"
+
+    def get(self) -> str:
+        return str(self.entry.get()) if (hasattr(self, "entry") and self.entry.winfo_exists()) else str(
+            getattr(self, "_from", "0.0"))
+
+    def set(self, value):
+        try:
+            if not getattr(self, "_values", None):
+                num = float(value)
+                if num < self._from: num = self._from
+                if num > self._to: num = self._to
+                self._current_numeric_value = num
+                display_text, callback_val = self._format_value(num), num
+            else:
+                display_text = str(value)
+                if display_text in self._values: self._current_index = self._values.index(display_text)
+                callback_val = display_text
+
+            old = self.entry.cget("state");
+            self.entry.configure(state="normal");
+            self.entry.delete(0, "end");
+            self.entry.insert(0, display_text);
+            self.entry.configure(state=old)
+            if self._command:
+                try:
+                    self._command(callback_val)
+                except TypeError:
+                    self._command()
+        except ValueError:
+            if getattr(self, "_values", None):
+                display_text = str(value)
+                if display_text in self._values: self._current_index = self._values.index(display_text)
+                self.entry.configure(state="normal");
+                self.entry.delete(0, "end");
+                self.entry.insert(0, display_text);
+                self.entry.configure(state="normal" if self._state == "normal" else "readonly")
+
+    def _increment_callback(self):
+        if self._state == "disabled": return
+        if hasattr(self, "_values") and self._values:
+            i = self._current_index + 1
+            if i >= len(self._values): i = 0 if self._wrap else (len(self._values) - 1)
+            self._current_index = i;
+            self.set(self._values[i]);
+            return
+        try:
+            n = self._current_numeric_value + self._step_size
+            if n > self._to: n = self._from if self._wrap else self._to
+            self.set(n)
+        except Exception:
+            self.set(self._from)
+
+    def _decrement_callback(self):
+        if self._state == "disabled": return
+        if hasattr(self, "_values") and self._values:
+            i = self._current_index - 1
+            if i < 0: i = (len(self._values) - 1) if self._wrap else 0
+            self._current_index = i;
+            self.set(self._values[i]);
+            return
+        try:
+            n = self._current_numeric_value - self._step_size
+            if n < self._from: n = self._to if self._wrap else self._from
+            self.set(n)
+        except Exception:
+            self.set(self._from)
+
+    def _validate_and_sanitize_input(self):
+        if getattr(self, "_values", None):
+            if self.get() in self._values: self._current_index = self._values.index(self.get())
+            return
+        try:
+            raw = self.get().strip()
+            if not raw: self.set(self._from); return
+            for clean_token in [self._format, "kHz", "MHz", "dB", "%", "Hz", "{", "}", " "]:
+                if clean_token: raw = raw.replace(clean_token, "")
+            self.set(float(raw))
+        except ValueError:
+            self.set(self._current_numeric_value)
+
+    def _set_appearance_mode(self, mode_string: str):
+        if hasattr(super(), "_set_appearance_mode"):
+            try:
+                super()._set_appearance_mode(mode_string)
+            except Exception:
+                pass
+        self._apply_custom_theme_colors()
+
+    def state(self, mode: str = None) -> str:
+        if mode is None: return str(getattr(self, "_state", "normal")).lower()
+        self.configure(state=mode)
+        return mode
+
+    def get_state(self) -> str:
+        return self.state()
+
+    def _apply_custom_theme_colors(self):
+        if not hasattr(self, "entry") or not self.entry.winfo_exists(): return
+        is_disabled = self._state == "disabled"
+        m = self._custom_disabled_map if is_disabled else self._local_defaults
+        dm = self._custom_disabled_map
+
+        d_b_text = self._resolve_color(dm.get("text_color", ("#94A3B8", "gray50")))
+
+        # 🔑 NATIVE ACTION ROUTING:
+        # Forcefully route the active status through sCTkEntryPrimary's public state tracker.
+        # This allows your custom entry class to execute its native content desaturation path seamlessly!
+        if hasattr(self.entry, "state"):
+            self.entry.state("disabled" if is_disabled else "normal")
+        else:
+            self.entry.configure(state="disabled" if is_disabled else "normal")
+
+        # Refresh fallback surface colors safely
+        self.entry.configure(
+            fg_color=m.get("entry_color", ("#FFFFFF", "#1E293B")),
+            border_color=m.get("border_color", ("#CBD5E1", "#475569"))
+        )
+
+        b_color = self._resolve_color(self._local_defaults.get("button_color", ("#1A4375", "#1F6AA5")))
+        b_hover = self._resolve_color(self._local_defaults.get("button_hover_color", ("#112A4B", "#194A7A")))
+        b_text = self._resolve_color(self._local_defaults.get("text_color", ("#FFFFFF", "#FFFFFF")))
+        d_b_color = self._resolve_color(dm.get("button_color", ("#CBD5E1", "#374151")))
+
+        for b in [self.up_button, self.down_button]:
+            if hasattr(b, "winfo_exists") and b.winfo_exists():
+                b.configure(
+                    fg_color=d_b_color if is_disabled else b_color,
+                    hover_color=d_b_color if is_disabled else b_hover,
+                    text_color=d_b_text if is_disabled else b_text,
+                    text_color_disabled=d_b_text,
+                    state="disabled" if is_disabled else "normal"
+                )
+
+
+# =============================================================================
+#   STANDALONE HARNESS TEST DECK (PART 4 OF 4 COMPLETED & ISOLATED)
+# =============================================================================
+if __name__ == "__main__":
+    import sCTkThemes
+    from sCTkFrame import sCTkFrame
+    from sCTkLabelSecondary import sCTkLabelSecondary
+    from sCTkComboBox import sCTkComboBox
+
+    sCTkThemes.apply_sCTkThemes()
+    app = ctk.CTk()
+    app.title("sCTk Advanced Spinbox Tester Deck")
+    app.geometry("490x740")
+    app.configure(fg_color=("#F1F5F9", "#1C1C1C"))
+
+    def on_spinbox_value_changed(val):
+        if isinstance(val, float): vfo_readout.configure(text=f"Telemetry Output: {val:.3f}")
+        else: vfo_readout.configure(text=f"Telemetry Output: '{str(val)}'")
+
+    dashboard_panel = sCTkFrame(app, fg_color="transparent", border_width=0)
+    dashboard_panel.pack(padx=25, pady=15, fill="both", expand=True)
+
+    vfo_readout = sCTkLabelSecondary(dashboard_panel, text="Telemetry Output: Initializing...", font=("Arial", 22, "bold"), text_color=("#1A4375", "#FF9100"))
+    vfo_readout.pack(pady=10)
+
+    spinbox = sCTkSpinbox(dashboard_panel, from_=1.0, to=50.0, step_size=0.5, wrap=True, justify="center", placeholder_text="Click Me", command=on_spinbox_value_changed, width=180, height=34)
+    spinbox.pack(pady=10)
+
+    control_frame = sCTkFrame(dashboard_panel, fg_color=("#E2E8F0", "#262626"), corner_radius=6)
+    control_frame.pack(fill="both", expand=True, padx=5, pady=10)
+    control_frame.grid_columnconfigure(0, weight=1); control_frame.grid_columnconfigure(1, weight=1)
+
+    lbl_state = sCTkLabelSecondary(control_frame, text="Component State:", font=("Arial", 11, "bold"))
+    lbl_state.grid(row=0, column=0, padx=15, pady=5, sticky="w")
+    state_dropdown = sCTkComboBox(control_frame, values=["Normal State (Active)", "Disabled State (Locked)"], command=lambda choice: spinbox.configure(state="disabled" if "Disabled" in choice else "normal"), width=170)
+    state_dropdown.grid(row=0, column=1, padx=15, pady=5, sticky="e"); state_dropdown.set("Normal State (Active)")
+
+    lbl_justify = sCTkLabelSecondary(control_frame, text="Text Alignment (Justify):", font=("Arial", 11, "bold"))
+    lbl_justify.grid(row=1, column=0, padx=15, pady=5, sticky="w")
+    justify_dropdown = sCTkComboBox(control_frame, values=["Center", "Left", "Right"], command=lambda choice: spinbox.configure(justify=choice.lower()), width=170)
+    justify_dropdown.grid(row=1, column=1, padx=15, pady=5, sticky="e"); justify_dropdown.set("Center")
+
+    lbl_format = sCTkLabelSecondary(control_frame, text="Masking Format Pattern:", font=("Arial", 11, "bold"))
+    lbl_format.grid(row=2, column=0, padx=15, pady=5, sticky="w")
+    format_dropdown = sCTkComboBox(control_frame, values=["None (Default)", "%.1f kHz", "{:.2f}", "{:.3f}"], command=lambda choice: spinbox.configure(format={"%.1f kHz": "%.1f kHz", "{:.2f}": "{:.2f}", "{:.3f}": "{:.3f}", "None (Default)": ""}.get(choice, "")), width=170)
+    format_dropdown.grid(row=2, column=1, padx=15, pady=5, sticky="e"); format_dropdown.set("None (Default)")
+
+    lbl_wrap = sCTkLabelSecondary(control_frame, text="Boundary Iteration Wrap:", font=("Arial", 11, "bold"))
+    lbl_wrap.grid(row=3, column=0, padx=15, pady=5, sticky="w")
+    wrap_dropdown = ctk.CTkComboBox(control_frame, values=["True (Loop Enabled)", "False (Hard Limits)"], command=lambda choice: spinbox.configure(wrap=True if "True" in choice else False), width=170)
+    wrap_dropdown.grid(row=3, column=1, padx=15, pady=5, sticky="e"); wrap_dropdown.set("True (Loop Enabled)")
+
+    lbl_mode = sCTkLabelSecondary(control_frame, text="Data Array Input Mode:", font=("Arial", 11, "bold"))
+    lbl_mode.grid(row=4, column=0, padx=15, pady=5, sticky="w")
+    def on_mode_changed(choice):
+        if "Discrete List" in choice: spinbox.set_values(txt_custom_values.get())
+        else: spinbox.set_values([]); spinbox.set(5.0)
+    mode_dropdown = sCTkComboBox(control_frame, values=["Numerical Mode (1.0 - 50.0)", "Discrete List Mode (Strings)"], command=on_mode_changed, width=170)
+    mode_dropdown.grid(row=4, column=1, padx=15, pady=5, sticky="e"); mode_dropdown.set("Numerical Mode (1.0 - 50.0)")
+
+    lbl_custom_vals = sCTkLabelSecondary(control_frame, text="List Strings Configuration:", font=("Arial", 11, "bold"))
+    lbl_custom_vals.grid(row=5, column=0, padx=15, pady=5, sticky="w")
+    txt_custom_values = sCTkEntryPrimary(control_frame, width=170, height=28, placeholder_text="Item1 'Item Two' Item3...")
+    txt_custom_values.grid(row=5, column=1, padx=15, pady=5, sticky="e"); txt_custom_values.insert(0, 'Slow Normal Fast "Turbo Speed" Max')
+    txt_custom_values.bind("<Return>", lambda e: spinbox.set_values(txt_custom_values.get()) if "Discrete List" in mode_dropdown.get() else None)
+
+    lbl_side = sCTkLabelSecondary(control_frame, text="Hardware Button Side:", font=("Arial", 11, "bold"))
+    lbl_side.grid(row=6, column=0, padx=15, pady=5, sticky="w")
+    side_dropdown = sCTkComboBox(control_frame, values=["Right", "Left", "Split"], command=lambda choice: spinbox.configure(button_side=choice.lower()), width=170)
+    side_dropdown.grid(row=6, column=1, padx=15, pady=5, sticky="e"); side_dropdown.set("Right")
+
+    lbl_orient = sCTkLabelSecondary(control_frame, text="Control Grid Orientation:", font=("Arial", 11, "bold"))
+    lbl_orient.grid(row=7, column=0, padx=15, pady=5, sticky="w")
+    orient_dropdown = sCTkComboBox(control_frame, values=["Vertical", "Horizontal"], command=lambda choice: spinbox.configure(orientation=choice.lower()), width=170)
+    orient_dropdown.grid(row=7, column=1, padx=15, pady=5, sticky="e"); orient_dropdown.set("Vertical")
+
+    lbl_arrow_size = sCTkLabelSecondary(control_frame, text="Arrow Glyphs Font Size:", font=("Arial", 11, "bold"))
+    lbl_arrow_size.grid(row=8, column=0, padx=15, pady=5, sticky="w")
+    arrow_size_dropdown = sCTkComboBox(control_frame, values=["8 pt (Default)", "11 pt (Medium)", "14 pt (Large)", "18 pt"], command=lambda choice: spinbox.configure(arrow_font_size=int(choice.split()[0])), width=170)
+    arrow_size_dropdown.grid(row=8, column=1, padx=15, pady=5, sticky="e"); arrow_size_dropdown.set("8 pt (Default)")
+
+    app.mainloop()
