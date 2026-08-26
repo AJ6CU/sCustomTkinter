@@ -13,8 +13,8 @@ def get_asset_path(relative_path: str) -> str:
 
 from .sctk_core import sCTk
 from .sctk_button_primary import sCTkButtonPrimary
-from .sCTkButtonSecondary import CTkButtonSecondary
-from .sCTkButtonTertiary import sCTkButtonTertiary
+from .sctk_button_secondary import CTkButtonSecondary
+from .sctk_button_tertiary import sCTkButtonTertiary
 from .sctk_checkbox import sCTkCheckBox
 from .sctk_combobox import sCTkComboBox
 from .sctk_dial import sCTkDial
