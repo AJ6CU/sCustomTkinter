@@ -13,11 +13,11 @@ import tkinter as tk
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
 
-from sctk_file_explorer import sCTkFileExplorer
+from .sctk_file_explorer import sCTkFileExplorer
 
 # Framework-compliant component imports
-from sctk_button_primary import sCTkButtonPrimary
-from sctk_entry_primary import sCTkEntryPrimary
+from .sctk_button_primary import sCTkButtonPrimary
+from .sctk_entry_primary import sCTkEntryPrimary
 
 class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
     _MANAGED_PROPERTIES = frozenset({
