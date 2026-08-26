@@ -11,29 +11,38 @@ import json
 import tkinter as tk
 import customtkinter as ctk
 
-import os
-import json
-import tkinter as tk
-import customtkinter as ctk
+# 🛠️ GLOBAL THEME REGISTRY POOL
+GLOBAL_THEME_REGISTRY = {}
 
-# 🔑 THE CASCADING FALLBACK ENGINE (Runs once globally immediately on package import)
-local_user_workspace = os.path.normpath(os.path.join(os.getcwd(), "sCTkThemes.json"))
-bundled_library_default = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "sCTkThemes.json"))
 
-if os.path.exists(local_user_workspace):
-    THEME_FILE_PATH = local_user_workspace
-else:
-    THEME_FILE_PATH = bundled_library_default
+def load_initial_framework_themes():
+    """Idempotent startup hook to pull themes.json safely without dropping imports."""
+    global GLOBAL_THEME_REGISTRY
+    if GLOBAL_THEME_REGISTRY:
+        return
 
-try:
-    with open(THEME_FILE_PATH, "r", encoding="utf-8") as file:
-        GLOBAL_THEME_REGISTRY = json.load(file)
-except Exception as err:
-    raise FileNotFoundError(
-        f"CRITICAL SYSTEM BREAKDOWN: Centralized theme file '{THEME_FILE_PATH}' "
-        f"could not be parsed. Error: {err}."
-    )
+    local_user_workspace = os.path.normpath(os.path.join(os.getcwd(), "sCTkThemes.json"))
 
+    # 🔑 FIXED DIRECTORY COORDINATES: Look inside your actual bundled assets folder
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    bundled_library_default = os.path.normpath(os.path.join(current_script_dir, "assets", "sCTkThemes.json"))
+
+    theme_target = local_user_workspace if os.path.exists(local_user_workspace) else bundled_library_default
+
+    try:
+        if os.path.exists(theme_target):
+            with open(theme_target, "r", encoding="utf-8") as file:
+                GLOBAL_THEME_REGISTRY = json.load(file)
+        else:
+            # Fallback empty profile dictionary so your widget protections don't crash if files vanish
+            GLOBAL_THEME_REGISTRY = {}
+    except Exception as err:
+        print(f"⚠️ sCustomTkinter System Warning -> Could not parse theme layout tracking: {err}")
+        GLOBAL_THEME_REGISTRY = {}
+
+
+# 🚀 NATIVE INITIALIZATION PASS: Safe, unblocked startup invocation
+load_initial_framework_themes()
 
 
 def default_i18n_translator(value):
