@@ -7,12 +7,11 @@ Inherits from sCTkTabviewUI and ThemeableWidget to manage dense cockpit dashboar
 panels safely with full live theme repaint loops out of themes.json.
 """
 import tkinter as tk
-import sCTkTabviewui as baseui
 
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
 
-class sCTkTabview(baseui.sCTkTabviewUI, ThemeableWidget):
+class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
     def __init__(self, master=None, **kw):
 
         # 1. Run shared mixin logic first to parse master themes.json safely
