@@ -124,57 +124,57 @@ def get_appearance_mode() -> str:
 
 
 # !/usr/bin/python3
-"""
-sCTkThemes - Standalone Automated Initialization Testing Harness
-"""
-import customtkinter as ctk
-import sCTkThemes  # 🛠️ THE UNIFIED SINGLE ENGINE IMPORT MODEL
-
-if __name__ == "__main__":
-    # 1. Fire your centralized asset discovery and loading utility engine.
-    # We turn on bootstrap_ctk to force plain native CTk widgets to absorb our designs,
-    # and lock mapping_mode to primary to protect our baseline application layout rules.
-    sCTkThemes.apply_sCTkThemes(bootstrap_ctk=True, mapping_mode="primary")
-
-    # 2. 🛠️ THE ENCAPSULATION PASS-THROUGH IN ACTION:
-    # We alter global operating window appearance states directly via your utility module.
-    # This completely eliminates the need to cross-reference or type the 'ctk' namespace!
-    sCTkThemes.set_appearance_mode("Dark")
-
-    root = ctk.CTk()
-    root.geometry("450x250")
-    root.title("sCTkThemes Global Controller Validation Deck")
-
-    # Layout a clean base application container card
-    from sCTkFrame import sCTkFrame
-
-    base_card = sCTkFrame(root)
-    base_card.pack(expand=True, fill="both", padx=25, pady=25)
-
-    from sCTkLabelPrimary import sCTkLabelPrimary
-
-    lbl_title = sCTkLabelPrimary(base_card, text="CORE FREQUENCY ENGINE OPERATIONAL")
-    lbl_title.pack(pady=15)
-
-
-    # Standard interactive toggle button hook to verify wrapped runtime state changes
-    def cycle_display_themes():
-        current_env = sCTkThemes.get_appearance_mode().lower()
-        target_env = "Light" if current_env == "dark" else "Dark"
-
-        sCTkThemes.set_appearance_mode(target_env)
-        print(f"Logged Verification Hook -> sCTkThemes.get_appearance_mode() = {sCTkThemes.get_appearance_mode()}")
-
-
-    btn_mode_shift = ctk.CTkButton(
-        base_card,
-        text="Flip UI Theme Mode",
-        command=cycle_display_themes
-    )
-    btn_mode_shift.pack(pady=10)
-
-    print("--- BOOT INITIALIZATION SEAMLESS PASSTHROUGH ---")
-    print(f"Active Runtime Theme Capture Mode = {sCTkThemes.get_appearance_mode().upper()}")
-    print("=================================================\n")
-
-    root.mainloop()
+# """
+# sCTkThemes - Standalone Automated Initialization Testing Harness
+# """
+# import customtkinter as ctk
+# import sCTkThemes  # 🛠️ THE UNIFIED SINGLE ENGINE IMPORT MODEL
+#
+# if __name__ == "__main__":
+#     # 1. Fire your centralized asset discovery and loading utility engine.
+#     # We turn on bootstrap_ctk to force plain native CTk widgets to absorb our designs,
+#     # and lock mapping_mode to primary to protect our baseline application layout rules.
+#     sCTkThemes.apply_sCTkThemes(bootstrap_ctk=True, mapping_mode="primary")
+#
+#     # 2. 🛠️ THE ENCAPSULATION PASS-THROUGH IN ACTION:
+#     # We alter global operating window appearance states directly via your utility module.
+#     # This completely eliminates the need to cross-reference or type the 'ctk' namespace!
+#     sCTkThemes.set_appearance_mode("Dark")
+#
+#     root = ctk.CTk()
+#     root.geometry("450x250")
+#     root.title("sCTkThemes Global Controller Validation Deck")
+#
+#     # Layout a clean base application container card
+#     from sCTkFrame import sCTkFrame
+#
+#     base_card = sCTkFrame(root)
+#     base_card.pack(expand=True, fill="both", padx=25, pady=25)
+#
+#     from sCTkLabelPrimary import sCTkLabelPrimary
+#
+#     lbl_title = sCTkLabelPrimary(base_card, text="CORE FREQUENCY ENGINE OPERATIONAL")
+#     lbl_title.pack(pady=15)
+#
+#
+#     # Standard interactive toggle button hook to verify wrapped runtime state changes
+#     def cycle_display_themes():
+#         current_env = sCTkThemes.get_appearance_mode().lower()
+#         target_env = "Light" if current_env == "dark" else "Dark"
+#
+#         sCTkThemes.set_appearance_mode(target_env)
+#         print(f"Logged Verification Hook -> sCTkThemes.get_appearance_mode() = {sCTkThemes.get_appearance_mode()}")
+#
+#
+#     btn_mode_shift = ctk.CTkButton(
+#         base_card,
+#         text="Flip UI Theme Mode",
+#         command=cycle_display_themes
+#     )
+#     btn_mode_shift.pack(pady=10)
+#
+#     print("--- BOOT INITIALIZATION SEAMLESS PASSTHROUGH ---")
+#     print(f"Active Runtime Theme Capture Mode = {sCTkThemes.get_appearance_mode().upper()}")
+#     print("=================================================\n")
+#
+#     root.mainloop()
