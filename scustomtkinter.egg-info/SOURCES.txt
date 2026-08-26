@@ -3,6 +3,7 @@ MANIFEST.in
 README.md
 pyproject.toml
 scustomtkinter/ThemeableWidget.py
+scustomtkinter/__init__.py
 scustomtkinter/sCTkButtonSecondary.py
 scustomtkinter/sCTkButtonTertiary.py
 scustomtkinter/sCTkCheckBox.py
