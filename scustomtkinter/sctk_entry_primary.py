@@ -12,7 +12,6 @@ from .themeable_widget import ThemeableWidget
 
 class sCTkEntryPrimary(ctk.CTkEntry, ThemeableWidget):
     def __init__(self, master=None, **kw):
-        print("\n[Forensic Check] SHTKENTRYPRIMARY ACTIVE AND MONITORED!\n")
 
         # 1. Fire our shared theme logic first. It automatically finds "sCTkEntryPrimary" in themes.json
         ThemeableWidget.__init__(self, kw)
