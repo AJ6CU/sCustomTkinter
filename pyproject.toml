@@ -16,12 +16,12 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 dependencies = [
-    "customtkinter"
+    "customtkinter",
+    "Pillow"
 ]
 
 [tool.setuptools]
-packages = ["scustomtkinter",
-            "Pillow"]
+packages = ["scustomtkinter"]
 include-package-data = true
 
 
