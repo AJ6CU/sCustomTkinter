@@ -176,11 +176,9 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
 # =====================================================================
 # 🛠️ TESTING HARNESS IMPORTS & SETUP
 # =====================================================================
-import sCTkThemes
-from sCTkFrame import sCTkFrame
+from scustomtkinter import sCTkFrame
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
 
     root = ctk.CTk()
     root.geometry("450x340")

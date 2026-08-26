@@ -71,11 +71,8 @@ class sCTkFrame(ctk.CTkFrame, ThemeableWidget):
 # =====================================================================
 # 🛠️ TESTING HARNESS IMPORTS & SETUP
 # =====================================================================
-import sCTkThemes  # 🔍 Duplicate import kept close for script scannability
 
 if __name__ == "__main__":
-    # Natively resolves your package assets and populates configurations cleanly
-    sCTkThemes.apply_sCTkThemes()
 
     root = ctk.CTk()
     root.geometry("450x300")
