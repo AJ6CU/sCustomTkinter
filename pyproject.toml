@@ -20,7 +20,8 @@ dependencies = [
 ]
 
 [tool.setuptools]
-packages = ["scustomtkinter"]
+packages = ["scustomtkinter",
+            "Pillow"]
 include-package-data = true
 
 
