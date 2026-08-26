@@ -17,7 +17,9 @@ from .sctk_button_secondary import sCTkButtonSecondary
 from .sctk_button_tertiary import sCTkButtonTertiary
 from .sctk_checkbox import sCTkCheckBox
 from .sctk_combobox import sCTkComboBox
-from .sctk_dial import sCTkDial
+from .sctk_dial import sCTkDialContinuous
+from .sctk_dial import sCTkDialSelector
+from .sctk_dial import sCTkDialRange
 # from .sctk_dialog_core import sCTkDialogCore
 # from .sctk_dialog_mixin import sCTkDialogMixin
 # from .sctk_dialog_toplevel import sCTkDialogToplevel
