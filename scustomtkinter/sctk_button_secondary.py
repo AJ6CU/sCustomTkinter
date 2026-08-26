@@ -1,36 +1,32 @@
 #!/usr/bin/python3
 """
-sCTkButtonPrimary - Piece 1 of 2
+sCTkButtonSecondary - Piece 1 of 2
 
-A custom, theme-compliant dominant action button widget.
+A custom, theme-compliant secondary latching button widget.
 Inherits cleanly and directly from ctk.CTkButton to preserve 100% of native
-CustomTkinter features, theme tracking loops, and real-time state updates.
+CustomTkinter features and mouse tracks without middleman interface tearing.
 """
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
 
-class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
+class sCTkButtonSecondary(ctk.CTkButton, ThemeableWidget):
     def __init__(self, master=None, **kw):
-        print("\n[Forensic Check] PURE PROGRAMMATIC PRIMARY BUTTON ACTIVE!\n")
-
-        # 1. Fire our shared theme logic first. It automatically finds "sCTkButtonPrimary" in the JSON
+        # 1. Fire our shared theme logic first. It automatically finds "sCTkButtonSecondary" in the JSON
         ThemeableWidget.__init__(self, kw)
 
         # 2. 🛠️ THE MUTATION SAFEGUARD DEEP COPY:
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
         self._custom_pressed_map = dict(self._widget_pressed_map)
-        self._custom_alarm_map = dict(self._widget_alarm_map)
 
         # 3. Initialize CustomTkinter natively with the clean final kwargs array safely
         super().__init__(master, **self.final_kw)
 
         self.is_pressed = False
-        self.is_alarm = False
         self._custom_current_state = "normal"
         self._update_current_visual_state()
 
-        # 🔑 4. REGISTER LIFECYCLE HANDSHAKE HOOK: Pushes notifications up to Pygubu systems cleanly.
+        # 🔑 4. REGISTER LIFECYCLE HANDSHAKE HOOK:
         self._finalize_themeable_lifecycle()
 
     def configure(self, *args, **kwargs):
@@ -44,8 +40,6 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
                 current_state = str(self.state()).lower()
                 if current_state == "disabled" and self._custom_disabled_map:
                     val = self._custom_disabled_map.get(pname)
-                elif getattr(self, "is_alarm", False) and self._custom_alarm_map:
-                    val = self._custom_alarm_map.get(pname)
                 elif getattr(self, "is_pressed", False) and self._custom_pressed_map:
                     val = self._custom_pressed_map.get(pname)
                 else:
@@ -84,7 +78,7 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
         return self.state()
 
     def state(self, mode: str = None):
-        """Dedicated button state controller with input tracking isolation shields."""
+        """Dedicated secondary button latching toggle state controller."""
         if mode is None:
             return str(getattr(self, "_custom_current_state", "normal")).lower()
 
@@ -99,7 +93,6 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
 
         elif mode == "disabled":
             self._custom_current_state = "disabled"
-            # 🔑 HARD INTERCEPT UNBIND MATRIX: Paralyzes active mouse events without locking layout update passes
             try:
                 if hasattr(self, "_canvas") and self._canvas:
                     self._canvas.unbind("<Enter>")
@@ -114,27 +107,14 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
         return self._custom_current_state
 
     def set_pressed(self, pressed: bool):
-        """Toggles the visual pressed state of the button cleanly."""
-        if getattr(self, "_custom_current_state", "normal") == "disabled" or self.is_alarm:
+        """Toggles the visual pressed state of the secondary button cleanly."""
+        if getattr(self, "_custom_current_state", "normal") == "disabled":
             return
         self.is_pressed = pressed
         self._update_current_visual_state()
 
-    def set_alarm_state(self, active: bool):
-        """Forces the button into a high-visibility warning red state cleanly."""
-        if getattr(self, "_custom_current_state", "normal") == "disabled":
-            return
-        self.is_alarm = active
-        if self.is_alarm:
-            self.is_pressed = False
-        self._update_current_visual_state()
-
     def _update_current_visual_state(self):
-        """
-        MASTER VISUAL ROUTER FIXED:
-        🔑 REPAINT LOGIC DYNAMIC MAP: Evaluates self._custom_current_state uniformly,
-        ensuring disabled buttons swap dark/light hex vectors seamlessly on preference changes!
-        """
+        """MASTER VISUAL ROUTER FIXED: Forces disabled colors to track theme changes natively."""
         if getattr(self, "_custom_current_state", "normal") == "disabled":
             config_payload = {}
             for key in ("fg_color", "hover_color", "border_color", "text_color"):
@@ -145,16 +125,7 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
                 super().configure(**config_payload)
             return
 
-        if self.is_alarm:
-            config_payload = {}
-            for key in ("fg_color", "hover_color", "border_color", "text_color"):
-                val = self._custom_alarm_map.get(key)
-                if val is not None:
-                    config_payload[key] = self._resolve_color(val) if "color" in key or "fg" in key else val
-            config_payload["hover"] = False
-            super().configure(**config_payload)
-
-        elif self.is_pressed:
+        if self.is_pressed:
             config_payload = {}
             for key in ("fg_color", "hover_color", "border_color", "text_color"):
                 val = self._custom_pressed_map.get(key)
@@ -162,7 +133,6 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
                     config_payload[key] = self._resolve_color(val) if "color" in key or "fg" in key else val
             config_payload["hover"] = False
             super().configure(**config_payload)
-
         else:
             config_payload = {}
             for key in ("fg_color", "hover_color", "border_color", "text_color", "border_width", "corner_radius", "font"):
@@ -172,3 +142,4 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
             config_payload["hover"] = True
             if config_payload:
                 super().configure(**config_payload)
+

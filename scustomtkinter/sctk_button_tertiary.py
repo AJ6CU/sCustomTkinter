@@ -1,40 +1,44 @@
 #!/usr/bin/python3
 """
-sCTkButtonPrimary - Piece 1 of 2
+sCTkButtonTertiary - Piece 1 of 2
 
-A custom, theme-compliant dominant action button widget.
+A custom, theme-compliant tertiary outline latching variant button widget.
 Inherits cleanly and directly from ctk.CTkButton to preserve 100% of native
-CustomTkinter features, theme tracking loops, and real-time state updates.
+CustomTkinter features and eliminate baseui middleman interface crashes.
 """
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
 
-class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
+class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
     def __init__(self, master=None, **kw):
-        print("\n[Forensic Check] PURE PROGRAMMATIC PRIMARY BUTTON ACTIVE!\n")
-
-        # 1. Fire our shared theme logic first. It automatically finds "sCTkButtonPrimary" in the JSON
+        # 1. Run the shared theme logic to load defaults out of themes.json
         ThemeableWidget.__init__(self, kw)
 
-        # 2. 🛠️ THE MUTATION SAFEGUARD DEEP COPY:
+        # 2. 🛠️ THE SYSTEM ACCENT FALLBACK INTERCEPT:
+        if "text_color" not in self.final_kw or self.final_kw["text_color"] is None:
+            try:
+                live_fg_color = ctk.ThemeManager.theme["CTkButton"]["fg_color"]
+                self.final_kw["text_color"] = tuple(live_fg_color)
+            except Exception:
+                self.final_kw["text_color"] = ("#3B8ED0", "#1F6AA5")
+
+        # 3. 🛠️ THE MUTATION SAFEGUARD DEEP COPY:
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
         self._custom_pressed_map = dict(self._widget_pressed_map)
-        self._custom_alarm_map = dict(self._widget_alarm_map)
 
-        # 3. Initialize CustomTkinter natively with the clean final kwargs array safely
+        # 4. Initialize CustomTkinter natively with the clean final kwargs array safely
         super().__init__(master, **self.final_kw)
 
         self.is_pressed = False
-        self.is_alarm = False
         self._custom_current_state = "normal"
         self._update_current_visual_state()
 
-        # 🔑 4. REGISTER LIFECYCLE HANDSHAKE HOOK: Pushes notifications up to Pygubu systems cleanly.
+        # 🔑 5. REGISTER LIFECYCLE HANDSHAKE HOOK:
         self._finalize_themeable_lifecycle()
 
     def configure(self, *args, **kwargs):
-        """Handles Pygubu designer queries and manages composite state updates safely."""
+        """Handles Pygubu designer queries and manages state updates safely."""
         if args and len(args) == 1:
             pname = args if isinstance(args, (list, tuple)) else args
             if pname == "state":
@@ -44,8 +48,6 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
                 current_state = str(self.state()).lower()
                 if current_state == "disabled" and self._custom_disabled_map:
                     val = self._custom_disabled_map.get(pname)
-                elif getattr(self, "is_alarm", False) and self._custom_alarm_map:
-                    val = self._custom_alarm_map.get(pname)
                 elif getattr(self, "is_pressed", False) and self._custom_pressed_map:
                     val = self._custom_pressed_map.get(pname)
                 else:
@@ -84,7 +86,7 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
         return self.state()
 
     def state(self, mode: str = None):
-        """Dedicated button state controller with input tracking isolation shields."""
+        """Dedicated button state controller."""
         if mode is None:
             return str(getattr(self, "_custom_current_state", "normal")).lower()
 
@@ -99,7 +101,6 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
 
         elif mode == "disabled":
             self._custom_current_state = "disabled"
-            # 🔑 HARD INTERCEPT UNBIND MATRIX: Paralyzes active mouse events without locking layout update passes
             try:
                 if hasattr(self, "_canvas") and self._canvas:
                     self._canvas.unbind("<Enter>")
@@ -114,27 +115,14 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
         return self._custom_current_state
 
     def set_pressed(self, pressed: bool):
-        """Toggles the visual pressed state of the button cleanly."""
-        if getattr(self, "_custom_current_state", "normal") == "disabled" or self.is_alarm:
+        """Toggles the visual pressed state of the tertiary button cleanly."""
+        if getattr(self, "_custom_current_state", "normal") == "disabled":
             return
         self.is_pressed = pressed
         self._update_current_visual_state()
 
-    def set_alarm_state(self, active: bool):
-        """Forces the button into a high-visibility warning red state cleanly."""
-        if getattr(self, "_custom_current_state", "normal") == "disabled":
-            return
-        self.is_alarm = active
-        if self.is_alarm:
-            self.is_pressed = False
-        self._update_current_visual_state()
-
     def _update_current_visual_state(self):
-        """
-        MASTER VISUAL ROUTER FIXED:
-        🔑 REPAINT LOGIC DYNAMIC MAP: Evaluates self._custom_current_state uniformly,
-        ensuring disabled buttons swap dark/light hex vectors seamlessly on preference changes!
-        """
+        """MASTER VISUAL ROUTER FIXED: Forces disabled outline configurations to adapt fluidly."""
         if getattr(self, "_custom_current_state", "normal") == "disabled":
             config_payload = {}
             for key in ("fg_color", "hover_color", "border_color", "text_color"):
@@ -145,30 +133,24 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
                 super().configure(**config_payload)
             return
 
-        if self.is_alarm:
+        if getattr(self, "is_pressed", False):
             config_payload = {}
-            for key in ("fg_color", "hover_color", "border_color", "text_color"):
-                val = self._custom_alarm_map.get(key)
-                if val is not None:
-                    config_payload[key] = self._resolve_color(val) if "color" in key or "fg" in key else val
-            config_payload["hover"] = False
-            super().configure(**config_payload)
-
-        elif self.is_pressed:
-            config_payload = {}
-            for key in ("fg_color", "hover_color", "border_color", "text_color"):
+            for key in ("fg_color", "border_color", "hover_color", "text_color"):
                 val = self._custom_pressed_map.get(key)
                 if val is not None:
                     config_payload[key] = self._resolve_color(val) if "color" in key or "fg" in key else val
+
+            config_payload.setdefault("hover_color", self._resolve_color(self._local_defaults.get("hover_color")))
             config_payload["hover"] = False
             super().configure(**config_payload)
-
         else:
             config_payload = {}
             for key in ("fg_color", "hover_color", "border_color", "text_color", "border_width", "corner_radius", "font"):
                 val = self._local_defaults.get(key)
                 if val is not None:
                     config_payload[key] = self._resolve_color(val) if "color" in key or "fg" in key else val
+
             config_payload["hover"] = True
             if config_payload:
                 super().configure(**config_payload)
+

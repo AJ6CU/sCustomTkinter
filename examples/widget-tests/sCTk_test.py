@@ -7,7 +7,6 @@ Eliminitates the need for end-users to import customtkinter directly,
 acting as the singular core application window root for the sCustomTkinter library.
 """
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
 
 class sCTk(ctk.CTk):
     def __init__(self, fg_color=None, **kwargs):
