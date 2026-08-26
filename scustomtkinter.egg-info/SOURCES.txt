@@ -1,0 +1,7 @@
+LICENSE
+README.md
+setup.py
+scustomtkinter.egg-info/PKG-INFO
+scustomtkinter.egg-info/SOURCES.txt
+scustomtkinter.egg-info/dependency_links.txt
+scustomtkinter.egg-info/top_level.txt

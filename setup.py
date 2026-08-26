@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # setup.py
 from setuptools import setup, find_packages
 
@@ -12,7 +13,8 @@ setup(
     package_data={
         "scustomtkinter": ["assets/*.json","assets/images/*.png"],
     },
-    install_packages=[
+    # 🔑 THE CRITICAL HOOK REPAIR: Fixed parameter mapping to let setuptools compile cleanly!
+    install_requires=[
         "customtkinter",
     ],
     classifiers=[
@@ -21,3 +23,5 @@ setup(
     ],
     python_requires=">=3.8",
 )
+
+

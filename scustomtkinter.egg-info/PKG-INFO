@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: scustomtkinter
+Version: 1.0.0
+Summary: A theme-compliant custom widget library wrapping CustomTkinter.
+Home-page: https://github.com
+Author: aj6cu
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+License-File: LICENSE
+Dynamic: author
+Dynamic: classifier
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+Dynamic: summary
