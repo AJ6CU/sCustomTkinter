@@ -1,33 +1,30 @@
-#!#!/usr/bin/python3
+#!/usr/bin/python3
 """
 sCTkThemes
 
 Centralized package asset discovery and core theme configuration engine.
-Wraps CustomTkinter native parameters to provide a single, unified import model.
 """
 import os
 import json
 import customtkinter as ctk
-# 🔑 UNIFIED NAMESPACE BINDING: Relatively track your shared global layout variables
+# 🔑 BREAK THE CIRCULAR LOOP: Import your elements using local relative calls!
 from .ThemeableWidget import GLOBAL_THEME_REGISTRY
 from . import ThemeableWidget
-import scustomtkinter as sctk
 
-# 🔑 DYNAMIC PATH LOOKUP: Safely finds the asset, avoiding virtual environment finder drops
-json_path = sctk.get_asset_path("assets/sCTkThemes.json")
 
-# =====================================================================
-# ⚙️ FULLY INDENTED JSON PARSING PAYLOAD POOL
-# =====================================================================
-with open(json_path, "r", encoding="utf-8") as f:
-    # 🚀 Load your theme profiles smoothly here and bind them to the registry!
-    parsed_theme_data = json.load(f)
+# Define your asset lookup logic locally or pull it directly from its source module file
+# instead of trying to read it from a global scustomtkinter package import pass
+def apply_sCTkThemes():
+    # Pinpoint coordinates relative to this file path
+    current_script_dir = os.path.dirname(os.path.abspath(__file__))
+    json_path = os.path.normpath(os.path.join(current_script_dir, "assets", "sCTkThemes.json"))
 
-    # Hydrate both tracking namespaces to guarantee absolute system stability
-    GLOBAL_THEME_REGISTRY.update(parsed_theme_data)
-    ThemeableWidget.GLOBAL_THEME_REGISTRY.update(parsed_theme_data)
+    with open(json_path, "r", encoding="utf-8") as f:
+        parsed_theme_data = json.load(f)
+        GLOBAL_THEME_REGISTRY.update(parsed_theme_data)
+        ThemeableWidget.GLOBAL_THEME_REGISTRY.update(parsed_theme_data)
 
-print("🎨 sCustomTkinter -> Centralized theme configuration dictionary parsed successfully.")
+    print("🎨 sCustomTkinter -> Centralized theme configuration dictionary parsed successfully.")
 
 
 def apply_sCTkThemes(custom_path=None, bootstrap_ctk=False, mapping_mode="primary"):
