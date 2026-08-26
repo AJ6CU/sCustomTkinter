@@ -11,8 +11,15 @@ import json
 import tkinter as tk
 import customtkinter as ctk
 
-# 🛠️ GLOBAL JSON LOADER (Runs only once when the application boots)
-THEME_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sCTkThemes.json")
+# 🛠️ GLOBAL JSON LOADER (Cascades: checks local workspace folder first, then drops back to bundled library defaults)
+local_user_workspace = os.path.normpath(os.path.join(os.getcwd(), "sCTkThemes.json"))
+bundled_library_default = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "sCTkThemes.json"))
+
+# 🔑 THE CASCADING FALLBACK ENGINE
+if os.path.exists(local_user_workspace):
+    THEME_FILE_PATH = local_user_workspace
+else:
+    THEME_FILE_PATH = bundled_library_default
 
 try:
     with open(THEME_FILE_PATH, "r", encoding="utf-8") as file:
@@ -22,6 +29,7 @@ except Exception as err:
         f"CRITICAL SYSTEM BREAKDOWN: Centralized theme file '{THEME_FILE_PATH}' "
         f"could not be parsed. Error: {err}."
     )
+
 
 def default_i18n_translator(value):
     return value
