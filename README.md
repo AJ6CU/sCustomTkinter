@@ -116,5 +116,5 @@ pip install git+https://github.com/aj6cu/sCustomTkinter/
 ```
 Or from the Pycharm Library manager, Select the Gear option, and click "Install from VCS" when asked for the URL, enter
 ```bash
-git+https://github.com/aj6cu/sCustomTkinter/
+https://github.com/aj6cu/sCustomTkinter/
 ```
