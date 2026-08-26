@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scustomtkinter"
+version = "1.0.0"
+authors = [
+    { name = "aj6cu" }
+]
+description = "A theme-compliant custom widget library wrapping CustomTkinter."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "customtkinter"
+]
+
+[tool.setuptools]
+packages = ["scustomtkinter"]
+include-package-data = true
+
+
+[tool.setuptools.package-data]
+scustomtkinter = [
+    "assets/*.json",
+    "assets/images/*.png"
+]

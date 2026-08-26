@@ -9,6 +9,14 @@ import os
 import json
 import customtkinter as ctk
 from ThemeableWidget import GLOBAL_THEME_REGISTRY
+import scustomtkinter as sctk
+
+# 🔑 DYNAMIC PATH LOOKUP: Safely finds the asset, avoiding virtual environment finder drops
+json_path = sctk.get_asset_path("assets/themes.json")
+
+with open(json_path, "r", encoding="utf-8") as f:
+    # load your theme profiles smoothly here...
+
 
 
 def apply_sCTkThemes(custom_path=None, bootstrap_ctk=False, mapping_mode="primary"):

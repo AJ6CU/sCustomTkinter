@@ -1,6 +1,15 @@
 # scustomtkinter/__init__.py
 
 #from .sCTkThemes import  apply_sCTkThemes
+import os
+
+# 🔑 THE DYNAMIC FILE PATH ANCHOR: Extracts the absolute physical location on disk
+_PACKAGE_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+def get_asset_path(relative_path: str) -> str:
+    """Safely resolves file paths to assets relative to the physical package directory."""
+    return os.path.normpath(os.path.join(_PACKAGE_ROOT, relative_path))
+
 
 from .sCTk.py import sCTk
 from .sCTkButtonPrimary.py import sCTkButtonPrimary
