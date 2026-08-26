@@ -7,7 +7,7 @@ Inherits cleanly and directly from ctk.CTkScrollableFrame to preserve native fea
 while hiding internal scrollbars smoothly across all mode changes.
 """
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidgett
+from .themeable_widget import ThemeableWidget
 
 class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
     properties = frozenset()
