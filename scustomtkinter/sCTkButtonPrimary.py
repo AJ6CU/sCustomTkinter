@@ -7,7 +7,7 @@ Inherits cleanly and directly from ctk.CTkButton to preserve 100% of native
 CustomTkinter features, theme tracking loops, and real-time state updates.
 """
 import customtkinter as ctk
-from ThemeableWidget import ThemeableWidget
+from .ThemeableWidget import ThemeableWidget
 
 class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
     def __init__(self, master=None, **kw):

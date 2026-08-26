@@ -7,7 +7,7 @@ Inherits cleanly and directly from ctk.CTkFrame to preserve 100% of native
 CustomTkinter features, theme tracking loops, and Pygubu container actions.
 """
 import customtkinter as ctk
-from ThemeableWidget import ThemeableWidget
+from .ThemeableWidget import ThemeableWidget
 
 class sCTkFrame(ctk.CTkFrame, ThemeableWidget):
     properties = frozenset()
