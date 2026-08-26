@@ -19,7 +19,7 @@ from .themeable_widget import ThemeableWidget
 from typing import Literal, Optional, Union, Tuple
 
 from .sctk_button_primary import sCTkButtonPrimary
-from .sctk_buttons_econdary import sCTkButtonSecondary
+from .sctk_button_secondary import sCTkButtonSecondary
 from .sctk_label_secondary import sCTkLabelSecondary
 from .sctk_entry_primary import sCTkEntryPrimary
 
