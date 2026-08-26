@@ -11,8 +11,8 @@ def get_asset_path(relative_path: str) -> str:
     return os.path.normpath(os.path.join(_PACKAGE_ROOT, relative_path))
 
 
-from .sCTk import sCTk as sCTk
-from .sCTkButtonPrimary import sCTkButtonPrimary as sCTkButtonPrimary
+from .sctk_core import sCTk
+from .sctk_button_primary import sCTkButtonPrimary
 from .sCTkButtonSecondary import CTkButtonSecondary
 from .sCTkButtonTertiary import sCTkButtonTertiary
 from .sCTkCheckBox import sCTkCheckBox
@@ -24,7 +24,7 @@ from .sCTkDialogToplevel import sCTkDialogToplevel
 from .sCTkEntryPrimary import sCTkEntryPrimary
 from .sCTkEntrySecondary import sCTkEntrySecondary
 from .sCTkFileExplorer import sCTkFileExplorer
-from .sCTkFrame import sCTkFrame as sCTkFrame
+from .sctk_frame import sCTkFrame
 from .sCTkFrameLabeledPrimary import sCTkFrameLabeledPrimary
 from .sCTkFrameLabeledSecondary import sCTkFrameLabeledSecondary
 from .sCTkFrameOutlined import sCTkFrameOutlined
