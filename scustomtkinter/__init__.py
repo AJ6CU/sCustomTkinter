@@ -52,5 +52,5 @@ from .sctk_frame import sCTkFrame
 #from .sCTkTabview import sCTkTabview
 #from .sCTkTextboxPrimary import sCTkTextboxPrimary
 #from .sCTkTextboxSecondary import sCTkTextboxSecondary
-from .sCTkThemes import sCTkThemes
+from .sctkthemes import sCTkThemes
 #from .sCTkToplevel import sCTkToplevel
