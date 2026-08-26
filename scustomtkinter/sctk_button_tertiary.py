@@ -14,14 +14,6 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
         # 1. Run the shared theme logic to load defaults out of themes.json
         ThemeableWidget.__init__(self, kw)
 
-        # 2. 🛠️ THE SYSTEM ACCENT FALLBACK INTERCEPT:
-        if "text_color" not in self.final_kw or self.final_kw["text_color"] is None:
-            try:
-                live_fg_color = ctk.ThemeManager.theme["CTkButton"]["fg_color"]
-                self.final_kw["text_color"] = tuple(live_fg_color)
-            except Exception:
-                self.final_kw["text_color"] = ("#3B8ED0", "#1F6AA5")
-
         # 3. 🛠️ THE MUTATION SAFEGUARD DEEP COPY:
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
