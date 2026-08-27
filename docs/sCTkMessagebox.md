@@ -1,7 +1,6 @@
-## sCTkMessage
+## sCTkMessagebox
 
 ### Table of Contents
-* [System Architecture Overview](#system-architecture-overview)
 * [API Constructor Reference](#api-constructor-reference)
 * [Global Shortcut Function Handlers](#global-shortcut-function-handlers)
 * [Simple Syntax Quick-Reference Guide](#simple-syntax-quick-reference-guide)
@@ -11,24 +10,14 @@
 
 ---
 
-The `sCTkMessage` is an advanced, themeable dialog window system subclassed from `ctk.CTkToplevel` and integrated with `ThemeableWidget`. It replaces standard OS message alerts with modular, center-positioned dialogue boxes featuring dynamic text-wrapping, automated parent window tracking calculations, custom asset handling, and support for dual high-contrast action selection layouts that return boolean runtime parameters.
-
-### System Architecture Overview
-
-The subsystem operates dynamically at runtime through execution logic chains. Because modal dialog boxes are instantiated procedurally within code event callbacks rather than being statically placed, **this component does not require a Pygubu Builder Object (BO) file.**
-
-The architecture is divided into the following layout segments:
-1. **`sctk_message.py`**: Contains the top-level window manager tracking rules, uniform grid button size distributions, and the virtual `messagebox` object attribute bindings.
-2. **`assets/images/` Subdirectory**: A centralized storage assets folder containing your custom graphic files:
-   * `info.png`, `warning.png`, `error.png` *(Standard Light Mode Assets)*
-   * `info_dark.png`, `warning_dark.png`, `error_dark.png` *(High-Contrast Dark Mode Overrides)*
+The `sCTkMessagebox` is an advanced, themeable dialog window system designed to provide critical messages to the user. It replaces standard OS message alerts with modular, center-positioned dialogue boxes featuring dynamic text-wrapping, automated parent window tracking calculations, custom asset handling, and support for dual high-contrast action selection layouts that return boolean runtime parameters.
 
 ---
 
 ### API Constructor Reference
 
 ```python
-sCTkMessage(title, message, typ, master=None, buttons="ok", ok_text="Ok", yes_text="Yes", no_text="No", width=400)
+sCTkMessagebox(title, message, typ, master=None, buttons="ok", ok_text="Ok", yes_text="Yes", no_text="No", width=400)
 ```
 
 | Parameter Name | Data Type | Default Value | Description |
@@ -51,16 +40,16 @@ To launch modal dialog blocks quickly inside callback triggers without handling 
 
 #### Standard Alert Prompts (Returns `True` upon closure)
 ```python
-messagebox.showinfo(title, message, ok_text="Ok", width=400, master=root)
-messagebox.showwarning(title, message, ok_text="Ok", width=400, master=root)
-messagebox.showerror(title, message, ok_text="Ok", width=400, master=root)
+sCTkMessagebox.showinfo(title, message, ok_text="Ok", width=400, master=root)
+sCTkMessagebox.showwarning(title, message, ok_text="Ok", width=400, master=root)
+sCTkMessagebox.showerror(title, message, ok_text="Ok", width=400, master=root)
 ```
 
 #### Confirmation Prompt Shortcuts (Returns primitive Python `True` or `False` boolean states)
 ```python
-messagebox.askyesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
-messagebox.askwarningyesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
-messagebox.askerroryesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
+sCTkMessagebox.askyesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
+sCTkMessagebox.askwarningyesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
+sCTkMessagebox.askerroryesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
 ```
 
 ---
@@ -69,49 +58,49 @@ messagebox.askerroryesno(title, message, yes_text="Yes", no_text="No", width=400
 
 Below are clean, minimal use-cases showcasing how to call each convenience shortcut using the standardized `messagebox` proxy engine.
 
-#### 1. `messagebox.showinfo`
+#### 1. `sCTkMessagebox.showinfo`
 Used for general application notifications, status confirmations, and completions.
 ```python
-from scustomtkinter import messagebox
+from scustomtkinter import sCTkMessagebox
 
 # Displays a standard informative dialog popup
-messagebox.showinfo("System Init", "Satellite link successfully established.", master=root)
+sCTkMessagebox.showinfo("System Init", "Satellite link successfully established.", master=root)
 ```
 
-#### 2. `messagebox.showwarning`
+#### 2. `sCTkMessagebox.showwarning`
 Used to display alert parameters, non-fatal operational boundary breaches, or layout cautions.
 ```python
-from scustomtkinter import messagebox
+from scustomtkinter import sCTkMessagebox
 
 # Displays a warning alert box with a custom approval button text
-messagebox.showwarning("Battery Low", "Backup power source dropped below 15%.", ok_text="Acknowledge", master=root)
+sCTkMessagebox.showwarning("Battery Low", "Backup power source dropped below 15%.", ok_text="Acknowledge", master=root)
 ```
 
-#### 3. `messagebox.showerror`
+#### 3. `sCTkMessagebox.showerror`
 Used to halt operations when a severe terminal failure or unhandled exception block is triggered.
 ```python
-from scustomtkinter import messagebox
+from scustomtkinter import sCTkMessagebox
 
 # Displays a fatal critical error box
-messagebox.showerror("TX Failure", "Transmitter hardware thermal overload detected.", master=root)
+sCTkMessagebox.showerror("TX Failure", "Transmitter hardware thermal overload detected.", master=root)
 ```
 
-#### 4. `messagebox.askyesno`
+#### 4. `sCTkMessagebox.askyesno`
 Launches a standard query dialogue window, returning a boolean flag based on the user's action.
 ```python
-from scustomtkinter import messagebox
+from scustomtkinter import sCTkMessagebox
 
 # Captures true/false verification states
-if messagebox.askyesno("Log Session", "Do you wish to save the active telemetry log files?", master=root):
+if sCTkMessagebox.askyesno("Log Session", "Do you wish to save the active telemetry log files?", master=root):
     print("User clicked YES: Executing write loop...")
 else:
     print("User clicked NO: Dropping record data...")
 ```
 
-#### 5. `messagebox.askwarningyesno`
+#### 5. `sCTkMessagebox.askwarningyesno`
 Launches a critical query box carrying high-visibility alert graphics for destructive actions.
 ```python
-from scustomtkinter import messagebox
+from scustomtkinter import sCTkMessagebox
 
 # Captures permission states for hazardous overrides
 override_allowed = messagebox.askwarningyesno(
@@ -123,13 +112,13 @@ override_allowed = messagebox.askwarningyesno(
 )
 ```
 
-#### 6. `messagebox.askerroryesno`
+#### 6. `sCTkMessagebox.askerroryesno`
 Launches an error-status confirmation panel, typical for prompt actions following a hard code drop.
 ```python
-from scustomtkinter import messagebox
+from scustomtkinter import sCTkMessagebox
 
 # Captures choice states to run system self-healing scripts
-if messagebox.askerroryesno("Cascade Failure", "Buffer buffer overflow hit. Attempt a cold reset?", master=root):
+if sCTkMessagebox.askerroryesno("Cascade Failure", "Buffer buffer overflow hit. Attempt a cold reset?", master=root):
     # Execute recovery sequence...
     pass
 ```
@@ -142,7 +131,7 @@ The component relies heavily on your centralized style dictionary system. To pre
 
 ```json
 {
-    "sCTkMessage": {
+    "sCTkMessagebox": {
         "font": ["Arial", 14],
         "text_color": ["#1A1A1A", "#E5E5E5"]
     }
@@ -173,7 +162,7 @@ Below is a complete, self-contained test execution script demonstrating how to p
 # =====================================================================
 
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTk
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTk, sCTkMessagebox
 
 if __name__ == "__main__":
     root = sCTk()
@@ -184,20 +173,20 @@ if __name__ == "__main__":
 
     # 🚀 Clean functional callbacks using the messagebox namespace!
     def trigger_info_ask():
-        print(f"Feedback: {messagebox.askyesno('Info Query', 'Log parameter data?', yes_text='Log', no_text='Skip', master=root)}")
+        print(f"Feedback: {sCTkMessagebox.askyesno('Info Query', 'Log parameter data?', yes_text='Log', no_text='Skip', master=root)}")
 
     def trigger_warning_ask():
-        print(f"Feedback: {messagebox.askwarningyesno('Band Switch', long_msg, yes_text='Override', no_text='Drop', width=450, master=root)}")
+        print(f"Feedback: {sCTkMessagebox.askwarningyesno('Band Switch', long_msg, yes_text='Override', no_text='Drop', width=450, master=root)}")
 
     def trigger_error_ask():
-        print(f"Feedback: {messagebox.askerroryesno('Fatal Error', 'Attempt buffer cold reset?', yes_text='Reset', no_text='Quit', master=root)}")
+        print(f"Feedback: {sCTkMessagebox.askerroryesno('Fatal Error', 'Attempt buffer cold reset?', yes_text='Reset', no_text='Quit', master=root)}")
 
     # 🚀 Native drop-in style execution pass!
-    sCTkButtonPrimary(root, text="Test Info (OK)", width=200, command=lambda: messagebox.showinfo("Message Example", "Short statement alert.", ok_text="Acknowledge", master=root)).pack(pady=8)
+    sCTkButtonPrimary(root, text="Test Info (OK)", width=200, command=lambda: sCTkMessagebox.showinfo("Message Example", "Short statement alert.", ok_text="Acknowledge", master=root)).pack(pady=8)
     sCTkButtonPrimary(root, text="Test Info (Yes/No)", width=200, command=trigger_info_ask).pack(pady=(8, 25))
-    sCTkButtonPrimary(root, text="Test Warning (OK)", width=200, command=lambda: messagebox.showwarning("Warning", "Listen carefully", ok_text="Proceed", master=root)).pack(pady=8)
+    sCTkButtonPrimary(root, text="Test Warning (OK)", width=200, command=lambda: sCTkMessagebox.showwarning("Warning", "Listen carefully", ok_text="Proceed", master=root)).pack(pady=8)
     sCTkButtonPrimary(root, text="Test Warning (Yes/No)", width=200, command=trigger_warning_ask).pack(pady=(8, 25))
-    sCTkButtonPrimary(root, text="Test Error (OK)", width=200, command=lambda: messagebox.showerror("Error", "Dead meat", ok_text="Close", master=root)).pack(pady=8)
+    sCTkButtonPrimary(root, text="Test Error (OK)", width=200, command=lambda: sCTkMessagebox.showerror("Error", "Dead meat", ok_text="Close", master=root)).pack(pady=8)
     sCTkButtonPrimary(root, text="Test Error (Yes/No)", width=200, command=trigger_error_ask).pack(pady=8)
 
     root.mainloop()

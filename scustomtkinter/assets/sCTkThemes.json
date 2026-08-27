@@ -418,7 +418,7 @@
         "font": ["Arial", 11, "bold"],
         "text_color": ["#1A1A1A", "#FFFFFF"]
     },
-    "sCTkMessage": {
+    "sCTkMessagebox": {
         "font": ["Arial", 14],
         "text_color": ["#1A1A1A", "#E5E5E5"]
     },
