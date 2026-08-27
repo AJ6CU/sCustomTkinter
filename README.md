@@ -179,26 +179,5 @@ sCustomTkinter/              (The GitHub Repository Root)
     └── build_docs.sh        (Documentation consolidation script)
 ```
 
-### 🖼️ Asset Image Injection Rules
-To maintain broken-link protection across both standalone local setups and online GitHub hosting pages, follow these path-binding guidelines:
-* **Storage Location:** Save all workspace layout screenshots and visual display graphs inside the dedicated folder track `docs/images/`.
-* **Path Injections:** Reference images using clean relative path mappings to ensure they render identically across your local IDE markdown previewer lanes and the GitHub web panel:
-  `![Tableview Telemetry Interface Layout](docs/images/tableview_showcase.png)`
-
----
-
-## 📋 Markdown Asset Consolidation
-
-For offline indexing, printer exports, or single-file deployment passes, the repository houses an internal automation compiler shell script at `tools/build_docs.sh`. 
-
-This script iterates through individual component markdown documentation sheets sequentially, stripping trailing notes, and combining them into a single file named `docs/sCustomTkinter_Comprehensive_Guide.md`.
-
-#### Executing the Documentation Builder Script:
-```bash
-chmod +x tools/build_docs.sh
-./tools/build_docs.sh
-```
-
----
 
 
