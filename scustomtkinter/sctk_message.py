@@ -153,12 +153,12 @@ class sCTkMessage(ctk.CTkToplevel, ThemeableWidget):
         return self._result
 
 # =====================================================================
-# ⚡ GLOBAL SHORTCUT FUNCTION ROUTING CHANNELS
+# ⚡ STANDALONE RE-ROUTING CHANNELS (OUTDENTED TO ZERO INDENT SPACES!)
 # =====================================================================
 def showinfo(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
     return sCTkMessage(title, message, "info", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
 
-def showwarning(self, title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
+def showwarning(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
     return sCTkMessage(title, message, "warning", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
 
 def showerror(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
@@ -175,4 +175,16 @@ def askwarningyesno(title: str, message: str, yes_text: str = "Yes", no_text: st
 def askerroryesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
     val = sCTkMessage(title, message, "error", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
     return True if val is True else False
+
+
+# =====================================================================
+# 🔑 THE DYNAMIC BACK-BIND: Injects attributes onto the Class token namespace!
+# =====================================================================
+# This forces sCTkMessage.showinfo(...) to work perfectly everywhere!
+sCTkMessage.showinfo = showinfo
+sCTkMessage.showwarning = showwarning
+sCTkMessage.showerror = showerror
+sCTkMessage.askyesno = askyesno
+sCTkMessage.askwarningyesno = askwarningyesno
+sCTkMessage.askerroryesno = askerroryesno
 
