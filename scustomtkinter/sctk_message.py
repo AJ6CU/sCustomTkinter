@@ -55,10 +55,14 @@ class sCTkMessage(ctk.CTkToplevel, ThemeableWidget):
         text_color_config = self._local_defaults.get("text_color") or ("#1A1A1A", "#E5E5E5")
 
         # 4. Custom Local Icon Asset Extraction Loops
-        images_dir = os.path.join(os.path.dirname(__file__), "images")
+        # 4. 🔑 DYNAMIC ASSET PATH ANCHOR: Safely navigates down into assets/images/
+        current_script_dir = os.path.dirname(os.path.abspath(__file__))
+        images_dir = os.path.normpath(os.path.join(current_script_dir, "assets", "images"))
+
         light_icon_path = os.path.join(images_dir, f"{typ}.png")
         dark_icon_path = os.path.join(images_dir, f"{typ}_dark.png")
 
+        # Fallback to standard light version if an explicit dark-theme variant is missing
         if not os.path.exists(dark_icon_path):
             dark_icon_path = light_icon_path
 
@@ -69,10 +73,14 @@ class sCTkMessage(ctk.CTkToplevel, ThemeableWidget):
                 ctk_image = ctk.CTkImage(light_image=pil_light, dark_image=pil_dark, size=(85, 85))
                 self.image_label = sCTkLabelPrimary(self, text="", image=ctk_image, width=85, height=85)
                 self.image_label.grid(row=0, column=0, padx=(15, 5), pady=20, sticky="n")
-            except Exception:
+            except Exception as image_err:
+                # Graceful extraction safety recovery trace
+                print(f"⚠️ sCustomTkinter Warning -> Image format initialization error: {image_err}")
                 self.image_label = sCTkLabelPrimary(self, text=f"[{typ.upper()}]", font=("Arial", 12, "bold"))
                 self.image_label.grid(row=0, column=0, padx=(15, 5), pady=20, sticky="n")
         else:
+            # Safe text-based interface fallback if filesystem layout tracks vanish
+            print(f"⚠️ sCustomTkinter Warning -> Missing visual alert asset from target path: {light_icon_path}")
             self.image_label = sCTkLabelPrimary(self, text=f"[{typ.upper()}]", font=("Arial", 12, "bold"))
             self.image_label.grid(row=0, column=0, padx=(15, 5), pady=20, sticky="n")
 
@@ -144,27 +152,27 @@ class sCTkMessage(ctk.CTkToplevel, ThemeableWidget):
         else: self.wait_window(self)
         return self._result
 
-# =====================================================================
-# ⚡ GLOBAL SHORTCUT FUNCTION ROUTING CHANNELS
-# =====================================================================
-def showinfo(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
-    return sCTkMessage(title, message, "info", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
+    # =====================================================================
+    # ⚡ GLOBAL SHORTCUT FUNCTION ROUTING CHANNELS
+    # =====================================================================
+    def showinfo(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
+        return sCTkMessage(title, message, "info", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
 
-def showwarning(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
-    return sCTkMessage(title, message, "warning", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
+    def showwarning(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
+        return sCTkMessage(title, message, "warning", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
 
-def showerror(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
-    return sCTkMessage(title, message, "error", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
+    def showerror(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
+        return sCTkMessage(title, message, "error", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
 
-def askyesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
-    val = sCTkMessage(title, message, "info", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
-    return True if val is True else False
+    def askyesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
+        val = sCTkMessage(title, message, "info", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
+        return True if val is True else False
 
-def askwarningyesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
-    val = sCTkMessage(title, message, "warning", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
-    return True if val is True else False
+    def askwarningyesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
+        val = sCTkMessage(title, message, "warning", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
+        return True if val is True else False
 
-def askerroryesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
-    val = sCTkMessage(title, message, "error", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
-    return True if val is True else False
+    def askerroryesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
+        val = sCTkMessage(title, message, "error", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
+        return True if val is True else False
 
