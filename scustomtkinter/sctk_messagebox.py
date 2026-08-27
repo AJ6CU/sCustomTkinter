@@ -156,24 +156,24 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
 # ⚡ STANDALONE RE-ROUTING CHANNELS (OUTDENTED TO ZERO INDENT SPACES!)
 # =====================================================================
 def showinfo(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
-    return CTkMessagebox(title, message, "info", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
+    return sCTkMessagebox(title, message, "info", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
 
 def showwarning(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
-    return CTkMessagebox(title, message, "warning", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
+    return sCTkMessagebox(title, message, "warning", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
 
 def showerror(title: str, message: str, ok_text: str = "Ok", width: int = 400, master: any = None) -> Optional[bool]:
-    return CTkMessagebox(title, message, "error", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
+    return sCTkMessagebox(title, message, "error", master=master, buttons="ok", ok_text=ok_text, width=width).wait_end()
 
 def askyesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
-    val = CTkMessagebox(title, message, "info", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
+    val = sCTkMessagebox(title, message, "info", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
     return True if val is True else False
 
 def askwarningyesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
-    val = CTkMessagebox(title, message, "warning", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
+    val = sCTkMessagebox(title, message, "warning", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
     return True if val is True else False
 
 def askerroryesno(title: str, message: str, yes_text: str = "Yes", no_text: str = "No", width: int = 400, master: any = None) -> bool:
-    val = CTkMessagebox(title, message, "error", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
+    val = sCTkMessagebox(title, message, "error", master=master, buttons="yes_no", yes_text=yes_text, no_text=no_text, width=width).wait_end()
     return True if val is True else False
 
 
