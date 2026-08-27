@@ -18,6 +18,10 @@ from .sctk_file_explorer import sCTkFileExplorer
 # Framework-compliant component imports
 from .sctk_button_primary import sCTkButtonPrimary
 from .sctk_entry_primary import sCTkEntryPrimary
+from .sctk_button_secondary import sCTkButtonSecondary
+from .sctk_frame import sCTkFrame
+from .sctk_file_explorer import sCTkFileExplorer
+
 
 class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
     _MANAGED_PROPERTIES = frozenset({
@@ -294,10 +298,6 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
             double_click_command=lambda *args: (self.set(args[-1]), popup.grab_release(), popup.destroy())
         )
         explorer.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-
-        from sCTkFrame import sCTkFrame
-        from sCTkButtonPrimary import sCTkButtonPrimary
-        from sCTkButtonSecondary import sCTkButtonSecondary
 
         bottom_bar = sCTkFrame(popup, fg_color="transparent")
         bottom_bar.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
