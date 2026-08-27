@@ -61,6 +61,7 @@ from .sctk_progress_bar import sCTkProgressBar
 from .sctk_radiobutton import sCTkRadioButton
 from .sctk_scrollable_frame import sCTkScrollableFrame
 from .sctk_scrollbar import sCTkScrollbar
+from .sctk_scrollbar import sCTkScrollArea
 from .sctk_segmentedbutton import sCTkSegmentedButton
 from .sctk_selector import sCTkSelector
 from .sctk_separator import sCTkSeparator
