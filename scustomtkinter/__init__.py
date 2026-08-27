@@ -35,29 +35,20 @@ from .sctk_label_primary import sCTkLabelPrimary
 from .sctk_label_secondary import sCTkLabelSecondary
 from .sctk_label_tertiary import sCTkLabelTertiary
 from .sctk_message import sCTkMessage
-# scustomtkinter/__init__.py
-# 🔑 CANONICAL PUBLIC PACKAGE GATEWAY: Case-separated module maps
-
-from .sctk_core import sCTk as sCTk
-from .sctk_frame import sCTkFrame as sCTkFrame
-from .sctk_button_primary import sCTkButtonPrimary as sCTkButtonPrimary
-from .sctk_label_secondary import sCTkLabelSecondary as sCTkLabelSecondary
-
-# 1. Map the underlying dialogue class object blueprint natively
-from .sctk_message import sCTkMessage as sCTkMessage
-
 
 # =====================================================================
 # 📦 VIRTUAL MESSAGEBOX SUBMODULE PROXY NAMESPACE
 # =====================================================================
+
 class _VirtualMessageBox:
     """Namespace container class mimicking the native tkinter.messagebox layout hooks."""
-    from .sctk_message import showinfo
-    from .sctk_message import showwarning
-    from .sctk_message import showerror
-    from .sctk_message import askyesno
-    from .sctk_message import askwarningyesno
-    from .sctk_message import askerroryesno
+    def __init__(self):
+        self.showinfo = showinfo
+        self.showwarning = showwarning
+        self.showerror = showerror
+        self.askyesno = askyesno
+        self.askwarningyesno = askwarningyesno
+        self.askerroryesno = askerroryesno
 
 # 🚀 Expose the virtual module globally inside the storefront namespace!
 messagebox = _VirtualMessageBox()
