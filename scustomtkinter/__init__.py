@@ -43,12 +43,12 @@ from .sctk_message import sCTkMessage
 class _VirtualMessageBox:
     """Namespace container class mimicking the native tkinter.messagebox layout hooks."""
     def __init__(self):
-        self.showinfo = showinfo
-        self.showwarning = showwarning
-        self.showerror = showerror
-        self.askyesno = askyesno
-        self.askwarningyesno = askwarningyesno
-        self.askerroryesno = askerroryesno
+        self.showinfo = sCTkMessage.showinfo
+        self.showwarning = sCTkMessage.showwarning
+        self.showerror = sCTkMessage.showerror
+        self.askyesno = sCTkMessage.askyesno
+        self.askwarningyesno = sCTkMessage.askwarningyesno
+        self.askerroryesno = sCTkMessage.askerroryesno
 
 # 🚀 Expose the virtual module globally inside the storefront namespace!
 messagebox = _VirtualMessageBox()
