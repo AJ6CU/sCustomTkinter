@@ -34,24 +34,24 @@ from .sctk_frame_outlined import sCTkFrameOutlined
 from .sctk_label_primary import sCTkLabelPrimary
 from .sctk_label_secondary import sCTkLabelSecondary
 from .sctk_label_tertiary import sCTkLabelTertiary
-from .sctk_message import sCTkMessage
+from .sctk_messagebox import sCTkMessagebox
 
 # =====================================================================
 # 📦 VIRTUAL MESSAGEBOX SUBMODULE PROXY NAMESPACE
 # =====================================================================
 
-class _VirtualMessageBox:
+class _VirtualMessagebox:
     """Namespace container class mimicking the native tkinter.messagebox layout hooks."""
     def __init__(self):
-        self.showinfo = sCTkMessage.showinfo
-        self.showwarning = sCTkMessage.showwarning
-        self.showerror = sCTkMessage.showerror
-        self.askyesno = sCTkMessage.askyesno
-        self.askwarningyesno = sCTkMessage.askwarningyesno
-        self.askerroryesno = sCTkMessage.askerroryesno
+        self.showinfo = sCTkMessagebox.showinfo
+        self.showwarning = sCTkMessagebox.showwarning
+        self.showerror = sCTkMessagebox.showerror
+        self.askyesno = sCTkMessagebox.askyesno
+        self.askwarningyesno = sCTkMessagebox.askwarningyesno
+        self.askerroryesno = sCTkMessagebox.askerroryesno
 
 # 🚀 Expose the virtual module globally inside the storefront namespace!
-messagebox = _VirtualMessageBox()
+messagebox = _VirtualMessagebox()
 
 
 from .sctk_optionmenu_primary import sCTkOptionMenuPrimary

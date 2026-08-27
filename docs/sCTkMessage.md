@@ -4,8 +4,10 @@
 * [System Architecture Overview](#system-architecture-overview)
 * [API Constructor Reference](#api-constructor-reference)
 * [Global Shortcut Function Handlers](#global-shortcut-function-handlers)
+* [Simple Syntax Quick-Reference Guide](#simple-syntax-quick-reference-guide)
 * [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
 * [Layout & Text Wrapping Integration Rules](#layout--text-wrapping-integration-rules)
+* [Implementation Example & Test Harness](#implementation-example--test-harness)
 
 ---
 
@@ -16,8 +18,8 @@ The `sCTkMessage` is an advanced, themeable dialog window system subclassed from
 The subsystem operates dynamically at runtime through execution logic chains. Because modal dialog boxes are instantiated procedurally within code event callbacks rather than being statically placed, **this component does not require a Pygubu Builder Object (BO) file.**
 
 The architecture is divided into the following layout segments:
-1. **`sCTkMessage.py`**: Contains the top-level window manager tracking rules, uniform grid button size distributions, and global functional shortcut wrappers.
-2. **`images/` Subdirectory**: A localized storage assets folder matching your component layout containing custom graphic files.
+1. **`sctk_message.py`**: Contains the top-level window manager tracking rules, uniform grid button size distributions, and the virtual `messagebox` object attribute bindings.
+2. **`assets/images/` Subdirectory**: A centralized storage assets folder containing your custom graphic files:
    * `info.png`, `warning.png`, `error.png` *(Standard Light Mode Assets)*
    * `info_dark.png`, `warning_dark.png`, `error_dark.png` *(High-Contrast Dark Mode Overrides)*
 
@@ -45,21 +47,95 @@ sCTkMessage(title, message, typ, master=None, buttons="ok", ok_text="Ok", yes_te
 
 ### Global Shortcut Function Handlers
 
-To launch modal dialog blocks quickly inside callback triggers without handling complete class instantiations manually, utilize these pre-wired functional shortcuts:
+To launch modal dialog blocks quickly inside callback triggers without handling complete class instantiations manually, utilize these pre-wired shortcuts via the **`messagebox`** namespace proxy:
 
 #### Standard Alert Prompts (Returns `True` upon closure)
 ```python
-showinfo(title, message, ok_text="Ok", width=400, master=root)
-showwarning(title, message, ok_text="Ok", width=400, master=root)
-showerror(title, message, ok_text="Ok", width=400, master=root)
+messagebox.showinfo(title, message, ok_text="Ok", width=400, master=root)
+messagebox.showwarning(title, message, ok_text="Ok", width=400, master=root)
+messagebox.showerror(title, message, ok_text="Ok", width=400, master=root)
 ```
 
 #### Confirmation Prompt Shortcuts (Returns primitive Python `True` or `False` boolean states)
 ```python
-askyesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
-askwarningyesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
-askerroryesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
+messagebox.askyesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
+messagebox.askwarningyesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
+messagebox.askerroryesno(title, message, yes_text="Yes", no_text="No", width=400, master=root)
 ```
+
+---
+
+### Simple Syntax Quick-Reference Guide
+
+Below are clean, minimal use-cases showcasing how to call each convenience shortcut using the standardized `messagebox` proxy engine.
+
+#### 1. `messagebox.showinfo`
+Used for general application notifications, status confirmations, and completions.
+```python
+from scustomtkinter import messagebox
+
+# Displays a standard informative dialog popup
+messagebox.showinfo("System Init", "Satellite link successfully established.", master=root)
+```
+
+#### 2. `messagebox.showwarning`
+Used to display alert parameters, non-fatal operational boundary breaches, or layout cautions.
+```python
+from scustomtkinter import messagebox
+
+# Displays a warning alert box with a custom approval button text
+messagebox.showwarning("Battery Low", "Backup power source dropped below 15%.", ok_text="Acknowledge", master=root)
+```
+
+#### 3. `messagebox.showerror`
+Used to halt operations when a severe terminal failure or unhandled exception block is triggered.
+```python
+from scustomtkinter import messagebox
+
+# Displays a fatal critical error box
+messagebox.showerror("TX Failure", "Transmitter hardware thermal overload detected.", master=root)
+```
+
+#### 4. `messagebox.askyesno`
+Launches a standard query dialogue window, returning a boolean flag based on the user's action.
+```python
+from scustomtkinter import messagebox
+
+# Captures true/false verification states
+if messagebox.askyesno("Log Session", "Do you wish to save the active telemetry log files?", master=root):
+    print("User clicked YES: Executing write loop...")
+else:
+    print("User clicked NO: Dropping record data...")
+```
+
+#### 5. `messagebox.askwarningyesno`
+Launches a critical query box carrying high-visibility alert graphics for destructive actions.
+```python
+from scustomtkinter import messagebox
+
+# Captures permission states for hazardous overrides
+override_allowed = messagebox.askwarningyesno(
+    "Frequency Sync", 
+    "VFO phase lock is currently unstable. Force manual override?", 
+    yes_text="Force Override", 
+    no_text="Abort Scan", 
+    master=root
+)
+```
+
+#### 6. `messagebox.askerroryesno`
+Launches an error-status confirmation panel, typical for prompt actions following a hard code drop.
+```python
+from scustomtkinter import messagebox
+
+# Captures choice states to run system self-healing scripts
+if messagebox.askerroryesno("Cascade Failure", "Buffer buffer overflow hit. Attempt a cold reset?", master=root):
+    # Execute recovery sequence...
+    pass
+```
+
+---
+
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
 
 The component relies heavily on your centralized style dictionary system. To prevent the mixin parser tracking structures from raising runtime validation faults, verify your shared stylesheet contains this asset entry:
@@ -84,8 +160,6 @@ Observe these implementation traits:
 * **Vertical Safety Gutter**: Text layout nodes use `padx=(10, 35)` paired alongside a calculated character width subtraction map. This forces word bounds to drop downwards well before interacting with the physical window frame margin boundary.
 * **Autonomous Resizing**: The `_center_window` geometry calculations lock your custom manual `width` pixel profile constraint, but query the active required widget layout height parameters dynamically via `winfo_reqheight()`. This allows window frames to expand or shrink vertically based on your text content volume requirements automatically.
 
-[Return to Table of Contents](#contents)
-
 ---
 
 ### Implementation Example & Test Harness
@@ -94,67 +168,37 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkMessage - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Messagebox
+# =====================================================================
 
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes                
-from sCTkButtonPrimary import sCTkButtonPrimary
-from sCTkMessage import showinfo, showwarning, showerror, askyesno, askwarningyesno, askerroryesno
+import customtkinter as ctk
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTk
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
-
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("300x520")
     root.title("Message Example")
 
-    long_msg = (
-        "Warning: The VFO phase lock loop has lost lock synchronization with the master synthesizer. "
-        "Continuous operation may contaminate adjacent radio channels. Do you wish to override?"
-    )
+    long_msg = "Warning: The VFO phase lock loop has lost lock synchronization with the master synthesizer. Override?"
 
+    # 🚀 Clean functional callbacks using the messagebox namespace!
     def trigger_info_ask():
-        ans = askyesno("Info Query", "Do you wish to log parameter data strings?", yes_text="Log Data", no_text="Skip", master=root)
-        print(f"Info Yes/No Feedback evaluated to: {ans}")
+        print(f"Feedback: {messagebox.askyesno('Info Query', 'Log parameter data?', yes_text='Log', no_text='Skip', master=root)}")
 
     def trigger_warning_ask():
-        ans = askwarningyesno("Band Switch Warning", long_msg, yes_text="Override", no_text="Disconnect", width=450, master=root)
-        print(f"Warning Yes/No Feedback evaluated to: {ans}")
+        print(f"Feedback: {messagebox.askwarningyesno('Band Switch', long_msg, yes_text='Override', no_text='Drop', width=450, master=root)}")
 
     def trigger_error_ask():
-        ans = askerroryesno("Fatal Overload Error", "VFO buffer cascade encountered. Attempt cold reset?", yes_text="Reset Buffer", no_text="Terminate", master=root)
-        print(f"Error Yes/No Feedback evaluated to: {ans}")
+        print(f"Feedback: {messagebox.askerroryesno('Fatal Error', 'Attempt buffer cold reset?', yes_text='Reset', no_text='Quit', master=root)}")
 
-    # ----------------------------------------------------
-    #   1. INFO ALERT SECTION (Testing custom ok_text text!)
-    # ----------------------------------------------------
-    sCTkButtonPrimary(root, text="Test Info (OK)", width=200,
-                      command=lambda: showinfo("Message Example", "Short statement info alert box.", ok_text="Acknowledge", master=root)).pack(pady=8)
-    sCTkButtonPrimary(root, text="Test Info (Yes/No)", width=200,
-                      command=trigger_info_ask).pack(pady=(8, 25))
-
-    # ----------------------------------------------------
-    #   2. WARNING ALERT SECTION
-    # ----------------------------------------------------
-    sCTkButtonPrimary(root, text="Test Warning (OK)", width=200,
-                      command=lambda: showwarning("Warning", "Listen carefully", ok_text="Proceed", master=root)).pack(pady=8)
-    sCTkButtonPrimary(root, text="Test Warning (Yes/No)", width=200,
-                      command=trigger_warning_ask).pack(pady=(8, 25))
-
-    # ----------------------------------------------------
-    #   3. ERROR ALERT SECTION
-    # ----------------------------------------------------
-    sCTkButtonPrimary(root, text="Test Error (OK)", width=200,
-                      command=lambda: showerror("Error", "Dead meat", ok_text="Close", master=root)).pack(pady=8)
-    sCTkButtonPrimary(root, text="Test Error (Yes/No)", width=200,
-                      command=trigger_error_ask).pack(pady=8)
+    # 🚀 Native drop-in style execution pass!
+    sCTkButtonPrimary(root, text="Test Info (OK)", width=200, command=lambda: messagebox.showinfo("Message Example", "Short statement alert.", ok_text="Acknowledge", master=root)).pack(pady=8)
+    sCTkButtonPrimary(root, text="Test Info (Yes/No)", width=200, command=trigger_info_ask).pack(pady=(8, 25))
+    sCTkButtonPrimary(root, text="Test Warning (OK)", width=200, command=lambda: messagebox.showwarning("Warning", "Listen carefully", ok_text="Proceed", master=root)).pack(pady=8)
+    sCTkButtonPrimary(root, text="Test Warning (Yes/No)", width=200, command=trigger_warning_ask).pack(pady=(8, 25))
+    sCTkButtonPrimary(root, text="Test Error (OK)", width=200, command=lambda: messagebox.showerror("Error", "Dead meat", ok_text="Close", master=root)).pack(pady=8)
+    sCTkButtonPrimary(root, text="Test Error (Yes/No)", width=200, command=trigger_error_ask).pack(pady=8)
 
     root.mainloop()
 ```
-
-[Return to Table of Contents](#contents)

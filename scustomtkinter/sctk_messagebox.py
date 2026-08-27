@@ -19,7 +19,7 @@ from .sctk_button_primary import sCTkButtonPrimary
 from .sctk_button_secondary import sCTkButtonSecondary
 from .sctk_label_primary import sCTkLabelPrimary
 
-class sCTkMessage(ctk.CTkToplevel, ThemeableWidget):
+class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
     """Advanced themeable message dialog window supporting single or dual prompt states."""
 
     def __init__(self,
@@ -181,10 +181,10 @@ def askerroryesno(title: str, message: str, yes_text: str = "Yes", no_text: str 
 # 🔑 THE DYNAMIC BACK-BIND: Injects attributes onto the Class token namespace!
 # =====================================================================
 # This forces sCTkMessage.showinfo(...) to work perfectly everywhere!
-sCTkMessage.showinfo = showinfo
-sCTkMessage.showwarning = showwarning
-sCTkMessage.showerror = showerror
-sCTkMessage.askyesno = askyesno
-sCTkMessage.askwarningyesno = askwarningyesno
-sCTkMessage.askerroryesno = askerroryesno
+sCTkMessagebox.showinfo = showinfo
+sCTkMessagebox.showwarning = showwarning
+sCTkMessagebox.showerror = showerror
+sCTkMessagebox.askyesno = askyesno
+sCTkMessagebox.askwarningyesno = askwarningyesno
+sCTkMessagebox.askerroryesno = askerroryesno
 
