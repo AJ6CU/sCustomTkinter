@@ -17,7 +17,8 @@ classifiers = [
 ]
 dependencies = [
     "customtkinter",
-    "Pillow"
+    "Pillow",
+    "pygubu"
 ]
 
 [tool.setuptools]
