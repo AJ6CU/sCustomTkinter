@@ -90,55 +90,50 @@ The reference manual for this library is provided [here](https://github.com/AJ6C
     * `sCTkButttonPrimary`** provides high-visibility, accented action button featuring integrated hover loops and dynamic panel lock desaturation states. Use this for the action the user should take. 
     * `sCTkButtonSecondary`**:  A toned down button used for less likely options or end points. You might use this for the Cancel button.
     * `sCTkButtonTertiary`**: Known in the industry as a `Ghost Button`, this button is almost invisible. Use this for low probability selections.
+* `sCTkCheckBox`: A
+* `sCTkComboBox`: A
+* `Entry Fields`
+  * `sCTkEntryPrimary` A
+  * `ssCTkEntrySecondary`: A
+* `Labels`
+  * `sCTkLabelPrimary` A bold, heavy header text panel element mapping high-contrast foreground labels.
+  * `ssCTkLabelSecondary`: A crisp, clean layout typography item engineered for tabular listings, lane statuses, and technical readouts.
+  * `sCTkLabelTertiray`:
+* `sCTkProgressBar`: A
+* `sCTkRadioButton`: A
+* `sCTkScrollbar` & `sCTkScrollArea`: An unblocked viewport engine. Embedded with an **Inertial Micro-Delta Aggregator Loop**, it perfectly aggregates fine-grained macOS touchpad and Apple Magic Mouse gesture streams alongside standard notched scroll wheels with zero layout stutter or type error drifts.
 
-* **`sCTkCheckBox`**: A
-* **`sCTkComboBox`**: A
-* **`sCTkEntryPrimary`**: A
-* **`ssCTkEntrySecondary`**: A
-* **`sCTkLabelPrimary`**: A bold, heavy header text panel element mapping high-contrast foreground labels.
-* **`sCTkLabelSecondary`**: A crisp, clean layout typography item engineered for tabular listings, lane statuses, and technical readouts.
-* **`sCTkLabelTertiary`**: A
-* **`sCTkProgressBar`**: A
-* **`sCTkRadioButton`**: A
-* **`sCTkScrollbar` & `sCTkScrollArea`**: An unblocked viewport engine. Embedded with an **Inertial Micro-Delta Aggregator Loop**, it perfectly aggregates fine-grained macOS touchpad and Apple Magic Mouse gesture streams alongside standard notched scroll wheels with zero layout stutter or type error drifts.
-
-* **`sCTkSegmentedButton`**: A
-* **`sCTkSlider`**: A
-* **`sCTkSwitch`**: A
-* **`sCTkTabview`**: A multi-page layout container. Features cascading palette loops to cleanly desaturate unselected tabs and flatten backing frame blocks when frozen.
-* **`sCTkTextboxPrimary`**: A
-* **`sCTkTextboxSecondary`**: A
+* `sCTkSegmentedButton`: A
+* `sCTkSlider`: A
+* `sCTkSwitch`: A
+* `sCTkTabview`: A multi-page layout container. Features cascading palette loops to cleanly desaturate unselected tabs and flatten backing frame blocks when frozen.
+*  `Textboxes`
+  * `sCTkTextboxPrimary`: A
+  * `sCTkTextboxSecondary`: A
 
 
 
 #### Menus
-* **`sCTkOptionMenuPrimary`**: A
-* **`sCTkOptionMenuSecondary`**: A
+* `sCTkOptionMenuPrimary`: A
+* `sCTkOptionMenuSecondary`: A
 
 
 
 ### Additional Widgets provided by `sCustomTkinter`
-* **`sCTkDial`**: A
-* **`sCTkDialog`**: A
-
-* **`sCTkFileExplorer`**: A
-* **`sCTkFrameLabeledPrimary`**: A
-* **`ssCTkFrameLabeledSecondary`**: A
-* **`sCTkFrameOutlined`**: A
-
-
-* **`sCTkPathChooser`**: A
-
-
-* **`sCTkSelector`**: A
-* **`sCTkSeparator`**: A
-
-* **`sCTkSMeter`**: A
-* **`sCTkSMeterBar`**: A
-* **`sCTkSpinbox`**: A
-
-* **`sCTkSwitchAlt`**: A
-* **`sCTkTableview`**: A dense, interactive telemetry data grid component. Features inline data validation filters, row double-click entry editing, and dynamic column property anchors.
+* `sCTkDial`: A
+* `sCTkDialog`: A
+* `sCTkFileExplorer`: A
+* `sCTkFrameLabeledPrimary`: A
+* `ssCTkFrameLabeledSecondary`: A
+* `sCTkFrameOutlined`: A
+* `sCTkPathChooser`: A
+* `sCTkSelector`: A
+* `sCTkSeparator`: A
+* `sCTkSMeter`: A
+* `sCTkSMeterBar`: A
+* `sCTkSpinbox`: A
+* `sCTkSwitchAlt`: A
+* `sCTkTableview`: A dense, interactive telemetry data grid component. Features inline data validation filters, row double-click entry editing, and dynamic column property anchors.
 
 
 
