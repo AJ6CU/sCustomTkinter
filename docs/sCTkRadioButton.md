@@ -12,13 +12,9 @@
 
 A theme-compliant custom mutual exclusion radio selection switch component wrapping `customtkinter.CTkRadioButton`. Specially engineered for cockpit tuning tasks—such as VFO selection banks, transmitter operation modes, and antenna relay switches—it decouples low-level parameter configurations to prevent layout validation crashes while keeping disabled states 100% theme-adaptive.
 
-### System Architecture Overview
 
-Unlike standard checkbox elements that track states independently, radio buttons operate in synchronized clusters linked by a shared data backplane container. 
-
-To maintain pristine layout integrity, the architecture implements two vital paradigms:
-1. **The Shared Variable Anchor:** By routing your `tk.StringVar` or `tk.IntVar` straight inside the initialization routine, the low-level Tkinter event loops bind correctly to a mutual exclusion track, automatically un-toggling adjacent options when a new choice is pressed.
-2. **The Virtual Repaint Shield:** Instead of using CustomTkinter's native state flag (which freezes drawing updates), a virtual state coordinator paralyzes mouse clicking by unbinding Tkinter canvas triggers on the fly, allowing look preferences and grays to translate smoothly during active lockout passes.
+![sCTkRadioButton_Dark.png](images/sCTkRadioButton_Dark.png)
+![sCTkRadioButton_Light.png](images/sCTkRadioButton_Light.png)
 
 ---
 
@@ -87,63 +83,68 @@ Below is a complete, self-contained test execution script demonstrating how to l
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkRadioButton - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
-import tkinter as tk
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Radiobutton
+# =====================================================================
 
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes                    
-from sCTkFrame import sCTkFrame      
-from sCTkLabelSecondary import sCTkLabelSecondary
-from sCTkRadioButton import sCTkRadioButton
+import customtkinter as ctk
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTkLabelSecondary, sCTk, sCTkRadioButton
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x320")
     root.title("sCTkRadioButton Mutual Exclusion Validation Bench")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # Centralized StringVar linking both buttons together natively
-    radio_var = tk.StringVar(value="VFO_A")
+    # Centralized StringVar linking both buttons together
+    radio_var = ctk.StringVar(value="VFO_A")
 
     lbl_monitor = sCTkLabelSecondary(base, text="Active Telemetry Target: VFO_A")
     lbl_monitor.pack(pady=10)
 
+
     def print_result():
         lbl_monitor.configure(text=f"Active Telemetry Target: {radio_var.get()}")
 
-    # Packed using horizontal expansion and left anchoring for perfect checkbox stacking
-    widget = sCTkRadioButton(base, text="Primary VFO A Link Target", variable=radio_var, value="VFO_A", command=print_result)
+
+    # 🔑 FIXED ALIGNMENT PACK ENGINE: Enforces left-anchoring with horizontal expansion
+    widget = sCTkRadioButton(base, text="Primary VFO A Link Target", variable=radio_var, value="VFO_A",
+                             command=print_result)
     widget.pack(expand=False, fill="x", padx=60, pady=10, anchor="w")
 
-    widget2 = sCTkRadioButton(base, text="Secondary VFO B Link Target", variable=radio_var, value="VFO_B", command=print_result)
+    widget2 = sCTkRadioButton(base, text="Secondary VFO B Link Target", variable=radio_var, value="VFO_B",
+                              command=print_result)
     widget2.pack(expand=False, fill="x", padx=60, pady=10, anchor="w")
 
+
     def toggle_radio_lock():
-        """Toggles operational availability states back and forth."""
         current_mode = widget.get_state()
         target = "disabled" if current_mode == "normal" else "normal"
         widget.configure(state=target)
         widget2.configure(state=target)
         btn_lock.configure(text="Lock Radio Switch" if target == "normal" else "Unlock Radio Switch")
 
+
     def toggle_skin_mode():
         current_skin = ctk.get_appearance_mode()
         ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
 
-    btn_lock = ctk.CTkButton(base, text="Lock Radio Switch", command=toggle_radio_lock)
+
+    btn_lock = sCTkButtonPrimary(base, text="Lock Radio Switch", command=toggle_radio_lock)
     btn_lock.pack(pady=5)
 
-    btn_theme = ctk.CTkButton(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
+    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
     btn_theme.pack(side="bottom", pady=10)
+
+    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
+    widget.state("disabled")
+    print("state (Disabled Pass) =", widget.get_state())
+    widget.state("normal")
+    print("state (Normal Pass)   =", widget.get_state())
+    print("========================================\n")
 
     root.mainloop()
 ```

@@ -12,6 +12,11 @@
 
 An advanced composite field-and-trigger widget pairing a fluid single-line text lane entry block directly alongside an integrated modal browser toggle button. It translates local paths, expands system tilde keys (`~`), and dynamically opens an embedded, theme-synchronized `sCTkFileExplorer` portal centered accurately over your parent layout dimensions without locking primary background execution threads.
 
+
+![sCTkPathChooser_Dark.png](images/sCTkPathChooser_Dark.png)
+![sCTkPathChooser_Light.png](images/sCTkPathChooser_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -93,29 +98,20 @@ Below is a complete, self-contained test execution script demonstrating how to e
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkPathChooser - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
-import os
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Path Chooser
+# =====================================================================
 
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes                      
-from sCTkFrame import sCTkFrame        
-from sCTkLabelSecondary import sCTkLabelSecondary
-from sCTkPathChooser import sCTkPathChooser
+import os
+import customtkinter as ctk
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkPathChooser
 
 if __name__ == "__main__":
-    # Natively resolves your package assets and populates configurations cleanly
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
-    root.title("Compound Component Test Suite")
+    root = sCTk()
+    root.title("Compound Path Chooser Test Suite")
     root.geometry("700x260")
 
-    # Swapped top container backplane over to theme-compliant chassis frame
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
@@ -126,43 +122,27 @@ if __name__ == "__main__":
         lbl_monitor.configure(text=f"Active Telemetry Target: {os.path.basename(path)}")
         print(f"MAIN CONSOLE PATH SELECTION -> {path}")
 
-    # Instantiate your custom compound directory path chooser element
     chooser = sCTkPathChooser(
-        base,
-        type="file",
-        title="Select Log Target",
-        filetypes=[".py"],
-        command=print_result,
-        justify="right",
-        width=550,
-        height=50,
-        state="normal",
-        entry_height=40,
-        btn_width=40,
-        btn_height=40,
-        btn_text="▶",
-        browser_width=550,
-        browser_height=500
+        base, type="file", title="Select Log Target", filetypes=[".py"], command=print_result,
+        justify="right", width=550, height=50, state="normal", entry_height=40, btn_width=40,
+        btn_height=40, btn_text="▶", browser_width=550, browser_height=500
     )
     chooser.pack(padx=20, pady=15)
 
     def toggle_chooser_lock():
-        """Toggles the component state between normal active and dimmed profiles."""
-        current_mode = chooser.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
+        target = "disabled" if chooser.get_state() == "normal" else "normal"
         chooser.configure(state=target)
         btn_lock.configure(text="Lock Chooser Deck" if target == "normal" else "Unlock Chooser Deck")
         print(f"Logged Verification Hook -> chooser.get_state() = {chooser.get_state()}")
 
-    btn_lock = ctk.CTkButton(base, text="Lock Chooser Deck", command=toggle_chooser_lock)
+    btn_lock = sCTkButtonPrimary(base, text="Lock Chooser Deck", command=toggle_chooser_lock)
     btn_lock.pack(side="bottom", pady=5)
 
-    # Run the interactive boot tracking validation sequences
     print("--- BOOT INITIALIZATION PASSTHROUGH ---")
     chooser.state("disabled")
-    print("state (Disabled Pass) =", chooser.get_state())  # Output: disabled
+    print("state (Disabled Pass) =", chooser.get_state())
     chooser.state("normal")
-    print("state (Normal Pass)   =", chooser.get_state())  # Output: normal
+    print("state (Normal Pass)   =", chooser.get_state())
     print("========================================\n")
 
     root.mainloop()

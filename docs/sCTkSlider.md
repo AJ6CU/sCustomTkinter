@@ -2,14 +2,10 @@
 
 Standardized live track calibration adjustment slider providing real-time data value interception, disabled layout mapping overrides, and multi-zone Pygubu designer compatibility.
 
----
 
-## 🛠️ Architectural Design Features
+![sCTkSlider_Dark.png](images/sCTkSlider_Dark.png)
+![sCTkSlider_Light.png](images/sCTkSlider_Light.png)
 
-*   **Direct Native Inheritance:** Inherits directly and cleanly from `customtkinter.CTkSlider` to completely preserve native high-performance mouse dragging handle calculations, scaling boundaries, and coordinate snap thresholds without unneeded structural layers.
-*   **Decoupled Style Cascade Engine:** Color tracks and telemetry handle visuals are driven 100% via your centralized `themes.json` configuration file, avoiding duplicate style overrides scattered across your backend modules.
-*   **Asynchronous Repaint Protection:** Utilizes a tight internal thread buffer on look resets to completely guard against layout collisions and prevent recursive infinite execution loop freezes.
-*   **Pygubu Live Workspace Compatibility:** Safely handles Pygubu inspector property positional queries and feeds theme parameters directly into your designer workspace canvas to support accurate real-time visual mock sweeps.
 
 ---
 
@@ -49,32 +45,39 @@ To drive linear progress track filling and custom knob coordinate handle styles 
 ## 💻 Implementation Code Template
 
 ```python
+#!/usr/bin/python3
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Slider
+# =====================================================================
+
 import customtkinter as ctk
-import sCTkThemes
-from sCTkFrame import sCTkFrame
-from sCTkSlider import sCTkSlider
-from sCTkLabelSecondary import sCTkLabelSecondary
+from scustomtkinter import sCTkFrame, sCTkLabelSecondary, sCTk, sCTkSlider
 
-# 1. Initialize global theme definitions
-sCTkThemes.apply_sCTkThemes()
+if __name__ == "__main__":
 
-root = ctk.CTk()
-root.geometry("450x220")
-root.title("Slider Real-Time Telemetry Monitor")
+    root = sCTk()
+    root.geometry("450x220")
+    root.title("Slider Real-Time Telemetry Monitor")
 
-# 2. Build parent layout track frame
-base = sCTkFrame(root)
-base.pack(expand=True, fill="both", padx=20, pady=20)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-# 3. Live feedback layer to catch floating point data changes instantly
-lbl_telemetry = sCTkLabelSecondary(base, text="Slider Coordinate: 0.450", font=("Courier New", 12, "bold"))
+    lbl_telemetry = sCTkLabelSecondary(base, text="Slider Coordinate: 0.450", font=("Courier New", 12, "bold"))
 
-# 4. Instantiate the clean native-inheriting tracking slider widget
-widget = sCTkSlider(base)
-widget.configure(command=lambda val: lbl_telemetry.configure(text=f"Slider Coordinate: {val:.3f}"))
-widget.pack(expand=False, fill="x", padx=40, pady=15)
-widget.set(0.450)
-lbl_telemetry.pack(pady=10)
+    widget = sCTkSlider(base)
+    widget.configure(command=lambda val: lbl_telemetry.configure(text=f"Slider Coordinate: {val:.3f}"))
+    widget.pack(expand=False, fill="x", padx=40, pady=15)
+    widget.set(0.450)
+    lbl_telemetry.pack(pady=10)
 
-root.mainloop()
+    # Verify look states transition flawlessly on the console
+    widget.state("disabled")
+    print("--- DISABLED PASS ---")
+    print("state (Disabled Pass) =", widget.get_state())
+
+    widget.state("normal")
+    print("\n--- NORMAL PASS ---")
+    print("state (Normal Pass)   =", widget.get_state())
+
+    root.mainloop()
 ```

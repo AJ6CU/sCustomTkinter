@@ -11,6 +11,11 @@
 
 A clean, theme-compliant standard backplane container layout chassis widget. It functions as the geometric foundation card for stacking controls, isolating interface subsections, and grouping multi-frequency layout grids.
 
+![sCTkFrame_Dark.png](images/sCTkFrame_Dark.png)
+![sCTkFrame_Light.png](images/sCTkFrame_Light.png)
+
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -65,46 +70,44 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkFrame - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
 
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame
 # =====================================================================
-import sCTkThemes                # 🔍 Duplicate import kept close for script scannability
-from sCTkFrame import sCTkFrame  # Testing application wrapper container frame
+
+from scustomtkinter import sCTkButtonPrimary, sCTkLabelPrimary, sCTk, sCTkFrame
+
 
 if __name__ == "__main__":
-    # Natively resolves your package assets and populates configurations cleanly
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
-    root.geometry("450x300")
+    root = sCTk()
+    root.geometry("500x300")
     root.title("sCTkFrame Container Validation Bench")
 
     # Instantiate your custom theme-compliant frame element chassis
     base_container = sCTkFrame(root, border_width=2)
     base_container.pack(expand=True, fill="both", padx=30, pady=30)
-
-    # Add a simple sub-element child widget to verify structural clipping layouts
-    lbl_marker = ctk.CTkLabel(base_container, text="FRAME BACKPLANE CONTAINER OPERATIONAL")
+#
+#     # Add a simple sub-element child widget to verify structural clipping layouts
+    lbl_marker = sCTkLabelPrimary(base_container, text="FRAME BACKPLANE CONTAINER OPERATIONAL\n"+
+                                  "Border Visible for Testing Purposes only")
     lbl_marker.pack(expand=True)
 
+#
+#     # Standard dashboard interaction toggle simulation pass
     def toggle_panel_lock():
-        """Toggles the helper input field between normal active and dimmed disabled profiles."""
         current_mode = base_container.get_state()
         target = "disabled" if current_mode == "normal" else "normal"
-        
-        # Explicitly testing the dual-routing capability via configure()
+#
+#         # Explicitly testing the dual-routing capability via configure()
         base_container.configure(state=target)
         print(f"Logged Verification Hook -> base_container.get_state() = {base_container.get_state()}")
 
-    btn_lock = ctk.CTkButton(root, text="Simulate Cascading Interface Lock", command=toggle_panel_lock)
+#
+    btn_lock = sCTkButtonPrimary(root, text="Simulate Cascading Interface Lock", command=toggle_panel_lock)
     btn_lock.pack(side="bottom", pady=15)
-
-    # Run the interactive boot tracking logs
+#
+#     # Run the interactive boot tracking logs
     print("--- BOOT INITIALIZATION PASSTHROUGH ---")
     base_container.state("disabled")
     print("state (Disabled Pass) =", base_container.get_state())  # Output: normal (Frames bypass disabled masks)
@@ -114,6 +117,8 @@ if __name__ == "__main__":
     print("========================================\n")
 
     root.mainloop()
+
+
 ```
 
 [Return to Table of Contents](#contents)

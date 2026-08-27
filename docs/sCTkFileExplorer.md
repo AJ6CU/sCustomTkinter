@@ -14,7 +14,10 @@
 A theme-compliant, highly configurable custom file and folder navigation panel embedded directly within user layout cards. Designed to list paths and filter extensions dynamically without forcing external platform dialog boxes, it unbinds hover highlights and locks canvas scroll mechanisms seamlessly when interaction states toggle.
 
 ---
-![FileExplorer.png](images/FileExplorer.png)
+
+![sCTkFileExplorer_Dark.png](images/sCTkFileExplorer_Dark.png)
+![sCTkFileExplorer_Light.png](images/sCTkFileExplorer_Light.png)
+
 
 ### API Property Reference
 
@@ -128,24 +131,19 @@ To satisfy the framework configuration guidelines, ensure your theme matrix incl
 Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkFileExplorer` workspace card alongside pure, composite companion input tools and entry lanes to drive runtime changes dynamically.
 
 ```python
-
 #!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS SETUP
-# =====================================================================
-if __name__ == "__main__":
-    import os
-    import customtkinter as ctk
-    import sCTkThemes
-    from sCTkFrame import sCTkFrame
-    from sCTkEntryPrimary import sCTkEntryPrimary
-    from sCTkButtonPrimary import sCTkButtonPrimary
-    from sCTkOptionMenuPrimary import sCTkOptionMenuPrimary
-    from sCTkLabelSecondary import sCTkLabelSecondary
-    from sCTkFileExplorer import sCTkFileExplorer
 
-    sCTkThemes.apply_sCTkThemes()
-    root = ctk.CTk()
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for FIle Explorer
+# =====================================================================
+
+import os
+import customtkinter as ctk
+from scustomtkinter import sCTkFrame, sCTkEntryPrimary, sCTkButtonPrimary
+from scustomtkinter import sCTkOptionMenuPrimary, sCTk, sCTkLabelSecondary, sCTkFileExplorer
+
+if __name__ == "__main__":
+    root = sCTk()
     root.title("Standalone Embedded sCTkFileExplorer Panel View")
     root.geometry("600x720")
 
@@ -211,6 +209,7 @@ if __name__ == "__main__":
     btn_lock = sCTkButtonPrimary(base, text="Lock Explorer Deck", command=toggle_explorer_lock)
     btn_lock.pack(side="bottom", pady=10)
     root.mainloop()
+
 ```
 
 [Return to Table of Contents](#contents)

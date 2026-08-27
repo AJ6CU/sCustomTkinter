@@ -11,6 +11,11 @@
 
 The dominant primary header typography display label widget component wrapping `customtkinter.CTkLabel`. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
 
+
+![sCTkLabelPrimary_Dark.png](images/sCTkLabelPrimary_Dark.png)
+![sCTkLabelPrimary_Light.png](images/sCTkLabelPrimary_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -65,23 +70,16 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkLabelPrimary - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
-import sCTkThemes
-from sCTkFrame import sCTkFrame
-from sCTkLabelPrimary import sCTkLabelPrimary
+
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Label Secondary
 # =====================================================================
+
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary,sCTk, sCTkLabelPrimary
+
 if __name__ == "__main__":
-    import sCTkThemes
-    from sCTkFrame import sCTkFrame
 
-    sCTkThemes.apply_sCTkThemes()
-
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x280")
     root.title("sCTkLabelPrimary Testing Deck")
 
@@ -91,7 +89,7 @@ if __name__ == "__main__":
     primary_label = sCTkLabelPrimary(container, text="MAIN RADIO DECK CONSOLE")
     primary_label.pack(expand=True, pady=10)
 
-    lbl_status = ctk.CTkLabel(container, text="Current State Assertion: NORMAL", font=("Arial", 10, "italic"))
+    lbl_status = sCTkLabelSecondary(container, text="Current State Assertion: NORMAL", font=("Arial", 10, "italic"))
     lbl_status.pack(side="bottom", pady=5)
 
     def toggle_label_states():
@@ -110,7 +108,7 @@ if __name__ == "__main__":
 
         print(f"Logged Verification Hook -> primary_label.get_state() = {primary_label.get_state()}")
 
-    btn_toggle = ctk.CTkButton(
+    btn_toggle = sCTkButtonPrimary(
         container,
         text="Dim Header (Set 'disabled')",
         command=toggle_label_states,
@@ -128,6 +126,8 @@ if __name__ == "__main__":
     print("========================================\n")
 
     root.mainloop()
+
+
 ```
 
 [Return to Table of Contents](#contents)

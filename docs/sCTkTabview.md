@@ -2,8 +2,12 @@
 
 The `sCTkTabview` is a theme-compliant custom multi-page dashboard deck container widget engineered specifically for the `sCustomTkinter` desktop amateur radio cockpit application. It inherits from `baseui.sCTkTabviewUI` and `ThemeableWidget` to manage dense workstation layouts cleanly. The component provides absolute palette rendering flexibility driven straight out of your central `themes.json` sheets, ensuring uniform text desaturation and track flattening when frozen or locked.
 
+![sCTkTabview_Dark.png](images/sCTkTabview_Dark.png)
+![sCTkTabview_Light.png](images/sCTkTabview_Light.png)
+
+
 <a name="contents"></a>
-### 📌 Localized Table of Contents
+### Localized Table of Contents
 * [API Constructor Reference](#constructor)
 * [Pygubu Designer Workspace Tab Insertion Rules](#pygubu-designer)
 * [Programmatic Tab Creation & Content Hydration](#content-delivery)
@@ -14,7 +18,7 @@ The `sCTkTabview` is a theme-compliant custom multi-page dashboard deck containe
 ---
 
 <a name="constructor"></a>
-### 📋 API Constructor Reference
+### API Constructor Reference
 
 ```python
 tabview = sCTkTabview(master=None, **kw)
@@ -39,7 +43,7 @@ Because `sCTkTabview` derives its visual look from custom composite frames, nest
 
 [Go to Piece 2 of 2](#content-delivery) | [Return to Table of Contents](#contents)
 <a name="content-delivery"></a>
-### 🎛️ Programmatic Tab Creation & Content Hydration
+### Programmatic Tab Creation & Content Hydration
 When crafting your radio console layouts natively via Python scripts, adding navigation tabs and stacking contents involves a simple three-step lifecycle lookup:
 
 ```python
@@ -71,7 +75,7 @@ widget.state("disabled")
 ---
 
 <a name="stylesheet"></a>
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+### Centralized Stylesheet Integration (`sCTkThemes.json`)
 
 ```json
 {
@@ -99,17 +103,17 @@ widget.state("disabled")
 ### 💻 Implementation Reference Template
 
 ```python
+#!/usr/bin/python3
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Tabview
+# =====================================================================
+
 import customtkinter as ctk
-import sCTkThemes
-from sCTkFrame import sCTkFrame
-from sCTkLabelPrimary import sCTkLabelPrimary
-from sCTkTabview import sCTkTabview
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelPrimary, sCTk, sCTkTabview
 
 if __name__ == "__main__":
-    # 1. Initialize centralized framework look records natively out of themes.json
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("560x420")
     root.title("sCTkTabview Container Validation Bench")
     root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
@@ -125,7 +129,7 @@ if __name__ == "__main__":
     # Define our targeted operational dashboard page labels string array
     tab_pages = ["Transceiver Settings", "Audio Filters", "System Logs"]
 
-    # 4. 🔑 NESTED TAB FRAME GENERATION PASS:
+    # 4. NESTED TAB FRAME GENERATION PASS:
     # Loops through the strings, adds the tabs, and nests an sCTkFrame containing
     # an sCTkLabelPrimary placeholder inside every viewport page cleanly!
     for page_name in tab_pages:
@@ -143,7 +147,38 @@ if __name__ == "__main__":
         test_label = sCTkLabelPrimary(inner_frame, text=f"Test Contents — {page_name}")
         test_label.pack(expand=True, fill="none", padx=20, pady=20)
 
+
+    # =====================================================================
+    # 🛠️ INTERACTIVE BENCH OPERATION CONTROLLERS
+    # =====================================================================
+    def toggle_tab_lock():
+        """Toggles active data page switches and flattens tab button fills."""
+        current = widget.state()
+        target = "disabled" if current == "normal" else "normal"
+        widget.state(target)
+        btn_lock.configure(
+            text="Unlock Tabview Navigation" if target == "disabled" else "Lock Tabview (Set 'disabled')")
+        print(f"Logged State Verification Hook -> widget.state() = {widget.state()}")
+
+
+    def toggle_skin_preference():
+        """Toggles between Light and Dark interface appearance preferences."""
+        ctk.set_appearance_mode("Light" if ctk.get_appearance_mode() == "Dark" else "Dark")
+
+
+    # Arrange test interaction buttons horizontally across the lower tray tray area
+    control_tray = sCTkFrame(root, fg_color="transparent")
+    control_tray.pack(side="bottom", fill="x", padx=20, pady=(0, 15))
+
+    btn_lock = sCTkButtonPrimary(control_tray, text="Lock Tabview (Set 'disabled')", command=toggle_tab_lock)
+    btn_lock.pack(side="left", expand=True, padx=5)
+
+    btn_skin = sCTkButtonPrimary(control_tray, text="Toggle UI Light/Dark Appearance", command=toggle_skin_preference)
+    btn_skin.pack(side="right", expand=True, padx=5)
+
     root.mainloop()
+
+
 ```
 
 [Return to Table of Contents](#contents)

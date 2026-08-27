@@ -2,6 +2,11 @@
 
 A custom, theme-compliant secondary logging and auxiliary console text display viewport built cleanly and natively on top of `customtkinter.CTkTextbox`. Designed to match the exact programmatic engine of the primary console, it uses sequential repaint loops to guarantee native read-only input locks without visual color freezes or text canvas truncation errors.
 
+
+![sCTkTextboxSecondary_Dark.png](images/sCTkTextboxSecondary_Dark.png)
+![sCTkTextboxSecondary_Light.png](images/sCTkTextboxSecondary_Light.png)
+
+
 ## Core Features
 *   **Isolated Look Mappings**: Allows secondary terminal readouts and backup radio tracking data logs to manage distinct color desaturation maps separate from the primary dominant workspace console.
 *   **Sequential Repaint Engine**: Synchronizes the base widget text engine and internal scroll handles natively, executing look updates first to bypass framework disabled white-out traps completely.
@@ -40,18 +45,17 @@ Operational state management controller. Coordinates background desaturation col
 Below is a complete, self-contained interactive test execution script demonstrating how to use a `sCTkTextboxSecondary`.
 
 ```python
+#!/usr/bin/python3
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Textbox Secondary
 # =====================================================================
+
 import customtkinter as ctk
-import sCTkThemes
-from sCTkFrame import sCTkFrame
-from sCTkTextboxSecondary import sCTkTextboxSecondary
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkTextboxSecondary
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("500x450")
     root.title("sCTkTextboxSecondary Native Pure Bench")
 
@@ -82,13 +86,14 @@ if __name__ == "__main__":
         ctk.set_appearance_mode(target)
 
 
-    btn_toggle = ctk.CTkButton(base, text="Lock Secondary Feed", command=toggle_logger_states)
+    btn_toggle = sCTkButtonPrimary(base, text="Lock Secondary Feed", command=toggle_logger_states)
     btn_toggle.pack(fill="x", padx=10, pady=5)
 
-    btn_theme = ctk.CTkButton(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
+    btn_theme = sCTkButtonPrimary(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
     btn_theme.pack(fill="x", padx=10, pady=5)
 
     root.mainloop()
+
 ```
 
 [Return to Table of Contents](#contents)

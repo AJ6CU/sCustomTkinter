@@ -12,6 +12,10 @@
 
 A theme-compliant, prominent data-entry combo box widget variant designed for multi-frequency array indexes, input lanes, and tracking channels. It features an independent deep-copy keyword caching shield and early parameter-popping filters to safeguard dropdown sub-component properties from native mutation deletion loops.
 
+![sCTkComboBox_Dark.png](images/sCTkComboBox_Dark.png)
+![sCTkComboBox_Light.png](images/sCTkComboBox_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -86,26 +90,23 @@ frequency_dropdown.state("disabled")        # Freezes entry input lanes and appl
 Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkComboBox` alongside an interactive theme state track.
 
 ```python
-#!/usr/bin/python3
-"""
-sCTkComboBox - Standalone Interactive Testing Harness
-"""
+
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for ComboBox
+# =====================================================================
+
 import customtkinter as ctk
-import sCTkThemes                
-from sCTkFrame import sCTkFrame  
-from sCTkComboBox import sCTkComboBox
+from scustomtkinter import sCTkFrame, sCTk, sCTkButtonPrimary, sCTkComboBox
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x300")
     root.title("ComboBox Interaction Telemetry Bench")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # Instantiate with dummy options test list array values and click reporter logs
     widget = sCTkComboBox(
         base,
         values=["Channel A (VHF)", "Channel B (UHF)", "Direct Audio Feed"],
@@ -113,29 +114,26 @@ if __name__ == "__main__":
     )
     widget.pack(expand=True, fill="none", padx=10, pady=10)
 
-    # THE OPERATION STATE TOGGLE BUTTON TRACK:
     def toggle_widget_state():
         current_mode = widget.get_state()
         target = "disabled" if current_mode == "normal" else "normal"
-        
         widget.configure(state=target)
-        btn_toggle.configure(
-            text="Unlock Dropdown" if target == "disabled" else "Lock Dropdown (Set 'disabled')"
-        )
+        btn_toggle.configure(text="Unlock Dropdown" if target == "disabled" else "Lock Dropdown (Set 'disabled')")
         print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state()}")
 
-    btn_toggle = ctk.CTkButton(base, text="Lock Dropdown (Set 'disabled')", command=toggle_widget_state)
+    btn_toggle = sCTkButtonPrimary(base, text="Lock Dropdown (Set 'disabled')", command=toggle_widget_state)
     btn_toggle.pack(side="bottom", pady=15)
 
     print("--- BOOT INITIALIZATION PASSTHROUGH ---")
     widget.state("disabled")
-    print("state (Disabled Pass) =", widget.get_state())  
+    print("state (Disabled Pass) =", widget.get_state())
 
     widget.state("normal")
-    print("state (Normal Pass)   =", widget.get_state())  
+    print("state (Normal Pass)   =", widget.get_state())
     print("========================================\n")
 
     root.mainloop()
+
 ```
 
 [Return to Table of Contents](#contents)

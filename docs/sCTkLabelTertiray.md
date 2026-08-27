@@ -13,6 +13,11 @@ The fine inline description, sub-legend, or auxiliary notice typography display 
 
 *For prominent main dashboard header and mid-level sections, see the companion component pages:* [sCTkLabelPrimary](sCTkLabelPrimary.md) and [sCTkLabelSecondary](sCTkLabelSecondary.md).
 
+
+![sCTkLabelTertiary_Dark.png](images/sCTkLabelTertiary_Dark.png)
+![sCTkLabelTertiary_Light.png](images/sCTkLabelTertiary_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -67,35 +72,27 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkLabelTertiary - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
 
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Label Tertiary
 # =====================================================================
-import sCTkThemes
-from sCTkFrame import sCTkFrame
-from sCTkLabelTertiary import sCTkLabelTertiary
+
+import customtkinter as ctk
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkLabelTertiary
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x280")
     root.title("sCTkLabelTertiary Testing Deck")
 
-    # Layout a clean, padded workspace container frame panel
     container = sCTkFrame(root, fg_color="transparent")
     container.pack(expand=True, fill="both", padx=30, pady=30)
 
-    # Instantiate your custom tertiary description label widget
     tertiary_label = sCTkLabelTertiary(container, text="Inline notice: tuning resolution bounded to 100Hz.")
     tertiary_label.pack(expand=True, pady=10)
 
-    # Live state monitoring feedback label
-    lbl_status = ctk.CTkLabel(container, text="Current State Assertion: NORMAL", font=("Arial", 10, "italic"))
+    lbl_status = sCTkLabelSecondary(container, text="Current State Assertion: NORMAL", font=("Arial", 10, "italic"))
     lbl_status.pack(side="bottom", pady=5)
 
     def toggle_label_states():
@@ -114,8 +111,7 @@ if __name__ == "__main__":
 
         print(f"Logged Verification Hook -> tertiary_label.get_state() = {tertiary_label.get_state()}")
 
-    # Standard interaction trigger button to dispatch state transformations
-    btn_toggle = ctk.CTkButton(
+    btn_toggle = sCTkButtonPrimary(
         container,
         text="Dim Description (Set 'disabled')",
         command=toggle_label_states,
@@ -133,6 +129,8 @@ if __name__ == "__main__":
     print("========================================\n")
 
     root.mainloop()
+
+
 ```
 
 [Return to Table of Contents](#contents)

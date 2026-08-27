@@ -13,6 +13,11 @@ The intermediate sub-section display typography label widget component. It featu
 
 *For dominant main dashboard header components, see the companion component documentation page:* [sCTkLabelPrimary](sCTkLabelPrimary.md).
 
+
+![sCTkLabelSecondary_Dark.png](images/sCTkLabelSecondary_Dark.png)
+![sCTkLabelSecondary_Light.png](images/sCTkLabelSecondary_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -67,31 +72,19 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkLabelSecondary - Standalone Interactive Testing Harness
-"""
+
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Label Primery
+# =====================================================================
+
 import customtkinter as ctk
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkButtonSecondary, sCTk, sCTkLabelSecondary
 
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes                    # 🔍 Duplicate import kept close for script scannability
-from sCTkFrame import sCTkFrame      # Testing application wrapper container frame
-from sCTkLabelSecondary import sCTkLabelSecondary
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
 if __name__ == "__main__":
-    import sCTkThemes
-    from sCTkFrame import sCTkFrame
-    from sCTkButtonPrimary import sCTkButtonPrimary
 
-    root = ctk.CTk()
-    root.geometry("400x200")
+    root = sCTk()
+    root.geometry("450x240")
     root.title("sCTkLabelSecondary Testing Deck")
-
-    sCTkThemes.apply_sCTkThemes()
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
@@ -114,13 +107,15 @@ if __name__ == "__main__":
         ctk.set_appearance_mode(target)
 
 
-    btn_theme = ctk.CTkButton(base, text="Toggle Skin Mode (Dark / Light)", command=toggle_appearance_skin)
+    btn_theme = sCTkButtonPrimary(base, text="Toggle Skin Mode (Dark / Light)", command=toggle_appearance_skin)
     btn_theme.pack(side="bottom", pady=(5, 5))
 
-    btn_toggle = ctk.CTkButton(base, text="Lock Label Text", command=toggle_operational_state)
+    btn_toggle = sCTkButtonSecondary(base, text="Lock Label Text", command=toggle_operational_state)
     btn_toggle.pack(side="bottom", pady=(10, 5))
 
     root.mainloop()
+
+
 ```
 
 [Return to Table of Contents](#contents)

@@ -15,8 +15,10 @@
 The *sCTkSeparator* is an advanced, themeable divider widget for CustomTkinter. It provides dynamic scaling via layout managers, vector-drawn customizable corner radiuses, dashed/dotted line styles, and automated line-splitting centered section text headers with bounding capsule brackets.
 
 --- 
-### Widget Preview
-![sCTkSeparator.png](images/sCTkSeparator.png)
+
+![sCTkSeparator_Dark.png](images/sCTkSeparator_Dark.png)
+![sCTkSeparator_Light.png](images/sCTkSeparator_Light.png)
+
 
 ### System Architecture Overview
 
@@ -105,41 +107,35 @@ Below is a complete, self-contained test execution script demonstrating how to l
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkSeparator - Standalone Interactive Testing Harness
-"""
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Separator
+# =====================================================================
+
 import customtkinter as ctk
-import sCTkThemes
-from sCTkSeparator import sCTkSeparator
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkSeparator
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
-    root = ctk.CTk()
+    root = sCTk()
     root.title("sCTkSeparator Production Test Environment")
     root.geometry("600x450")
 
-    grid_Frame = ctk.CTkFrame(root)
+    grid_Frame = sCTkFrame(root)
     grid_Frame.pack(side="top", fill="both", expand=True, padx=20, pady=15)
-    grid_Frame.grid_columnconfigure(0, weight=1)
-    grid_Frame.grid_columnconfigure(1, weight=1)
-    grid_Frame.grid_columnconfigure(2, weight=1)
-    grid_Frame.grid_rowconfigure(0, weight=1)
+    grid_Frame.grid_columnconfigure(0, weight=1); grid_Frame.grid_columnconfigure(1, weight=1); grid_Frame.grid_columnconfigure(2, weight=1); grid_Frame.grid_rowconfigure(0, weight=1)
 
-    lbl_left = ctk.CTkLabel(grid_Frame, text="Left Sub-Panel Group Data")
+    lbl_left = sCTkLabelSecondary(grid_Frame, text="Left Sub-Panel Group Data")
     lbl_left.grid(row=0, column=0, sticky="nswe")
 
-    # Bounded safely inside expanding column constraints to allow text physical clearance
     sep_vertical_text = sCTkSeparator(grid_Frame, orientation="vertical", text="CORE API", width=4)
     sep_vertical_text.grid(row=0, column=1, sticky="nswe", padx=10, pady=10)
 
-    lbl_right = ctk.CTkLabel(grid_Frame, text="Right Sub-Panel Group Data")
+    lbl_right = sCTkLabelSecondary(grid_Frame, text="Right Sub-Panel Group Data")
     lbl_right.grid(row=0, column=2, sticky="nswe")
 
     sep_horizontal_text = sCTkSeparator(root, orientation="horizontal", text="SYSTEM DASH SEPARATOR SECTION", width=4)
     sep_horizontal_text.pack(side="top", fill="x", padx=20, pady=10)
 
     def toggle_separator_lock():
-        """Toggles operational state tracking paths back and forth."""
         target = "disabled" if sep_vertical_text.get_state() == "normal" else "normal"
         sep_vertical_text.configure(state=target)
         sep_horizontal_text.configure(state=target)
@@ -149,9 +145,9 @@ if __name__ == "__main__":
         current_skin = ctk.get_appearance_mode()
         ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
 
-    btn_lock = ctk.CTkButton(root, text="Lock Separators", command=toggle_separator_lock)
+    btn_lock = sCTkButtonPrimary(root, text="Lock Separators", command=toggle_separator_lock)
     btn_lock.pack(pady=5)
-    btn_theme = ctk.CTkButton(root, text="Simulate Global Theme Shift", command=toggle_skin_mode)
+    btn_theme = sCTkButtonPrimary(root, text="Simulate Global Theme Shift", command=toggle_skin_mode)
     btn_theme.pack(pady=(5, 20))
 
     root.mainloop()

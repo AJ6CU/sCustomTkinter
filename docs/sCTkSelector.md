@@ -12,6 +12,11 @@
 
 An advanced theme-compliant option list selector widget. It pairs an optional high-contrast string prefix search lane with a dynamic checklist scrollback chassis to safely manage multi-state checkbox row configurations natively.
 
+
+![sCTkSelector_Dark.png](images/sCTkSelector_Dark.png)
+![sCTkSelector_Light.png](images/sCTkSelector_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -88,26 +93,20 @@ Below is a complete, self-contained testing suite containing interactive buttons
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkSelector - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Selector
+# =====================================================================
 
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes                      
-from sCTkButtonPrimary import sCTkButtonPrimary
-from sCTkSelector import sCTkSelector
+import customtkinter as ctk
+from scustomtkinter import sCTkButtonPrimary, sCTk, sCTkSelector
+
 
 if __name__ == "__main__":
-    def on_confirm(): 
-        print(f"Active Selection Telemetry Array: {theSelector.get_selections()}")
-        
-    root = ctk.CTk()
+    def on_confirm(): print(f"Active Selection Telemetry Array: {theSelector.get_selections()}")
+
+    root = sCTk()
     root.geometry("250x420")
     root.title("sCTkSelector Validation Bench")
-    sCTkThemes.apply_sCTkThemes()
 
     items = ["vw", "porsche", "roadster", "tesla", "ferrari", "mclaren"]
     theSelector = sCTkSelector(root, items=items, multiple_choices=True)
@@ -124,14 +123,13 @@ if __name__ == "__main__":
 
     confirm_btn = sCTkButtonPrimary(root, text="Confirm Selections", command=on_confirm)
     confirm_btn.pack(pady=5)
-    
-    btn_lock = ctk.CTkButton(root, text="Lock Selector Deck", command=toggle_selector_lock)
+    btn_lock = sCTkButtonPrimary(root, text="Lock Selector Deck", command=toggle_selector_lock)
     btn_lock.pack(pady=5)
-    
-    btn_theme = ctk.CTkButton(root, text="Simulate Global Theme Shift", command=toggle_skin_mode)
+    btn_theme = sCTkButtonPrimary(root, text="Simulate Global Theme Shift", command=toggle_skin_mode)
     btn_theme.pack(pady=(5, 15))
 
     root.mainloop()
+
 ```
 
 [Return to Table of Contents](#contents)

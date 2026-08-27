@@ -14,6 +14,11 @@ Dominant form input lane widget variant designed for primary user data entry (e.
 
 *For alternative helper input fields or metadata input channels, see the companion component documentation page:* [sCTkEntrySecondary](sCTkEntrySecondary.md).
 
+
+![sCTkEntryPrimary_Dark.png](images/sCTkEntryPrimary_Dark.png)
+![sCTkEntryPrimary_Light.png](images/sCTkEntryPrimary_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -86,64 +91,53 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkEntryPrimary - Standalone Interactive Testing Harness
-"""
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Entry Secondary
+# =====================================================================
+
+import customtkinter as ctk
+from scustomtkinter import sCTkFrameLabeledSecondary, sCTkButtonPrimary, sCTk, sCTkLabelTertiary, sCTkEntrySecondary
 
 # =====================================================================
 # 🛠️ TESTING HARNESS IMPORTS & SETUP
 # =====================================================================
-import customtkinter as ctk
-import sCTkThemes                
-from sCTkFrame import sCTkFrame  
-from sCTkLabelSecondary import sCTkLabelSecondary
-from sCTkEntryPrimary import sCTkEntryPrimary
+import sCTkThemes
+from sCTkFrame import sCTkFrame
 
 if __name__ == "__main__":
-    # Natively resolves your package assets and populates configurations cleanly
     sCTkThemes.apply_sCTkThemes()
 
     root = ctk.CTk()
-    root.geometry("450x260")
-    root.title("sCTkEntryPrimary Testing Deck")
+    root.geometry("500x450")
+    root.title("sCTkEntryPrimary Real-Time Validation Bench")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # Label notice layer to catch floating text changes
-    lbl_monitor = sCTkLabelSecondary(base, text="Console monitor active...")
-    lbl_monitor.pack(pady=10)
+    widget = sCTkEntryPrimary(base, placeholder_text="Enter Transceiver Callsign...")
+    widget.pack(fill="x", padx=20, pady=20)
 
-    # Instantiate your custom input widget field
-    input_field = sCTkEntryPrimary(base, placeholder_text="Enter Transceiver Frequency...")
-    input_field.pack(expand=False, fill="x", padx=40, pady=10)
+    def toggle_logger_states():
+        """Cycles operational states between active feed and locked desaturated tracks."""
+        current_state = widget.get_state()
+        target = "disabled" if current_state == "normal" else "normal"
 
-    # Attach interactive keyboard binding tracker to dump text entries straight to terminal loop
-    input_field.bind("<KeyRelease>", lambda e: lbl_monitor.configure(text=f"Live Buffer: {input_field.get()}"))
+        widget.configure(state=target)
+        btn_toggle.configure(text="Activate Entry Field" if target == "disabled" else "Lock Entry Field")
+        print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state().upper()}")
 
-    def toggle_operational_state():
-        """Toggles the input lane between normal active and dimmed disabled profiles."""
-        current_mode = input_field.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
+    def toggle_appearance_skin():
+        current_mode = ctk.get_appearance_mode()
+        ctk.set_appearance_mode("Light" if current_mode == "Dark" else "Dark")
 
-        # Explicitly testing the dual-routing capability via configure()
-        input_field.configure(state=target)
-        btn_toggle.configure(text="Lock Input (Set 'disabled')" if target == "normal" else "Unlock Input (Set 'normal')")
-        print(f"Logged Verification Hook -> input_field.get_state() = {input_field.get_state()}")
+    btn_toggle = ctk.CTkButton(base, text="Lock Entry Field", command=toggle_logger_states)
+    btn_toggle.pack(fill="x", padx=10, pady=5)
 
-    btn_toggle = ctk.CTkButton(base, text="Lock Input (Set 'disabled')", command=toggle_operational_state)
-    btn_toggle.pack(side="bottom", pady=15)
-
-    # Run the interactive boot tracking logs
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    input_field.state("disabled")
-    print("state (Disabled Pass) =", input_field.get_state())  # Output: disabled
-
-    input_field.state("normal")
-    print("state (Normal Pass)   =", input_field.get_state())  # Output: normal
-    print("========================================\n")
+    btn_theme = ctk.CTkButton(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
+    btn_theme.pack(fill="x", padx=10, pady=5)
 
     root.mainloop()
+
 ```
 
 [Return to Table of Contents](#contents)

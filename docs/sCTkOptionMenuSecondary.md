@@ -14,6 +14,11 @@ The auxiliary secondary option menu drop-down selector widget component variant 
 
 *For dominant form drop-downs or principal system mode choices, see the master component documentation page:* [sCTkOptionMenuPrimary](sCTkOptionMenuPrimary.md).
 
+
+![sCTkOptionMenuSecondary_Dark.png](images/sCTkOptionMenuSecondary_Dark.png)
+![sCTkOptionMenuSecondary_Light.png](images/sCTkOptionMenuSecondary_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -87,34 +92,25 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkOptionMenuSecondary - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for OptionMenu Secondary
+# =====================================================================
 
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes                    
-from sCTkFrame import sCTkFrame      
-from sCTkLabelSecondary import sCTkLabelSecondary
-from sCTkOptionMenuSecondary import sCTkOptionMenuSecondary
+import customtkinter as ctk
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTkLabelSecondary, sCTk, sCTkOptionMenuSecondary
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x320")
     root.title("sCTkOptionMenuSecondary Real-Time Validation Bench")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # Telemetry reporting label updates live on interaction changes
     lbl_monitor = sCTkLabelSecondary(base, text="Active Selection: Filter: Narrow")
     lbl_monitor.pack(pady=10)
 
-    # Instantiate your custom drop-down menu helper element chassis
     menu_field = sCTkOptionMenuSecondary(
         base,
         values=["Filter: Narrow", "Filter: Medium", "Filter: Wide"],
@@ -124,7 +120,6 @@ if __name__ == "__main__":
     menu_field.set("Filter: Narrow")
 
     def toggle_operational_state():
-        """Toggles the option menu between normal active and dimmed disabled profiles."""
         current_mode = menu_field.get_state()
         target = "disabled" if current_mode == "normal" else "normal"
         menu_field.configure(state=target)
@@ -134,19 +129,11 @@ if __name__ == "__main__":
         current_skin = ctk.get_appearance_mode()
         ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
 
-    btn_toggle = ctk.CTkButton(base, text="Lock Dropdown (Set 'disabled')", command=toggle_operational_state)
+    btn_toggle = sCTkButtonPrimary(base, text="Lock Dropdown (Set 'disabled')", command=toggle_operational_state)
     btn_toggle.pack(side="bottom", pady=5)
 
-    btn_theme = ctk.CTkButton(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
+    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
     btn_theme.pack(side="bottom", pady=5)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    menu_field.state("disabled")
-    print("state (Disabled Pass) =", menu_field.get_state())  
-
-    menu_field.state("normal")
-    print("state (Normal Pass)   =", menu_field.get_state())  
-    print("========================================\n")
 
     root.mainloop()
 ```

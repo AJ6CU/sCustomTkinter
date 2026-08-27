@@ -12,6 +12,11 @@
 
 A concrete rotary encoder switch variant designed for stepped selector controls (e.g., band configurations, operating modes, or filter sub-selections). It uses an explicit bounding arc configuration and outputs a clean integer mapping parameter tracking list item indices natively.
 
+
+![sCTkDialSelector_Dark.png](images/sCTkDialSelector_Dark.png)
+![sCTkDialSelector_Light.png](images/sCTkDialSelector_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature        | Type / Signature | Description |
@@ -88,46 +93,47 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkDialSelector - Standalone Interactive Testing Harness
-"""
+
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Dial Rotary Switch (sCTkDialSelector)
+# =====================================================================
+
 import customtkinter as ctk
-import sCTkThemes                
-from sCTkFrame import sCTkFrame  
-from sCTkLabelSecondary import sCTkLabelSecondary
-from sCTkDial import sCTkDialSelector
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkLabelSecondary, sCTkDialSelector
+
 
 if __name__ == "__main__":
-    # Natively resolves your package assets and populates configurations cleanly
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x350")
     root.title("Rotary Switch Selector Bench")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # 1. Attach a live telemetry readout label 
+    # 1. Attach a live telemetry readout label
     lbl_mode_tag = sCTkLabelSecondary(base, text="Selected Mode: AM", font=("Arial", 11, "bold"))
     lbl_mode_tag.pack(pady=15)
 
+
     def my_custom_left_click():
         """Accelerated Jump: Moves 2 complete indexing steps left per click tap."""
-        if mode_selector.get_state() == "disabled": 
+        if mode_selector.get_state() == "disabled":
             return
         mode_selector.set(mode_selector.get() - 2)
 
+
     def my_custom_right_click():
         """Accelerated Jump: Moves 2 complete indexing steps right per click tap."""
-        if mode_selector.get_state() == "disabled": 
+        if mode_selector.get_state() == "disabled":
             return
         mode_selector.set(mode_selector.get() + 2)
+
 
     # 2. Instantiate with unique radio deck selector labels and selection trackers
     mode_selector = sCTkDialSelector(
         base,
-        labels=["AM", "FM", "LSB", "USB", "CW-N"],
+        labels=["AM", "FM", "LSB", "USB", "CW"],
         arc_angle=180,  # Half-circle step selector arc
         command=lambda idx: lbl_mode_tag.configure(text=f"Selected Mode: {mode_selector._labels[idx]}"),
         left_click_callback=my_custom_left_click,
@@ -135,16 +141,18 @@ if __name__ == "__main__":
     )
     mode_selector.pack(expand=True, fill="none", padx=10, pady=10)
 
+
     # 3. Standard application dashboard interaction lock toggle simulation
     def toggle_widget_lock():
         current_mode = mode_selector.get_state()
         target = "disabled" if current_mode == "normal" else "normal"
-        
+
         mode_selector.configure(state=target)
         btn_lock.configure(
             text="UNLOCK CHANNELS" if target == "disabled" else "LOCK SWITCH (Set 'disabled')"
         )
         print(f"Logged Verification Hook -> mode_selector.get_state() = {mode_selector.get_state()}")
+
 
     btn_lock = ctk.CTkButton(base, text="LOCK SWITCH (Set 'disabled')", command=toggle_widget_lock)
     btn_lock.pack(side="bottom", pady=10)

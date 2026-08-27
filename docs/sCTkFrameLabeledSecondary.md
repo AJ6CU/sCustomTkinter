@@ -11,6 +11,11 @@
 
 The custom secondary interface typography display label widget component wrapping `customtkinter.CTkLabel`. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
 
+
+![sCTkFrameLabeledSecondary_Dark.png](images/sCTkFrameLabeledSecondary_Dark.png)
+![sCTkFrameLabeledSecondary_Light.png](images/sCTkFrameLabeledSecondary_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -66,51 +71,66 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkLabelSecondary - Standalone Interactive Testing Harness
-"""
 
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame Labeled Secondary
 # =====================================================================
-import customtkinter as ctk
-import sCTkThemes
-from sCTkFrame import sCTkFrame
-from sCTkLabelSecondary import sCTkLabelSecondary
+
+from scustomtkinter import sCTkButtonPrimary, sCTkLabelTertiary, sCTk, sCTkFrameLabeledSecondary
 
 if __name__ == "__main__":
-    # Natively resolves your package assets and populates configurations cleanly
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
-    root.geometry("450x240")
-    root.title("sCTkLabelSecondary Testing Deck")
+    root = sCTk()
+    root.geometry("450x450")
+    root.title("Labeled Scrollable Secondary Frame Test Bench")
 
-    base = sCTkFrame(root)
-    base.pack(expand=True, fill="both", padx=20, pady=20)
+    # Instantiate your custom scrollable secondary frame container [INDEX]
+    scroll_panel = sCTkFrameLabeledSecondary(root, label_text="AUXILIARY METADATA TRACK MATRIX")
+    scroll_panel.pack(expand=True, fill="both", padx=25, pady=25)
 
-    # Instantiate your custom text component cell
-    widget = sCTkLabelSecondary(base, text="Active Teleceiver Signal Frequency Lane [94.1 MHz]")
-    widget.pack(expand=True, padx=20, pady=20)
+    # Populate scroll panel container slots with helper sCTkLabelTertiary notice items [INDEX]
+    for i in range(1, 21):
+        lbl_item = sCTkLabelTertiary(scroll_panel,
+                                     text=f"Helper Node Index [ID: {i:02d}] - Calibration Offset [0.00Hz]")
+        lbl_item.pack(pady=4, fill="x", padx=10)
 
-    def toggle_operational_state():
-        current_mode = widget.get_state()
+
+    def toggle_frame_states():
+        """Toggles the container panel and cascades the state down to all child widgets [INDEX]."""
+        current_mode = scroll_panel.get_state()
         target = "disabled" if current_mode == "normal" else "normal"
-        widget.configure(state=target)
-        btn_toggle.configure(text="Lock Label Text" if target == "normal" else "Unlock Label Text")
 
-    def toggle_appearance_skin():
-        current_mode = ctk.get_appearance_mode()
-        target = "Light" if current_mode == "Dark" else "Dark"
-        ctk.set_appearance_mode(target)
+        # 1. Update the parent scrollable frame's visual layout variables via dual-routing syntax [INDEX]
+        scroll_panel.configure(state=target)
 
-    btn_theme = ctk.CTkButton(base, text="Toggle Skin Mode (Dark / Light)", command=toggle_appearance_skin)
-    btn_theme.pack(side="bottom", pady=(5, 5))
+        # 2. Native standard cascade loop leveraging your winfo_children() override [INDEX]
+        true_children = scroll_panel.winfo_children()
+        print(f"DEBUG ASSERTER: Successfully captured {len(true_children)} label elements...")
 
-    btn_toggle = ctk.CTkButton(base, text="Lock Label Text", command=toggle_operational_state)
-    btn_toggle.pack(side="bottom", pady=(10, 5))
+        for child in true_children:
+            if hasattr(child, "configure"):
+                child.configure(state=target)
+
+        btn_toggle.configure(
+            text="Lock Container (Set 'disabled')" if target == "normal" else "Unlock Container (Set 'normal')")
+        print(f"Logged Verification Hook -> scroll_panel.get_state() = {scroll_panel.get_state()}\n")
+
+
+    btn_toggle = sCTkButtonPrimary(root, text="Lock Container (Set 'disabled')", command=toggle_frame_states)
+    btn_toggle.pack(pady=15)
+
+    # Run the interactive boot tracking logs [INDEX]
+    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
+    scroll_panel.state("disabled")
+    print(f"state (Disabled Pass) = {scroll_panel.get_state().upper()}")
+
+    scroll_panel.state("normal")
+    print(f"state (Normal Pass)   = {scroll_panel.get_state().upper()}")
+    print("========================================\n")
 
     root.mainloop()
+
+
 ```
 
 [Return to Table of Contents](#contents)

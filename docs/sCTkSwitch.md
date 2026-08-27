@@ -2,6 +2,11 @@
 
 The `sCTkSwitch` is a theme-compliant, standard custom toggle switch component inheriting directly from `ctk.CTkSwitch`. It guarantees absolute layout engine continuity and native rendering execution pipelines. The widget enforces custom framework state management layers, text desaturation systems, and an airtight event priority tag shield when locked, without clashing with low-level canvas polygon caching locks.
 
+
+![sCTkSwitch_Dark.png](images/sCTkSwitch_Dark.png)
+![sCTkSwitch_Light.png](images/sCTkSwitch_Light.png)
+
+
 <a name="contents"></a>
 ### 📍 Table of Contents
 * [API Constructor Reference](#constructor)
@@ -119,17 +124,18 @@ Both the standard and alternative switch widgets route look parameters natively 
 ### 💻 Implementation Reference Template
 
 ```python
+#!/usr/bin/python3
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Switch
+# =====================================================================
+
 import customtkinter as ctk
-import sCTkThemes
-from sCTkFrame import sCTkFrame
-from sCTkSwitch import sCTkSwitch
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkSwitch
+
 
 if __name__ == "__main__":
-    import sCTkThemes
-    from sCTkFrame import sCTkFrame
 
-    sCTkThemes.apply_sCTkThemes()
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x240")
     root.title("sCTkSwitch Native Container Validation Bench")
 
@@ -146,10 +152,11 @@ if __name__ == "__main__":
         btn_lock.configure(text="Unlock Switch (Set 'normal')" if target == "disabled" else "Lock Switch (Set 'disabled')")
         print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state()}")
 
-    btn_lock = ctk.CTkButton(root, text="Lock Switch (Set 'disabled')", command=toggle_panel_lock)
+    btn_lock = sCTkButtonPrimary(root, text="Lock Switch (Set 'disabled')", command=toggle_panel_lock)
     btn_lock.pack(side="bottom", pady=15)
 
     root.mainloop()
+
 ```
 
 [Return to Table of Contents](#contents)

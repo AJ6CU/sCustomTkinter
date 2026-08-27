@@ -14,6 +14,11 @@ Auxiliary / secondary metadata input lane widget variant designed for secondary 
 
 *For dominant form input fields or direct operational data entry channels, see the primary component documentation page:* [sCTkEntryPrimary](sCTkEntryPrimary.md).
 
+
+![sCTkEntrySecondary_Dark.png](images/sCTkEntrySecondary_Dark.png)
+![sCTkEntrySecondary_Light.png](images/sCTkEntrySecondary_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -86,24 +91,19 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkEntrySecondary - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
 
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for EntrySecondary
 # =====================================================================
-import sCTkThemes                
-from sCTkFrame import sCTkFrame  
-from sCTkLabelSecondary import sCTkLabelSecondary
-from sCTkEntrySecondary import sCTkEntrySecondary
+
+import customtkinter as ctk
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkLabelSecondary, sCTkEntrySecondary
+
+
 
 if __name__ == "__main__":
-    # Natively resolves your package assets and populates configurations cleanly
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x260")
     root.title("sCTkEntrySecondary Testing Deck")
 
@@ -132,7 +132,7 @@ if __name__ == "__main__":
             text="Lock Helper Input (Set 'disabled')" if target == "normal" else "Unlock Helper Input (Set 'normal')")
         print(f"Logged Verification Hook -> input_field.get_state() = {input_field.get_state()}")
 
-    btn_toggle = ctk.CTkButton(base, text="Lock Helper Input (Set 'disabled')", command=toggle_operational_state)
+    btn_toggle = sCTkButtonPrimary(base, text="Lock Helper Input (Set 'disabled')", command=toggle_operational_state)
     btn_toggle.pack(side="bottom", pady=15)
 
     # Run the interactive boot tracking logs

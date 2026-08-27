@@ -2,6 +2,8 @@
 
 Abstract foundational base class for theme-adaptive mechanical rotary encoder components. It coordinates vector canvas layouts, mouse interaction loops, and cross-platform OS theme repainting rules.
 
+![sCTkDial_All_Dark.png](images/sCTkDial_All_Dark.png)
+
 ### Universal Dial Architecture
 
 Every custom rotary knob in the ecosystem inherits its vector mechanics directly out of this core layout module. It establishes several universal features:

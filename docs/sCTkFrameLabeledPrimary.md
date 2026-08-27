@@ -12,6 +12,10 @@
 
 A clean, theme-compliant custom header-labeled scrollable container card frame built directly on top of CustomTkinter's native text/scroll classes. It is engineered to act as an organized panel matrix tree that seamlessly suppresses visible scrollbar components out of view by hard-matching scrollbar background canvas elements directly to frame asset color backgrounds.
 
+![sCTkFrameLabeledPrimary_Dark.png](images/sCTkFrameLabeledPrimary_Dark.png)
+![sCTkFrameLabeledPrimary_Light.png](images/sCTkFrameLabeledPrimary_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -82,49 +86,37 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkFrameLabeledPrimary - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
 
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame Labeled Primary
 # =====================================================================
-import sCTkThemes                    # 🔍 Duplicate import kept close for script scannability
-from sCTkFrame import sCTkFrame      # Testing application wrapper container frame
-from sCTkLabelSecondary import sCTkLabelSecondary
-from sCTkFrameLabeledPrimary import sCTkFrameLabeledPrimary
+
+from scustomtkinter import sCTkButtonPrimary, sCTkLabelSecondary, CTk, sCTkFrameLabeledPrimary
+
 
 if __name__ == "__main__":
-    # Natively resolves your package assets and populates configurations cleanly
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.geometry("450x450")
     root.title("Labeled Scrollable Frame Test Bench")
 
-    # Instantiate your custom scrollable primary frame container
     scroll_panel = sCTkFrameLabeledPrimary(root, label_text="RIG CHANNEL MATRIX CONTROLLER")
     scroll_panel.pack(expand=True, fill="both", padx=25, pady=25)
 
-    # Populate scroll panel container layout slots with sCTkLabelSecondary items
     for i in range(1, 21):
-        lbl_item = sCTkLabelSecondary(scroll_panel, text=f"Channel Lane Entry #{i:02d}")
+        lbl_item = sCTkLabelSecondary(scroll_panel, text=f"Channel Lane Array Entry #{i:02d} - Active Track [100Hz]")
         lbl_item.pack(pady=4, fill="x", padx=10)
 
+
     def toggle_frame_states():
-        """Toggles the container panel and cascades the state down to all child widgets."""
         current_mode = scroll_panel.get_state()
         target = "disabled" if current_mode == "normal" else "normal"
 
-        # 1. Update the parent scrollable frame's visual layout variables via dual-routing syntax
         scroll_panel.configure(state=target)
 
-        # 2. Extract your children using our newly targeted intercept loop pass
         true_children = scroll_panel.winfo_children()
-        print(f"DEBUG ASSERTER: Successfully captured {len(true_children)} elements...")
+        print(f"DEBUG ASSERTER: Successfully captured {len(true_children)} label elements...")
 
-        # 3. Cascade the state change down to every single true child label uniformly
         for child in true_children:
             if hasattr(child, "configure"):
                 child.configure(state=target)
@@ -133,10 +125,10 @@ if __name__ == "__main__":
             text="Lock Container (Set 'disabled')" if target == "normal" else "Unlock Container (Set 'normal')")
         print(f"Logged Verification Hook -> scroll_panel.get_state() = {scroll_panel.get_state()}\n")
 
-    btn_toggle = ctk.CTkButton(root, text="Lock Container (Set 'disabled')", command=toggle_frame_states)
+
+    btn_toggle = sCTkButtonPrimary(root, text="Lock Container (Set 'disabled')", command=toggle_frame_states)
     btn_toggle.pack(pady=15)
 
-    # Run the interactive boot tracking logs
     print("--- BOOT INITIALIZATION PASSTHROUGH ---")
     scroll_panel.state("disabled")
     print(f"state (Disabled Pass) = {scroll_panel.get_state().upper()}")
@@ -146,6 +138,8 @@ if __name__ == "__main__":
     print("========================================\n")
 
     root.mainloop()
+
+
 ```
 
 [Return to Table of Contents](#contents)

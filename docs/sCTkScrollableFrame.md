@@ -13,6 +13,11 @@
 
 An advanced scrollable window viewport capsule inheriting natively and directly from CustomTkinter's `ctk.CTkScrollableFrame` layouts. It streamlines geometry tracking parameters and isolates background mouse-wheel layers cleanly while leaving the application developer completely in control of child layout configuration sweeps across theme switches.
 
+
+![sCTkScrollableFrame_Dark.png](images/sCTkScrollableFrame_Dark.png)
+![sCTkScrollableFrame_Light.png](images/sCTkScrollableFrame_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -101,24 +106,18 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkScrollableFrame - Standalone Interactive Testing Harness
-"""
-# =================================================================
-# STANDALONE TEST HARNESS
-# =================================================================
-if __name__ == "__main__":
-    import customtkinter as ctk
-    import sCTkThemes
-    from sCTkButtonPrimary import sCTkButtonPrimary
-    from sCTkEntryPrimary import sCTkEntryPrimary
-    from sCTkScrollableFrame import sCTkScrollableFrame
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for ScrollableFrame
+# =====================================================================
 
-    root = ctk.CTk()
+import customtkinter as ctk
+from scustomtkinter import sCTkButtonPrimary, sCTkEntryPrimary, sCTk, sCTkScrollableFrame
+
+if __name__ == "__main__":
+
+    root = sCTk()
     root.title("ScrollableFrame Pure Baseline Verification")
     root.geometry("450x420")
-
-    sCTkThemes.apply_sCTkThemes()
 
     test_frame = sCTkScrollableFrame(root, width=380, height=250, label_text="Telemetry Viewport Container")
     test_frame.pack(padx=20, pady=20, fill="both", expand=True)
@@ -147,7 +146,7 @@ if __name__ == "__main__":
     toggle_btn = sCTkButtonPrimary(root, text="Enforce State: DISABLED", command=toggle_cascade_lockout)
     toggle_btn.pack(side="bottom", pady=15)
 
-    btn_theme = ctk.CTkButton(root, text="Toggle Theme Skin", command=lambda: ctk.set_appearance_mode(
+    btn_theme = sCTkButtonPrimary(root, text="Toggle Theme Skin", command=lambda: ctk.set_appearance_mode(
         "Dark" if ctk.get_appearance_mode() == "Light" else "Light"))
     btn_theme.pack(side="bottom", pady=5)
 

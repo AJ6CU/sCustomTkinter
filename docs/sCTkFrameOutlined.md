@@ -2,6 +2,10 @@
 
 A clean, theme-compliant container frame variant explicitly styled to act as an outlined structural card or passive layout grouping box. It integrates a clean operational state interceptor layer to gracefully absorb cascading configuration switches without throwing unrecognized keyword violations.
 
+![sCTkFrameOutlined_Dark.png](images/sCTkFrameOutlined_Dark.png)
+![sCTkFrameOutlined_Light.png](images/sCTkFrameOutlined_Light.png)
+
+
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -77,23 +81,20 @@ Below is a complete, self-contained test execution script demonstrating how to p
 
 ```python
 #!/usr/bin/python3
-"""
-sCTkFrameOutlined - Standalone Interactive Testing Harness
-"""
-import customtkinter as ctk
-import sCTkThemes
-from sCTkLabelSecondary import sCTkLabelSecondary
-from sCTkEntryPrimary import sCTkEntryPrimary
-from sCTkFrameOutlined import sCTkFrameOutlined
+
+# =====================================================================
+# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame Outlined
+# =====================================================================
+
+from scustomtkinter import (sCTkButtonPrimary, sCTkEntryPrimary, sCTkLabelSecondary,
+                            sCTk, sCTkFrameOutlined)
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
+    root = sCTk()
     root.title("Passive Outline Frame Test Suite")
     root.geometry("450x300")
 
-    # Instantiate your custom theme-compliant outlined frame panel card
     frame_group = sCTkFrameOutlined(root, border_width=2)
     frame_group.pack(fill="both", expand=True, padx=20, pady=20)
 
@@ -103,15 +104,14 @@ if __name__ == "__main__":
     mock_entry = sCTkEntryPrimary(frame_group, placeholder_text="Standard data field...")
     mock_entry.pack(pady=10, padx=25, fill="x")
 
+
     def toggle_frame_states():
         """Toggles the outlined card panel and cascades the state change down to child widgets, skipping the trigger."""
         current_mode = frame_group.get_state()
         target = "disabled" if current_mode == "normal" else "normal"
 
-        # 1. Transition the parent outline panel colors
         frame_group.configure(state=target)
 
-        # 2. Cascade loop targeting elements resting inside the border frame card
         for child in frame_group.winfo_children():
             if child == btn_toggle:
                 continue
@@ -122,7 +122,8 @@ if __name__ == "__main__":
             text="Lock Outline Deck (Set 'disabled')" if target == "normal" else "Unlock Outline Deck (Set 'normal')")
         print(f"Logged Verification Hook -> frame_group.get_state() = {frame_group.get_state()}")
 
-    btn_toggle = ctk.CTkButton(frame_group, text="Lock Outline Deck (Set 'disabled')", command=toggle_frame_states)
+
+    btn_toggle = sCTkButtonPrimary(frame_group, text="Lock Outline Deck (Set 'disabled')", command=toggle_frame_states)
     btn_toggle.pack(side="bottom", pady=15)
 
     print("--- BOOT INITIALIZATION PASSTHROUGH ---")
@@ -130,4 +131,6 @@ if __name__ == "__main__":
     print("========================================\n")
 
     root.mainloop()
+
+
 ```
