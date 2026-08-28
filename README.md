@@ -1,5 +1,6 @@
 # sCustomTkinter
 
+
 A high-performance, theme-adaptive, and encapsulated widget framework engineered to support user interfaces with multiple designs for each widget. Not all Buttons (or for that matter Labels, Menus, etc.) should look the same in a well thought out UX. Important ones should catch your attention, while the less important fade into the background until needed. For example, `sCustomTkinter` starts you off with 3 different level of Buttons, that you can individually tailor to your design theme to help create consistency across your whole UX. 
 
 This project is a set of subclasses (hence the "s" prefix) of Tom Schimansky's [CustomTkinter](https://customtkinter.tomschimansky.com/) that he has generously made available This widget to the community under the MIT License. Without his work, this would not have been made possible.
