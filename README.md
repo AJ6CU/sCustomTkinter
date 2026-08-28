@@ -142,7 +142,6 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 
 
 * <u>Textboxes</u>: Two levels of text boxes are supported for different needs of your users.
-* 
 	- `sCTkTextboxPrimary` - The standard textbox that you will probably use most of the time.
 	- `sCTkTextboxSecondary` - Smaller font that you might find useful for other purposes.
 
