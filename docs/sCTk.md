@@ -24,13 +24,16 @@ It maps perfectly onto all native window properties, event loop callbacks, lifec
 from sCTk import sCTk
 from sCTkThemes import apply_sCTkThemes
 
-# 1. Initialize centralized framework look records natively on system boot
+1. Initialize centralized framework look records natively on system boot
 apply_sCTkThemes()
 
-# 2. Instantiate your primary root application backplane directly
+2. Instantiate your primary root application backplane directly
 app = sCTk()
 app.geometry("800x600")
 app.title("Main Control Rig Backplane")
 
 app.mainloop()
 ```
+
+
+[Return to Table of Contents](#contents)

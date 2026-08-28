@@ -104,9 +104,6 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 * <u>`sCTkCheckBox`</u>: Used to enable/disable a feature function. 
 
 
-* <u>`sCTkComboBox`</u>: Drop down menu of choices. But more importantly, can accept user input.
-
-
 * <u>Entry Fields</u>: There are two levels of Entry Fields included in this library.
 
 	- `sCTkEntryPrimary` - It is recommended that you use this one for key or required input.
@@ -148,6 +145,11 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 
 
 #### Menus
+
+* <u>`sCTkComboBox`</u>: Drop down menu of choices. But more importantly, can accept user input.
+
+
+
 * <u>OptionMenus</u>: Two levels of optionsMenus (basically da rop down list that the user selects an item from) are provided.
 
 	- `sCTkOptionMenuPrimary`: Larger font with stronger colors. Probably the one you will use for your main options
