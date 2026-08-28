@@ -1,4 +1,4 @@
-# sCTkTextboxSecondary
+## sCTkTextboxSecondary
 
 A custom, theme-compliant secondary logging and auxiliary console text display viewport built cleanly and natively on top of `customtkinter.CTkTextbox`. Designed to match the exact programmatic engine of the primary console, it uses sequential repaint loops to guarantee native read-only input locks without visual color freezes or text canvas truncation errors.
 
@@ -7,21 +7,21 @@ A custom, theme-compliant secondary logging and auxiliary console text display v
 ![sCTkTextboxSecondary_Light.png](images/sCTkTextboxSecondary_Light.png)
 
 
-## Core Features
+### Core Features
 *   **Isolated Look Mappings**: Allows secondary terminal readouts and backup radio tracking data logs to manage distinct color desaturation maps separate from the primary dominant workspace console.
 *   **Sequential Repaint Engine**: Synchronizes the base widget text engine and internal scroll handles natively, executing look updates first to bypass framework disabled white-out traps completely.
 *   **Uninhibited Scroll Navigation**: Retains cross-platform mechanical mouse wheel and high-precision Apple Magic Mouse tracking loops across all states to ensure long-form system logs remain searchable.
 *   **ThemeableWidget Protocol Mixin**: Implements multiple inheritance from the central mixin class to provide instant support for Pygubu string translations (`translator`) and object generation hooks (`on_first_object_cb`).
 
-## Public Methods
+### Public Methods
 
-### `state(state_string: str = None) -> str`
+#### `state(state_string: str = None) -> str`
 Operational state management controller. Coordinates background desaturation colors and typing masks safely.
 *   **Arguments**: 
     *   `state_string` (*str*, optional): The target state to enforce (`"normal"` or `"disabled"`). If omitted, queries the active virtual state memory slot.
 *   **Returns**: The active virtual state tracking string.
 
-## Theme Configuration Matrix (`themes.json`)
+### Theme Configuration Matrix (`themes.json`)
 ```json
 {
   "sCTkTextboxSecondary": {
@@ -40,7 +40,7 @@ Operational state management controller. Coordinates background desaturation col
 }
 ```
 
-## Implementation Example & Test Harness
+### Implementation Example & Test Harness
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use a `sCTkTextboxSecondary`.
 

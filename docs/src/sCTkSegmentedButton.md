@@ -1,4 +1,4 @@
-# sCTkSegmentedButton
+## sCTkSegmentedButton
 
 A custom, theme-compliant segmented button strip tracker widget designed for hardware-inspired radio control panel layouts. Inherits directly from `customtkinter.CTkSegmentedButton` and implements the `ThemeableWidget` mixin framework, enabling total alignment with centralized stylesheet configurations.
 
@@ -7,7 +7,7 @@ A custom, theme-compliant segmented button strip tracker widget designed for har
 
 
 
-## 🛠️ Architectural Design Features
+### 🛠️ Architectural Design Features
 
 *   **Zero-Gap Contiguous Bar:** Bypasses CustomTkinter's native button spacing layout by programmatically flattening horizontal paddings down to absolute zero. Every tab segment welds tightly flush next to each other inside a single continuous capsule pill track profile.
 *   **Dynamic High-Contrast Legibility:** Forcefully overrides child element text layers dynamically on click events. This ensures the active choice badge maintains crisp pure white lettering over deep accent container fills, while adjacent unselected choices cleanly snap back to your rested dark gray or blue typography targets.
@@ -16,7 +16,7 @@ A custom, theme-compliant segmented button strip tracker widget designed for har
 
 ---
 
-## 🎨 Centralized Stylesheet Setup (`sCTkThemes.json`)
+### 🎨 Centralized Stylesheet Setup (`sCTkThemes.json`)
 
 To drive the dual-blue layout metrics and clear-contrast typography text shifts accurately across both look preference sweeps, ensure your centralized theme profile file includes this exact element block:
 
@@ -43,7 +43,7 @@ To drive the dual-blue layout metrics and clear-contrast typography text shifts 
 
 ---
 
-## ⚙️ Public API Methods Reference
+### ⚙️ Public API Methods Reference
 
 | Method Name | Arguments | Return Type | Description |
 | :--- | :--- | :--- | :--- |
@@ -54,7 +54,7 @@ To drive the dual-blue layout metrics and clear-contrast typography text shifts 
 
 ---
 
-## 💻 Implementation Code Template
+### 💻 Implementation Code Template
 
 ```python
 #!/usr/bin/python3

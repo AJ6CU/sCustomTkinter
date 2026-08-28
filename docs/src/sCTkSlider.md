@@ -1,4 +1,4 @@
-# sCTkSlider
+## sCTkSlider
 
 Standardized live track calibration adjustment slider providing real-time data value interception, disabled layout mapping overrides, and multi-zone Pygubu designer compatibility.
 
@@ -9,7 +9,7 @@ Standardized live track calibration adjustment slider providing real-time data v
 
 ---
 
-## 🎨 Centralized Stylesheet Setup (`themes.json`)
+### 🎨 Centralized Stylesheet Setup (`themes.json`)
 
 To drive linear progress track filling and custom knob coordinate handle styles accurately across both look preference sweeps, ensure your centralized theme profile file includes this exact element block:
 
@@ -31,7 +31,7 @@ To drive linear progress track filling and custom knob coordinate handle styles 
 
 ---
 
-## ⚙️ Public API Methods Reference
+### ⚙️ Public API Methods Reference
 
 | Method Name | Arguments | Return Type | Description |
 | :--- | :--- | :--- | :--- |
@@ -42,7 +42,7 @@ To drive linear progress track filling and custom knob coordinate handle styles 
 
 ---
 
-## 💻 Implementation Code Template
+### 💻 Implementation Code Template
 
 ```python
 #!/usr/bin/python3

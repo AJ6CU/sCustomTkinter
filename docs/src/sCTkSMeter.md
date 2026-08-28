@@ -72,7 +72,7 @@ THEME_DEFAULTS = {
 
 ---
 
-## Implementation Example & Test Harness
+### Implementation Example & Test Harness
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use `sCTkSMeter`.
 

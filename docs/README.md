@@ -1,6 +1,14 @@
 # Introduction
 
-This is an introduction.
+This reference manual is split into the following sections:
+* Containers
+* Controls and Display
+* Menus
+* Additional Widgets
+
+Each widget has a brief description of its function and includes a screen shot of the widget, description of its constructor, list of properties and any public methods. There is also a section describing the specific Theme used for the widget, If you want to customize it for your purposes this is a great starting point
+
+Check out the Notes section near the end, it might save you a lot of time by avoiding problems. And perhaps of But most importantly, there is a runnable code example that you can copy and it should just work.
 
 # Contents
 
@@ -22,27 +30,12 @@ This is an introduction.
   * [sCTkProgressBar](#sctkprogressbar)
   * [sCTkRadioButton](#sctkradiobutton)
   * [sCTkScrollbar](#sctkscrollbar)
-* [sCTkSegmentedButton](#sctksegmentedbutton)
-  * [🛠️ Architectural Design Features](#-architectural-design-features)
-  * [🎨 Centralized Stylesheet Setup (`sCTkThemes.json`)](#-centralized-stylesheet-setup-sctkthemesjson)
-  * [⚙️ Public API Methods Reference](#-public-api-methods-reference)
-  * [💻 Implementation Code Template](#-implementation-code-template)
-* [sCTkSlider](#sctkslider)
-  * [🎨 Centralized Stylesheet Setup (`themes.json`)](#-centralized-stylesheet-setup-themesjson)
-  * [⚙️ Public API Methods Reference](#-public-api-methods-reference)
-  * [💻 Implementation Code Template](#-implementation-code-template)
+  * [sCTkSegmentedButton](#sctksegmentedbutton)
+  * [sCTkSlider](#sctkslider)
   * [sCTkSwitch](#sctkswitch)
   * [sCTkTabview](#sctktabview)
-* [sCTkTextboxPrimary](#sctktextboxprimary)
-  * [Core Features](#core-features)
-  * [Public Methods](#public-methods)
-  * [Theme Configuration Matrix (`themes.json`)](#theme-configuration-matrix-themesjson)
-  * [Implementation Example & Test Harness](#implementation-example--test-harness)
-* [sCTkTextboxSecondary](#sctktextboxsecondary)
-  * [Core Features](#core-features)
-  * [Public Methods](#public-methods)
-  * [Theme Configuration Matrix (`themes.json`)](#theme-configuration-matrix-themesjson)
-  * [Implementation Example & Test Harness](#implementation-example--test-harness)
+  * [sCTkTextboxPrimary](#sctktextboxprimary)
+  * [sCTkTextboxSecondary](#sctktextboxsecondary)
 * [Menus](#menus)
   * [sCTkComboBox](#sctkcombobox)
   * [sCTkOptionMenuPrimary](#sctkoptionmenuprimary)
@@ -62,9 +55,7 @@ This is an introduction.
   * [sCTkSelector](#sctkselector)
   * [sCTkSeparator](#sctkseparator)
   * [sCTkSMeter](#sctksmeter)
-  * [Implementation Example & Test Harness](#implementation-example--test-harness)
   * [sCTkSMeterBar](#sctksmeterbar)
-  * [Implementation Example & Test Harness](#implementation-example--test-harness)
   * [sCTkSpinbox](#sctkspinbox)
   * [sCTkSwitchAlt](#sctkswitchalt)
   * [sCTkTableview](#sctktableview)
@@ -73,7 +64,7 @@ This is an introduction.
 
 # Containers
 
-The following widgets are the containers that will hold your user interface.
+The following widgets are the containers that will hold your user interface. There are some additional constainers that might be of interest that are listed later in the section where we document additional widgets added with sCustomTkinter.
 
 
 ## sCTk
@@ -454,7 +445,7 @@ if __name__ == "__main__":
 
 # Controls and Display
 
-These are the basic everyday widgets that you will use.
+These are the basic everyday widgets that you will use frequently.  There are some additional selections below where we document the extra widgets included in sCustomTkinter.
 
 
 ## sCTkButtonPrimary
@@ -2141,7 +2132,7 @@ if __name__ == "__main__":
 
 
 
-# sCTkSegmentedButton
+## sCTkSegmentedButton
 
 A custom, theme-compliant segmented button strip tracker widget designed for hardware-inspired radio control panel layouts. Inherits directly from `customtkinter.CTkSegmentedButton` and implements the `ThemeableWidget` mixin framework, enabling total alignment with centralized stylesheet configurations.
 
@@ -2150,7 +2141,7 @@ A custom, theme-compliant segmented button strip tracker widget designed for har
 
 
 
-## 🛠️ Architectural Design Features
+### 🛠️ Architectural Design Features
 
 *   **Zero-Gap Contiguous Bar:** Bypasses CustomTkinter's native button spacing layout by programmatically flattening horizontal paddings down to absolute zero. Every tab segment welds tightly flush next to each other inside a single continuous capsule pill track profile.
 *   **Dynamic High-Contrast Legibility:** Forcefully overrides child element text layers dynamically on click events. This ensures the active choice badge maintains crisp pure white lettering over deep accent container fills, while adjacent unselected choices cleanly snap back to your rested dark gray or blue typography targets.
@@ -2159,7 +2150,7 @@ A custom, theme-compliant segmented button strip tracker widget designed for har
 
 ---
 
-## 🎨 Centralized Stylesheet Setup (`sCTkThemes.json`)
+### 🎨 Centralized Stylesheet Setup (`sCTkThemes.json`)
 
 To drive the dual-blue layout metrics and clear-contrast typography text shifts accurately across both look preference sweeps, ensure your centralized theme profile file includes this exact element block:
 
@@ -2186,7 +2177,7 @@ To drive the dual-blue layout metrics and clear-contrast typography text shifts 
 
 ---
 
-## ⚙️ Public API Methods Reference
+### ⚙️ Public API Methods Reference
 
 | Method Name | Arguments | Return Type | Description |
 | :--- | :--- | :--- | :--- |
@@ -2197,7 +2188,7 @@ To drive the dual-blue layout metrics and clear-contrast typography text shifts 
 
 ---
 
-## 💻 Implementation Code Template
+### 💻 Implementation Code Template
 
 ```python
 #!/usr/bin/python3
@@ -2246,7 +2237,7 @@ if __name__ == "__main__":
 
 
 
-# sCTkSlider
+## sCTkSlider
 
 Standardized live track calibration adjustment slider providing real-time data value interception, disabled layout mapping overrides, and multi-zone Pygubu designer compatibility.
 
@@ -2257,7 +2248,7 @@ Standardized live track calibration adjustment slider providing real-time data v
 
 ---
 
-## 🎨 Centralized Stylesheet Setup (`themes.json`)
+### 🎨 Centralized Stylesheet Setup (`themes.json`)
 
 To drive linear progress track filling and custom knob coordinate handle styles accurately across both look preference sweeps, ensure your centralized theme profile file includes this exact element block:
 
@@ -2279,7 +2270,7 @@ To drive linear progress track filling and custom knob coordinate handle styles 
 
 ---
 
-## ⚙️ Public API Methods Reference
+### ⚙️ Public API Methods Reference
 
 | Method Name | Arguments | Return Type | Description |
 | :--- | :--- | :--- | :--- |
@@ -2290,7 +2281,7 @@ To drive linear progress track filling and custom knob coordinate handle styles 
 
 ---
 
-## 💻 Implementation Code Template
+### 💻 Implementation Code Template
 
 ```python
 #!/usr/bin/python3
@@ -2684,7 +2675,7 @@ if __name__ == "__main__":
 
 
 
-# sCTkTextboxPrimary
+## sCTkTextboxPrimary
 
 A dominant theme-compliant messaging and logging terminal console wrapper that inherits natively from `customtkinter.CTkTextbox`. It implements a specialized sequential order of operations pass to enforce native, zero-leak read-only locks while completely preventing CustomTkinter's native disabled appearance mode freezes.
 
@@ -2693,25 +2684,25 @@ A dominant theme-compliant messaging and logging terminal console wrapper that i
 ![sCTkTextboxPrimary_Light.png](src/images/sCTkTextboxPrimary_Light.png)
 
 
-## Core Features
+### Core Features
 *   **Native Read-Only Lockout**: Leverages CustomTkinter's native text buffer lockout states when disabled to provide a secure, native typing and text insertion freeze.
 *   **Standard Viewport Accessibility**: Leaves mouse wheel scrolling tracks and high-precision macOS trackpad touch gestures fully functional when locked down, matching standard native CustomTkinter behavioral layout guidelines.
 *   **Sequential Repaint Engine**: Forces structural scrollbar thumb vector updates *before* applying text engine state flags, ensuring internal canvas shapes never drop theme switches or freeze their color slots when locked.
 *   **ThemeableWidget Protocol Mixin**: Integrates natively with the central mixin repository layer to strip, isolate, and safely process custom Pygubu keywords (`translator`, `on_first_object_cb`, `image_loader`, `data_pool`) on startup, preventing constructor crashes.
 *   **Automated Asset Upgrades**: Automatically transforms raw incoming string icon file paths from Pygubu into modern vector-scaled `ctk.CTkImage` references behind the scenes.
 
-## Public Methods
+### Public Methods
 
-### `state(state_string: str = None) -> str`
+#### `state(state_string: str = None) -> str`
 Operational state management controller. Coordinates background desaturation colors and native input locks safely.
 *   **Arguments**: 
     *   `state_string` (*str*, optional): The target state to enforce (`"normal"` or `"disabled"`). If omitted, returns the active virtual configuration tracker state.
 *   **Returns**: The active operational state tracking string.
 
-### `configure(*args, **kwargs)`
+#### `configure(*args, **kwargs)`
 Handles both programmatic keyword modifications and Pygubu designer inspector positional dictionary queries safely. Automatically populates internal lifecycle handshake hooks (`_finalize_themeable_lifecycle`).
 
-## Theme Configuration Matrix (`themes.json`)
+### Theme Configuration Matrix (`themes.json`)
 ```json
 {
   "sCTkTextboxPrimary": {
@@ -2730,7 +2721,7 @@ Handles both programmatic keyword modifications and Pygubu designer inspector po
 }
 ```
 
-## Implementation Example & Test Harness
+### Implementation Example & Test Harness
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use a `sCTkTextboxPrimary`.
 
@@ -2793,7 +2784,7 @@ if __name__ == "__main__":
 
 
 
-# sCTkTextboxSecondary
+## sCTkTextboxSecondary
 
 A custom, theme-compliant secondary logging and auxiliary console text display viewport built cleanly and natively on top of `customtkinter.CTkTextbox`. Designed to match the exact programmatic engine of the primary console, it uses sequential repaint loops to guarantee native read-only input locks without visual color freezes or text canvas truncation errors.
 
@@ -2802,21 +2793,21 @@ A custom, theme-compliant secondary logging and auxiliary console text display v
 ![sCTkTextboxSecondary_Light.png](src/images/sCTkTextboxSecondary_Light.png)
 
 
-## Core Features
+### Core Features
 *   **Isolated Look Mappings**: Allows secondary terminal readouts and backup radio tracking data logs to manage distinct color desaturation maps separate from the primary dominant workspace console.
 *   **Sequential Repaint Engine**: Synchronizes the base widget text engine and internal scroll handles natively, executing look updates first to bypass framework disabled white-out traps completely.
 *   **Uninhibited Scroll Navigation**: Retains cross-platform mechanical mouse wheel and high-precision Apple Magic Mouse tracking loops across all states to ensure long-form system logs remain searchable.
 *   **ThemeableWidget Protocol Mixin**: Implements multiple inheritance from the central mixin class to provide instant support for Pygubu string translations (`translator`) and object generation hooks (`on_first_object_cb`).
 
-## Public Methods
+### Public Methods
 
-### `state(state_string: str = None) -> str`
+#### `state(state_string: str = None) -> str`
 Operational state management controller. Coordinates background desaturation colors and typing masks safely.
 *   **Arguments**: 
     *   `state_string` (*str*, optional): The target state to enforce (`"normal"` or `"disabled"`). If omitted, queries the active virtual state memory slot.
 *   **Returns**: The active virtual state tracking string.
 
-## Theme Configuration Matrix (`themes.json`)
+### Theme Configuration Matrix (`themes.json`)
 ```json
 {
   "sCTkTextboxSecondary": {
@@ -2835,7 +2826,7 @@ Operational state management controller. Coordinates background desaturation col
 }
 ```
 
-## Implementation Example & Test Harness
+### Implementation Example & Test Harness
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use a `sCTkTextboxSecondary`.
 
@@ -5433,7 +5424,7 @@ THEME_DEFAULTS = {
 
 ---
 
-## Implementation Example & Test Harness
+### Implementation Example & Test Harness
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use `sCTkSMeter`.
 
@@ -5579,7 +5570,7 @@ THEME_DEFAULTS = {
 
 ---
 
-## Implementation Example & Test Harness
+### Implementation Example & Test Harness
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use `sCTkSMeterBar`.
 

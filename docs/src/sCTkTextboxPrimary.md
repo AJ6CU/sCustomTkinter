@@ -1,4 +1,4 @@
-# sCTkTextboxPrimary
+## sCTkTextboxPrimary
 
 A dominant theme-compliant messaging and logging terminal console wrapper that inherits natively from `customtkinter.CTkTextbox`. It implements a specialized sequential order of operations pass to enforce native, zero-leak read-only locks while completely preventing CustomTkinter's native disabled appearance mode freezes.
 
@@ -7,25 +7,25 @@ A dominant theme-compliant messaging and logging terminal console wrapper that i
 ![sCTkTextboxPrimary_Light.png](images/sCTkTextboxPrimary_Light.png)
 
 
-## Core Features
+### Core Features
 *   **Native Read-Only Lockout**: Leverages CustomTkinter's native text buffer lockout states when disabled to provide a secure, native typing and text insertion freeze.
 *   **Standard Viewport Accessibility**: Leaves mouse wheel scrolling tracks and high-precision macOS trackpad touch gestures fully functional when locked down, matching standard native CustomTkinter behavioral layout guidelines.
 *   **Sequential Repaint Engine**: Forces structural scrollbar thumb vector updates *before* applying text engine state flags, ensuring internal canvas shapes never drop theme switches or freeze their color slots when locked.
 *   **ThemeableWidget Protocol Mixin**: Integrates natively with the central mixin repository layer to strip, isolate, and safely process custom Pygubu keywords (`translator`, `on_first_object_cb`, `image_loader`, `data_pool`) on startup, preventing constructor crashes.
 *   **Automated Asset Upgrades**: Automatically transforms raw incoming string icon file paths from Pygubu into modern vector-scaled `ctk.CTkImage` references behind the scenes.
 
-## Public Methods
+### Public Methods
 
-### `state(state_string: str = None) -> str`
+#### `state(state_string: str = None) -> str`
 Operational state management controller. Coordinates background desaturation colors and native input locks safely.
 *   **Arguments**: 
     *   `state_string` (*str*, optional): The target state to enforce (`"normal"` or `"disabled"`). If omitted, returns the active virtual configuration tracker state.
 *   **Returns**: The active operational state tracking string.
 
-### `configure(*args, **kwargs)`
+#### `configure(*args, **kwargs)`
 Handles both programmatic keyword modifications and Pygubu designer inspector positional dictionary queries safely. Automatically populates internal lifecycle handshake hooks (`_finalize_themeable_lifecycle`).
 
-## Theme Configuration Matrix (`themes.json`)
+### Theme Configuration Matrix (`themes.json`)
 ```json
 {
   "sCTkTextboxPrimary": {
@@ -44,7 +44,7 @@ Handles both programmatic keyword modifications and Pygubu designer inspector po
 }
 ```
 
-## Implementation Example & Test Harness
+### Implementation Example & Test Harness
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use a `sCTkTextboxPrimary`.
 
