@@ -96,7 +96,6 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 
 #### Controls and Display
 * <u>sCTkButtons</u>: There are three levels of buttons included in the library.
-
     - `sCTkButtonPrimary` - Provides high-visibility, accented action button featuring integrated hover loops and dynamic panel lock desaturation states. Use this for the action the user should take. 
     - `sCTkButtonSecondary` - A toned down button used for less likely options or end points. You might use this for the Cancel button.
     - `sCTkButtonTertiary` - Known in the industry as a `Ghost Button`, this button is almost invisible. Use this for low probability selections.
@@ -143,7 +142,6 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 
 
 * <u>Textboxes</u>: Two levels of text boxes are supported for different needs of your users.
-* 
 	- `sCTkTextboxPrimary` - The standard textbox that you will probably use most of the time.
 	- `sCTkTextboxSecondary` - Smaller font that you might find useful for other purposes.
 
