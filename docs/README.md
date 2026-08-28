@@ -178,8 +178,8 @@ app.mainloop()
 
 A clean, theme-compliant standard backplane container layout chassis widget. It functions as the geometric foundation card for stacking controls, isolating interface subsections, and grouping multi-frequency layout grids.
 
-![sCTkFrame_Dark.png](images/sCTkFrame_Dark.png)
-![sCTkFrame_Light.png](images/sCTkFrame_Light.png)
+![sCTkFrame_Dark.png](src/images/sCTkFrame_Dark.png)
+![sCTkFrame_Light.png](src/images/sCTkFrame_Light.png)
 
 
 
@@ -308,8 +308,8 @@ if __name__ == "__main__":
 An advanced scrollable window viewport capsule inheriting natively and directly from CustomTkinter's `ctk.CTkScrollableFrame` layouts. It streamlines geometry tracking parameters and isolates background mouse-wheel layers cleanly while leaving the application developer completely in control of child layout configuration sweeps across theme switches.
 
 
-![sCTkScrollableFrame_Dark.png](images/sCTkScrollableFrame_Dark.png)
-![sCTkScrollableFrame_Light.png](images/sCTkScrollableFrame_Light.png)
+![sCTkScrollableFrame_Dark.png](src/images/sCTkScrollableFrame_Dark.png)
+![sCTkScrollableFrame_Light.png](src/images/sCTkScrollableFrame_Light.png)
 
 
 ### API Property Reference
@@ -460,8 +460,8 @@ These are the basic everyday widgets that you will use.
 ## sCTkButtonPrimary
 
 The dominant primary command execution button widget component wrapping `customtkinter.CTkButton`. It incorporates high-priority telemetry layout overrides (**Alarm Warning Blocks** and **Latching Pressed Anchors**) layered over an independent deep-copy keyword caching shield to isolate colors from native dictionary mutation failures while leveraging `ThemeableWidget` mixins to natively handle Pygubu data streams.
-![sCTkButtonPrimary_Dark.png](images/sCTkButtonPrimary_Dark.png)
-![sCTkButtonPrimary_Light.png](images/sCTkButtonPrimary_Light.png)
+![sCTkButtonPrimary_Dark.png](src/images/sCTkButtonPrimary_Dark.png)
+![sCTkButtonPrimary_Light.png](src/images/sCTkButtonPrimary_Light.png)
 ### API Property Reference
 
 | Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
@@ -598,8 +598,8 @@ if __name__ == "__main__":
 A specialized, theme-compliant secondary button component widget variant wrapping `customtkinter.CTkButton` designed to act as a latching status toggle selector. It implements a deep-copy keyword caching shield to preserve custom visual style parameters from native mutation traps and prevent `NoneType` canvas validation exceptions.
 
 
-![sCTkButtonSecondary_Dark.png](images/sCTkButtonSecondary_Dark.png)
-![sCTkButtonSecondary_Light.png](images/sCTkButtonSecondary_Light.png)
+![sCTkButtonSecondary_Dark.png](src/images/sCTkButtonSecondary_Dark.png)
+![sCTkButtonSecondary_Light.png](src/images/sCTkButtonSecondary_Light.png)
 
 
 ### API Property Reference
@@ -723,8 +723,8 @@ if __name__ == "__main__":
 An outline-driven custom toggle variant button widget component styled specifically for sub-presets, tuning markers, and option lock keys wrapping `customtkinter.CTkButton`. It utilizes an independent deep-copy keyword caching shield and a dynamic runtime accent fallback detector to align button typography with CustomTkinter system configurations automatically.
 
 
-![sCTkButtonTertiary_Dark.png](images/sCTkButtonTertiary_Dark.png)
-![sCTkButtonTertiary_Light.png](images/sCTkButtonTertiary_Light.png)
+![sCTkButtonTertiary_Dark.png](src/images/sCTkButtonTertiary_Dark.png)
+![sCTkButtonTertiary_Light.png](src/images/sCTkButtonTertiary_Light.png)
 
 
 ### API Property Reference
@@ -850,8 +850,8 @@ if __name__ == "__main__":
 
 A specialized, theme-compliant checkbox element component variant designed for binary option selections, telemetry locks, and parameter configurations. It integrates an independent deep-copy keyword caching shield and clean programmatic inheritance to preserve checkbox configurations without intermediate file middlemen.
 
-![sCTkCheckBox_Dark.png](images/sCTkCheckBox_Dark.png)
-![sCTkCheckBox_Light.png](images/sCTkCheckBox_Light.png)
+![sCTkCheckBox_Dark.png](src/images/sCTkCheckBox_Dark.png)
+![sCTkCheckBox_Light.png](src/images/sCTkCheckBox_Light.png)
 
 
 ### API Property Reference
@@ -988,8 +988,8 @@ Dominant form input lane widget variant designed for primary user data entry (e.
 *For alternative helper input fields or metadata input channels, see the companion component documentation page:* [sCTkEntrySecondary](sCTkEntrySecondary.md).
 
 
-![sCTkEntryPrimary_Dark.png](images/sCTkEntryPrimary_Dark.png)
-![sCTkEntryPrimary_Light.png](images/sCTkEntryPrimary_Light.png)
+![sCTkEntryPrimary_Dark.png](src/images/sCTkEntryPrimary_Dark.png)
+![sCTkEntryPrimary_Light.png](src/images/sCTkEntryPrimary_Light.png)
 
 
 ### API Property Reference
@@ -1134,8 +1134,8 @@ Auxiliary / secondary metadata input lane widget variant designed for secondary 
 *For dominant form input fields or direct operational data entry channels, see the primary component documentation page:* [sCTkEntryPrimary](sCTkEntryPrimary.md).
 
 
-![sCTkEntrySecondary_Dark.png](images/sCTkEntrySecondary_Dark.png)
-![sCTkEntrySecondary_Light.png](images/sCTkEntrySecondary_Light.png)
+![sCTkEntrySecondary_Dark.png](src/images/sCTkEntrySecondary_Dark.png)
+![sCTkEntrySecondary_Light.png](src/images/sCTkEntrySecondary_Light.png)
 
 
 ### API Property Reference
@@ -1284,8 +1284,8 @@ if __name__ == "__main__":
 The dominant primary header typography display label widget component wrapping `customtkinter.CTkLabel`. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
 
 
-![sCTkLabelPrimary_Dark.png](images/sCTkLabelPrimary_Dark.png)
-![sCTkLabelPrimary_Light.png](images/sCTkLabelPrimary_Light.png)
+![sCTkLabelPrimary_Dark.png](src/images/sCTkLabelPrimary_Dark.png)
+![sCTkLabelPrimary_Light.png](src/images/sCTkLabelPrimary_Light.png)
 
 
 ### API Property Reference
@@ -1422,8 +1422,8 @@ The intermediate sub-section display typography label widget component. It featu
 *For dominant main dashboard header components, see the companion component documentation page:* [sCTkLabelPrimary](sCTkLabelPrimary.md).
 
 
-![sCTkLabelSecondary_Dark.png](images/sCTkLabelSecondary_Dark.png)
-![sCTkLabelSecondary_Light.png](images/sCTkLabelSecondary_Light.png)
+![sCTkLabelSecondary_Dark.png](src/images/sCTkLabelSecondary_Dark.png)
+![sCTkLabelSecondary_Light.png](src/images/sCTkLabelSecondary_Light.png)
 
 
 ### API Property Reference
@@ -1546,8 +1546,8 @@ The fine inline description, sub-legend, or auxiliary notice typography display 
 *For prominent main dashboard header and mid-level sections, see the companion component pages:* [sCTkLabelPrimary](sCTkLabelPrimary.md) and [sCTkLabelSecondary](sCTkLabelSecondary.md).
 
 
-![sCTkLabelTertiary_Dark.png](images/sCTkLabelTertiary_Dark.png)
-![sCTkLabelTertiary_Light.png](images/sCTkLabelTertiary_Light.png)
+![sCTkLabelTertiary_Dark.png](src/images/sCTkLabelTertiary_Dark.png)
+![sCTkLabelTertiary_Light.png](src/images/sCTkLabelTertiary_Light.png)
 
 
 ### API Property Reference
@@ -1684,8 +1684,8 @@ if __name__ == "__main__":
 An advanced theme-compliant linear progression indicator widget. It implements custom state hooks to dynamically morph track backgrounds and progress fill lanes into desaturated gray tokens on a programmatic lock, protecting visual dashboard metrics from freezing out of theme synchronization.
 
 
-![sCTkProgressBar_Dark.png](images/sCTkProgressBar_Dark.png)
-![sCTkProgressBar_Light.png](images/sCTkProgressBar_Light.png)
+![sCTkProgressBar_Dark.png](src/images/sCTkProgressBar_Dark.png)
+![sCTkProgressBar_Light.png](src/images/sCTkProgressBar_Light.png)
 
 
 ### API Property Reference
@@ -1866,8 +1866,8 @@ if __name__ == "__main__":
 A theme-compliant custom mutual exclusion radio selection switch component wrapping `customtkinter.CTkRadioButton`. Specially engineered for cockpit tuning tasks—such as VFO selection banks, transmitter operation modes, and antenna relay switches—it decouples low-level parameter configurations to prevent layout validation crashes while keeping disabled states 100% theme-adaptive.
 
 
-![sCTkRadioButton_Dark.png](images/sCTkRadioButton_Dark.png)
-![sCTkRadioButton_Light.png](images/sCTkRadioButton_Light.png)
+![sCTkRadioButton_Dark.png](src/images/sCTkRadioButton_Dark.png)
+![sCTkRadioButton_Light.png](src/images/sCTkRadioButton_Light.png)
 
 ---
 
@@ -2011,8 +2011,8 @@ if __name__ == "__main__":
 The `sCTkScrollbar` is a high-performance, theme-adaptive custom scrollbar element designed for the `sCustomTkinter` radio desktop interface, working in tandem with the unblocked `sCTkScrollArea` viewport container frame. It inherits from `ctk.CTkScrollbar` to preserve native light/dark appearance switches while introducing specialized hardware aggregators to handle inertial gestures smoothly.
 
 
-![sCTkScrollbar_Dark.png](images/sCTkScrollbar_Dark.png)
-![sCTkScrollbar_Light.png](images/sCTkScrollbar_Light.png)
+![sCTkScrollbar_Dark.png](src/images/sCTkScrollbar_Dark.png)
+![sCTkScrollbar_Light.png](src/images/sCTkScrollbar_Light.png)
 
 
 ### 📌 Localized Table of Contents
@@ -2145,8 +2145,8 @@ if __name__ == "__main__":
 
 A custom, theme-compliant segmented button strip tracker widget designed for hardware-inspired radio control panel layouts. Inherits directly from `customtkinter.CTkSegmentedButton` and implements the `ThemeableWidget` mixin framework, enabling total alignment with centralized stylesheet configurations.
 
-![sCTkSegmentedButton_Dark.png](images/sCTkSegmentedButton_Dark.png)
-![sCTkSegmentedButton_Light.png](images/sCTkSegmentedButton_Light.png)
+![sCTkSegmentedButton_Dark.png](src/images/sCTkSegmentedButton_Dark.png)
+![sCTkSegmentedButton_Light.png](src/images/sCTkSegmentedButton_Light.png)
 
 
 
@@ -2251,8 +2251,8 @@ if __name__ == "__main__":
 Standardized live track calibration adjustment slider providing real-time data value interception, disabled layout mapping overrides, and multi-zone Pygubu designer compatibility.
 
 
-![sCTkSlider_Dark.png](images/sCTkSlider_Dark.png)
-![sCTkSlider_Light.png](images/sCTkSlider_Light.png)
+![sCTkSlider_Dark.png](src/images/sCTkSlider_Dark.png)
+![sCTkSlider_Light.png](src/images/sCTkSlider_Light.png)
 
 
 ---
@@ -2337,8 +2337,8 @@ if __name__ == "__main__":
 The `sCTkSwitch` is a theme-compliant, standard custom toggle switch component inheriting directly from `ctk.CTkSwitch`. It guarantees absolute layout engine continuity and native rendering execution pipelines. The widget enforces custom framework state management layers, text desaturation systems, and an airtight event priority tag shield when locked, without clashing with low-level canvas polygon caching locks.
 
 
-![sCTkSwitch_Dark.png](images/sCTkSwitch_Dark.png)
-![sCTkSwitch_Light.png](images/sCTkSwitch_Light.png)
+![sCTkSwitch_Dark.png](src/images/sCTkSwitch_Dark.png)
+![sCTkSwitch_Light.png](src/images/sCTkSwitch_Light.png)
 
 
 <a name="contents"></a>
@@ -2501,8 +2501,8 @@ if __name__ == "__main__":
 
 The `sCTkTabview` is a theme-compliant custom multi-page dashboard deck container widget engineered specifically for the `sCustomTkinter` desktop amateur radio cockpit application. It inherits from `baseui.sCTkTabviewUI` and `ThemeableWidget` to manage dense workstation layouts cleanly. The component provides absolute palette rendering flexibility driven straight out of your central `themes.json` sheets, ensuring uniform text desaturation and track flattening when frozen or locked.
 
-![sCTkTabview_Dark.png](images/sCTkTabview_Dark.png)
-![sCTkTabview_Light.png](images/sCTkTabview_Light.png)
+![sCTkTabview_Dark.png](src/images/sCTkTabview_Dark.png)
+![sCTkTabview_Light.png](src/images/sCTkTabview_Light.png)
 
 
 <a name="contents"></a>
@@ -2689,8 +2689,8 @@ if __name__ == "__main__":
 A dominant theme-compliant messaging and logging terminal console wrapper that inherits natively from `customtkinter.CTkTextbox`. It implements a specialized sequential order of operations pass to enforce native, zero-leak read-only locks while completely preventing CustomTkinter's native disabled appearance mode freezes.
 
 
-![sCTkTextboxPrimary_Dark.png](images/sCTkTextboxPrimary_Dark.png)
-![sCTkTextboxPrimary_Light.png](images/sCTkTextboxPrimary_Light.png)
+![sCTkTextboxPrimary_Dark.png](src/images/sCTkTextboxPrimary_Dark.png)
+![sCTkTextboxPrimary_Light.png](src/images/sCTkTextboxPrimary_Light.png)
 
 
 ## Core Features
@@ -2798,8 +2798,8 @@ if __name__ == "__main__":
 A custom, theme-compliant secondary logging and auxiliary console text display viewport built cleanly and natively on top of `customtkinter.CTkTextbox`. Designed to match the exact programmatic engine of the primary console, it uses sequential repaint loops to guarantee native read-only input locks without visual color freezes or text canvas truncation errors.
 
 
-![sCTkTextboxSecondary_Dark.png](images/sCTkTextboxSecondary_Dark.png)
-![sCTkTextboxSecondary_Light.png](images/sCTkTextboxSecondary_Light.png)
+![sCTkTextboxSecondary_Dark.png](src/images/sCTkTextboxSecondary_Dark.png)
+![sCTkTextboxSecondary_Light.png](src/images/sCTkTextboxSecondary_Light.png)
 
 
 ## Core Features
@@ -2913,8 +2913,8 @@ Not a lot of choices here, but they should suffice.
 
 A theme-compliant, prominent data-entry combo box widget variant designed for multi-frequency array indexes, input lanes, and tracking channels. It features an independent deep-copy keyword caching shield and early parameter-popping filters to safeguard dropdown sub-component properties from native mutation deletion loops.
 
-![sCTkComboBox_Dark.png](images/sCTkComboBox_Dark.png)
-![sCTkComboBox_Light.png](images/sCTkComboBox_Light.png)
+![sCTkComboBox_Dark.png](src/images/sCTkComboBox_Dark.png)
+![sCTkComboBox_Light.png](src/images/sCTkComboBox_Light.png)
 
 
 ### API Property Reference
@@ -3056,8 +3056,8 @@ if __name__ == "__main__":
 The dominant primary option menu selector drop-down widget component wrapping `customtkinter.CTkOptionMenu`. It incorporates early parameter popping filters and an independent value-cloned deep copy caching layer to guarantee composite drop-down states remain permanently insulated against native CustomTkinter initialization dictionary data loss.
 
 
-![sCTkOptionMenuPrimary_Dark.png](images/sCTkOptionMenuPrimary_Dark.png)
-![sCTkOptionMenuPrimary_Light.png](images/sCTkOptionMenuPrimary_Light.png)
+![sCTkOptionMenuPrimary_Dark.png](src/images/sCTkOptionMenuPrimary_Dark.png)
+![sCTkOptionMenuPrimary_Light.png](src/images/sCTkOptionMenuPrimary_Light.png)
 
 
 ### API Property Reference
@@ -3206,8 +3206,8 @@ The auxiliary secondary option menu drop-down selector widget component variant 
 *For dominant form drop-downs or principal system mode choices, see the master component documentation page:* [sCTkOptionMenuPrimary](sCTkOptionMenuPrimary.md).
 
 
-![sCTkOptionMenuSecondary_Dark.png](images/sCTkOptionMenuSecondary_Dark.png)
-![sCTkOptionMenuSecondary_Light.png](images/sCTkOptionMenuSecondary_Light.png)
+![sCTkOptionMenuSecondary_Dark.png](src/images/sCTkOptionMenuSecondary_Dark.png)
+![sCTkOptionMenuSecondary_Light.png](src/images/sCTkOptionMenuSecondary_Light.png)
 
 
 ### API Property Reference
@@ -3341,7 +3341,7 @@ These are all the extra widgets that were added to the stock set provided with `
 
 Abstract foundational base class for theme-adaptive mechanical rotary encoder components. It coordinates vector canvas layouts, mouse interaction loops, and cross-platform OS theme repainting rules.
 
-![sCTkDial_All_Dark.png](images/sCTkDial_All_Dark.png)
+![sCTkDial_All_Dark.png](src/images/sCTkDial_All_Dark.png)
 
 ### Universal Dial Architecture
 
@@ -3404,8 +3404,8 @@ All concrete sub-classes read from this structural arrangement format inside you
 An infinite flywheel tuning encoder module tracking signed velocity delta step increments across an endless 360-degree rotation path (ideal for high-fidelity radio VFO controls, audio mixers, and multi-channel squelch encoders).
 
 
-![sCTkDialContinuous_Dark.png](images/sCTkDialContinuous_Dark.png)
-![sCTkDialContinuous_Light.png](images/sCTkDialContinuous_Light.png)
+![sCTkDialContinuous_Dark.png](src/images/sCTkDialContinuous_Dark.png)
+![sCTkDialContinuous_Light.png](src/images/sCTkDialContinuous_Light.png)
 
 
 ### API Property Reference
@@ -3591,8 +3591,8 @@ if __name__ == "__main__":
 A concrete rotary encoder range variant designed for hard-bounded linear controls (e.g., AF/RF volume gain level sliders, squelch limits, or power thresholds). It enforces absolute mechanical dead stops at outer thresholds, preventing directional wraparound loops.
 
 
-![sCTkDialRange_Dark.png](images/sCTkDialRange_Dark.png)
-![sCTkDialRange_Light.png](images/sCTkDialRange_Light.png)
+![sCTkDialRange_Dark.png](src/images/sCTkDialRange_Dark.png)
+![sCTkDialRange_Light.png](src/images/sCTkDialRange_Light.png)
 
 
 ### API Property Reference
@@ -3767,8 +3767,8 @@ if __name__ == "__main__":
 A concrete rotary encoder switch variant designed for stepped selector controls (e.g., band configurations, operating modes, or filter sub-selections). It uses an explicit bounding arc configuration and outputs a clean integer mapping parameter tracking list item indices natively.
 
 
-![sCTkDialSelector_Dark.png](images/sCTkDialSelector_Dark.png)
-![sCTkDialSelector_Light.png](images/sCTkDialSelector_Light.png)
+![sCTkDialSelector_Dark.png](src/images/sCTkDialSelector_Dark.png)
+![sCTkDialSelector_Light.png](src/images/sCTkDialSelector_Light.png)
 
 
 ### API Property Reference
@@ -3944,8 +3944,8 @@ A theme-compliant, highly configurable custom file and folder navigation panel e
 
 ---
 
-![sCTkFileExplorer_Dark.png](images/sCTkFileExplorer_Dark.png)
-![sCTkFileExplorer_Light.png](images/sCTkFileExplorer_Light.png)
+![sCTkFileExplorer_Dark.png](src/images/sCTkFileExplorer_Dark.png)
+![sCTkFileExplorer_Light.png](src/images/sCTkFileExplorer_Light.png)
 
 
 ### API Property Reference
@@ -4159,8 +4159,8 @@ if __name__ == "__main__":
 
 A clean, theme-compliant custom header-labeled scrollable container card frame built directly on top of CustomTkinter's native text/scroll classes. It is engineered to act as an organized panel matrix tree that seamlessly suppresses visible scrollbar components out of view by hard-matching scrollbar background canvas elements directly to frame asset color backgrounds.
 
-![sCTkFrameLabeledPrimary_Dark.png](images/sCTkFrameLabeledPrimary_Dark.png)
-![sCTkFrameLabeledPrimary_Light.png](images/sCTkFrameLabeledPrimary_Light.png)
+![sCTkFrameLabeledPrimary_Dark.png](src/images/sCTkFrameLabeledPrimary_Dark.png)
+![sCTkFrameLabeledPrimary_Light.png](src/images/sCTkFrameLabeledPrimary_Light.png)
 
 
 ### API Property Reference
@@ -4307,8 +4307,8 @@ if __name__ == "__main__":
 The custom secondary interface typography display label widget component wrapping `customtkinter.CTkLabel`. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
 
 
-![sCTkFrameLabeledSecondary_Dark.png](images/sCTkFrameLabeledSecondary_Dark.png)
-![sCTkFrameLabeledSecondary_Light.png](images/sCTkFrameLabeledSecondary_Light.png)
+![sCTkFrameLabeledSecondary_Dark.png](src/images/sCTkFrameLabeledSecondary_Dark.png)
+![sCTkFrameLabeledSecondary_Light.png](src/images/sCTkFrameLabeledSecondary_Light.png)
 
 
 ### API Property Reference
@@ -4436,8 +4436,8 @@ if __name__ == "__main__":
 
 A clean, theme-compliant container frame variant explicitly styled to act as an outlined structural card or passive layout grouping box. It integrates a clean operational state interceptor layer to gracefully absorb cascading configuration switches without throwing unrecognized keyword violations.
 
-![sCTkFrameOutlined_Dark.png](images/sCTkFrameOutlined_Dark.png)
-![sCTkFrameOutlined_Light.png](images/sCTkFrameOutlined_Light.png)
+![sCTkFrameOutlined_Dark.png](src/images/sCTkFrameOutlined_Dark.png)
+![sCTkFrameOutlined_Light.png](src/images/sCTkFrameOutlined_Light.png)
 
 
 ### API Property Reference
@@ -4588,8 +4588,8 @@ The `sCTkMessagebox` is an advanced, themeable dialog window system designed to 
 ---
 
 
-![sCTkMessagebox_Dark.png](images/sCTkMessagebox_Dark.png)
-![sCTkMessagebox_Light.png](images/sCTkMessagebox_Light.png)
+![sCTkMessagebox_Dark.png](src/images/sCTkMessagebox_Dark.png)
+![sCTkMessagebox_Light.png](src/images/sCTkMessagebox_Light.png)
 
 
 ### API Constructor Reference
@@ -4786,8 +4786,8 @@ if __name__ == "__main__":
 An advanced composite field-and-trigger widget pairing a fluid single-line text lane entry block directly alongside an integrated modal browser toggle button. It translates local paths, expands system tilde keys (`~`), and dynamically opens an embedded, theme-synchronized `sCTkFileExplorer` portal centered accurately over your parent layout dimensions without locking primary background execution threads.
 
 
-![sCTkPathChooser_Dark.png](images/sCTkPathChooser_Dark.png)
-![sCTkPathChooser_Light.png](images/sCTkPathChooser_Light.png)
+![sCTkPathChooser_Dark.png](src/images/sCTkPathChooser_Dark.png)
+![sCTkPathChooser_Light.png](src/images/sCTkPathChooser_Light.png)
 
 
 ### API Property Reference
@@ -4929,8 +4929,8 @@ if __name__ == "__main__":
 
 The `sCTkScrollArea` is an unblocked viewport container layout chassis designed for the `sCustomTkinter` radio desktop interface. It acts as a direct canvas frame alternative to `ctk.CTkScrollableFrame`, allowing isolated external scrolling elements to connect natively to an internal view surface. It isolates internal frame elements to capture mouse wheels and high-precision touchpad momentum sweeps smoothly across all target rows.
 
-![sCTkScrollArea_Dark.png](images/sCTkScrollArea_Dark.png)
-![sCTkScrollArea_Light.png](images/sCTkScrollArea_Light.png)
+![sCTkScrollArea_Dark.png](src/images/sCTkScrollArea_Dark.png)
+![sCTkScrollArea_Light.png](src/images/sCTkScrollArea_Light.png)
 
 ### 📌 Localized Table of Contents
 * [API Constructor Reference](#-api-constructor-reference)
@@ -5077,8 +5077,8 @@ if __name__ == "__main__":
 An advanced theme-compliant option list selector widget. It pairs an optional high-contrast string prefix search lane with a dynamic checklist scrollback chassis to safely manage multi-state checkbox row configurations natively.
 
 
-![sCTkSelector_Dark.png](images/sCTkSelector_Dark.png)
-![sCTkSelector_Light.png](images/sCTkSelector_Light.png)
+![sCTkSelector_Dark.png](src/images/sCTkSelector_Dark.png)
+![sCTkSelector_Light.png](src/images/sCTkSelector_Light.png)
 
 
 ### API Property Reference
@@ -5218,8 +5218,8 @@ The *sCTkSeparator* is an advanced, themeable divider widget for CustomTkinter. 
 
 --- 
 
-![sCTkSeparator_Dark.png](images/sCTkSeparator_Dark.png)
-![sCTkSeparator_Light.png](images/sCTkSeparator_Light.png)
+![sCTkSeparator_Dark.png](src/images/sCTkSeparator_Dark.png)
+![sCTkSeparator_Light.png](src/images/sCTkSeparator_Light.png)
 
 
 ### System Architecture Overview
@@ -5364,8 +5364,8 @@ if __name__ == "__main__":
 The `sCTkSMeter` is a standalone, theme-adaptive analog S-Meter/Power Output gauge instrument designed specifically for ham radio transceiver desktop interfaces. Natively inheriting container footprints from `customtkinter.CTkFrame`, it delivers smooth telemetry tracking sweeps without the overhead of extraneous nesting modules.
 
 
-![sCTkSMeter_Dark.png](images/sCTkSMeter_Dark.png)
-![sCTkSMeter_Light.png](images/sCTkSMeter_Light.png)
+![sCTkSMeter_Dark.png](src/images/sCTkSMeter_Dark.png)
+![sCTkSMeter_Light.png](src/images/sCTkSMeter_Light.png)
 
 
 ---
@@ -5501,8 +5501,8 @@ if __name__ == "__main__":
 The `sCTkSMeterBar` is a standalone, low-profile horizontal discrete 30-segment LED bar instrumentation widget displaying independent telemetry tracks for incoming receiver S-Units, transmitter SWR ratio levels, and forward RF Power output percentage. Like all sCTk widgets, it is fully theme-adaptive.
 
 
-![sCTkSMeterBar_Dark.png](images/sCTkSMeterBar_Dark.png)
-![sCTkSMeterBar_Light.png](images/sCTkSMeterBar_Light.png)
+![sCTkSMeterBar_Dark.png](src/images/sCTkSMeterBar_Dark.png)
+![sCTkSMeterBar_Light.png](src/images/sCTkSMeterBar_Light.png)
 
 
 ---
@@ -5655,8 +5655,8 @@ if __name__ == "__main__":
 The `sCTkSpinbox` is a highly configurable, theme-compliant custom spinbox wrapper widget. It extends `ctk.CTkFrame` and aggregates an internal `sCTkEntryPrimary` alongside two flanking or stacked directional button controls. The component dynamically supports two operational tracking modes: standard numerical incrementation step ranges, and discrete string text array index navigation. Like all sCTk widgets, it is fully theme-adaptive.
 
 
-![sCTkSpinbox_Dark.png](images/sCTkSpinbox_Dark.png)
-![sCTkSpinbox_Light.png](images/sCTkSpinbox_Light.png)
+![sCTkSpinbox_Dark.png](src/images/sCTkSpinbox_Dark.png)
+![sCTkSpinbox_Light.png](src/images/sCTkSpinbox_Light.png)
 
 
 <a name="contents"></a>
@@ -5883,8 +5883,8 @@ if __name__ == "__main__":
 The `sCTkSwitchAlt` is an advanced custom composite toggle switch component built on a high-performance vector graphics `ctk.CTkCanvas` layout engine. Unlike the native inheritance model found in the `sCTkSwitch` (Standard Switch), the alternative variant is engineered specifically to shatter CustomTkinter's low-level polygon color caching locks. This enables **100% complete color rendering control** driven straight out of your central `themes.json` sheets across both the track background and moving selector handle elements, completely eliminating square bounding box ghosts and artifact dropouts.
 
 
-![sCTkSwitchAlt_Dark.png](images/sCTkSwitchAlt_Dark.png)
-![sCTkSwitchAlt_Light.png](images/sCTkSwitchAlt_Light.png)
+![sCTkSwitchAlt_Dark.png](src/images/sCTkSwitchAlt_Dark.png)
+![sCTkSwitchAlt_Light.png](src/images/sCTkSwitchAlt_Light.png)
 
 
 <a name="contents"></a>
@@ -6093,8 +6093,8 @@ if __name__ == "__main__":
 The `sCTkTableview` is a high-performance, theme-adaptive, and interactive data grid widget engineered specifically for the `sCustomTkinter` desktop amateur radio workspace architecture. It wraps a specialized scrollable container viewport to render structured, matrix-aligned logging rows, transceiver channels, or telemetry tracking data.
 
 
-![sCTkTableview_Dark.png](images/sCTkTableview_Dark.png)
-![sCTkTableview_Light.png](images/sCTkTableview_Light.png)
+![sCTkTableview_Dark.png](src/images/sCTkTableview_Dark.png)
+![sCTkTableview_Light.png](src/images/sCTkTableview_Light.png)
 
 
 <a name="contents"></a>

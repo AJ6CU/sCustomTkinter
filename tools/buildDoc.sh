@@ -1,7 +1,7 @@
 #!/bin/bash
 
-cat  ../docs/introduction.md > ../docs/index.md
-echo -e "# Contents\n" >> ../docs/index.md
+cat  ../docs/src/introduction.md > ../docs/README.md
+echo -e "# Contents\n" >> ../docs/README.md
 
 # 1. Generate TOC using order.txt
 while read -r file; do
@@ -22,13 +22,20 @@ while read -r file; do
       "# "*)   indent="* " ;;
     esac
 
-    echo "${indent}[$title](#$anchor)" >> ../docs/index.md
+    echo "${indent}[$title](#$anchor)" >> ../docs/README.md
   done
 done < order.txt
 
-echo -e "\n---\n" >> ../docs/index.md
+echo -e "\n---\n" >> ../docs/README.md
 
 # 2. Append files in the specified order
 while read -r file; do
-  cat "$file" >> ../docs/index.md && echo -e "\n\n" >> ../docs/index.md
+  cat "$file" >> ../docs/README.md && echo -e "\n\n" >> ../docs/README.md
 done < order.txt
+
+# =====================================================================
+# 3. Correct the image paths for the root README.md
+# =====================================================================
+# Works perfectly on both macOS and Linux:
+perl -pi -e 's|\(images/|\(src/images/|g' ../docs/README.md
+
