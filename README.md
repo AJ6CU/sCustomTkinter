@@ -73,7 +73,7 @@ root.mainloop()
 
 ## Comprehensive Component Catalog
 
-The reference manual for this library is provided [here](https://github.com/AJ6CU/sCustomTkinter/tree/main/docs/Readme.md) THe following is a summary of the library:
+The reference manual for this library is provided [here](docs/README.md) and the [pdf](docs/sCustomTkinterReferenceManual.pdf) The following is a summary of the library:
 
 
 ### Standard CustomTkinter Widgets
