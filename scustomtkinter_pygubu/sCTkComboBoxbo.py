@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkComboBoxBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkComboBox import sCTkComboBox
+from scustomtkinter.sctk_combobox import sCTkComboBox
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkComboBox"
+widget_namespace = "scustomtkinter.sctk_combobox"
 widget_classname = "sCTkComboBox"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

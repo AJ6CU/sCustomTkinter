@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkSegmentedButtonBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkSegmentedButton import sCTkSegmentedButton
+from scustomtkinter.sctk_segmentedbutton import sCTkSegmentedButton
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkSegmentedButton"
+widget_namespace = "scustomtkinter.sctk_segmentedbutton"
 widget_classname = "sCTkSegmentedButton"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

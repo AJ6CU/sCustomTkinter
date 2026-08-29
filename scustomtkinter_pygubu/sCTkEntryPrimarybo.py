@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkEntryBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkEntryPrimary import sCTkEntryPrimary
+from scustomtkinter.sctk_entry_primary import sCTkEntryPrimary
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkEntryPrimary"
+widget_namespace = "scustomtkinter.sctk_entry_primary"
 widget_classname = "sCTkEntryPrimary"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

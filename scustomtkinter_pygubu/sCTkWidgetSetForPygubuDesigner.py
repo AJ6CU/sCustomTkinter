@@ -13,80 +13,80 @@ from customtkinter import (CTkScrollableFrame)
 #
 
 
-import sCTkButtonPrimarybo
-import sCTkButtonSecondarybo
-import sCTkButtonTertiarybo
+import scustomtkinter_pygubu.sCTkButtonPrimarybo
+import scustomtkinter_pygubu.sCTkButtonSecondarybo
+import scustomtkinter_pygubu.sCTkButtonTertiarybo
 
-import sCTkCheckBoxbo
-import sCTkComboBoxbo
+import scustomtkinter_pygubu.sCTkCheckBoxbo
+import scustomtkinter_pygubu.sCTkComboBoxbo
 
-import sCTkDialbo
+import scustomtkinter_pygubu.sCTkDialbo
 
-import sCTkDialogCorebo
+import scustomtkinter_pygubu.sCTkDialogCorebo
 
-import sCTkEntryPrimarybo
-import sCTkEntrySecondarybo
+import scustomtkinter_pygubu.sCTkEntryPrimarybo
+import scustomtkinter_pygubu.sCTkEntrySecondarybo
 
 #import sCTkFileExplorerbo # missing bo file
 
 
-from sCTkFrame import sCTkFrame
-from sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFrame_builder_id)
+from scustomtkinter.sctk_frame import sCTkFrame
+from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFrame_builder_id)
 
-from sCTkFrameLabeledPrimary import sCTkFrameLabeledPrimary
-from sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
-import sCTkFrameLabeledSecondarybo
+from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
+from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
+import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
 
-from sCTkFrameOutlined import sCTkFrameOutlined
-from sCTkFrameOutlinedbo import (sCTkFrameOutlinedBO, builder_id as sCTkFrameOutlined_builder_id)
+from scustomtkinter.sctk_frame_outlined import sCTkFrameOutlined
+from scustomtkinter_pygubu.sCTkFrameOutlinedbo import (sCTkFrameOutlinedBO, builder_id as sCTkFrameOutlined_builder_id)
 
-import sCTkLabelPrimarybo
-import sCTkLabelSecondarybo
-import sCTkLabelTertiarybo
+import scustomtkinter_pygubu.sCTkLabelPrimarybo
+import scustomtkinter_pygubu.sCTkLabelSecondarybo
+import scustomtkinter_pygubu.sCTkLabelTertiarybo
 
-import sCTkOptionMenuPrimarybo
+import scustomtkinter_pygubu.sCTkOptionMenuPrimarybo
 
-from sCTkOptionMenuSecondary import sCTkOptionMenuSecondary
-from sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
+from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
+from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
 
-from sCTkPathChooser import sCTkPathChooser
-from sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
+from scustomtkinter.sctk_path_chooser import sCTkPathChooser
+from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
 
-import sCTkProgressBarbo
+import scustomtkinter_pygubu.sCTkProgressBarbo
 
-import sCTkRadioButtonbo
+import scustomtkinter_pygubu.sCTkRadioButtonbo
 
-import sCTkScrollableFramebo
+import scustomtkinter_pygubu.sCTkScrollableFramebo
 
-import sCTkScrollbarbo
+import scustomtkinter_pygubu.sCTkScrollbarbo
 
-import sCTkSegmentedButtonbo
+import scustomtkinter_pygubu.sCTkSegmentedButtonbo
 # from sCTkSegmentedButtonbo import (sCTkSegmentedButtonBO, builder_id as sCTkSegmentedButton_builder_id )
 
-from sCTkSelector import sCTkSelector
-from sCTkCheckBox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
+from scustomtkinter.sctk_selector import sCTkSelector
+from scustomtkinter.sctk_checkbox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
                                             # to search to find the clickable master frame
-from sCTkSelectorbo import (sCTkSelectorBO, builder_id as sCTkSelector_builder_id)
+from scustomtkinter_pygubu.sCTkSelectorbo import (sCTkSelectorBO, builder_id as sCTkSelector_builder_id)
 
-import sCTkSeparatorbo
+import scustomtkinter_pygubu.sCTkSeparatorbo
 
-import sCTkSliderbo
+import scustomtkinter_pygubu.sCTkSliderbo
 
-import sCTkSMeterbo
-import sCTkSMeterBarbo
+import scustomtkinter_pygubu.sCTkSMeterbo
+import scustomtkinter_pygubu.sCTkSMeterBarbo
 
-from sCTkSpinbox import sCTkSpinbox
-from sCTkSpinboxbo import (sCTkSpinboxBO, builder_id as sCTkSpinbox_builder_id)
+from scustomtkinter.sctk_spinbox import sCTkSpinbox
+from scustomtkinter_pygubu.sCTkSpinboxbo import (sCTkSpinboxBO, builder_id as sCTkSpinbox_builder_id)
 
-import sCTkSwitchbo
+import scustomtkinter_pygubu.sCTkSwitchbo
 
-import sCTkTabviewbo
+import scustomtkinter_pygubu.sCTkTabviewbo
 
-from sCTkTableview import sCTkTableview
-from sCTkTableviewbo import (sCTkTableviewBO, builder_id as sCTkTableview_builder_id)
+from scustomtkinter.sctk_tableview import sCTkTableview
+from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id as sCTkTableview_builder_id)
 
-import sCTkTextboxPrimarybo
-import sCTkTextboxSecondarybo
+import scustomtkinter_pygubu.sCTkTextboxPrimarybo
+import scustomtkinter_pygubu.sCTkTextboxSecondarybo
 
 # import sCTkTreeviewbo         # undecied whether to include
 

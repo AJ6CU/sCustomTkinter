@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkOptionMenuBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkOptionMenuPrimary import sCTkOptionMenuPrimary
+from scustomtkinter.sctk_optionmenu_primary import sCTkOptionMenuPrimary
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkOptionMenuPrimary"
+widget_namespace = "scustomtkinter.sctk_optionmenu_primary"
 widget_classname = "sCTkOptionMenuPrimary"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

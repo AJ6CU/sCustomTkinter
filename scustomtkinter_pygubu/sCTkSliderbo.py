@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkSliderBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkSlider import sCTkSlider
+from scustomtkinter.sctk_slider import sCTkSlider
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkSlider"
+widget_namespace = "scustomtkinter.sctk_slider"
 widget_classname = "sCTkSlider"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

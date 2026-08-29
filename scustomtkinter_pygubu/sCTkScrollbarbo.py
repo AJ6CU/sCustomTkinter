@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkScrollbarBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkScrollbar import sCTkScrollbar
+from scustomtkinter.sctk_scrollbar import sCTkScrollbar
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkScrollbar"
+widget_namespace = "scustomtkinter.sctk_scrollbar"
 widget_classname = "sCTkScrollbar"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

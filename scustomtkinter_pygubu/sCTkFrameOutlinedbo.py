@@ -19,13 +19,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkFrameBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkFrameOutlined import sCTkFrameOutlined
+from scustomtkinter.sctk_frame_outlined import sCTkFrameOutlined
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkFrameOutlined"
+widget_namespace = "scustomtkinter.sctk_frame_outlined"
 widget_classname = "sCTkFrameOutlined"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

@@ -12,10 +12,10 @@ from pygubu.api.v1 import (
 )
 
 # Import the native custom class
-from sCTkFileExplorer import sCTkFileExplorer
+from scustomtkinter.sctk_file_explorer import sCTkFileExplorer
 
 # Builder UI placement definitions
-widget_namespace = "sCTkFileExplorer"
+widget_namespace = "scustomtkinter.sctk_file_explorer"
 widget_classname = "sCTkFileExplorer"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkProgressBarBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkProgressBar import sCTkProgressBar
+from scustomtkinter.sctk_progress_bar import sCTkProgressBar
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkProgressBar"
+widget_namespace = "scustomtkinter.sctk_progress_bar"
 widget_classname = "sCTkProgressBar"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

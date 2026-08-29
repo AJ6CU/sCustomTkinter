@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkLabelBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkLabelTertiary import sCTkLabelTertiary
+from scustomtkinter.sctk_label_tertiary import sCTkLabelTertiary
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkLabelTertiary"
+widget_namespace = "scustomtkinter.sctk_label_tertiary"
 widget_classname = "sCTkLabelTertiary"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

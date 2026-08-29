@@ -20,13 +20,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.tabview import CTkTabviewBO, CTkTabviewTabBO
 
 
-from sCTkTabview import sCTkTabview
+from scustomtkinter.sctk_tabview import sCTkTabview
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkTabview"
+widget_namespace = "scustomtkinter.sctk_tabview"
 widget_classname = "sCTkTabview"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

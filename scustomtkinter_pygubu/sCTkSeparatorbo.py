@@ -11,12 +11,12 @@ from pygubu.api.v1 import (
     register_custom_property
 )
 from pygubu.plugins.customtkinter.widgets import CTkCanvasBO
-from sCTkThemes import THEME_DEFAULTS
+from scustomtkinter.sCTkThemes import THEME_DEFAULTS
 
 # Import the native custom class
-from sCTkSeparator import sCTkSeparator
+from scustomtkinter.sctk_separator import sCTkSeparator
 
-widget_namespace = "sCTkSeparator"
+widget_namespace = "scustomtkinter.sctk_separator"
 widget_classname = "sCTkSeparator"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

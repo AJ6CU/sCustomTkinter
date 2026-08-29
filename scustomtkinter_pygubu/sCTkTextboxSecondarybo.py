@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkTextboxBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkTextboxSecondary import sCTkTextboxSecondary
+from scustomtkinter.sctk_textbox_secondary import sCTkTextboxSecondary
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkTextboxSecondary"
+widget_namespace = "scustomtkinter.sctk_textbox_secondary"
 widget_classname = "sCTkTextboxSecondary"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

@@ -14,13 +14,13 @@ from pygubu.api.v1 import (
 )
 
 # Import the native custom class
-from sCTkSMeter import sCTkSMeter
+from scustomtkinter.sctk_smeter import sCTkSMeter
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkSMeter"
+widget_namespace = "scustomtkinter.sctk_smeter"
 widget_classname = "sCTkSMeter"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

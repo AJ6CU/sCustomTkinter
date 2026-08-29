@@ -4,9 +4,9 @@ from pygubu.api.v1 import (
     register_widget,
     register_custom_property
 )
-from sCTkTableview import sCTkTableview
+from scustomtkinter.sctk_tableview import sCTkTableview
 
-widget_namespace = "sCTkTableview"
+widget_namespace = "scustomtkinter.sctk_tableview"
 widget_classname = "sCTkTableview"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

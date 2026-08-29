@@ -18,13 +18,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkSwitchBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkSwitch import sCTkSwitch
+from scustomtkinter.sctk_switch import sCTkSwitch
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkSwitch"
+widget_namespace = "scustomtkinter.sctk_switch"
 widget_classname = "sCTkSwitch"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

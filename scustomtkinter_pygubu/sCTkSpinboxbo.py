@@ -4,9 +4,9 @@ from pygubu.api.v1 import (
     register_widget,
     register_custom_property
 )
-from sCTkSpinbox import sCTkSpinbox
+from scustomtkinter.sctk_spinbox import sCTkSpinbox
 
-widget_namespace = "sCTkSpinbox"
+widget_namespace = "scustomtkinter.sctk_spinbox"
 widget_classname = "sCTkSpinbox"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

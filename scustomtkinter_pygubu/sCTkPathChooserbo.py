@@ -14,12 +14,12 @@ from pygubu.api.v1 import (
 )
 
 # Import the native custom class
-from sCTkPathChooser import sCTkPathChooser
+from scustomtkinter.sctk_path_chooser import sCTkPathChooser
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkPathChooser"
+widget_namespace = "scustomtkinter.sctk_path_chooser"
 widget_classname = "sCTkPathChooser"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

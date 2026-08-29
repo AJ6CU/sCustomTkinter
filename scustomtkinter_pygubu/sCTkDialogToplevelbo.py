@@ -13,13 +13,13 @@ from pygubu.api.v1 import (
     BuilderObject,
     register_widget,
 )
-from sCTkDialogToplevel import sCTkDialogToplevel
+from scustomtkinter.sctk_dialog_toplevel import sCTkDialogToplevel
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkDialogToplevel"
+widget_namespace = "scustomtkinter.sctk_dialog_toplevel"
 widget_classname = "sCTkDialogToplevel"
 builder_namespace = "scustomtkinter"
 section_name = "Project Widgets"

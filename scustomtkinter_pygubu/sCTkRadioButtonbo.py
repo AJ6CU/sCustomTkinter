@@ -24,7 +24,7 @@ from sCTkRadioButton import sCTkRadioButton
 #
 # Builder definition section
 #
-widget_namespace = "sCTkRadioButton"
+widget_namespace = "scustomtkinter.sctk_radiobutton"
 widget_classname = "sCTkRadioButton"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

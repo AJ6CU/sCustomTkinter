@@ -19,13 +19,13 @@ from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.scrollableframe import CTkScrollableFrameBO
 from pygubu.api.v1 import copy_custom_property
 
-from sCTkScrollableFrame import sCTkScrollableFrame
+from scustomtkinter.sctk_scrollable_frame import sCTkScrollableFrame
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkScrollableFrame"
+widget_namespace = "scustomtkinter.sctk_scrollable_frame"
 widget_classname = "sCTkScrollableFrame"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

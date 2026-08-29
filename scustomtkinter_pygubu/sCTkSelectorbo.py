@@ -9,9 +9,9 @@ from pygubu.api.v1 import (
     register_widget,
     register_custom_property
 )
-from sCTkSelector import sCTkSelector
+from scustomtkinter.sctk_selector import sCTkSelector
 
-widget_namespace = "sCTkSelector"
+widget_namespace = "scustomtkinter.sctk_selector"
 widget_classname = "sCTkSelector"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"

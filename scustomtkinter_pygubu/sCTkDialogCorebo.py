@@ -16,13 +16,13 @@ from pygubu.api.v1 import (
     BuilderObject,
     register_widget,
 )
-from sCTkDialogCore import sCTkDialogCore
+from scustomtkinter.sctk_dialog_core import sCTkDialogCore
 
 
 #
 # Builder definition section
 #
-widget_namespace = "sCTkDialogCore"
+widget_namespace = "scustomtkinter.sctk_dialog_core"
 widget_classname = "sCTkDialogCore"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
