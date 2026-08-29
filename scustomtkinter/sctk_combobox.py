@@ -4,7 +4,7 @@ sCTkComboBox
 
 A custom, theme-compliant parameter selection dropdown combobox widget.
 Inherits cleanly and directly from ctk.CTkComboBox to preserve 100% of native
-CustomTkinter features, theme tracking loops, and native input locks [1.1, 1.2].
+CustomTkinter features, theme tracking loops, and native input locks.
 """
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
@@ -19,7 +19,7 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
         # 2. Fire our shared theme logic first. It automatically finds "sCTkComboBox" in the JSON
         ThemeableWidget.__init__(self, kw)
 
-        # 3. 🛠️ THE MUTATION SAFEGUARD DEEP COPY:
+        # 3. THE MUTATION SAFEGUARD DEEP COPY:
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
 
@@ -37,17 +37,23 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
 
         self._custom_current_state = "normal"
 
-        # 🔑 6. REGISTER LIFECYCLE HANDSHAKE HOOK:
+        # 6. REGISTER LIFECYCLE HANDSHAKE HOOK:
         self._finalize_themeable_lifecycle()
 
     def _set_appearance_mode(self, mode_string: str):
-        """Native look catcher ensuring combobox components follow global theme shifts fluidly [1.1, 1.2]."""
+        """
+        EXPERIMENTAL: no longer manually re-triggers _update_current_visual_state().
+        _update_current_visual_state() now passes raw (light, dark) tuples straight
+        through to configure() instead of pre-resolving to a single color, so CTk's
+        own appearance-mode tracking should repaint correctly on its own. If colors
+        stop following mode changes (especially while disabled), that's the signal
+        this doesn't hold and the manual re-trigger needs to come back.
+        """
         if hasattr(super(), "_set_appearance_mode"):
             try:
                 super()._set_appearance_mode(mode_string)
             except Exception:
                 pass
-        self._update_current_visual_state()
 
     def configure(self, *args, **kwargs):
         """Handles Pygubu designer queries and manages composite state updates safely."""
@@ -61,8 +67,7 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
 
                 if pname in ["fg_color", "border_color", "text_color", "hover_color"]:
                     current_state = str(self.state()).lower()
-                    val = self._custom_disabled_map.get(
-                        pname) if current_state == "disabled" else self._local_defaults.get(pname)
+                    val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
                     return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
 
                 return super().configure(pname)
@@ -85,11 +90,11 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
     config = configure
 
     def get_state(self):
-        """Explicit getter synchronized with your standalone test harness script assertions [1.1]."""
+        """Explicit getter synchronized with your standalone test harness script assertions."""
         return self.state()
 
     def state(self, mode: str = None):
-        """Dedicated combobox state controller [1.1]."""
+        """Dedicated combobox state controller."""
         if mode is None:
             return str(getattr(self, "_custom_current_state", "normal")).lower()
 
@@ -103,7 +108,11 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
             self._update_current_visual_state()
 
     def _update_current_visual_state(self):
-        """MASTER VISUAL ROUTER: Dynamically applies extensible theme properties [1.1, 1.2]."""
+        """
+        EXPERIMENTAL: passes raw (light, dark) tuples straight through to configure()
+        instead of resolving to a single color first, so CTk's native tracking can
+        handle appearance-mode repaints without help from _set_appearance_mode.
+        """
         is_disabled = getattr(self, "_custom_current_state", "normal") == "disabled"
         target_map = self._custom_disabled_map if is_disabled else self._local_defaults
 
@@ -112,12 +121,11 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
                     "dropdown_fg_color", "dropdown_text_color", "dropdown_hover_color", "border_width", "font"):
             val = target_map.get(key)
             if val is not None:
-                config_payload[key] = self._resolve_color(val) if "color" in key or "fg" in key else val
+                config_payload[key] = val
 
         if config_payload:
             super().configure(**config_payload)
 
-        # 🔑 SEQUENTIAL LOCK PASS: Native flag updates are executed at the absolute end
         if is_disabled:
             super().configure(state="disabled")
         else:

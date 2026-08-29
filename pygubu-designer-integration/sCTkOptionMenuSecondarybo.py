@@ -8,7 +8,7 @@ subclass of ctk.CTkFrame acting as a cleanly bordered composite OptionMenu
 UI source file: sCTkOptionMenuSecondary.ui
 """
 import customtkinter as ctk
-from ThemeableWidget import ThemeableWidget
+from .themeable_widget import ThemeableWidget
 
 
 # 🛠️ THE INHERITANCE CORRECTION:
