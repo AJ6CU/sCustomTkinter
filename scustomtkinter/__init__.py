@@ -13,9 +13,9 @@ def get_asset_path(relative_path: str) -> str:
 
 from .sctk_core import sCTk
 from .sctk_button_primary import sCTkButtonPrimary
-from .sctk_button_primarybo import sCTkButtonPrimaryBO
+from . import sCTkButtonPrimarybo
 __all__ = [
-    "sCTkButtonPrimaryBO"
+    "sCTkButtonPrimarybo"
 ]
 from .sctk_button_secondary import sCTkButtonSecondary
 from .sctk_button_tertiary import sCTkButtonTertiary
