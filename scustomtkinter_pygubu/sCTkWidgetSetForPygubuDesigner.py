@@ -1,6 +1,5 @@
 import tkinter as tk
-from pygubu.component.plugin_engine import IDesignerPlugin
-from pygubu.component.plugin_manager import PluginManager
+from pygubu.component.plugin_engine import BuilderLoaderPlugin, IDesignerPlugin
 from customtkinter import (CTkScrollableFrame)
 
 #
@@ -219,7 +218,7 @@ class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
 #
 # A Designer plugin for sCTk custom widgets
 #
-class sCTkPlugin(IDesignerPlugin):
+class sCTkDesignerPlugin(IDesignerPlugin):
 
     def get_preview_builder(self, builder_uid: str):
         """Return a BuilderObject subclass used to build a preview
@@ -247,9 +246,19 @@ class sCTkPlugin(IDesignerPlugin):
         return None
 
 
-#
-# Create a plugin instance and inject it.
-#
-custom_plugin = sCTkPlugin()
-PluginManager.designer_plugins.append(custom_plugin)
+class sCTkPlugin(BuilderLoaderPlugin):
+    def do_activate(self) -> bool:
+        spec = importlib.util.find_spec("scustomtkinter")
+        return spec is not None
 
+    def get_module_for(self, identifier: str) -> str:
+        return ["scustomtkinter_pygubu"]
+
+    def get_all_modules(self):
+        return ["scustomtkinter_pygubu"]
+
+    def can_load(self, identifier: str) -> bool:
+        return identifier.startswith("scustomtkinter.")
+
+    def get_designer_plugin(self):
+        return sCTkDesignerPlugin()
