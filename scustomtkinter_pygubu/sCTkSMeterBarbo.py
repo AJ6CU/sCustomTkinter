@@ -22,7 +22,7 @@ from sCTkFrame import sCTkFrame
 #
 widget_namespace = "sCTkSMeterBar"
 widget_classname = "sCTkSMeterBar"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

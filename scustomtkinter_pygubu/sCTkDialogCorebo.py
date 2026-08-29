@@ -24,7 +24,7 @@ from sCTkDialogCore import sCTkDialogCore
 #
 widget_namespace = "sCTkDialogCore"
 widget_classname = "sCTkDialogCore"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

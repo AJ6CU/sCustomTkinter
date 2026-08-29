@@ -17,7 +17,7 @@ from sCTkFileExplorer import sCTkFileExplorer
 # Builder UI placement definitions
 widget_namespace = "sCTkFileExplorer"
 widget_classname = "sCTkFileExplorer"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

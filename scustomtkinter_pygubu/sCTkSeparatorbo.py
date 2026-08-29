@@ -18,7 +18,7 @@ from sCTkSeparator import sCTkSeparator
 
 widget_namespace = "sCTkSeparator"
 widget_classname = "sCTkSeparator"
-builder_namespace = "sCTkSeparator"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

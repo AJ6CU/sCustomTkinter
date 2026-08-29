@@ -21,7 +21,7 @@ from sCTkDialogToplevel import sCTkDialogToplevel
 #
 widget_namespace = "sCTkDialogToplevel"
 widget_classname = "sCTkDialogToplevel"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "Project Widgets"
 
 

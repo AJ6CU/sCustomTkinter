@@ -16,7 +16,7 @@ from pygubu.api.v1 import (
 # Import the native custom classes directly out of your single-file source module
 from sCTkDial import sCTkDialContinuous, sCTkDialRange, sCTkDialSelector
 
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

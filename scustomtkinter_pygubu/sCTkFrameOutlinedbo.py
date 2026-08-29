@@ -27,7 +27,7 @@ from sCTkFrameOutlined import sCTkFrameOutlined
 #
 widget_namespace = "sCTkFrameOutlined"
 widget_classname = "sCTkFrameOutlined"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

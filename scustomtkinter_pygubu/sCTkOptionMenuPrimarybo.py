@@ -26,7 +26,7 @@ from sCTkOptionMenuPrimary import sCTkOptionMenuPrimary
 #
 widget_namespace = "sCTkOptionMenuPrimary"
 widget_classname = "sCTkOptionMenuPrimary"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

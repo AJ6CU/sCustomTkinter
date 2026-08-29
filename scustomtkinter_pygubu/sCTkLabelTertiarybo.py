@@ -26,7 +26,7 @@ from sCTkLabelTertiary import sCTkLabelTertiary
 #
 widget_namespace = "sCTkLabelTertiary"
 widget_classname = "sCTkLabelTertiary"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

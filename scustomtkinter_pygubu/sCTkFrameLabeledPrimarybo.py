@@ -26,7 +26,7 @@ from sCTkFrameLabeledPrimary import sCTkFrameLabeledPrimary
 #
 widget_namespace = "sCTkFrameLabeledPrimary"
 widget_classname = "sCTkFrameLabeledPrimary"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

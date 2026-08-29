@@ -28,7 +28,7 @@ from sCTkSelector import sCTkSelector
 #
 widget_namespace = "sCTkCheckBox"
 widget_classname = "sCTkCheckBox"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

@@ -13,7 +13,7 @@ from sCTkSelector import sCTkSelector
 
 widget_namespace = "sCTkSelector"
 widget_classname = "sCTkSelector"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

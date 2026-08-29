@@ -26,7 +26,7 @@ from sCTkEntryPrimary import sCTkEntryPrimary
 #
 widget_namespace = "sCTkEntryPrimary"
 widget_classname = "sCTkEntryPrimary"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

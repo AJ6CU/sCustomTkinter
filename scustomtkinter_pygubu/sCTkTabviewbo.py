@@ -28,7 +28,7 @@ from sCTkTabview import sCTkTabview
 #
 widget_namespace = "sCTkTabview"
 widget_classname = "sCTkTabview"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

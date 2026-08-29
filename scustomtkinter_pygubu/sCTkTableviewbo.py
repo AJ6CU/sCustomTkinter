@@ -8,7 +8,7 @@ from sCTkTableview import sCTkTableview
 
 widget_namespace = "sCTkTableview"
 widget_classname = "sCTkTableview"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

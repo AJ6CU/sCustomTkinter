@@ -26,7 +26,7 @@ from sCTkSwitch import sCTkSwitch
 #
 widget_namespace = "sCTkSwitch"
 widget_classname = "sCTkSwitch"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

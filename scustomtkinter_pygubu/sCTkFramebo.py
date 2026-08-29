@@ -27,7 +27,7 @@ from sCTkFrame import sCTkFrame
 #
 widget_namespace = "sCTkFrame"
 widget_classname = "sCTkFrame"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

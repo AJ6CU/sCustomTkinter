@@ -26,7 +26,7 @@ from sCTkComboBox import sCTkComboBox
 #
 widget_namespace = "sCTkComboBox"
 widget_classname = "sCTkComboBox"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

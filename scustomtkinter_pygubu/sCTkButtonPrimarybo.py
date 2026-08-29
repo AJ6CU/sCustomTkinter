@@ -25,7 +25,7 @@ from pygubu.api.v1 import copy_custom_property
 #
 widget_namespace = "sCTkButtonPrimary"
 widget_classname = "sCTkButtonPrimary"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

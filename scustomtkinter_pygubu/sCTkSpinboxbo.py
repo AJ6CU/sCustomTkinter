@@ -8,7 +8,7 @@ from sCTkSpinbox import sCTkSpinbox
 
 widget_namespace = "sCTkSpinbox"
 widget_classname = "sCTkSpinbox"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

@@ -26,7 +26,7 @@ from sCTkScrollbar import sCTkScrollbar
 #
 widget_namespace = "sCTkScrollbar"
 widget_classname = "sCTkScrollbar"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

@@ -26,7 +26,7 @@ from sCTkEntrySecondary import sCTkEntrySecondary
 #
 widget_namespace = "sCTkEntrySecondary"
 widget_classname = "sCTkEntrySecondary"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

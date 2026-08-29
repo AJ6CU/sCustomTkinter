@@ -22,7 +22,7 @@ from sCTkSMeter import sCTkSMeter
 #
 widget_namespace = "sCTkSMeter"
 widget_classname = "sCTkSMeter"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

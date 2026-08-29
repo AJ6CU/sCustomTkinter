@@ -26,7 +26,7 @@ from sCTkTextboxSecondary import sCTkTextboxSecondary
 #
 widget_namespace = "sCTkTextboxSecondary"
 widget_classname = "sCTkTextboxSecondary"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

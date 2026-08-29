@@ -21,7 +21,7 @@ from sCTkPathChooser import sCTkPathChooser
 #
 widget_namespace = "sCTkPathChooser"
 widget_classname = "sCTkPathChooser"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

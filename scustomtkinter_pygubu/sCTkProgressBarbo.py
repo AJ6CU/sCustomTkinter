@@ -26,7 +26,7 @@ from sCTkProgressBar import sCTkProgressBar
 #
 widget_namespace = "sCTkProgressBar"
 widget_classname = "sCTkProgressBar"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 

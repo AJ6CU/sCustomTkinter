@@ -27,7 +27,7 @@ from sCTkScrollableFrame import sCTkScrollableFrame
 #
 widget_namespace = "sCTkScrollableFrame"
 widget_classname = "sCTkScrollableFrame"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 container = True

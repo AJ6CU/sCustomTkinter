@@ -27,7 +27,7 @@ from sCTkFrameLabeledSecondary import sCTkFrameLabeledSecondary
 #
 widget_namespace = "sCTkFrameLabeledSecondary"
 widget_classname = "sCTkFrameLabeledSecondary"
-builder_namespace = "custom_widgets"
+builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 container = True
