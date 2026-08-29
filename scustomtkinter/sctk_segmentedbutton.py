@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkSegmentedButton - Piece 1 of 2
+sCTkSegmentedButton
 
 A highly optimized, theme-compliant segmented button strip widget.
 Inherits directly from ctk.CTkSegmentedButton to let CustomTkinter handle native
@@ -52,33 +52,52 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         if "variable" in kwargs: super().configure(variable=kwargs.pop("variable"))
         if "command" in kwargs: super().configure(command=kwargs.pop("command"))
 
-        has_state = "state" in kwargs
+        # FIX: previously left "state" in kwargs and let it pass straight through to
+        # super().configure(), which locked the widget natively but never updated
+        # self._custom_current_state -- so get_state() and the disabled color swap
+        # were both silently wrong. Routing through self.state() fixes both.
+        if "state" in kwargs:
+            self.state(kwargs.pop("state"))
+
         for k, v in list(kwargs.items()):
             if v == "": kwargs.pop(k)
 
         if kwargs:
             super().configure(**kwargs)
 
-        if has_state:
-            self._apply_custom_theme_colors()
-
     config = configure
 
     def _set_appearance_mode(self, mode_string: str):
-        """Native look catcher ensuring tracking cells repaint fluidly on theme skin shifts."""
+        """
+        EXPERIMENTAL: no longer manually re-triggers _apply_custom_theme_colors().
+        _apply_custom_theme_colors() now passes raw (light, dark) tuples straight
+        through to configure() instead of pre-resolving to a single color, so CTk's
+        own appearance-mode tracking should repaint correctly on its own. If colors
+        stop following mode changes (especially while disabled), that's the signal
+        this doesn't hold and the manual re-trigger needs to come back.
+        """
         if hasattr(super(), "_set_appearance_mode"):
             try:
                 super()._set_appearance_mode(mode_string)
             except Exception:
                 pass
-        self._apply_custom_theme_colors()
 
     def state(self, mode: str = None) -> str:
-        """Dedicated operational state manager mapped securely to hidden variables."""
+        """
+        Dedicated operational state manager.
+
+        FIX: previously read/wrote self._state, which nothing else in this class
+        actually updated (the only code that did was ThemeableWidget.configure(),
+        which is dead -- see the ThemeableWidget audit notes). Now consistently
+        uses self._custom_current_state, matching every other sCTk widget.
+        """
         if mode is None:
-            return str(getattr(self, "_state", "normal")).lower()
-        self.configure(state=mode)
-        return mode
+            return str(getattr(self, "_custom_current_state", "normal")).lower()
+
+        self._custom_current_state = "disabled" if mode.lower() == "disabled" else "normal"
+        super().configure(state=self._custom_current_state)
+        self._apply_custom_theme_colors()
+        return self._custom_current_state
 
     def get_state(self) -> str:
         """Explicit getter synchronized with your standalone test harness script assertions."""
@@ -96,36 +115,33 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
 
     def _apply_custom_theme_colors(self):
         """
-        PURE THEME PROCESSOR COMPRESSED:
-        Extracts color profiles dynamically out of themes.json and flattens child button
-        layout paddings to completely weld background gaps.
+        EXPERIMENTAL: passes raw (light, dark) tuples straight through to configure()
+        instead of resolving to a single color first, so CTk's native tracking can
+        handle appearance-mode repaints without help from _set_appearance_mode.
+
+        Also fixed: is_disabled now reads self._custom_current_state (see state() fix
+        above) instead of the never-updated self._state.
         """
         if not hasattr(self, "_buttons_dict") or not self._buttons_dict:
             return
 
-        is_disabled = str(getattr(self, "_state", "normal")).lower() == "disabled"
-        current_skin = str(ctk.get_appearance_mode()).lower()
+        is_disabled = str(getattr(self, "_custom_current_state", "normal")).lower() == "disabled"
         target_map = self._custom_disabled_map if is_disabled else self._local_defaults
 
-        # Resolve clean core track palettes directly out of stylesheet maps
-        resolved_fg = self._resolve_color(target_map.get("fg_color", ["#4F75A2", "#2B4C7E"]))
-        d_selected_bg = self._resolve_color(
-            self._custom_disabled_map.get("disabled_selected_color", ["#70777B", "#4A4E51"]))
-        n_selected = self._resolve_color(self._local_defaults.get("selected_color", ["#1A4375", "#1F6AA5"]))
+        fg_tuple = tuple(target_map.get("fg_color", ("#4F75A2", "#2B4C7E")))
+        d_selected = tuple(self._custom_disabled_map.get("disabled_selected_color", ("#70777B", "#4A4E51")))
+        n_selected = tuple(self._local_defaults.get("selected_color", ("#1A4375", "#1F6AA5")))
+        unselected_hover = tuple(self._local_defaults.get("unselected_hover_color", ("#CBD5E1", "#334155")))
 
-        # Package the parent payload track updates cleanly
         fg_payload = {
-            "fg_color": resolved_fg,
-            "selected_color": d_selected_bg if is_disabled else n_selected,
-            "unselected_color": resolved_fg,
-            "unselected_hover_color": resolved_fg if is_disabled else self._resolve_color(
-                self._local_defaults.get("unselected_hover_color", ["#CBD5E1", "#334155"]))
+            "fg_color": fg_tuple,
+            "selected_color": d_selected if is_disabled else n_selected,
+            "unselected_color": fg_tuple,
+            "unselected_hover_color": fg_tuple if is_disabled else unselected_hover,
         }
         super().configure(**fg_payload)
 
-        # Resolve typography base configurations cleanly
-        raw_txt = target_map.get("text_color")
-        base_txt_color = self._resolve_color(raw_txt) if raw_txt else ["#FFFFFF", "#FFFFFF"]
+        base_txt_tuple = tuple(target_map.get("text_color") or ("#FFFFFF", "#FFFFFF"))
 
         for val_name, button in self._buttons_dict.items():
             # Clear layout padding bounds flush to the container track edge
@@ -136,9 +152,8 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
 
             if is_disabled:
                 if hasattr(self, "_current_value") and val_name == self._current_value:
-                    button.configure(text_color="#FFFFFF" if current_skin == "dark" else "#1F2937")
+                    button.configure(text_color=("#1F2937", "#FFFFFF"))
                 else:
-                    button.configure(text_color=self._resolve_color(["#475569", "#94A3B8"]))
+                    button.configure(text_color=("#475569", "#94A3B8"))
             else:
-                button.configure(text_color=base_txt_color)
-
+                button.configure(text_color=base_txt_tuple)
