@@ -267,16 +267,13 @@
         "fg_color": ["#4F75A2", "#2B4C7E"],
         "selected_color": ["#1A4375", "#3A6FA2"],
         "selected_hover_color": ["#112A4B", "#2B5885"],
-        "unselected_color": "transparent",
         "unselected_hover_color": ["#3A5C85", "#3A5F8C"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
-        "text_color_disabled": ["#94A3B8", "#64748B"],
         "disabled_map": {
             "fg_color": ["#B2B9BC", "#222527"],
             "selected_color": ["#70777B", "#45494D"],
-            "selected_hover_color": ["#70777B", "#45494D"],
-            "unselected_color": "transparent",
-            "unselected_hover_color": "transparent"
+            "text_color": ["#94A3B8", "#64748B"],
+            "selected_text_color": ["#1F2937", "#FFFFFF"]
         }
     },
     "sCTkToplevel": {
