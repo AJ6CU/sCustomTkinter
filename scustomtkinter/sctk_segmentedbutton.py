@@ -42,11 +42,11 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
 
     def configure(self, *args, **kwargs):
         """Passes layout adjustments down natively while capturing state triggers smoothly."""
-        if args and len(args) == 1:
-            return super().configure(args)
-
-        if args and isinstance(args, dict):
-            kwargs = args | kwargs
+        if len(args) == 1:
+            if isinstance(args[0], dict):
+                kwargs = {**args[0], **kwargs}
+            else:
+                return super().configure(args[0])
 
         if "values" in kwargs: super().configure(values=kwargs.pop("values"))
         if "variable" in kwargs: super().configure(variable=kwargs.pop("variable"))
@@ -61,6 +61,8 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
 
         if has_state:
             self._apply_custom_theme_colors()
+
+    config = configure
 
     def _set_appearance_mode(self, mode_string: str):
         """Native look catcher ensuring tracking cells repaint fluidly on theme skin shifts."""

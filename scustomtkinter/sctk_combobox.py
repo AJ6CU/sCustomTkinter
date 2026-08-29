@@ -50,21 +50,22 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
         self._update_current_visual_state()
 
     def configure(self, *args, **kwargs):
-        """Handles Pygubu designer queries and manages composite state updates safely [1.1]."""
-        if args and len(args) == 1:
-            pname = args
-            if pname == "state":
-                return ("state", "state", "state", "normal", str(self.state()))
+        """Handles Pygubu designer queries and manages composite state updates safely."""
+        if len(args) == 1:
+            if isinstance(args[0], dict):
+                kwargs = {**args[0], **kwargs}
+            else:
+                pname = args[0]
+                if pname == "state":
+                    return ("state", "state", "state", "normal", str(self.state()))
 
-            if pname in ["fg_color", "border_color", "text_color", "hover_color"]:
-                current_state = str(self.state()).lower()
-                val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
+                if pname in ["fg_color", "border_color", "text_color", "hover_color"]:
+                    current_state = str(self.state()).lower()
+                    val = self._custom_disabled_map.get(
+                        pname) if current_state == "disabled" else self._local_defaults.get(pname)
+                    return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
 
-            return super().configure(pname)
-
-        if args and isinstance(args, dict):
-            kwargs = args | kwargs
+                return super().configure(pname)
 
         if "values" in kwargs: super().configure(values=kwargs.pop("values"))
         if "command" in kwargs: super().configure(command=kwargs.pop("command"))
