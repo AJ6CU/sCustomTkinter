@@ -1,94 +1,36 @@
-import tkinter as tk
+import scustomtkinter_pygubu.designer.properties
+
 from pygubu.component.plugin_engine import IDesignerPlugin
-from pygubu.component.plugin_manager import PluginManager
-from customtkinter import (CTkScrollableFrame)
 
-#
-#   Import the sCustomTkinter Widgets (alphabetically)
-#   Format is "import foobo" for normal widgets that are selectable
-#   format is
-#   from foo import foo
-#   from foobo import (fooBO,builder_id as foo_builder_id)
-#   notice difference between "foorbo" (file name) and "fooBO" (class name within that file)
-#
+from scustomtkinter.sctk_frame import sCTkFrame
+from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFrame_builder_id)
 
+from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
+from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
+import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
 
-import sCTkButtonPrimarybo
-import sCTkButtonSecondarybo
-import sCTkButtonTertiarybo
+from scustomtkinter.sctk_frame_outlined import sCTkFrameOutlined
+from scustomtkinter_pygubu.sCTkFrameOutlinedbo import (sCTkFrameOutlinedBO, builder_id as sCTkFrameOutlined_builder_id)
+from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
 
-import sCTkCheckBoxbo
-import sCTkComboBoxbo
+# FIXME: missing sCTkOptionMenuSecondaryBO class
+# from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
+sCTkOptionMenuSecondary_builder_id = "FIXME"
 
-import sCTkDialbo
+from scustomtkinter.sctk_path_chooser import sCTkPathChooser
+from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
 
-import sCTkDialogCorebo
-
-import sCTkEntryPrimarybo
-import sCTkEntrySecondarybo
-
-#import sCTkFileExplorerbo # missing bo file
-
-
-from sCTkFrame import sCTkFrame
-from sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFrame_builder_id)
-
-from sCTkFrameLabeledPrimary import sCTkFrameLabeledPrimary
-from sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
-import sCTkFrameLabeledSecondarybo
-
-from sCTkFrameOutlined import sCTkFrameOutlined
-from sCTkFrameOutlinedbo import (sCTkFrameOutlinedBO, builder_id as sCTkFrameOutlined_builder_id)
-
-import sCTkLabelPrimarybo
-import sCTkLabelSecondarybo
-import sCTkLabelTertiarybo
-
-import sCTkOptionMenuPrimarybo
-
-from sCTkOptionMenuSecondary import sCTkOptionMenuSecondary
-from sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
-
-from sCTkPathChooser import sCTkPathChooser
-from sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
-
-import sCTkProgressBarbo
-
-import sCTkRadioButtonbo
-
-import sCTkScrollableFramebo
-
-import sCTkScrollbarbo
-
-import sCTkSegmentedButtonbo
-# from sCTkSegmentedButtonbo import (sCTkSegmentedButtonBO, builder_id as sCTkSegmentedButton_builder_id )
-
-from sCTkSelector import sCTkSelector
-from sCTkCheckBox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
+from scustomtkinter.sctk_selector import sCTkSelector
+from scustomtkinter.sctk_checkbox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
                                             # to search to find the clickable master frame
-from sCTkSelectorbo import (sCTkSelectorBO, builder_id as sCTkSelector_builder_id)
+from scustomtkinter_pygubu.sCTkSelectorbo import (sCTkSelectorBO, builder_id as sCTkSelector_builder_id)
 
-import sCTkSeparatorbo
+from scustomtkinter.sctk_spinbox import sCTkSpinbox
+from scustomtkinter_pygubu.sCTkSpinboxbo import (sCTkSpinboxBO, builder_id as sCTkSpinbox_builder_id)
 
-import sCTkSliderbo
+from scustomtkinter.sctk_tableview import sCTkTableview
+from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id as sCTkTableview_builder_id)
 
-import sCTkSMeterbo
-import sCTkSMeterBarbo
-
-from sCTkSpinbox import sCTkSpinbox
-from sCTkSpinboxbo import (sCTkSpinboxBO, builder_id as sCTkSpinbox_builder_id)
-
-import sCTkSwitchbo
-
-import sCTkTabviewbo
-
-from sCTkTableview import sCTkTableview
-from sCTkTableviewbo import (sCTkTableviewBO, builder_id as sCTkTableview_builder_id)
-
-import sCTkTextboxPrimarybo
-import sCTkTextboxSecondarybo
-
-# import sCTkTreeviewbo         # undecied whether to include
 
 #
 # Preview class for sCTkFrame
@@ -146,7 +88,7 @@ class sCTkSelectorForPreview(sCTkSelector):
                     clist.append(cwidget._text_label)
                     clist.append(cwidget._canvas)
         return clist
-import sys
+
 class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
     def winfo_children(self):
         internal = [
@@ -205,8 +147,9 @@ class sCTkTableviewForPreviewBO(sCTkTableviewBO):
 class sCTkSelectorForPreviewBO(sCTkSelectorBO):
     class_ = sCTkSelectorForPreview
 
-class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
-    class_ = sCTkOptionMenuSecondaryForPreview
+# FIXME: Missing sCTkOptionMenuSecondaryBO
+# class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
+#     class_ = sCTkOptionMenuSecondaryForPreview
 
 class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
     class_ = sCTkSpinboxForPreview
@@ -219,7 +162,7 @@ class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
 #
 # A Designer plugin for sCTk custom widgets
 #
-class sCTkPlugin(IDesignerPlugin):
+class sCTkDesignerPlugin(IDesignerPlugin):
 
     def get_preview_builder(self, builder_uid: str):
         """Return a BuilderObject subclass used to build a preview
@@ -245,11 +188,4 @@ class sCTkPlugin(IDesignerPlugin):
         #     return sCTkSegmentedButtonForPreviewBO
 
         return None
-
-
-#
-# Create a plugin instance and inject it.
-#
-custom_plugin = sCTkPlugin()
-PluginManager.designer_plugins.append(custom_plugin)
 

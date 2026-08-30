@@ -1,0 +1,1 @@
+from .sCTkWidgetSetForPygubuDesigner import sCTkPlugin
