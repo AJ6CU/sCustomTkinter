@@ -147,7 +147,7 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
 
         # 2. Store the resolved maps onto this instance.
         self._local_defaults = dict(self.final_kw)
-        self._custom_disabled_map = self._local_defaults.get("disabled_map", {})
+        self._custom_disabled_map = dict(self._widget_disabled_map)
 
         # 3. Extract the initial state and value-related config early.
         state_val = kw.pop("state", "normal")
