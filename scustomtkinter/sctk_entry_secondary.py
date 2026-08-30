@@ -233,3 +233,18 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
             super().configure(state="disabled")
         else:
             super().configure(state="normal")
+            self.after_idle(self._reset_cursor_if_showing_placeholder)
+
+    def _reset_cursor_if_showing_placeholder(self) -> None:
+        """
+        Resets the cursor to position 0, but only if the field is currently
+        showing its placeholder text -- never touches the cursor if the field
+        holds real user-typed content. See sCTkEntryPrimary's identical
+        method for the full reasoning, including why this deliberately avoids
+        CTkEntry's private internal placeholder-tracking attributes in favor
+        of comparing self.get() against self.cget("placeholder_text") via
+        public API only.
+        """
+        placeholder = self.cget("placeholder_text")
+        if placeholder and self.get() == placeholder:
+            self.icursor(0)

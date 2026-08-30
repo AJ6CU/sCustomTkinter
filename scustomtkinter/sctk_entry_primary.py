@@ -246,3 +246,39 @@ class sCTkEntryPrimary(ctk.CTkEntry, ThemeableWidget):
             super().configure(state="disabled")
         else:
             super().configure(state="normal")
+            self.after_idle(self._reset_cursor_if_showing_placeholder)
+
+    def _reset_cursor_if_showing_placeholder(self) -> None:
+        """
+        Resets the cursor to position 0, but only if the field is currently
+        showing its placeholder text -- never touches the cursor if the field
+        holds real user-typed content.
+
+        FIX: after a disable -> enable cycle, clicking the field placed the
+        cursor at the END of the placeholder text instead of position 0 --
+        confirmed by direct testing. Likely cause: CustomTkinter's own
+        placeholder system re-inserts the placeholder string when the widget
+        regains a non-focused, empty state (which disabling appears to
+        trigger via focus loss), and a plain text insert leaves the cursor
+        positioned after whatever was just inserted -- i.e. at the end --
+        unless something explicitly resets it afterward. Deferred via
+        after_idle so this runs after CTk's own internal refresh, the same
+        reasoning as the after_idle fix on sCTkButtonPrimary's state-
+        transition race.
+
+        Deliberately does NOT use CTkEntry's private, underscore-prefixed
+        internal attributes (e.g. self._is_focused, self._activate_placeholder())
+        to detect placeholder state, even though those exist -- relying on
+        undocumented internals would break silently on a future CustomTkinter
+        version. Since the placeholder is implemented by genuinely inserting
+        the placeholder string as the field's real text content (confirmed
+        from CustomTkinter's own source), comparing self.get() against the
+        configured placeholder_text via public, documented API achieves the
+        same result without that risk. The only false-positive case is a user
+        typing content that exactly matches the placeholder text verbatim, in
+        which case resetting the cursor to 0 is a harmless, barely-noticeable
+        side effect, not a real problem.
+        """
+        placeholder = self.cget("placeholder_text")
+        if placeholder and self.get() == placeholder:
+            self.icursor(0)
