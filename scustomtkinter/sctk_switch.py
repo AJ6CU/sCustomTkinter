@@ -105,7 +105,7 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
     #   pattern and hardcoded-fallback issues elsewhere in this file have
     #   been fixed. Does NOT address the separate handle-fading-into-
     #   background problem in light mode -- see class docstring.
-    _DIM_ALL_COLORS_WHEN_DISABLED = False
+    _DIM_ALL_COLORS_WHEN_DISABLED = True
 
     # EXPERIMENTAL TOGGLE -- see _execute_safe_command_forwarding().
     # True (default): preserves the original behavior -- ANY exception from
@@ -116,7 +116,7 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
     #   (after the argument-count fallback attempt). Untested as of this
     #   writing -- flip this to False locally to see what a real bug in a
     #   command callback actually looks like with each setting.
-    _SILENTLY_SWALLOW_COMMAND_ERRORS = True
+    _SILENTLY_SWALLOW_COMMAND_ERRORS = False
 
     def __init__(
         self,
