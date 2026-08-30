@@ -17,7 +17,8 @@
 Dark Mode:	![sCTkEntrySecondary in dark mode](images/sCTkEntrySecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
 Light Mode:	![sCTkEntrySecondary in light mode](images/sCTkEntrySecondary_Light.png)
 
-> **Unresolved design question — identical to `sCTkEntryPrimary`.** This widget's "disabled" state maps to Tkinter's native `"readonly"`, not `"disabled"`, and this hasn't been independently confirmed correct through direct testing. See `sCTkEntryPrimary`'s documentation for the full explanation.
+
+Disabling uses CTk's native `state="disabled"` — confirmed correct by direct testing, consistent with every other widget in this library. See `sCTkEntryPrimary`'s documentation for the fuller history.
 
 ---
 
@@ -46,7 +47,7 @@ notes_entry.pack(fill="x", padx=40, pady=10)
 
 | Method | Returns | Description |
 |---|---|---|
-| `state(state_string=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. See the unresolved design note above. |
+| `state(state_string=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Uses CTk's native `state="disabled"`, confirmed correct by direct testing. |
 | `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
 | `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `text_color`, `border_color`, and `placeholder_text_color`. Queries for any other property name fall through to the native `CTkEntry.configure`. |
 
@@ -65,6 +66,7 @@ notes_entry.pack(fill="x", padx=40, pady=10)
         "border_color": ["#9CA3AF", "#4B5563"],
         "fg_color": ["#F3F4F6", "#1F2937"],
         "text_color": ["#4B5563", "#D1D5DB"],
+        "placeholder_text_color": ["#94A3B8", "#64748B"],
         "corner_radius": 6,
         "disabled_map": {
             "fg_color": ["#F3F4F6", "#0B0F19"],
@@ -75,7 +77,7 @@ notes_entry.pack(fill="x", padx=40, pady=10)
 }
 ```
 
-Same gap as `sCTkEntryPrimary`: there's no `placeholder_text_color` key here, even though the widget's code checks for one. Placeholder text uses CTkEntry's native default color rather than anything theme-driven.
+Same rationale as `sCTkEntryPrimary`: `placeholder_text_color` is a genuinely distinct, themed value, following CustomTkinter's own convention of giving placeholder text a visibly more muted color than typed text. CTkEntry has no separate font for placeholder text — it always shares the single `font` property with typed text; that's a real limitation of the underlying widget, not a gap in this theme file.
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
@@ -113,8 +115,6 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
-- **"Disabled" is actually native "readonly", not "disabled"** — see the note at the top of this document.
-- `placeholder_text_color` is checked by the widget's code but not defined anywhere in the theme file.
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
 - Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.

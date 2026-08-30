@@ -16,9 +16,10 @@ configure()/cget()/_set_appearance_mode() overrides have been removed entirely
 for this reason (see themeable_widget.py's docstring); this widget owns all of
 its own runtime color-swapping logic.
 
-IMPORTANT, UNRESOLVED DESIGN QUESTION -- identical to sCTkEntryPrimary: see
-that file's module docstring. "disabled" here maps to native "readonly", not
-"disabled", and this has not been independently confirmed correct.
+IMPORTANT: disabling uses CTk's native state="disabled" -- confirmed correct
+by direct testing, matching every other widget in this library. See
+sCTkEntryPrimary's module docstring for the fuller history (an earlier version
+used native "readonly" on an unverified claim; tested and found unnecessary).
 """
 from typing import Any, Optional
 import customtkinter as ctk
@@ -32,9 +33,8 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
       - Automatic light/dark theme resolution from sCTkThemes.json (via
         ThemeableWidget.__init__ -- see that class's docstring for what it does,
         and just as importantly, what it no longer does).
-      - A distinct enabled/disabled visual state -- see the module docstring's
-        unresolved question about whether "disabled" should map to native
-        "readonly" (current behavior) or true "disabled".
+      - A distinct enabled/disabled visual state, using CTk's native
+        state="disabled" (confirmed correct by direct testing).
       - Pygubu Designer property introspection for `state`, `fg_color`,
         `text_color`, `border_color`, and `placeholder_text_color` via a
         single-argument configure() call.
@@ -45,9 +45,11 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
     approach validated on sCTkComboBox, sCTkSegmentedButton, and the button
     family. Not separately re-confirmed for this specific widget.
 
-    Note: sCTkThemes.json's "sCTkEntrySecondary" block does not currently
-    define a `placeholder_text_color`, even though this widget's
-    configure()/repaint logic checks for one -- same gap as sCTkEntryPrimary.
+    placeholder_text_color is a real, themed key (not a fallback to
+    text_color) -- see sCTkEntryPrimary's docstring for the full rationale.
+    CTkEntry has no separate font for placeholder text vs. typed text -- both
+    always share the single `font` property; that's a ceiling in the
+    underlying widget, not a gap in this theme file.
     """
 
     def __init__(self, master: Optional[Any] = None, **kw: Any) -> None:
@@ -212,10 +214,6 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
         Passes raw (light, dark) tuples straight through to configure() instead
         of resolving to a single color first, so CTk's native tracking can
         handle appearance-mode repaints without help from _set_appearance_mode.
-
-        See the module docstring for the unresolved question about whether the
-        native lock below should be "readonly" (current behavior) or
-        "disabled".
         """
         is_disabled = self._custom_current_state == "disabled"
         target_map = self._custom_disabled_map if is_disabled else self._local_defaults
@@ -229,8 +227,9 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
         if config_payload:
             super().configure(**config_payload)
 
-        # UNRESOLVED: see module docstring.
+        # Confirmed correct by direct testing: native "disabled" properly
+        # blocks interaction.
         if is_disabled:
-            super().configure(state="readonly")
+            super().configure(state="disabled")
         else:
             super().configure(state="normal")
