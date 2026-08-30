@@ -302,7 +302,7 @@
     },
     "sCTkSwitch": {
         "progress_color": ["#1A4375", "#1F6AA5"],
-        "button_color": ["#FFFFFF", "#CBD5E1"],
+        "button_color": ["#CBD5E1", "#CBD5E1"],
         "button_hover_color": ["#E5E7EB", "#94A3B8"],
         "text_color": ["#1F2937", "#F9FAFB"],
         "font": ["Arial", 14, "normal"],

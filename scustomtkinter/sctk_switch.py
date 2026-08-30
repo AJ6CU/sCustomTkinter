@@ -83,28 +83,31 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
     an always-empty _custom_disabled_map caused by reading "disabled_map" out
     of final_kw -- where ThemeableWidget deliberately never puts it -- instead
     of the correctly-populated _widget_disabled_map, and hardcoded fallback
-    colors masking the real theme values). The handle-fading-into-background
-    problem is separate and still open -- see _resolve_bg_color() below for
-    an experimental fix targeting that specifically, adapted from the
-    approach sCTkSwitchAlt already uses successfully.
+    colors masking the real theme values).
+
+    The handle-fading-into-background problem itself was investigated
+    separately and RULED OUT as a bg_color issue, by direct, objective
+    testing (comparing sCTkSwitch.cget("bg_color") against the real parent
+    color, not just eyeballing screenshots): CTkSwitch already resolves
+    bg_color to match its real parent correctly on its own, including through
+    a transparent intermediate frame, with no help needed from this widget at
+    all. An experimental fix that explicitly set bg_color (adapted from
+    sCTkSwitchAlt's _apply_parent_bg_handshake()) was tested and found to
+    actively make one scenario WORSE -- overriding CTk's already-correct
+    native resolution with a hardcoded fallback that didn't match the real
+    background -- and removed entirely as a result.
+
+    The reason the port didn't apply: sCTkSwitchAlt needed that logic because
+    it draws on a raw tk.Canvas, which has no built-in awareness of parent
+    colors or transparency at all. sCTkSwitch subclasses the real
+    ctk.CTkSwitch, which already has this exact "find my real background
+    through any transparent chain" logic built in natively. The actual
+    handle-fading complaint is most likely a genuine low-contrast theme
+    color choice (white button_color against a pale fg_color in light mode),
+    not a code defect -- the same category of issue as the label family's
+    disabled-color contrast work earlier in this project, not the button
+    family's disable-mechanism bug.
     """
-
-
-
-    # EXPERIMENTAL TOGGLE -- see _resolve_bg_color() for what this changes.
-    # False (default): bg_color is left at whatever CTkSwitch's own default
-    #   handling produces -- the current behavior, and the source of the
-    #   confirmed handle-fading-into-background problem in light mode (a
-    #   white button_color against a bg_color that doesn't correctly match
-    #   the actual parent background).
-    # True: explicitly resolves and sets bg_color to the parent's real
-    #   fg_color at construction, adapted from the same approach
-    #   sCTkSwitchAlt already uses successfully (its _apply_parent_bg_handshake()),
-    #   but passing a real (light, dark) tuple rather than a single resolved
-    #   string, since sCTkSwitch's bg_color -- unlike a raw tk.Canvas's "bg"
-    #   option -- is a genuine CTk color property that supports tuples.
-    #   Untested as of this writing.
-    _EXPLICITLY_RESOLVE_BG_COLOR = True
 
     def __init__(
         self,
@@ -147,6 +150,10 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         # 4. Strip color-related theme keys (and disabled_map itself) out of
         # final_kw before construction -- these are applied afterward via
         # _apply_custom_theme_colors(), not passed to the native constructor.
+        # bg_color is deliberately NOT set here at all -- confirmed by direct
+        # testing that CTkSwitch already resolves it correctly on its own,
+        # including through a transparent intermediate parent. See class
+        # docstring.
         for pop_key in ["fg_color", "progress_color", "button_color", "button_hover_color",
                         "text_color", "font", "disabled_map"]:
             self.final_kw.pop(pop_key, None)
@@ -157,13 +164,10 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         if self._user_command:
             wrapped_command = self._execute_safe_command_forwarding
 
-        # 5b. EXPERIMENTAL (see _EXPLICITLY_RESOLVE_BG_COLOR): resolve and
-        # pass bg_color explicitly, so it doesn't fall back to whatever
-        # CTkSwitch's own default handling produces.
-        if self._EXPLICITLY_RESOLVE_BG_COLOR:
-            self.final_kw["bg_color"] = self._resolve_bg_color(master)
-
         # 6. Initialize CustomTkinter natively with the clean final kwargs array.
+        # bg_color is intentionally never set here -- see class docstring for
+        # why (confirmed by direct testing that CTkSwitch already resolves it
+        # correctly on its own).
         super().__init__(master, onvalue=onvalue, offvalue=offvalue, command=wrapped_command, **self.final_kw)
 
         # 7. Set up the bindtag-based click interceptor -- see module docstring.
@@ -180,47 +184,6 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         if self._custom_current_state == "disabled":
             self.configure(state="disabled")
         self._finalize_themeable_lifecycle()
-
-    def _resolve_bg_color(self, master: Any) -> Any:
-        """
-        EXPERIMENTAL (see _EXPLICITLY_RESOLVE_BG_COLOR): determines what
-        bg_color this widget should use so it doesn't fall back to some
-        default that can cause a light-colored button/handle to visually
-        blend into the actual background -- confirmed happening in light
-        mode via direct testing (screenshot review).
-
-        Adapted from sCTkSwitchAlt's _apply_parent_bg_handshake(), which
-        solves the same underlying problem for a raw tk.Canvas (which cannot
-        render CTk's "transparent" pseudo-color at all, unlike this widget's
-        bg_color, which is a real CTk color property). Returns a (light, dark)
-        tuple rather than a single resolved string, so CTk's own
-        appearance-mode tracking can handle the two variants automatically,
-        consistent with the tuple-based approach used throughout this project
-        -- unlike sCTkSwitchAlt, which had to resolve to one literal color
-        immediately because a raw Canvas has no such tracking of its own.
-
-        Args:
-            master: This widget's parent, whose fg_color is used as the
-                basis for the resolved bg_color.
-
-        Returns:
-            A (light, dark) tuple. Falls back to a fixed neutral pair if the
-            parent's fg_color can't be read, or is itself "transparent".
-        """
-        fallback = ("#F1F5F9", "#1C1C1C")
-
-        try:
-            parent_fg = master.cget("fg_color")
-        except Exception:
-            return fallback
-
-        if isinstance(parent_fg, str) and parent_fg.lower() == "transparent":
-            return fallback
-        if isinstance(parent_fg, (tuple, list)) and len(parent_fg) == 2:
-            return tuple(parent_fg)
-        if isinstance(parent_fg, str):
-            return (parent_fg, parent_fg)
-        return fallback
 
     def _execute_safe_command_forwarding(self) -> None:
         """
