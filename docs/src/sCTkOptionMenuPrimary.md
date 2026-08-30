@@ -14,8 +14,8 @@
 
 `sCTkOptionMenuPrimary` is a themeable subclass of `customtkinter.CTkOptionMenu` — a dropdown option-selection button. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. See also `sCTkOptionMenuSecondary`, a composite bordered variant with a different internal architecture.
 
-![sCTkOptionMenuPrimary in dark mode](images/sCTkOptionMenuPrimary_Dark.png)
-![sCTkOptionMenuPrimary in light mode](images/sCTkOptionMenuPrimary_Light.png)
+Dark Mode: ![sCTkOptionMenuPrimary in dark mode](images/sCTkOptionMenuPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode: ![sCTkOptionMenuPrimary in light mode](images/sCTkOptionMenuPrimary_Light.png)
 
 ---
 

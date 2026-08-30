@@ -14,8 +14,8 @@
 
 `sCTkEntryPrimary` is a themeable subclass of `customtkinter.CTkEntry` — the higher-emphasis of the library's two entry-field tiers (see also `sCTkEntrySecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state.
 
-![sCTkEntryPrimary in dark mode](images/sCTkEntryPrimary_Dark.png)
-![sCTkEntryPrimary in light mode](images/sCTkEntryPrimary_Light.png)
+Dark Mode:	![sCTkEntryPrimary in dark mode](images/sCTkEntryPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode:	![sCTkEntryPrimary in light mode](images/sCTkEntryPrimary_Light.png)
 
 > **Unresolved design question — read before relying on "disabled" behavior.** This widget's "disabled" state maps to Tkinter's native `"readonly"`, not `"disabled"`. Unlike every other widget in this library, this hasn't been independently confirmed correct or incorrect through direct testing. Behaviorally, `readonly` typically still permits focus, text selection, and copying, while `disabled` fully locks the widget — these are not the same thing. Confirm which behavior you actually want before depending on this.
 
@@ -84,27 +84,55 @@ Colors are stored and passed through as raw `(light, dark)` tuples rather than r
 ### Example
 
 ```python
+#!/usr/bin/python3
+
 import customtkinter as ctk
-from scustomtkinter import sCTk, sCTkFrame, sCTkEntryPrimary, sCTkButtonPrimary
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkLabelPrimary, sCTkEntryPrimary
+
+
 
 if __name__ == "__main__":
+
     root = sCTk()
-    root.geometry("400x250")
-    root.title("EntryPrimary Example")
+    root.geometry("450x260")
+    root.title("sCTkEntryPrimary Testing Deck")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    freq_entry = sCTkEntryPrimary(base, placeholder_text="Enter frequency (MHz)")
-    freq_entry.pack(fill="x", pady=10)
+    # Label notice layer to monitor buffer array activity
+    lbl_monitor = sCTkLabelPrimary(base, text="Console monitor active...")
+    lbl_monitor.pack(pady=10)
 
-    def toggle_disabled():
-        target = "disabled" if freq_entry.get_state() == "normal" else "normal"
-        freq_entry.state(target)
-        disable_toggle.configure(text="Enable Field" if target == "disabled" else "Disable Field")
+    # Instantiate your custom Primary helper field
+    input_field = sCTkEntryPrimary(base, placeholder_text="Enter configuration metadata...")
+    input_field.pack(expand=False, fill="x", padx=40, pady=10)
 
-    disable_toggle = sCTkButtonPrimary(base, text="Disable Field", command=toggle_disabled)
-    disable_toggle.pack(pady=10)
+    # Monitor keystrokes live
+    input_field.bind("<KeyRelease>", lambda e: lbl_monitor.configure(text=f"Live Buffer: {input_field.get()}"))
+
+    def toggle_operational_state():
+        """Toggles the helper input field between normal active and dimmed disabled profiles."""
+        current_mode = input_field.get_state()
+        target = "disabled" if current_mode == "normal" else "normal"
+
+        # Explicitly testing the dual-routing capability via configure()
+        input_field.configure(state=target)
+        btn_toggle.configure(
+            text="Lock Helper Input (Set 'disabled')" if target == "normal" else "Unlock Helper Input (Set 'normal')")
+        print(f"Logged Verification Hook -> input_field.get_state() = {input_field.get_state()}")
+
+    btn_toggle = sCTkButtonPrimary(base, text="Lock Helper Input (Set 'disabled')", command=toggle_operational_state)
+    btn_toggle.pack(side="bottom", pady=15)
+
+    # Run the interactive boot tracking logs
+    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
+    input_field.state("disabled")
+    print("state (Disabled Pass) =", input_field.get_state())  # Output: disabled
+
+    input_field.state("normal")
+    print("state (Normal Pass)   =", input_field.get_state())  # Output: normal
+    print("========================================\n")
 
     root.mainloop()
 ```

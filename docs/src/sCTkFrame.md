@@ -14,8 +14,8 @@
 
 `sCTkFrame` is a themeable subclass of `customtkinter.CTkFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`. Unlike every other widget in this library, it has no disabled state and no per-state color swapping — frames are containers, not interactive controls, so there's nothing to dim or lock.
 
-![sCTkFrame in dark mode](images/sCTkFrame_Dark.png)
-![sCTkFrame in light mode](images/sCTkFrame_Light.png)
+Dark Mode: ![sCTkFrame in dark mode](images/sCTkFrame_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode: ![sCTkFrame in light mode](images/sCTkFrame_Light.png)
 
 ---
 
@@ -71,19 +71,25 @@ Colors are passed through as raw `(light, dark)` tuples at construction and neve
 ### Example
 
 ```python
-import customtkinter as ctk
-from scustomtkinter import sCTk, sCTkFrame, sCTkLabelPrimary
+#!/usr/bin/python3
+
+from scustomtkinter import sCTkButtonPrimary, sCTkLabelPrimary, sCTk, sCTkFrame
+
 
 if __name__ == "__main__":
+
     root = sCTk()
-    root.geometry("400x250")
-    root.title("Frame Example")
+    root.geometry("500x300")
+    root.title("sCTkFrame Container Validation Bench")
 
-    panel = sCTkFrame(root)
-    panel.pack(expand=True, fill="both", padx=20, pady=20)
-
-    label = sCTkLabelPrimary(panel, text="Content goes here")
-    label.pack(expand=True)
+    # Instantiate your custom theme-compliant frame element chassis
+    base_container = sCTkFrame(root, border_width=2)
+    base_container.pack(expand=True, fill="both", padx=30, pady=30)
+#
+#     # Add a simple sub-element child widget to verify structural clipping layouts
+    lbl_marker = sCTkLabelPrimary(base_container, text="FRAME BACKPLANE CONTAINER OPERATIONAL\n"+
+                                  "Border Visible for Testing Purposes only")
+    lbl_marker.pack(expand=True)
 
     root.mainloop()
 ```

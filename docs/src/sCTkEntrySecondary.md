@@ -14,8 +14,8 @@
 
 `sCTkEntrySecondary` is a themeable subclass of `customtkinter.CTkEntry` — the lower-emphasis of the library's two entry-field tiers (see also `sCTkEntryPrimary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state.
 
-![sCTkEntrySecondary in dark mode](images/sCTkEntrySecondary_Dark.png)
-![sCTkEntrySecondary in light mode](images/sCTkEntrySecondary_Light.png)
+Dark Mode:	![sCTkEntrySecondary in dark mode](images/sCTkEntrySecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode:	![sCTkEntrySecondary in light mode](images/sCTkEntrySecondary_Light.png)
 
 > **Unresolved design question — identical to `sCTkEntryPrimary`.** This widget's "disabled" state maps to Tkinter's native `"readonly"`, not `"disabled"`, and this hasn't been independently confirmed correct through direct testing. See `sCTkEntryPrimary`'s documentation for the full explanation.
 
