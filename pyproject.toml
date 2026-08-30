@@ -21,8 +21,11 @@ dependencies = [
     "pygubu"
 ]
 
+[project.entry-points.'pygubu.plugins']
+scustomtkinter = 'scustomtkinter_pygubu'
+
 [tool.setuptools]
-packages = ["scustomtkinter"]
+packages = ["scustomtkinter", "scustomtkinter_pygubu", "scustomtkinter_pygubu.designer"]
 include-package-data = true
 
 
