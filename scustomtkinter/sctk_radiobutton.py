@@ -24,16 +24,17 @@ setting native state to "disabled" at all. Fixed to match the button family's
 confirmed-correct approach; not independently re-tested on this specific
 widget.
 
-UNVERIFIED RISK, worth testing: configure(variable=...) and configure(value=...)
-after construction bypass the native widget's own configure() entirely and
-write directly to CTkRadioButton's private _variable/_value attributes
-instead (see configure()'s "CRASH SHIELD PASS" comment, preserved from the
-original). This was apparently done to work around a ValueError that calling
-super().configure(variable=...) raised directly -- but writing to a private
-attribute directly may not correctly re-establish whatever internal trace/
-callback binding the native widget uses to react to variable changes.
-Re-binding a RadioButton to a new variable or value after construction has
-not been independently tested as part of this project's audit.
+CONFIRMED by direct testing: configure(variable=...) and configure(value=...)
+now route through the native widget's own super().configure(), rather than
+writing directly to CTkRadioButton's private _variable/_value attributes as
+an earlier version did. That private-attribute approach (see its own "CRASH
+SHIELD PASS" comment, apparently written to work around a ValueError) was
+tested directly and found to be a real, confirmed bug: rebinding a button to
+a new group's variable left the OLD variable's trace active (so the button
+stayed incorrectly coupled to its original group) and corrupted the new
+variable's value during the rebind. The native super().configure() approach
+does not raise, correctly tears down the old binding, and correctly
+establishes real two-way mutual exclusion in the new group.
 """
 import os
 from typing import Any, Callable, Optional
@@ -64,6 +65,17 @@ class sCTkRadioButton(ctk.CTkRadioButton, ThemeableWidget):
     approach validated on sCTkComboBox, sCTkSegmentedButton, and the button
     family. Not separately re-confirmed for this specific widget.
 
+    CONFIRMED by direct testing: rebinding variable/value via
+    super().configure() (the "proper" approach) works correctly -- it does
+    not raise, correctly tears down the old variable's trace (a button
+    rebound to a new group no longer responds to the old group's other
+    buttons), and correctly establishes real two-way mutual exclusion in the
+    new group. The private-attribute approach previously used here was
+    confirmed WORSE than just "might not work": it left the old variable's
+    trace active (so the rebound button stayed incorrectly coupled to its
+    original group) and corrupted the new variable's value during the
+    rebind. See configure() for the finalized implementation.
+
     The theme's border_width_unchecked and border_width_checked control this
     widget's border thickness based on whether it's the currently-selected
     button in its group (thicker when checked, to show the filled dot) --
@@ -78,19 +90,6 @@ class sCTkRadioButton(ctk.CTkRadioButton, ThemeableWidget):
     than renamed, since border_width_unchecked/checked don't need to be
     re-applied on disable/enable in the first place.
     """
-
-    # EXPERIMENTAL TOGGLE -- see configure() for what this changes.
-    # False (default): preserves the original behavior -- variable/value are
-    #   written directly to CTkRadioButton's private _variable/_value
-    #   attributes, bypassing super().configure() entirely.
-    # True: routes variable/value through super().configure() the "proper"
-    #   way instead. Untested as of this writing -- flip this to True locally
-    #   to find out whether it actually raises the ValueError the original
-    #   comment implied, and if not, whether rebinding to a new variable
-    #   after construction then works correctly (does the button join the
-    #   new group's mutual exclusion, does clicking it update the new
-    #   variable, does it correctly reflect the new variable's current value).
-    _REBIND_VIA_NATIVE_CONFIGURE = True
 
     def __init__(self, master: Optional[Any] = None, **kw: Any) -> None:
         """
@@ -164,12 +163,10 @@ class sCTkRadioButton(ctk.CTkRadioButton, ThemeableWidget):
                   configure(), which does not support single-argument property
                   queries for arbitrary properties (same limitation).
             **kwargs: Standard CTkRadioButton configuration options, plus:
-                `variable`/`value` are written directly to this widget's
-                private native attributes rather than routed through
-                super().configure() -- see the module docstring's unverified-
-                risk note before relying on re-binding these after
-                construction; `command` and `state` are each routed
-                individually.
+                `variable`/`value` are each routed through super().configure()
+                individually -- confirmed correct for rebinding to a new
+                group after construction, see module docstring; `command`
+                and `state` are each routed individually too.
 
         Returns:
             The query tuple described above for the single-argument case, or
@@ -196,26 +193,16 @@ class sCTkRadioButton(ctk.CTkRadioButton, ThemeableWidget):
 
                 return super().configure(pname)
 
-        # EXPERIMENTAL TOGGLE -- see class docstring / _REBIND_VIA_NATIVE_CONFIGURE.
-        # Default (False) preserves the original private-attribute approach.
-        # An earlier version of this comment called this a "CRASH SHIELD
-        # PASS... to prevent ValueError loops", implying super().configure(
-        # variable=...) raised directly. Not yet independently confirmed --
-        # see the toggle below to test both.
+        # CONFIRMED by direct testing: routing variable/value through
+        # super().configure() (rather than writing directly to CTkRadioButton's
+        # private _variable/_value attributes) does not raise, and correctly
+        # rebinds mutual exclusion to the new group -- see class docstring
+        # for the full confirmation and what was wrong with the private-
+        # attribute approach this replaces.
         if "variable" in kwargs:
-            new_var = kwargs.pop("variable")
-            if self._REBIND_VIA_NATIVE_CONFIGURE:
-                super().configure(variable=new_var)
-            else:
-                self._variable = new_var
-                if hasattr(self, "_draw"): self._draw()
+            super().configure(variable=kwargs.pop("variable"))
         if "value" in kwargs:
-            new_val = kwargs.pop("value")
-            if self._REBIND_VIA_NATIVE_CONFIGURE:
-                super().configure(value=new_val)
-            else:
-                self._value = new_val
-                if hasattr(self, "_draw"): self._draw()
+            super().configure(value=kwargs.pop("value"))
         if "command" in kwargs:
             super().configure(command=kwargs.pop("command"))
 
