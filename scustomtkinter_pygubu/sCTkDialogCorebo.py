@@ -8,10 +8,6 @@ UI source file: sCTkDialogCore.ui
 """
 import tkinter as tk
 import tkinter.ttk as ttk
-from sCTkButtonPrimary import sCTkButtonPrimary
-from sCTkButtonSecondary import sCTkButtonSecondary
-from sCTkFrame import sCTkFrame
-from sCTkLabelPrimary import sCTkLabelPrimary
 from pygubu.api.v1 import (
     BuilderObject,
     register_widget,

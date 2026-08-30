@@ -14,10 +14,7 @@ from pygubu.api.v1 import (
     register_widget,
 )
 
-from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkLabelBO
-from pygubu.api.v1 import copy_custom_property
-
 from scustomtkinter.sctk_label_secondary import sCTkLabelSecondary
 
 
@@ -45,10 +42,3 @@ builder_id = f"{builder_namespace}.{widget_classname}"
 register_widget(
     builder_id, sCTkLabelSecondaryBO, widget_classname, ("ttk", section_name)
 )
-
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkLabel is the registered name for CTkLabelBO builder.
-for pname in CTkLabelBO.properties:
-    copy_custom_property(nsctk.CTkLabel, pname, builder_id)

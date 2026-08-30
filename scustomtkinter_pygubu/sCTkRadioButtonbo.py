@@ -14,11 +14,8 @@ from pygubu.api.v1 import (
     register_widget,
 )
 
-from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkRadioButtonBO
-from pygubu.api.v1 import copy_custom_property
-
-from sCTkRadioButton import sCTkRadioButton
+from scustomtkinter.sctk_radiobutton import sCTkRadioButton
 
 
 #
@@ -46,9 +43,3 @@ register_widget(
     builder_id, sCTkRadioButtonBO, widget_classname, ("ttk", section_name)
 )
 
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkRadioButton is the registered name for CTkRadioButtonBO builder.
-for pname in CTkRadioButtonBO.properties:
-    copy_custom_property(nsctk.CTkRadioButton, pname, builder_id)

@@ -46,9 +46,3 @@ register_widget(
     builder_id, sCTkScrollbarBO, widget_classname, ("ttk", section_name)
 )
 
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkScrollbar is the registered name for CTkScrollbarBO builder.
-for pname in CTkScrollbarBO.properties:
-    copy_custom_property(nsctk.CTkScrollbar, pname, builder_id)

@@ -14,9 +14,7 @@ from pygubu.api.v1 import (
     register_widget,
     register_custom_property)
 
-from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.scrollableframe import CTkScrollableFrameBO
-from pygubu.api.v1 import copy_custom_property
 
 from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
 
@@ -52,12 +50,3 @@ register_widget(
     builder_id, sCTkFrameLabeledPrimaryBO, widget_classname, ("ttk", section_name)
 )
 
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkScrollableFrame is the registered name for CTkScrollableFrameBO builder.
-for pname in CTkScrollableFrameBO.properties:
-    try:
-        copy_custom_property(nsctk.CTkScrollableFrame, pname, builder_id)
-    except:
-        pass

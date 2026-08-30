@@ -11,7 +11,7 @@ from pygubu.api.v1 import (
     register_custom_property
 )
 from pygubu.plugins.customtkinter.widgets import CTkCanvasBO
-from scustomtkinter.sCTkThemes import THEME_DEFAULTS
+from scustomtkinter.themeable_widget import GLOBAL_THEME_REGISTRY as THEME_DEFAULTS
 
 # Import the native custom class
 from scustomtkinter.sctk_separator import sCTkSeparator

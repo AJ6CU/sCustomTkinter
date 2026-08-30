@@ -15,7 +15,6 @@ from pygubu.api.v1 import (
 
 # Import the native custom class
 from scustomtkinter.sctk_smeter_bar import sCTkSMeterBar
-from scustomtkinter.sCTkFrame import sCTkFrame
 
 #
 # Builder definition section

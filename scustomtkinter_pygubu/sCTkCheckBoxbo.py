@@ -14,10 +14,7 @@ from pygubu.api.v1 import (
     register_widget,
 )
 
-
-from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkCheckBoxBO
-from pygubu.api.v1 import copy_custom_property
 
 from scustomtkinter.sctk_checkbox import sCTkCheckBox
 
@@ -46,9 +43,3 @@ register_widget(
     builder_id, sCTkCheckBoxBO, widget_classname, ("ttk", section_name)
 )
 
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkCheckBox is the registered name for CTkCheckBoxBO builder.
-for pname in CTkCheckBoxBO.properties:
-    copy_custom_property(nsctk.CTkCheckBox, pname, builder_id)

@@ -15,10 +15,7 @@ from pygubu.api.v1 import (
     register_custom_property
 )
 
-from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkFrameBO
-from pygubu.api.v1 import copy_custom_property
-
 from scustomtkinter.sctk_frame_outlined import sCTkFrameOutlined
 
 
@@ -47,9 +44,3 @@ register_widget(
     builder_id, sCTkFrameOutlinedBO, widget_classname, ("ttk", section_name)
 )
 
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkFrame is the registered name for CTkFrameBO builder.
-for pname in CTkFrameBO.properties:
-    copy_custom_property(nsctk.CTkFrame, pname, builder_id)

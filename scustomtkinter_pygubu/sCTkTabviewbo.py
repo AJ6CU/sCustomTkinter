@@ -15,11 +15,8 @@ from pygubu.api.v1 import (
     copy_custom_property,
 )
 
-
 from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.tabview import CTkTabviewBO, CTkTabviewTabBO
-
-
 from scustomtkinter.sctk_tabview import sCTkTabview
 
 
@@ -68,9 +65,3 @@ CTkTabviewTabBO.add_allowed_parent(builder_id)
 #     ("ttk", section_name)
 # )
 
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkTabview is the registered name for CTkTabviewBO builder.
-for pname in CTkTabviewBO.properties:
-    copy_custom_property(nsctk.CTkTabview, pname, builder_id)

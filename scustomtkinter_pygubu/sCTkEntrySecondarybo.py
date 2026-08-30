@@ -14,10 +14,7 @@ from pygubu.api.v1 import (
     register_widget,
 )
 
-from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.widgets import CTkEntryBO
-from pygubu.api.v1 import copy_custom_property
-
 from scustomtkinter.sctk_entry_secondary import sCTkEntrySecondary
 
 
@@ -46,9 +43,3 @@ register_widget(
     builder_id, sCTkEntrySecondaryBO, widget_classname, ("ttk", section_name)
 )
 
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkEntry is the registered name for CTkEntryBO builder.
-for pname in CTkEntryBO.properties:
-    copy_custom_property(nsctk.CTkEntry, pname, builder_id)
