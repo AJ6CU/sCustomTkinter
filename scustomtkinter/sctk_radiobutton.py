@@ -90,7 +90,7 @@ class sCTkRadioButton(ctk.CTkRadioButton, ThemeableWidget):
     #   after construction then works correctly (does the button join the
     #   new group's mutual exclusion, does clicking it update the new
     #   variable, does it correctly reflect the new variable's current value).
-    _REBIND_VIA_NATIVE_CONFIGURE = False
+    _REBIND_VIA_NATIVE_CONFIGURE = True
 
     def __init__(self, master: Optional[Any] = None, **kw: Any) -> None:
         """

@@ -70,53 +70,41 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
     approach validated on sCTkComboBox, sCTkSegmentedButton, and the button
     family. Not separately re-confirmed for this specific widget.
 
-    HISTORY, corrected from an earlier version of this docstring: an earlier
-    pass at this file only ever varied text_color by state, leaving
-    fg_color/progress_color/button_color/button_hover_color fixed regardless
-    of disabled state, and a comment claimed this was deliberate. It wasn't --
-    per direct confirmation, full dimming was previously attempted and
-    abandoned after repeated failed attempts, which is also why a separate
-    widget (sCTkSwitchAlt) exists, built specifically to work around both this
-    and a related light-mode visibility problem (the button/handle, colored
-    white in the stock theme, can visually fade into a light background).
-    sCTkThemes.json's disabled_map for this widget already has full color
-    values for all four properties -- they were simply never read by this
-    code. See _DIM_ALL_COLORS_WHEN_DISABLED below for an experimental attempt
-    at actually using them, now that several other issues that could have
-    silently sabotaged earlier attempts (the tuple-vs-resolved-color pattern,
-    hardcoded fallbacks masking real theme values) have been fixed elsewhere
-    in this file. The handle-fading-into-background problem is a separate
-    issue, not addressed by this toggle -- resolving it here would benefit
-    from seeing exactly what mechanism sCTkSwitchAlt uses to fix it first,
-    rather than guessing at a new one blind.
+    HISTORY: an earlier version of this file only ever varied text_color by
+    state, leaving fg_color/progress_color/button_color/button_hover_color
+    fixed regardless of disabled state, with a comment claiming this was
+    deliberate. It wasn't -- full dimming had previously been attempted and
+    abandoned after repeated failures, which is also why a separate widget
+    (sCTkSwitchAlt) exists, built specifically to work around this and a
+    related light-mode visibility problem (the button/handle, white in the
+    stock theme, visually fades into a light background). Full dimming is now
+    confirmed working by direct testing, once several infrastructure bugs
+    elsewhere in this file were fixed (the tuple-vs-resolved-color pattern,
+    an always-empty _custom_disabled_map caused by reading "disabled_map" out
+    of final_kw -- where ThemeableWidget deliberately never puts it -- instead
+    of the correctly-populated _widget_disabled_map, and hardcoded fallback
+    colors masking the real theme values). The handle-fading-into-background
+    problem is separate and still open -- see _resolve_bg_color() below for
+    an experimental fix targeting that specifically, adapted from the
+    approach sCTkSwitchAlt already uses successfully.
     """
 
-    # EXPERIMENTAL TOGGLE -- see _apply_custom_theme_colors() for what this
-    # changes.
-    # False (default): preserves the behavior every prior version of this
-    #   file had -- only text_color varies by state; fg_color/progress_color/
-    #   button_color/button_hover_color are always the normal-state values,
-    #   even while disabled.
-    # True: reads fg_color/progress_color/button_color/button_hover_color
-    #   from disabled_map while disabled, the same way every other color-
-    #   swapping widget in this library already works. Untested as of this
-    #   writing -- flip this to True locally to find out whether the
-    #   dimming now actually works, now that the tuple-vs-resolved-color
-    #   pattern and hardcoded-fallback issues elsewhere in this file have
-    #   been fixed. Does NOT address the separate handle-fading-into-
-    #   background problem in light mode -- see class docstring.
-    _DIM_ALL_COLORS_WHEN_DISABLED = True
 
-    # EXPERIMENTAL TOGGLE -- see _execute_safe_command_forwarding().
-    # True (default): preserves the original behavior -- ANY exception from
-    #   the user's command, not just a genuine argument-count mismatch, is
-    #   silently swallowed. A real bug in the user's own command produces no
-    #   error, no traceback, nothing.
-    # False: lets exceptions from the user's command propagate normally
-    #   (after the argument-count fallback attempt). Untested as of this
-    #   writing -- flip this to False locally to see what a real bug in a
-    #   command callback actually looks like with each setting.
-    _SILENTLY_SWALLOW_COMMAND_ERRORS = False
+
+    # EXPERIMENTAL TOGGLE -- see _resolve_bg_color() for what this changes.
+    # False (default): bg_color is left at whatever CTkSwitch's own default
+    #   handling produces -- the current behavior, and the source of the
+    #   confirmed handle-fading-into-background problem in light mode (a
+    #   white button_color against a bg_color that doesn't correctly match
+    #   the actual parent background).
+    # True: explicitly resolves and sets bg_color to the parent's real
+    #   fg_color at construction, adapted from the same approach
+    #   sCTkSwitchAlt already uses successfully (its _apply_parent_bg_handshake()),
+    #   but passing a real (light, dark) tuple rather than a single resolved
+    #   string, since sCTkSwitch's bg_color -- unlike a raw tk.Canvas's "bg"
+    #   option -- is a genuine CTk color property that supports tuples.
+    #   Untested as of this writing.
+    _EXPLICITLY_RESOLVE_BG_COLOR = False
 
     def __init__(
         self,
@@ -169,6 +157,12 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         if self._user_command:
             wrapped_command = self._execute_safe_command_forwarding
 
+        # 5b. EXPERIMENTAL (see _EXPLICITLY_RESOLVE_BG_COLOR): resolve and
+        # pass bg_color explicitly, so it doesn't fall back to whatever
+        # CTkSwitch's own default handling produces.
+        if self._EXPLICITLY_RESOLVE_BG_COLOR:
+            self.final_kw["bg_color"] = self._resolve_bg_color(master)
+
         # 6. Initialize CustomTkinter natively with the clean final kwargs array.
         super().__init__(master, onvalue=onvalue, offvalue=offvalue, command=wrapped_command, **self.final_kw)
 
@@ -187,46 +181,84 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
             self.configure(state="disabled")
         self._finalize_themeable_lifecycle()
 
+    def _resolve_bg_color(self, master: Any) -> Any:
+        """
+        EXPERIMENTAL (see _EXPLICITLY_RESOLVE_BG_COLOR): determines what
+        bg_color this widget should use so it doesn't fall back to some
+        default that can cause a light-colored button/handle to visually
+        blend into the actual background -- confirmed happening in light
+        mode via direct testing (screenshot review).
+
+        Adapted from sCTkSwitchAlt's _apply_parent_bg_handshake(), which
+        solves the same underlying problem for a raw tk.Canvas (which cannot
+        render CTk's "transparent" pseudo-color at all, unlike this widget's
+        bg_color, which is a real CTk color property). Returns a (light, dark)
+        tuple rather than a single resolved string, so CTk's own
+        appearance-mode tracking can handle the two variants automatically,
+        consistent with the tuple-based approach used throughout this project
+        -- unlike sCTkSwitchAlt, which had to resolve to one literal color
+        immediately because a raw Canvas has no such tracking of its own.
+
+        Args:
+            master: This widget's parent, whose fg_color is used as the
+                basis for the resolved bg_color.
+
+        Returns:
+            A (light, dark) tuple. Falls back to a fixed neutral pair if the
+            parent's fg_color can't be read, or is itself "transparent".
+        """
+        fallback = ("#F1F5F9", "#1C1C1C")
+
+        try:
+            parent_fg = master.cget("fg_color")
+        except Exception:
+            return fallback
+
+        if isinstance(parent_fg, str) and parent_fg.lower() == "transparent":
+            return fallback
+        if isinstance(parent_fg, (tuple, list)) and len(parent_fg) == 2:
+            return tuple(parent_fg)
+        if isinstance(parent_fg, str):
+            return (parent_fg, parent_fg)
+        return fallback
+
     def _execute_safe_command_forwarding(self) -> None:
         """
         Calls the user's command, first trying with the switch's current
         value as a single argument, falling back to calling with no arguments
         if that raises TypeError.
 
-        KNOWN ISSUE, not addressed by the toggle below: the inner
-        `except TypeError` can't distinguish "your command doesn't accept an
-        argument" from "your command raised a TypeError for some unrelated
-        reason inside its own body." Either one triggers the same fallback --
-        calling the command AGAIN, with no arguments. A genuine TypeError bug
-        in the user's command could therefore run the command twice, or hit a
-        second, different error on the retry that then gets swallowed by the
-        outer catch below (if _SILENTLY_SWALLOW_COMMAND_ERRORS is True). Fixing
-        this properly would mean checking the command's actual signature
-        (e.g. via inspect.signature(...).bind(...)) before calling it, rather
-        than inferring compatibility from a caught exception -- not yet
-        implemented; test the behavior first before deciding whether it's
-        worth the added complexity.
+        Confirmed by direct testing: exceptions from the user's command
+        propagate normally (an earlier version swallowed all of them
+        silently -- no error, no traceback, nothing, which hid real bugs
+        completely). Tkinter's own default callback-exception handling
+        reports propagated exceptions to the console without crashing the
+        running application.
 
-        See _SILENTLY_SWALLOW_COMMAND_ERRORS for what the outer catch does.
+        KNOWN, UNFIXED ISSUE: the inner `except TypeError` can't distinguish
+        "your command doesn't accept an argument" from "your command raised a
+        TypeError for some unrelated reason inside its own body." Either one
+        triggers the same fallback -- calling the command AGAIN, with no
+        arguments. A genuine TypeError bug in a one-argument command will
+        therefore raise a second, confusing "missing required argument" error
+        on top of the real one -- confirmed by direct testing. Python's
+        exception chaining keeps both tracebacks visible (the real bug prints
+        first, followed by "During handling of the above exception..."), so
+        the bug isn't hidden, just noisier than necessary. Fixing this
+        properly would mean checking the command's actual signature (e.g. via
+        inspect.signature(...).bind(...)) before calling it, rather than
+        inferring compatibility from a caught exception -- not yet
+        implemented.
         """
         if not self._user_command:
             return
 
-        try:
-            active_val = self.get()
-        except Exception:
-            if self._SILENTLY_SWALLOW_COMMAND_ERRORS:
-                return
-            raise
+        active_val = self.get()
 
         try:
-            try:
-                self._user_command(active_val)
-            except TypeError:
-                self._user_command()
-        except Exception:
-            if not self._SILENTLY_SWALLOW_COMMAND_ERRORS:
-                raise
+            self._user_command(active_val)
+        except TypeError:
+            self._user_command()
 
     def configure(self, require_redraw: Any = None, **kwargs: Any) -> Any:
         """
@@ -355,45 +387,32 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         of resolving to a single color first, so CTk's native tracking can
         handle appearance-mode repaints without help from _set_appearance_mode.
 
-        fg_color, progress_color, button_color, and button_hover_color are
-        required to be present in the top-level theme block; text_color is
-        required in both the top-level block and disabled_map. If
-        _DIM_ALL_COLORS_WHEN_DISABLED is True, all four are also required in
-        disabled_map. Missing any required key raises immediately -- see this
-        class's docstring.
-
-        See _DIM_ALL_COLORS_WHEN_DISABLED (class attribute) and this class's
-        docstring for the history behind why fg_color/progress_color/
-        button_color/button_hover_color don't dim by default.
+        All five properties (fg_color, progress_color, button_color,
+        button_hover_color, text_color) are required to be present in both
+        the top-level theme block and disabled_map -- missing any raises
+        immediately rather than substituting a hardcoded color. This full
+        dimming is confirmed working by direct testing; see this class's
+        docstring for the history of why it wasn't always the behavior here.
         """
         is_disabled = self._custom_current_state == "disabled"
         normal_map = self._local_defaults
         disabled_map = self._custom_disabled_map
 
-        for required_key in ("fg_color", "progress_color", "button_color", "button_hover_color"):
+        for required_key in ("fg_color", "progress_color", "button_color", "button_hover_color", "text_color"):
             if normal_map.get(required_key) is None:
                 raise KeyError(
                     f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
                     f"at the top level of sCTkThemes.json."
                 )
-        if normal_map.get("text_color") is None:
-            raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'text_color' at the top level.")
-        if disabled_map.get("text_color") is None:
-            raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'text_color' in disabled_map.")
+            if disabled_map.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                )
 
-        if self._DIM_ALL_COLORS_WHEN_DISABLED:
-            for required_key in ("fg_color", "progress_color", "button_color", "button_hover_color"):
-                if disabled_map.get(required_key) is None:
-                    raise KeyError(
-                        f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
-                        f"in disabled_map (required because _DIM_ALL_COLORS_WHEN_DISABLED is True)."
-                    )
-
-        text_map = disabled_map if is_disabled else normal_map
-        color_map = (disabled_map if is_disabled else normal_map) if self._DIM_ALL_COLORS_WHEN_DISABLED else normal_map
+        color_map = disabled_map if is_disabled else normal_map
 
         theme_payload = {
-            "text_color": text_map.get("text_color"),
+            "text_color": color_map.get("text_color"),
             "text_color_disabled": disabled_map.get("text_color"),
             "fg_color": color_map.get("fg_color"),
             "progress_color": color_map.get("progress_color"),
