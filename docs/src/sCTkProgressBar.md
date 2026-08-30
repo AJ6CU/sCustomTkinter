@@ -1,179 +1,116 @@
 ## sCTkProgressBar
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Progress Scaling & Movement Physics](#progress-scaling--movement-physics)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-An advanced theme-compliant linear progression indicator widget. It implements custom state hooks to dynamically morph track backgrounds and progress fill lanes into desaturated gray tokens on a programmatic lock, protecting visual dashboard metrics from freezing out of theme synchronization.
+### Overview
 
+`sCTkProgressBar` is a themeable subclass of `customtkinter.CTkProgressBar`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a purely visual "disabled" state — progress bars have no click behavior to block, so disabling one only dims its colors.
 
-![sCTkProgressBar_Dark.png](images/sCTkProgressBar_Dark.png)
-![sCTkProgressBar_Light.png](images/sCTkProgressBar_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkProgressBar(master)` | `sCTkProgressBar(master)` *(Themed Progress Bar)* |
-| **File Mapping** | Config metrics look up loose un-managed palette snapshot lists. | Separated safely across `sCTkProgressBar.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `widget.state("disabled")`<br>**OR**<br>`widget.configure(state="disabled")`<br><br>**Polymorphic State Controller:** Repaints the underlying vector fill segments to reflect a read-only lock state natively. |
+Dark Mode:  ![sCTkProgressBar in dark mode](images/sCTkProgressBar_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode: ![sCTkProgressBar in light mode](images/sCTkProgressBar_Light.png)
 
 ---
 
 ### Constructor
 
-Initialize a custom themed progression indicator chassis.
+```python
+sCTkProgressBar(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | `state` is pulled out and applied after construction. Everything else is any native `CTkProgressBar` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a telemetry loading indicator bar
-load_bar = sCTkProgressBar(master=dashboard_panel)
-
-# FIX: Keep expand=False to prevent track heights from over-stretching vertically!
-load_bar.pack(expand=False, fill="x", padx=40, pady=10)
-
-# Feed status tracking values down the matrix (0.0 to 1.0)
-load_bar.set(0.45)
+signal_meter = sCTkProgressBar(master=control_panel)
+signal_meter.pack(fill="x", padx=40, pady=10)
+signal_meter.set(0.65)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Unpack active progress metrics programmatically
-current_value = load_bar.get()                # Returns float between 0.0 and 1.0
+### Methods
 
-
-# Force-apply a new progress position value across the track index
-load_bar.set(0.75)                            # Sets progress bar layout directly to 75%
-
-
-# Apply an immediate visual state lock across the tracker segment
-load_bar.state("disabled")                    # Repaints filled lanes to desaturated gray
-```
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's visual "disabled" state. Unlike most widgets in this library, any string is accepted and stored as-is (lowercased) — there's no validation against a fixed set of values. Only the literal `"disabled"` actually changes colors; anything else is treated as "not disabled". |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `cget("state")` | `str` | Returns the current state, same as `get_state()`. Intercepted specially because native `CTkProgressBar` has no real `"state"` option to query — without this override, `cget("state")` would raise. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `progress_color`, and `border_color`. Queries for any other property name fall through to the native `CTkProgressBar.configure`. |
 
 ---
 
-### Progress Scaling & Movement Physics
+### Theming (`sCTkThemes.json`)
 
-The progression indicator updates its visual fill index strictly via **floating-point values ranging from `0.0` (0%) to `1.0` (100%)**. To safely translate integer step adjustments (like hardware clicks, telemetry deltas, or button taps) into smooth fractional bar movement, utilize the following resolution guidelines:
+- **Applied once, at construction** — every key in the widget's theme block, including `width`, `height`, and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `progress_color`, `border_width`, and `corner_radius` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
 
-#### 1. Incrementing with Decimal Steps
-To move the bar forward by a specific percentage step, extract the active position float via `.get()` and add a corresponding fractional delta (`0.01` for a 1% step, `0.05` for a 5% step, `0.10` for a 10% step):
-
-```python
-# Advance progress bar position forward by exactly +5%
-current_position = load_bar.get()
-next_position = current_position + 0.05
-
-# Clamp the value at the 1.0 (100%) ceiling to prevent math layout overflow exceptions
-if next_position > 1.0:
-    next_position = 1.0
-
-load_bar.set(next_position)
-```
-
-#### 2. Reversing to Percentages for Labels
-To report the floating-point index back to the operator dashboard as a readable integer percentage string, multiply the float by `100` and cast it to a flat `int()` value:
-
-```python
-# Converts a position of 0.65 into a clean string layout: "65%"
-percentage_string = f"{int(load_bar.get() * 100)}%"
-my_dashboard_label.configure(text=percentage_string)
-```
-
----
-
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
 ```json
 {
     "sCTkProgressBar": {
-        "fg_color": ["#E2E8F0", "#2D2D2D"],
-        "progress_color": ["#3B82F6", "#1F6AA5"],
-        "border_color": ["#CBD5E1", "#334155"],
+        "width": 200,
+        "height": 6,
+        "fg_color": ["#E5E7EB", "#4B5563"],
+        "progress_color": ["#1A4375", "#2471A3"],
+        "corner_radius": 100,
         "disabled_map": {
-            "fg_color": ["#E2E8F0", "#1E293B"],
-            "progress_color": ["#94A3B8", "#475569"]
+            "fg_color": ["#CBD5E1", "#374151"],
+            "progress_color": ["#94A3B8", "#4B5563"]
         }
     }
 }
 ```
 
+There's no `border_color` anywhere in this theme block, even though the repaint loop checks for one — this style simply has no themed border, the same situation as `sCTkButtonPrimary`'s `border_color`.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained interactive test execution script demonstrating how to map percentage labels and step controllers natively alongside an `sCTkProgressBar`.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for ProgressBar
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkButtonSecondary, sCTkLabelSecondary, sCTk, sCTkProgressBar
+from scustomtkinter import sCTk, sCTkFrame, sCTkProgressBar, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x260")
-    root.title("sCTkProgressBar Interactive Testing Deck")
+    root.geometry("400x250")
+    root.title("ProgressBar Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    initial_val = 0.45
-    lbl_status = sCTkLabelSecondary(
-        base,
-        text=f"Telemetry Progress Output: {int(initial_val * 100)}% / 100%"
-    )
-    lbl_status.pack(pady=(10, 5))
+    meter = sCTkProgressBar(base)
+    meter.pack(fill="x", pady=10)
+    meter.set(0.65)
 
-    widget = sCTkProgressBar(base)
-    widget.pack(expand=False, fill="x", padx=40, pady=10)
-    widget.set(initial_val)
+    def toggle_disabled():
+        target = "disabled" if meter.get_state() == "normal" else "normal"
+        meter.state(target)
+        disable_toggle.configure(text="Enable Meter" if target == "disabled" else "Disable Meter")
 
-    def step_progress():
-        if widget.get_state() == "disabled":
-            print("⚠️ Cannot modify progress channel: Widget is currently locked!")
-            return
-
-        current_val = widget.get()
-        next_val = current_val + 0.05
-        if next_val > 1.0:
-            next_val = 0.0
-
-        widget.set(next_val)
-        lbl_status.configure(text=f"Telemetry Progress Output: {int(next_val * 100)}% / 100%")
-
-    btn_step = sCTkButtonPrimary(base, text="Step Telemetry Track (+5%)", command=step_progress)
-    btn_step.pack(pady=(5, 5))
-
-    def toggle_operational_lock():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        widget.configure(state=target)
-        btn_lock.configure(text="Lock Indicator Track" if target == "normal" else "Unlock Indicator Track")
-        btn_step.configure(state=target)
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Indicator Track", command=toggle_operational_lock)
-    btn_lock.pack(side="bottom", pady=(5, 10))
-
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-    btn_theme = sCTkButtonSecondary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=5)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Meter", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- `state()` performs no validation at all — any string you pass is stored verbatim; only `"disabled"` actually changes the rendered colors.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

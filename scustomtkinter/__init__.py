@@ -75,7 +75,6 @@ from .sctk_smeter import sCTkSMeter
 from .sctk_smeter_bar import sCTkSMeterBar
 from .sctk_spinbox import sCTkSpinbox
 from .sctk_switch import sCTkSwitch
-from .sctk_switch_alt import sCTkSwitchAlt
 from .sctk_tableview import sCTkTableview
 from .sctk_tabview import sCTkTabview
 from .sctk_textbox_primary import sCTkTextboxPrimary
