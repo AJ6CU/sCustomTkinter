@@ -39,30 +39,15 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
     than pre-resolved to a single value, so CustomTkinter's own appearance-mode
     tracking repaints them automatically on a light/dark switch -- the same
     approach validated on sCTkComboBox and sCTkSegmentedButton.
-    """
 
-    # EXPERIMENTAL TOGGLE -- see state() for what this changes.
-    #
-    # CONFIRMED BY DIRECT TESTING:
-    #   - False (the original, manual-unbind behavior): does NOT actually
-    #     block clicks. The button's command still fired while "disabled",
-    #     confirmed by direct testing. Likely because CTkButton binds its
-    #     click handler at the canvas-item level (tag_bind), not the
-    #     canvas-widget level, so canvas.unbind() never reaches it.
-    #   - True (native state="disabled"): after a disable/enable cycle, colors
-    #     got stuck on the disabled palette and never returned to normal.
-    #     The after_idle-deferred reapply in state() below is an untested fix
-    #     for that specific symptom -- not yet confirmed. Whether True
-    #     actually blocks clicks correctly also hasn't been explicitly
-    #     confirmed yet, only inferred from it being the mechanism CTk itself
-    #     uses for interactivity locking elsewhere in this project
-    #     (sCTkSegmentedButton's hover suppression).
-    #
-    # Default is True because False is confirmed broken, not because True is
-    # confirmed correct. Needs another round of local testing (both the click
-    # behavior and whether colors now return correctly) before this can be
-    # called settled.
-    _DISABLE_VIA_NATIVE_STATE = True
+    Disabling uses CTk's native state="disabled" rather than manually unbinding
+    mouse events -- confirmed by direct testing to be the only mechanism that
+    actually blocks clicks (see state() for why). The post-transition color
+    reapply is deferred via after_idle rather than called immediately, since an
+    immediate call was found to lose a race against CTk's own internal
+    state-change repaint, leaving buttons visually stuck on the wrong palette
+    after repeated disable/enable cycles.
+    """
 
     def __init__(self, master: Optional[Any] = None, **kw: Any) -> None:
         """
@@ -236,33 +221,19 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
 
         elif mode == "disabled":
             self._custom_current_state = "disabled"
-
-            if self._DISABLE_VIA_NATIVE_STATE:
-                # ALTERNATIVE (experimental): rely on CTk's own native disabled
-                # handling entirely.
-                super().configure(state="disabled", hover=False)
-            else:
-                # DEFAULT (original) behavior: manually unbind mouse events
-                # instead of using the native "disabled" state.
-                #
-                # CONFIRMED BROKEN by direct testing: clicks still fired the
-                # button's command while "disabled" under this branch. Most
-                # likely cause: CTkButton binds its click handler to canvas
-                # ITEMS via tag_bind() (e.g. the drawn rectangle/text), not to
-                # the canvas widget itself -- so canvas.unbind() below, which
-                # only removes widget-level bindings, never touches the actual
-                # handler. Left in place only behind the toggle for reference;
-                # do not rely on this path.
-                try:
-                    if hasattr(self, "_canvas") and self._canvas:
-                        self._canvas.unbind("<Enter>")
-                        self._canvas.unbind("<Leave>")
-                        self._canvas.unbind("<Button-1>")
-                        self._canvas.unbind("<ButtonRelease>")
-                except Exception:
-                    pass
-                super().configure(state="normal", hover=False)
-
+            # Uses CTk's native state="disabled" -- confirmed by direct testing
+            # to be necessary, not optional. An earlier version instead
+            # manually unbound mouse events on the canvas while keeping native
+            # state at "normal", to avoid CTk's own disabled rendering
+            # potentially fighting with this widget's disabled/pressed/alarm
+            # color system. That approach was confirmed broken: clicks still
+            # fired the button's command while "disabled", almost certainly
+            # because CTkButton binds its click handler at the canvas-ITEM
+            # level (tag_bind on the drawn rectangle/text), not the
+            # canvas-WIDGET level -- so canvas.unbind() never reached it.
+            # Native state="disabled" is what actually blocks interaction;
+            # don't replace this with manual event unbinding again.
+            super().configure(state="disabled", hover=False)
             self.after_idle(self._update_current_visual_state)
 
         return self._custom_current_state
