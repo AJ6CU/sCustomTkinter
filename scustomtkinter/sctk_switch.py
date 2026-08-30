@@ -104,7 +104,7 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
     #   string, since sCTkSwitch's bg_color -- unlike a raw tk.Canvas's "bg"
     #   option -- is a genuine CTk color property that supports tuples.
     #   Untested as of this writing.
-    _EXPLICITLY_RESOLVE_BG_COLOR = False
+    _EXPLICITLY_RESOLVE_BG_COLOR = True
 
     def __init__(
         self,
