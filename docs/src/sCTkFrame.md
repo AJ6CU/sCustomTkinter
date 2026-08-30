@@ -1,124 +1,99 @@
 ## sCTkFrame
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A clean, theme-compliant standard backplane container layout chassis widget. It functions as the geometric foundation card for stacking controls, isolating interface subsections, and grouping multi-frequency layout grids.
+### Overview
 
-![sCTkFrame_Dark.png](images/sCTkFrame_Dark.png)
-![sCTkFrame_Light.png](images/sCTkFrame_Light.png)
+`sCTkFrame` is a themeable subclass of `customtkinter.CTkFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`. Unlike every other widget in this library, it has no disabled state and no per-state color swapping — frames are containers, not interactive controls, so there's nothing to dim or lock.
 
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkFrame(master)` | `sCTkFrame(master)` *(Backplane Container Chassis)* |
-| **File Mapping** | Everything runs under one core native framework layout tracker. | Streamlined and compiled programmatically across `sCTkFrame.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `base_container.state("disabled")`<br>**OR**<br>`base_container.configure(state="disabled")`<br><br>**Dual-Routing State Bypasser:** Absorbs state parameters smoothly without crashing. This prevents interface layout exceptions when cascading operational locks down across complex structural grids. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions, always returning `"normal"`. |
+![sCTkFrame in dark mode](images/sCTkFrame_Dark.png)
+![sCTkFrame in light mode](images/sCTkFrame_Light.png)
 
 ---
 
 ### Constructor
 
-Initialize a custom backplane container frame card instance. High-level custom configuration parameters passed by Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires. Geometry shapes, border offsets, and corner styles map cleanly out of central stylesheet parameters.
+```python
+sCTkFrame(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkFrame` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a master panel frame container card layout
-dashboard_card = sCTkFrame(
-    master=root_window,
-    border_width=2
-)
-
-# Render the container frame widget inside your view using geometry packers
-dashboard_card.pack(expand=True, fill="both", padx=25, pady=25)
+panel = sCTkFrame(control_root)
+panel.pack(expand=True, fill="both", padx=20, pady=20)
 ```
 
 ---
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | No-op. Always returns `"normal"` regardless of what's passed in — deliberate, not a bug, so generic code written against every widget's `state()`/`get_state()`/`configure(state=...)` API doesn't need a special case for frames. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. Always `"normal"`. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` is silently absorbed (a no-op) rather than forwarded to the native widget, which has no real state concept; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, and `border_color` — since neither varies by state here, `default` and `current` are always identical. Queries for any other property name fall through to the native `CTkFrame.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+Everything is applied once, at construction — there's no `disabled_map` for this widget, and no runtime color-swapping logic at all.
+
 ```json
 {
     "sCTkFrame": {
-        "fg_color": ["#F8FAFC", "#1E293B"],
-        "border_color": ["#E2E8F0", "#334155"],
-        "border_width": 1,
-        "corner_radius": 8
+        "border_width": 0,
+        "corner_radius": 0,
+        "border_color": ["gray", "gray"],
+        "fg_color": "transparent"
     }
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from `ctk.CTkFrame` and `ThemeableWidget`, bypassing the intermediate template layout files entirely. It connects the component straight to CustomTkinter's appearance modes while using the multiple inheritance protocol layer to sanitize keyword arrays.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization routine, the constructor fires `self._finalize_themeable_lifecycle()` to safely dispatch first-object registration notifications back up to Pygubu's master parent script controllers, unlocking full composition support.
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native container initialization loops mutate and delete attributes directly out of raw dictionary data footprints during its boot pass, the constructor clones your configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This preserves your color mappings safely.
-* **Passive Operation Parity:** Background chassis containers do not implement a variable `disabled_map`. They remain perpetually active (`"normal"`) to allow child inputs sitting on top of their canvas face to handle their own active drawing states independently.
+With `border_width` at `0`, `border_color` never actually renders visibly regardless of its value — the two are set to the neutral Tkinter color name `"gray"` for both light and dark mode here, but that's moot while the border has no width.
+
+Colors are passed through as raw `(light, dark)` tuples at construction and never touched again, so CustomTkinter's own native appearance-mode tracking handles light/dark repaints on its own — there's no `_set_appearance_mode()` override here, since there's nothing for one to re-trigger. This is the same underlying mechanism validated more deliberately on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkFrame` asset container along with a cascading lock simulation pass.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame
-# =====================================================================
-
-from scustomtkinter import sCTkButtonPrimary, sCTkLabelPrimary, sCTk, sCTkFrame
-
+import customtkinter as ctk
+from scustomtkinter import sCTk, sCTkFrame, sCTkLabelPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("500x300")
-    root.title("sCTkFrame Container Validation Bench")
+    root.geometry("400x250")
+    root.title("Frame Example")
 
-    # Instantiate your custom theme-compliant frame element chassis
-    base_container = sCTkFrame(root, border_width=2)
-    base_container.pack(expand=True, fill="both", padx=30, pady=30)
-#
-#     # Add a simple sub-element child widget to verify structural clipping layouts
-    lbl_marker = sCTkLabelPrimary(base_container, text="FRAME BACKPLANE CONTAINER OPERATIONAL\n"+
-                                  "Border Visible for Testing Purposes only")
-    lbl_marker.pack(expand=True)
+    panel = sCTkFrame(root)
+    panel.pack(expand=True, fill="both", padx=20, pady=20)
 
-#
-#     # Standard dashboard interaction toggle simulation pass
-    def toggle_panel_lock():
-        current_mode = base_container.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-#
-#         # Explicitly testing the dual-routing capability via configure()
-        base_container.configure(state=target)
-        print(f"Logged Verification Hook -> base_container.get_state() = {base_container.get_state()}")
-
-#
-    btn_lock = sCTkButtonPrimary(root, text="Simulate Cascading Interface Lock", command=toggle_panel_lock)
-    btn_lock.pack(side="bottom", pady=15)
-#
-#     # Run the interactive boot tracking logs
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    base_container.state("disabled")
-    print("state (Disabled Pass) =", base_container.get_state())  # Output: normal (Frames bypass disabled masks)
-
-    base_container.state("normal")
-    print("state (Normal Pass)   =", base_container.get_state())  # Output: normal
-    print("========================================\n")
+    label = sCTkLabelPrimary(panel, text="Content goes here")
+    label.pack(expand=True)
 
     root.mainloop()
-
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()`/`get_state()`/`configure(state=...)` are all no-ops by design — there's no way to visually disable a frame through this API, since the widget has no disabled state at all.
+- Calling `configure("fg_color")` or `configure("border_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`border_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

@@ -1,143 +1,122 @@
 ## sCTkEntryPrimary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-themesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-Dominant form input lane widget variant designed for primary user data entry (e.g., core configuration inputs, direct numeric entries, or text queries). It implements a direct native class configuration architecture combined with the `ThemeableWidget` sanitizer pass to guarantee complete safety against keyword collisions.
+### Overview
 
-*For alternative helper input fields or metadata input channels, see the companion component documentation page:* [sCTkEntrySecondary](sCTkEntrySecondary.md).
+`sCTkEntryPrimary` is a themeable subclass of `customtkinter.CTkEntry` — the higher-emphasis of the library's two entry-field tiers (see also `sCTkEntrySecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state.
 
+![sCTkEntryPrimary in dark mode](images/sCTkEntryPrimary_Dark.png)
+![sCTkEntryPrimary in light mode](images/sCTkEntryPrimary_Light.png)
 
-![sCTkEntryPrimary_Dark.png](images/sCTkEntryPrimary_Dark.png)
-![sCTkEntryPrimary_Light.png](images/sCTkEntryPrimary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkEntry(master)` | `sCTkEntryPrimary(master)` *(Primary form data field)* |
-| **Maintenance** | Local style overrides duplicated across files manually. | Clean updates across all layouts modified directly in the JSON file. |
-| **File Mapping** | Everything runs under one core native text pipeline. | Streamlined and compiled cleanly across `sCTkEntryPrimary.py` and `ThemeableWidget.py`. |
-| **State Lock** | `self.configure(state="disabled")` | `input_field.state("disabled")`<br>**OR**<br>`input_field.configure(state="disabled")`<br><br>**Dual-Routing State Pipeline:** Natively handles both syntax paths. Freezes text interaction lanes, blocks keyboard event streams, and dynamically shifts colors out of `disabled_map` guidelines via strict sequential update passes. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
+> **Unresolved design question — read before relying on "disabled" behavior.** This widget's "disabled" state maps to Tkinter's native `"readonly"`, not `"disabled"`. Unlike every other widget in this library, this hasn't been independently confirmed correct or incorrect through direct testing. Behaviorally, `readonly` typically still permits focus, text selection, and copying, while `disabled` fully locks the widget — these are not the same thing. Confirm which behavior you actually want before depending on this.
 
 ---
 
 ### Constructor
 
-Initialize a custom primary form data field instance. High-level custom configuration parameters from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkEntryPrimary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkEntry` argument (e.g. `placeholder_text`, `width`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). `state` is extracted and applied after construction rather than passed to the native constructor. |
 
 ```python
-# Instantiate a primary frequency entry lane input field
-freq_input_field = sCTkEntryPrimary(
+freq_entry = sCTkEntryPrimary(
     master=control_panel,
-    placeholder_text="Enter Transceiver Frequency...",
-    textvariable=vfo_string_var
+    placeholder_text="Enter frequency (MHz)",
 )
-
-# Render the widget inside your parent container coordinate tracker panel
-freq_input_field.pack(fill="x", padx=40, pady=10)
+freq_entry.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Selectively manipulate the internal textual elements on the fly
-frequency_input.insert(0, "14.032.000") # Populates text buffer indices with data strings
-frequency_input.delete(0, \"end\")         # Wipes the entry line lane completely back to empty
-active_buffer = frequency_input.get()    # Queries the live active text character arrays
+### Methods
 
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = frequency_input.get_state() # Returns 'normal' or 'disabled'
-frequency_input.state("disabled")          # Locks data entry tracks and applies muted gray fills
-```
+| Method | Returns | Description |
+|---|---|---|
+| `state(state_string=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. See the unresolved design note above for what "disabled" actually does at the native level. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `text_color`, `border_color`, and `placeholder_text_color`. Queries for any other property name fall through to the native `CTkEntry.configure`. |
 
-### Centralized Stylesheet Setup (`themes.json`)
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `text_color`, and `placeholder_text_color` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkEntryPrimary": {
+        "font": ["Arial", 15, "normal"],
+        "border_width": 1.5,
+        "border_color": ["#1A4375", "#64748B"],
         "fg_color": ["#FFFFFF", "#111827"],
-        "border_color": ["#1A4375", "#4B5563"],
-        "text_color": ["#1F2937", "#FFFFFF"],
-        "placeholder_text_color": ["#94A3B8", "#64748B"],
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "corner_radius": 6,
         "disabled_map": {
             "fg_color": ["#F3F4F6", "#1F2937"],
-            "border_color": ["#E5E7EB", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"],
-            "placeholder_text_color": ["#CBD5E1", "#475569"]
+            "border_color": ["#CBD5E1", "#475569"],
+            "text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Middleman:** This widget inherits directly from `ctk.CTkEntry` and `ThemeableWidget`, entirely removing any autogenerated Pygubu intermediate templates. This simplifies the class footprint while fully retaining dynamic string translation and lifecycle callback capabilities natively.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization routine, the constructor fires `self._finalize_themeable_lifecycle()` to safely dispatch first-object registration notifications back up to Pygubu's master parent script systems.
+There's no `placeholder_text_color` key here, even though the widget's `configure()`/repaint logic checks for one. If the field ever shows placeholder text, its color comes from CTkEntry's native default, not the theme file. Worth deciding whether to add a real theme key for this (following the precedent of `sCTkCheckBox`'s `checkmark_color`, which had the same gap) or leave it as native.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkEntryPrimary` input lane field along with an interactive status switch toggle.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Entry Secondary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrameLabeledSecondary, sCTkButtonPrimary, sCTk, sCTkLabelTertiary, sCTkEntrySecondary
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes
-from sCTkFrame import sCTkFrame
+from scustomtkinter import sCTk, sCTkFrame, sCTkEntryPrimary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
-
-    root = ctk.CTk()
-    root.geometry("500x450")
-    root.title("sCTkEntryPrimary Real-Time Validation Bench")
+    root = sCTk()
+    root.geometry("400x250")
+    root.title("EntryPrimary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkEntryPrimary(base, placeholder_text="Enter Transceiver Callsign...")
-    widget.pack(fill="x", padx=20, pady=20)
+    freq_entry = sCTkEntryPrimary(base, placeholder_text="Enter frequency (MHz)")
+    freq_entry.pack(fill="x", pady=10)
 
-    def toggle_logger_states():
-        """Cycles operational states between active feed and locked desaturated tracks."""
-        current_state = widget.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
+    def toggle_disabled():
+        target = "disabled" if freq_entry.get_state() == "normal" else "normal"
+        freq_entry.state(target)
+        disable_toggle.configure(text="Enable Field" if target == "disabled" else "Disable Field")
 
-        widget.configure(state=target)
-        btn_toggle.configure(text="Activate Entry Field" if target == "disabled" else "Lock Entry Field")
-        print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state().upper()}")
-
-    def toggle_appearance_skin():
-        current_mode = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_mode == "Dark" else "Dark")
-
-    btn_toggle = ctk.CTkButton(base, text="Lock Entry Field", command=toggle_logger_states)
-    btn_toggle.pack(fill="x", padx=10, pady=5)
-
-    btn_theme = ctk.CTkButton(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
-    btn_theme.pack(fill="x", padx=10, pady=5)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Field", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- **"Disabled" is actually native "readonly", not "disabled"** — see the note at the top of this document. This may permit focus, selection, and copying even while "disabled".
+- `placeholder_text_color` is checked by the widget's code but not defined anywhere in the theme file — see [Theming](#theming-sctkthemesjson).
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
