@@ -1,122 +1,133 @@
+
 ## sCTkButtonSecondary
 
-A specialized, theme-compliant secondary button component widget variant wrapping `customtkinter.CTkButton` designed to act as a latching status toggle selector. It implements a deep-copy keyword caching shield to preserve custom visual style parameters from native mutation traps and prevent `NoneType` canvas validation exceptions.
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
+---
+
+### Overview
+
+`sCTkButtonSecondary` is a themeable subclass of `customtkinter.CTkButton` — a lower-emphasis sibling of `sCTkButtonPrimary` (see also `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, and pressed — no "alarm" state, unlike Primary), and Pygubu Designer property introspection.
 
 ![sCTkButtonSecondary_Dark.png](images/sCTkButtonSecondary_Dark.png)
 ![sCTkButtonSecondary_Light.png](images/sCTkButtonSecondary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkButton(master)` | `sCTkButtonSecondary(master)` *(Latching Toggle Selector)* |
-| **File Mapping** | Component definitions bundle under single active tracks. | Streamlined and compiled programmatically across `sCTkButtonSecondary.py` and `ThemeableWidget.py`. |
-| `state(mode)` | `self.configure(state=...)` | `Method (str)` managing layout tracking maps and toggling active canvas event binds natively. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-| `set_pressed(bool)` | *Not Available Natively* | **Latching Hook:** Dynamically updates visual button states to look locked down. |
 
 ---
 
 ### Constructor
 
-Initialize a custom secondary latching toggle button instance. Custom parameters passed from Pygubu builder allocations (like string `translator` tracks or `data_pool` environments) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkButtonSecondary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkButton` argument (e.g. `text`, `command`, `width`, `height`, `font`, `corner_radius`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). As with `sCTkButtonPrimary`, there's no special extraction step — `command` and every other native argument flow straight through to construction. |
 
 ```python
-# Instantiate a secondary latching toggle button element
-vfo_lock_toggle = sCTkButtonSecondary(
+cancel_button = sCTkButtonSecondary(
     master=control_panel,
-    text="LOCK ACTIVE VFO MODE",
-    command=on_vfo_lock_toggled
+    text="Cancel",
+    command=on_cancel_clicked,
 )
-
-# Render the widget inside your parent container geometry tracker layout
-vfo_lock_toggle.pack(fill="x", padx=40, pady=10)
+cancel_button.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Force an active button press visual accent highlight on the fly
-vfo_lock_toggle.set_pressed(True)   # Shifts colors to match your pressed_map rules
+### Methods
 
-# Evaluate active visual modes or apply absolute user interaction locks
-current_mode = vfo_lock_toggle.get_state() # Returns 'normal' or 'disabled'
-vfo_lock_toggle.state("disabled")          # Unbinds mouse canvas routines and applies muted gray fills
-```
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only the literal string `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value matches neither branch and leaves the state unchanged. Disabling uses CTk's native `state="disabled"`, confirmed by direct testing to correctly block both clicks and hover color changes. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `set_pressed(pressed)` | `None` | Forces the visual "pressed" look on or off. No-op while disabled. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`, with `current` reflecting whichever state (disabled/pressed/normal) is presently active. Queries for any other property name fall through to the native `CTkButton.configure`. |
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+---
+
+### Theming (`sCTkThemes.json`)
+
+Three visual states, with precedence **disabled > pressed > normal** when both could apply.
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every state change** — `fg_color`, `hover_color`, `border_color`, and `text_color` are recomputed from whichever map matches the current state every time you call `state()` or `set_pressed()`. `border_width`, `corner_radius`, and `font` are **not** re-applied on state changes — they don't vary between states.
+
 ```json
 {
     "sCTkButtonSecondary": {
-        "fg_color": "transparent",
-        "border_color": ["#CBD5E1", "#44403C"],
-        "text_color": ["#334155", "#E7E5E4"],
-        "border_width": 1,
+        "font": ["Arial", 15, "normal"],
+        "fg_color": ["#E5E7EB", "#374151"],
+        "hover_color": ["#D1D5DB", "#4B5563"],
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "border_width": 2,
+        "border_color": ["#9CA3AF", "#4B5563"],
         "corner_radius": 6,
         "disabled_map": {
-            "fg_color": ["#F1F5F9", "#171412"],
-            "border_color": ["#E2E8F0", "#292524"],
-            "text_color": ["#94A3B8", "#57534E"]
+            "fg_color": ["#F3F4F6", "#1F2937"],
+            "hover_color": ["#F3F4F6", "#1F2937"],
+            "border_color": ["#E5E7EB", "#374151"],
+            "text_color": ["#94A3B8", "#64748B"]
         },
         "pressed_map": {
-            "fg_color": ["#E2E8F0", "#44403C"],
-            "border_color": ["#94A3B8", "#6B7280"],
-            "text_color": ["#000000", "#FFFFFF"]
+            "fg_color": ["#CBD5E1", "#1F2937"],
+            "hover_color": ["#CBD5E1", "#1F2937"],
+            "border_color": ["#475569", "#94A3B8"],
+            "text_color": ["#0F172A", "#FFFFFF"]
         }
     }
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Skeletons:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, completely bypassing the intermediate template layout files entirely to preserve high-DPI image scaling.
-* **Canvas Interaction Toggles:** When shifted into a `disabled` state configuration, the widget explicitly unbinds mouse events (`<Enter>`, `<Leave>`, `<Button-1>`) at the canvas level to lock interactions and prevent memory leaks. Shifting back to `normal` restores the listeners seamlessly.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
+Unlike `sCTkButtonPrimary` (which has no themed border at all, being a solid-fill button), this style does define `border_color` at every tier — normal, pressed, and disabled all have their own distinct border color.
 
-### Implementation Example & Test Harness
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`.
 
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkButtonSecondary` alongside an interactive latch controller.
+---
+
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Secondary Button
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTk, sCTkButtonSecondary
+from scustomtkinter import sCTk, sCTkFrame, sCTkButtonSecondary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.geometry("450x320")
-    root.title("Secondary Button Real-Time Validation Bench")
+    root.geometry("400x300")
+    root.title("ButtonSecondary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkButtonSecondary(base, text="System Action Button")
-    widget.pack(padx=40, pady=10, fill="x")
+    cancel_button = sCTkButtonSecondary(base, text="Cancel", command=lambda: print("Cancelled"))
+    cancel_button.pack(pady=10)
 
-    def toggle_disabled_lock():
-        target = "disabled" if widget.get_state() == "normal" else "normal"
-        widget.configure(state=target)
-        btn_lock.configure(text="Lock Button" if target == "normal" else "Unlock Button")
+    def toggle_disabled():
+        target = "disabled" if cancel_button.get_state() == "normal" else "normal"
+        cancel_button.state(target)
+        disable_toggle.configure(text="Enable Cancel" if target == "disabled" else "Disable Cancel")
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-    btn_lock = ctk.CTkButton(base, text="Lock Button", command=toggle_disabled_lock)
-    btn_lock.pack(pady=5)
-
-    btn_theme = ctk.CTkButton(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=10)
+    disable_toggle = sCTkButtonSecondary(base, text="Disable Cancel", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+## Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
+- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
+
+
 
 [Return to Table of Contents](#contents)

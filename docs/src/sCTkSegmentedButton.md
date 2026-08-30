@@ -1,4 +1,4 @@
-# sCTkSegmentedButton
+## sCTkSegmentedButton
 
 ### Table of Contents
 * [Overview](#overview)
@@ -10,7 +10,7 @@
 
 ---
 
-## Overview
+### Overview
 
 `sCTkSegmentedButton` is a themeable subclass of `customtkinter.CTkSegmentedButton` — a horizontal strip of connected text buttons where selecting one automatically unselects the others, similar to a row of radio buttons. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state, and per-segment text-color handling for the currently selected segment.
 
@@ -18,7 +18,7 @@
 ![sCTkSegmentedButton_Light.png](images/sCTkSegmentedButton_Light.png)
 ---
 
-## Constructor
+### Constructor
 
 ```python
 sCTkSegmentedButton(master=None, values=None, variable=None, command=None, **kwargs)
@@ -47,7 +47,7 @@ Colors are first applied roughly 15ms after construction, not immediately — th
 
 ---
 
-## Methods
+### Methods
 
 | Method | Returns | Description |
 |---|---|---|
@@ -59,7 +59,7 @@ Colors are first applied roughly 15ms after construction, not immediately — th
 
 ---
 
-## Theming (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
 
 Same two-tier model as the other themed widgets:
 
@@ -96,7 +96,7 @@ Every color in this widget now comes from `sCTkThemes.json` — there are no har
 
 ---
 
-## Example
+### Example
 
 ```python
 import customtkinter as ctk
@@ -131,8 +131,11 @@ if __name__ == "__main__":
 
 ---
 
-## Known Limitations
+### Known Limitations
 
 - `state()` treats any value other than `"disabled"` (case-insensitive) as `"normal"` — including typos like `"disbaled"`. No exception is raised and no warning is logged.
 - `unselected_color`, `unselected_hover_color`, `border_width`, `border_color`, and `selected_color_padding` cannot be set via constructor kwargs (see [Constructor](#constructor)); the color-related ones only take effect through the theme file or the widget's own repaint logic.
 - Calling `configure("some_property_name")` with a single property name does not return a Pygubu-style query tuple the way `sCTkComboBox`/`sCTkCheckBox` do; it's forwarded to the native widget's `configure()`, which — per the wider Pygubu-query investigation set aside earlier in this project — does not support single-argument property queries at all for most properties.
+
+
+[Return to Table of Contents](#contents)

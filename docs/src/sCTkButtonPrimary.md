@@ -10,7 +10,7 @@
 
 ---
 
-## Overview
+### Overview
 
 `sCTkButtonPrimary` is a themeable subclass of `customtkinter.CTkButton` — the most prominent of the library's three button tiers (see also `sCTkButtonSecondary`, `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a four-state visual model (not just enabled/disabled, but also pressed and alarm), and Pygubu Designer property introspection.
 
@@ -19,7 +19,7 @@
 
 ---
 
-## Constructor
+### Constructor
 
 ```python
 sCTkButtonPrimary(master=None, **kwargs)
@@ -41,7 +41,7 @@ save_button.pack(fill="x", padx=40, pady=10)
 
 ---
 
-## Methods
+### Methods
 
 | Method | Returns | Description |
 |---|---|---|
@@ -53,7 +53,7 @@ save_button.pack(fill="x", padx=40, pady=10)
 
 ---
 
-## Theming (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
 
 Four visual states, not two, with a fixed precedence when more than one could apply: **disabled > alarm > pressed > normal**. Only the highest-precedence active state's colors are ever shown — e.g. a button that's both "pressed" and in "alarm" shows alarm colors, and setting alarm while pressed automatically clears the pressed flag.
 
@@ -97,7 +97,7 @@ Disabling this button uses CustomTkinter's native `state="disabled"`, not a manu
 
 ---
 
-## Example
+### Example
 
 ```python
 import customtkinter as ctk
@@ -133,8 +133,10 @@ if __name__ == "__main__":
 
 ---
 
-## Known Limitations
+### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged. No exception is raised.
 - Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color — e.g. `"('#1A4375', '#2471A3')"` instead of a plain hex string. This is a known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project, not specific to this widget.
 - Passing a positional dict to `configure()` is supported and merges into the update; a positional property-name string returns the Tkinter-style query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
+
+[Return to Table of Contents](#contents)

@@ -1,4 +1,4 @@
-# sCTkComboBox
+## sCTkComboBox
 
 ### Table of Contents
 * [Overview](#overview)
@@ -10,7 +10,7 @@
 
 ---
 
-## Overview
+### Overview
 
 `sCTkComboBox` is a themeable subclass of `customtkinter.CTkComboBox`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state (separate from, but synchronized with, the widget's native interactive lock), and Pygubu Designer property introspection support.
 
@@ -19,7 +19,7 @@
 
 ---
 
-## Constructor
+### Constructor
 
 ```python
 sCTkComboBox(master=None, values=None, command=None, variable=None, **kwargs)
@@ -44,7 +44,7 @@ frequency_dropdown.pack(fill="x", padx=40, pady=10)
 
 ---
 
-## Methods
+### Methods
 
 | Method | Returns | Description |
 |---|---|---|
@@ -56,7 +56,7 @@ frequency_dropdown.pack(fill="x", padx=40, pady=10)
 
 ---
 
-## Theming (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
 
 Theme values are used in two different ways, worth keeping separate:
 
@@ -90,7 +90,7 @@ Theme values are used in two different ways, worth keeping separate:
 
 ---
 
-## Example
+### Example
 
 ```python
 import customtkinter as ctk
@@ -124,7 +124,10 @@ if __name__ == "__main__":
 
 ---
 
-## Known Limitations
+### Known Limitations
 
 - `state()` silently ignores any value other than `normal`, `enabled`, `active`, or `disabled` — no exception is raised and no warning is logged.
 - Passing a positional `dict` to `configure()` (e.g. `configure({"fg_color": "red"})`) is not merged into the update; only keyword arguments are applied. Use `configure(**your_dict)` instead.
+
+
+[Return to Table of Contents](#contents)

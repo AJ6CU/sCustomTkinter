@@ -166,7 +166,7 @@
         "fg_color": "transparent",
         "text_color": ["#111827", "#F9FAFB"],
         "disabled_map": {
-            "text_color": ["#94A3B8", "#64748B"]
+            "text_color": ["#64748B", "#94A3B8"]
         }
     },
     "sCTkLabelSecondary": {
@@ -182,7 +182,7 @@
         "fg_color": "transparent",
         "text_color": ["#4B5563", "#9CA3AF"],
         "disabled_map": {
-            "text_color": ["#94A3B8", "#64748B"]
+            "text_color": ["#CBD5E1", "#475569"]
         }
     },
     "sCTkOptionMenuPrimary": {
