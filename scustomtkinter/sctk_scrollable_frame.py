@@ -58,18 +58,25 @@ from .themeable_widget import ThemeableWidget
 class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     """Themeable scrollable viewport container.
 
-    EXPERIMENTAL TOGGLE under investigation -- see
-    _USE_CUSTOM_SCROLL_BINDING below. Since this class inherits directly
-    from ctk.CTkScrollableFrame, calling super().__init__() already triggers
-    native CTk's own complete, working scroll-binding setup automatically
-    (confirmed directly against CustomTkinter's own source: a global
-    bind_all("<MouseWheel>", ...) combined with a _check_if_valid_scroll()
-    walk-up-the-hierarchy check that safely routes events to the right
-    frame even with multiple scrollable frames coexisting). This file's own
-    custom scroll-binding system, added on top, may be entirely redundant
-    with -- and actively competing against -- that already-running native
-    system, rather than solving a problem native CTk doesn't already handle.
-    Under active investigation; not yet resolved.
+    RESOLVED INVESTIGATION -- see _USE_CUSTOM_SCROLL_BINDING below. This
+    class inherits directly from ctk.CTkScrollableFrame, so calling
+    super().__init__() already triggers native CTk's own scroll-binding
+    setup (a global bind_all("<MouseWheel>", ...) combined with a
+    _check_if_valid_scroll() walk-up-the-hierarchy check, confirmed directly
+    against CustomTkinter's own source). It was suspected this file's own
+    additional custom scroll-binding system might be entirely redundant with
+    -- and actively competing against -- that already-running native system.
+    Confirmed by direct testing NOT to be the case: with this file's custom
+    system fully disabled, an external mouse's wheel kept working correctly
+    (proving native's inherited handling genuinely works), but the trackpad
+    produced zero response at all (not degraded -- completely dead). Trackpad
+    gestures on the tested system generate ONLY <TouchpadScroll> events,
+    never <MouseWheel> -- these are disjoint event channels for disjoint
+    physical inputs, not two systems racing for the same events. This file's
+    <TouchpadScroll> handling is the sole channel for trackpad scrolling, not
+    a redundant addition alongside native CTk. The real, confirmed bug was
+    magnitude loss in _process_mac_touchpad_scroll's scaling -- see that
+    method's own docstring.
 
     Adds to native ctk.CTkScrollableFrame:
       - Automatic light/dark theme resolution from sCTkThemes.json (via
@@ -339,18 +346,43 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                         target_layer.bind(event_str, self._process_scroll_wheel, add="+")
 
     def _process_mac_touchpad_scroll(self, event):
-        """Processes Apple high-precision touch masks on the true master canvas [1.1]."""
+        """
+        Processes Apple high-precision touch masks on the true master canvas [1.1].
+
+        FIX: confirmed by direct testing that trackpad gestures on this
+        system generate ONLY <TouchpadScroll> events, never <MouseWheel> --
+        the earlier double-firing/competing-systems theory is disproven
+        (disabling this widget's own custom scroll system entirely produced
+        zero trackpad response, while an external mouse's wheel kept working
+        throughout via native CTk's own inherited handling). This method is
+        the sole channel for trackpad scrolling, not a redundant addition.
+
+        FIX: an earlier version discarded delta_y's actual magnitude
+        entirely, using only its sign -- confirmed by direct testing:
+        decoded_delta_y varied from 1 to 14+ across real trackpad gestures,
+        while scaled_scroll was always a fixed +/-3 regardless. A slow,
+        tiny finger movement and a fast, large one produced identical
+        scroll output. Now scales proportionally to the real magnitude
+        instead, divided by a tunable damping factor (matching the
+        maintainer's own recollection that this touchpad's raw delta stream
+        is high-resolution enough to need decimation, not zero scaling),
+        with a floor of 1 so small genuine movements still produce visible
+        movement rather than being rounded down to nothing.
+        """
         try:
             parent_widget = self.nametowidget(self.winfo_parent())
             if parent_widget and hasattr(parent_widget, "yview_scroll"):
                 delta_x, delta_y = self._decode_mac_touchpad_delta(event.delta)
                 if delta_y != 0:
-                    MAC_SCROLL_SENSITIVITY = 3
-                    scaled_scroll = -MAC_SCROLL_SENSITIVITY if delta_y > 0 else MAC_SCROLL_SENSITIVITY
-                    # TEMPORARY DIAGNOSTIC -- remove once the double-firing
-                    # question is settled. Timestamp lets you compare against
-                    # _process_scroll_wheel's print to see if both fire for
-                    # the same physical gesture.
+                    # Tunable -- larger value = more decimation/damping of
+                    # the raw high-resolution delta stream. Adjust this one
+                    # constant while testing to find what feels right;
+                    # nothing else in this method should need to change.
+                    TOUCHPAD_SCROLL_DIVISOR = 3
+                    magnitude = max(1, abs(delta_y) // TOUCHPAD_SCROLL_DIVISOR)
+                    scaled_scroll = -magnitude if delta_y > 0 else magnitude
+                    # TEMPORARY DIAGNOSTIC -- keep while tuning
+                    # TOUCHPAD_SCROLL_DIVISOR above; remove once satisfied.
                     print(f"[TouchpadScroll] t={time.time():.4f}  raw_delta={event.delta}  "
                           f"decoded_delta_y={delta_y}  scaled_scroll={scaled_scroll}")
                     parent_widget.yview_scroll(scaled_scroll, "units")
@@ -438,19 +470,3 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     def get_all_children(self) -> list:
         """Equivalent to winfo_children(include_private=True)."""
         return self.winfo_children(include_private=True)
-
-    # TEMPORARY DIAGNOSTIC -- confirms whether native CTkScrollableFrame's
-    # own inherited _mouse_wheel_all handler is actually being invoked at
-    # all, given the surprising result that scrolling was completely
-    # unresponsive with the custom scroll system fully disabled (which
-    # should NOT happen if native's own bind_all("<MouseWheel>", ...) setup,
-    # confirmed present in CustomTkinter's own source, were working
-    # correctly for this wrapped widget). Calls through to the real native
-    # behavior via super() -- this does not change any actual scroll logic,
-    # only observes whether it runs. Remove once this question is settled.
-    def _mouse_wheel_all(self, event):
-        print(f"[NATIVE _mouse_wheel_all] t={time.time():.4f}  event.widget={event.widget}  "
-              f"self={self}  self._parent_canvas={getattr(self, '_parent_canvas', 'MISSING')}")
-        valid = self._check_if_valid_scroll(event.widget)
-        print(f"[NATIVE _mouse_wheel_all]   _check_if_valid_scroll result: {valid}")
-        return super()._mouse_wheel_all(event)
