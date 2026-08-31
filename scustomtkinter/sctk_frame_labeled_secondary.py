@@ -2,86 +2,183 @@
 """
 sCTkFrameLabeledSecondary
 
-A clean CustomTkinter ScrollableFrame that natively hides its scrollbars
-by matching their color profile to the frame background.
+A theme-compliant labeled scrollable container panel -- the lower-emphasis
+of the library's two labeled scrollable frame tiers (see also
+sCTkFrameLabeledPrimary). Inherits directly from ctk.CTkScrollableFrame so
+CustomTkinter handles native scrolling and layout; this class layers
+automatic light/dark theme resolution, a visual-only "disabled" state, and
+scrollbar-hiding on top.
 
-UI source file: sCTkFrameLabeledSecondary.ui
+Base class order matters here: `class sCTkFrameLabeledSecondary(
+ctk.CTkScrollableFrame, ThemeableWidget)` puts the native CTk class first, so
+every `super()` call in this file's own methods resolves to
+ctk.CTkScrollableFrame -- and, beneath it, tkinter.Misc -- never to
+ThemeableWidget. ThemeableWidget's own configure()/cget()/_set_appearance_mode()
+overrides have been removed entirely for this reason (see
+themeable_widget.py's docstring); this widget owns all of its own runtime
+color-swapping logic.
+
+"Disabled" here is purely visual, same reasoning as sCTkFrameLabeledPrimary
+and sCTkFrameOutlined -- there is no native way to lock a CTkFrame-derived
+container's own interactivity. Disabling this widget dims its own colors; it
+does NOT automatically disable child widgets placed inside it.
+
+Deliberately not scrollable, same as sCTkFrameLabeledPrimary -- this widget
+uses ctk.CTkScrollableFrame purely for its native label feature, modeled on
+ttk.LabelFrame (which never scrolls), not because scrolling is wanted. The
+internal scrollbar is deliberately suppressed via _hide_internal_scrollbars().
+Confirmed by the maintainer: this is the intended design.
 """
+from typing import Any, Optional
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
 
 
 class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
-    properties = frozenset()
+    """Themeable, lower-emphasis labeled scrollable container.
 
-    def __init__(self, master=None, **kwargs):
-        # 1. Fire our shared theme logic first. It automatically finds the class section inside themes.json [INDEX]
+    Adds to native ctk.CTkScrollableFrame:
+      - Automatic light/dark theme resolution from sCTkThemes.json (via
+        ThemeableWidget.__init__ -- see that class's docstring for what it does,
+        and just as importantly, what it no longer does).
+      - A visual-only "disabled" state -- see module docstring.
+      - Pygubu Designer property introspection for `state`, `fg_color`,
+        `border_color`, and `label_text_color` via a single-argument
+        configure() call.
+      - Scrollbar hiding: the internal scrollbar's colors are forced to match
+        the frame's own background and its width collapsed to 0.
+      - winfo_children()/get_children()/get_all_children() -- same filtering
+        behavior and same known limitation as sCTkFrameLabeledPrimary; see
+        that class's docstring for the full explanation.
+
+    Colors are passed through to configure() as raw (light, dark) tuples rather
+    than pre-resolved to a single value, so CustomTkinter's own appearance-mode
+    tracking repaints them automatically on a light/dark switch -- the same
+    approach validated on sCTkComboBox, sCTkSegmentedButton, and the button
+    family. Not separately re-confirmed for this specific widget.
+    """
+
+    def __init__(self, master: Optional[Any] = None, **kwargs: Any) -> None:
+        """
+        Args:
+            master: Parent container.
+            **kwargs: Any native CTkScrollableFrame argument (e.g. `label_text`),
+                or a theme-key override (see the "sCTkFrameLabeledSecondary"
+                block in sCTkThemes.json, including its disabled_map).
+        """
+        # 1. Fire our shared theme logic first. This resolves final_kw
+        # (construction-time properties) and the disabled color map. See
+        # ThemeableWidget.__init__ for what actually happens here.
         ThemeableWidget.__init__(self, kwargs)
 
-        # 2. 🛠️ THE MUTATION SAFEGUARD DEEP COPY:
-        # Isolate your configuration rules inside protected memory structures BEFORE
-        # initializing super, preserving your true active settings from native deletion loops [INDEX].
+        # 2. Deep-copy the resolved map onto this instance, so later changes
+        # here never leak back into the shared theme registry.
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
 
-        # 3. Initialize CustomTkinter ScrollableFrame natively with final kwargs safely
+        # 3. Initialize CustomTkinter natively with the clean final kwargs array.
         super().__init__(master, **self.final_kw)
 
         self._custom_current_state = "normal"
 
-        # 4. Force initial scrollbar hiding execution pass
+        # 4. Hide the scrollbar visually on first construction.
         self._hide_internal_scrollbars()
 
-    def configure(self, *args, **kwargs):
-        """Handles Pygubu designer queries and manages composite state updates safely."""
+        # 5. Register lifecycle handshake hook, notifying Pygubu-style consumers
+        # that construction is complete. FIX: an earlier version of this file
+        # never called this at all -- meaning any on_first_object_cb callback
+        # provided to this widget would silently never fire. Every other
+        # widget in this project calls this at the end of __init__; this one
+        # was a genuine omission, not a deliberate difference.
+        self._finalize_themeable_lifecycle()
 
-        # -----------------------------------------------------------------
-        # ZONE A: POSITION INTERCEPT (Pygubu Inspector compatibility check)
-        # -----------------------------------------------------------------
-        if args and len(args) == 1:
-            pname = args
-            if pname == "state":
-                return ("state", "state", "state", "normal", str(self.state()))
+    def configure(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        Standard widget configuration, with Pygubu/positional-argument handling.
 
-            if pname in ["fg_color", "border_color", "label_text_color"]:
-                current_state = str(self.state()).lower()
-                val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(
-                    pname)
-                return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
+        Args:
+            *args: At most one positional argument is meaningful:
+                - a dict: merged into kwargs and processed normally below.
+                - the literal string "state": returns a Tkinter-style
+                  (name, name, name, default, current) tuple.
+                - one of "fg_color"/"border_color"/"label_text_color":
+                  returns the same style of tuple. Note the returned value is
+                  str(value), where value may itself be a (light, dark) tuple
+                  rather than a single resolved color -- a known limitation
+                  shared with the wider Pygubu-query investigation set aside
+                  elsewhere in this project, not fixed here.
+                - anything else: forwarded directly to the native widget's
+                  configure(), which does not support single-argument property
+                  queries for arbitrary properties (same limitation).
+            **kwargs: Standard CTkScrollableFrame configuration options, plus:
+                passing `state=...` routes through self.state() rather than
+                being forwarded as-is.
 
-            return super().configure(pname)
+        Returns:
+            The query tuple described above for the single-argument case, or
+            whatever super().configure() returns for the keyword-argument case.
+        """
+        # args is always a tuple -- args[0] is the actual value passed, whether
+        # that's a string or a dict. An earlier version of this method set
+        # `pname = args` directly, with no unwrapping attempt at all, so the
+        # query branches below never matched anything, and the fallback
+        # forwarded the wrapped tuple itself to super().configure() -- not a
+        # valid call shape for the native widget. Don't reintroduce that.
+        if len(args) == 1:
+            if isinstance(args[0], dict):
+                kwargs = {**args[0], **kwargs}
+            else:
+                pname = args[0]
+                if pname == "state":
+                    return ("state", "state", "state", "normal", str(self.state()))
+                if pname in ["fg_color", "border_color", "label_text_color"]:
+                    current_state = str(self.state()).lower()
+                    val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
+                    return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
+                return super().configure(pname)
 
-        # Handle Pygubu positional dictionary merging layers cleanly
-        if args and isinstance(args, dict):
-            kwargs = args | kwargs
-
-        # -----------------------------------------------------------------
-        # ZONE B: SUB-COMPONENT STATE INTERCEPTION
-        # -----------------------------------------------------------------
         if "state" in kwargs:
             target_state = kwargs.pop("state")
             self.state(target_state)
 
-        # Clean empty strings passed by backspacing parameters in Pygubu to prevent exceptions [INDEX]
         for k, v in list(kwargs.items()):
             if v == "":
                 kwargs.pop(k)
 
-        # -----------------------------------------------------------------
-        # ZONE C: RUNTIME KEYWORDS MRO ROUTING PASS & REDRAW PROPS
-        # -----------------------------------------------------------------
         if kwargs:
             result = super().configure(**kwargs)
             self._hide_internal_scrollbars()
             return result
         return None
 
-    def get_state(self):
-        """Explicit getter synchronized with your standalone test harness script assertions."""
+    # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
+    # attribute -- it does not automatically track whichever configure() a
+    # subclass defines. An earlier version of this file was MISSING this line
+    # entirely: calling .config(...) on an instance silently skipped this
+    # entire override and landed on the native widget's configure() directly,
+    # bypassing theming and state handling completely -- confirmed as a
+    # critical bug on sCTkSegmentedButton earlier in this project's audit; the
+    # same fix applies here.
+    config = configure
+
+    def get_state(self) -> str:
+        """Equivalent to calling state() with no argument."""
         return self.state()
 
-    def state(self, mode: str = None):
-        """Dedicated container frame state controller."""
+    def state(self, mode: Optional[str] = None) -> str:
+        """
+        Gets or sets the widget's visual "disabled" state. Purely cosmetic --
+        see module docstring.
+
+        Args:
+            mode: If None, returns the current state without changing
+                anything. Otherwise, only the literal string "disabled"
+                (case-insensitive) is treated as disabled; anything in
+                ("normal", "enabled", "active") is treated as enabled.
+
+        Returns:
+            The resulting state ("normal" or "disabled").
+        """
         if mode is None:
             return getattr(self, "_custom_current_state", "normal")
 
@@ -91,7 +188,6 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
             self._update_current_visual_state()
 
         elif mode == "disabled":
-            # Safely apply custom disabled overrides manually via super layout pools [INDEX]
             super_payload = {}
             for key in ("fg_color", "border_color", "label_text_color"):
                 if key in self._custom_disabled_map and self._custom_disabled_map[key] is not None:
@@ -102,13 +198,17 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
 
             self._custom_current_state = "disabled"
             self._hide_internal_scrollbars()
+        return self._custom_current_state
 
-    def _update_current_visual_state(self):
+    def _update_current_visual_state(self) -> None:
         """
-        MASTER VISUAL ROUTER: Dynamically applies extensible theme properties out of protected memory [INDEX].
-        Completely free of hardcoded property name fallback strings, ensuring total extensibility [INDEX].
+        Recomputes and applies this widget's colors from the theme file, for
+        the normal (enabled) state.
+
+        Passes raw (light, dark) tuples straight through to configure() --
+        this file already did so before this project's audit, unlike most
+        other widgets that needed the pre-resolved-color pattern removed.
         """
-        # 🛠️ THE BOUNDED DYNAMIC FILTER SHIELD:
         config_payload = {}
         for key in ("fg_color", "border_color", "label_text_color", "border_width", "label_font"):
             val = self._local_defaults.get(key)
@@ -119,8 +219,12 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
             super().configure(**config_payload)
         self._hide_internal_scrollbars()
 
-    def _hide_internal_scrollbars(self):
-        """Forces the scrollbar track elements to match the frame background color seamlessly."""
+    def _hide_internal_scrollbars(self) -> None:
+        """
+        Forces the internal scrollbar's colors to match the frame's own
+        background and collapses its width to 0, making it visually
+        invisible.
+        """
         try:
             bg_color = super().cget("fg_color")
             if hasattr(self, "_scrollbar") and self._scrollbar is not None:
@@ -135,10 +239,15 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
 
     def winfo_children(self, include_private: bool = False) -> list:
         """
-        🛠️ UNIFIED STRUCTURE INTERCEPTOR OVERRIDE:
-        By default, filters private internal title labels and heading elements out [INDEX].
-        Pass `include_private=True` to bypass the filter shield and return the raw,
-        unmanipulated Tkinter core layout lineage tree [INDEX]!
+        By default, filters out children whose exact class name is "CTkLabel",
+        "Label", "CTkFrame", or "Frame". See sCTkFrameLabeledPrimary's
+        docstring for the known limitation of this approach.
+
+        Args:
+            include_private: If True, returns the raw, unfiltered list instead.
+
+        Returns:
+            A list of child widgets.
         """
         raw_children = super().winfo_children()
         if include_private:
@@ -146,20 +255,18 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
 
         filtered_children = []
         for child in raw_children:
-            # Drop the private framework structural heading text cells and frame backplanes
             if child.__class__.__name__ not in ["CTkLabel", "Label", "CTkFrame", "Frame"]:
                 filtered_children.append(child)
         return filtered_children
 
     def get_children(self) -> list:
-        """Convenience function providing a clean, application-level custom widget layout array [INDEX]."""
+        """Equivalent to winfo_children(include_private=False)."""
         return self.winfo_children(include_private=False)
 
     def get_all_children(self) -> list:
-        """Convenience function providing direct, unfiltered access to the entire C-level native tree."""
+        """Equivalent to winfo_children(include_private=True)."""
         return self.winfo_children(include_private=True)
 
     def get_container(self):
+        """Returns self. Provided for API symmetry with composite widgets that wrap a separate inner container."""
         return self
-
-
