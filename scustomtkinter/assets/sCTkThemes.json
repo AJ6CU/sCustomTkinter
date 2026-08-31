@@ -111,7 +111,7 @@
       },
       "readonly_map": {
           "fg_color": ["#F8FAFC", "#1F2937"],
-          "border_color": ["#64748B", "#94A3B8"],
+          "border_color": ["#64748B", "#556478"],
           "text_color": ["#1F2937", "#F9FAFB"],
           "placeholder_text_color": ["#94A3B8", "#64748B"]
       }
@@ -131,7 +131,7 @@
       },
       "readonly_map": {
           "fg_color": ["#F3F4F6", "#1F2937"],
-          "border_color": ["#64748B", "#6B7280"],
+          "border_color": ["#64748B", "#405060"],
           "text_color": ["#4B5563", "#D1D5DB"],
           "placeholder_text_color": ["#94A3B8", "#64748B"]
       }

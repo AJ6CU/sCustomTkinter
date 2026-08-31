@@ -31,7 +31,40 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
 
+        # FIX: required-key validation moved here, to construction time,
+        # rather than living inside _update_current_visual_state() (called
+        # only later, and repeatedly on every state change). Moved so that
+        # border_color -- now also passed to both sub-widget constructors
+        # below, to keep their normal-state border visually consistent with
+        # this widget's own theme -- is guaranteed to exist before anything
+        # tries to use it, rather than risking a confusing native error at
+        # construction if a key were missing.
+        for required_key in ("text_color", "checkbox_fg_color", "checkbox_hover_color", "border_color", "checkmark_color"):
+            if self._local_defaults.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
+                )
+        for required_key in ("text_color", "checkbox_fg_color", "border_color", "checkmark_color"):
+            if self._custom_disabled_map.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                )
+
         fg_color = self._local_defaults.get("fg_color", "transparent")
+        # FIX: an earlier version never coordinated border_color between this
+        # widget and its two internal sub-widgets (search_bar,
+        # checkboxes_frame) -- each independently used its own standalone
+        # theme's border_color, which could visibly mismatch (confirmed by
+        # direct testing: sCTkEntryPrimary and sCTkScrollableFrame's own
+        # default border colors differ in dark mode). Passed here, once, at
+        # construction, rather than forced on every _update_current_visual_state()
+        # call -- that would fight with sCTkEntryPrimary's own correct
+        # readonly/disabled border-color changes, undoing the whole point of
+        # its three-state model. This only establishes the shared NORMAL-state
+        # border; each sub-widget's own state-driven color changes afterward
+        # are left completely alone.
+        selector_border_color = self._local_defaults.get("border_color")
 
         # 3. Call the parent sCTkFrame constructor safely
         super().__init__(master, **self.final_kw)
@@ -43,7 +76,7 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         self.search_bar = None
         self._search_box_visible = bool(searchBox)
 
-        self.checkboxes_frame = sCTkScrollableFrame(self, fg_color=fg_color)
+        self.checkboxes_frame = sCTkScrollableFrame(self, fg_color=fg_color, border_color=selector_border_color)
         self.checkboxes_frame.pack(expand=True, fill="both", side="bottom")
 
         if hasattr(self.checkboxes_frame, "_parent_frame") and self.checkboxes_frame._parent_frame is not None:
@@ -143,7 +176,11 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             elif isinstance(sb_val, str): sb_val = str(sb_val).lower() in ['true', '1', 'yes']
             self._search_box_visible = sb_val
             if self._search_box_visible:
-                if not hasattr(self, "search_bar") or self.search_bar is None: self.search_bar = sCTkEntryPrimary(self, textvariable=self.search_var)
+                # FIX: search_bar's border_color now aligned with this
+                # widget's own theme at creation time, matching the same
+                # fix applied to checkboxes_frame in __init__ -- see that
+                # constructor call's comment for the full reasoning.
+                if not hasattr(self, "search_bar") or self.search_bar is None: self.search_bar = sCTkEntryPrimary(self, textvariable=self.search_var, border_color=self._local_defaults.get("border_color"))
                 self.search_bar.pack(anchor="n", fill="x")
                 if hasattr(self, "checkboxes_frame") and self.checkboxes_frame is not None:
                     self.checkboxes_frame.pack_forget()
@@ -255,6 +292,10 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         """
         Applies checkbox and search-bar colors based on the current state.
 
+        Required-key validation for the theme keys this method (and
+        __init__'s sub-widget construction) depends on happens once, in
+        __init__ -- not repeated here on every call.
+
         FIX: an earlier version's disabled branch used 100% hardcoded
         literals -- self._custom_disabled_map was set up in __init__ but
         never actually consulted here, meaning a correctly-populated
@@ -301,20 +342,6 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
 
         if not hasattr(self, "checkboxes"):
             return
-
-        # FIX: required-key validation, replacing the hardcoded literals an
-        # earlier version used unconditionally in both branches below.
-        for required_key in ("text_color", "checkbox_fg_color", "checkbox_hover_color", "border_color", "checkmark_color"):
-            if self._local_defaults.get(required_key) is None:
-                raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
-                    f"at the top level of sCTkThemes.json."
-                )
-        for required_key in ("text_color", "checkbox_fg_color", "border_color", "checkmark_color"):
-            if self._custom_disabled_map.get(required_key) is None:
-                raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
-                )
 
         for cb in self.checkboxes:
             if is_disabled:
