@@ -396,9 +396,16 @@
     "sCTkSelector": {
         "fg_color": "transparent",
         "corner_radius": 6,
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "checkbox_fg_color": ["#1A4375", "#1F6AA5"],
+        "checkbox_hover_color": ["#112A4B", "#1A5885"],
+        "border_color": ["#94A3B8", "#4B5563"],
+        "checkmark_color": ["#FFFFFF", "#FFFFFF"],
         "disabled_map": {
             "text_color": ["#808080", "#666666"],
-            "fg_color": "transparent"
+            "checkbox_fg_color": ["#CBD5E1", "#475569"],
+            "border_color": ["#CBD5E1", "#334155"],
+            "checkmark_color": ["#F1F5F9", "#94A3B8"]
         }
     },
     "sCTkSeparator": {
