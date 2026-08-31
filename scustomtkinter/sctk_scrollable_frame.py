@@ -297,7 +297,19 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     # =========================================================================
 
     def _toggle_scroll_bindings(self, bind=True):
-        """The parent canvas intercept engine routing mouse wheels and touchpad events [1.1]."""
+        """The parent canvas intercept engine routing mouse wheels and touchpad events [1.1].
+
+        EXPERIMENTAL: gated on _USE_CUSTOM_SCROLL_BINDING -- see class
+        docstring. FIX: an earlier version of this gate lived only in
+        _finalize_split_bindings(), but the documented test-harness pattern
+        for this widget calls _toggle_scroll_bindings(bind=True) directly,
+        bypassing that gate entirely -- meaning setting the toggle to False
+        had no effect at all when this method was called this way. Moved
+        here, into this method itself, so the toggle is enforced regardless
+        of which entry point is used.
+        """
+        if bind and not self._USE_CUSTOM_SCROLL_BINDING:
+            return
         SCROLL_EVENTS = ["<MouseWheel>", "<TouchpadScroll>", "<Button-4>", "<Button-5>"]
         layers_to_bind = [self]
         try:
@@ -383,10 +395,10 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         Standard layout binding connection pass [1.1]. Call this yourself
         after placing the widget.
 
-        EXPERIMENTAL: gated on _USE_CUSTOM_SCROLL_BINDING -- see class
-        docstring. When False, this becomes a no-op, and scrolling relies
-        entirely on whatever native ctk.CTkScrollableFrame already set up
-        automatically via inheritance.
+        EXPERIMENTAL: the authoritative _USE_CUSTOM_SCROLL_BINDING gate now
+        lives inside _toggle_scroll_bindings() itself (see that method's
+        docstring for why), so it's enforced regardless of entry point. The
+        check here is just an early-exit optimization, not the real gate.
         """
         if not self._USE_CUSTOM_SCROLL_BINDING:
             return
