@@ -24,10 +24,11 @@ from .sctk_file_explorer import sCTkFileExplorer
 
 
 class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
-    _MANAGED_PROPERTIES = frozenset({
-        "initialdir", "initialfile", "type", "title", "filetypes", "defaultextension",
-        "btn_width", "btn_height", "btn_text", "entry_height", "browser_width", "browser_height", "justify"
-    })
+    # NOTE: an earlier version declared a _MANAGED_PROPERTIES frozenset here,
+    # never referenced anywhere else in this file -- dead code, removed. Same
+    # vestigial pattern found and removed elsewhere in this project
+    # (sCTkFrame's original "properties = frozenset()", sCTkButtonPrimary's
+    # original "_MANAGED_PROPERTIES = frozenset({'state'})").
 
     def __init__(self, master=None, **kwargs):
         # Forcefully extract custom properties out so ctk.CTkFrame never throws a kwargs error
@@ -145,6 +146,27 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         """Centralized theme-repaint pipeline resolving aesthetic look parameters."""
         theme = self._local_defaults
         btn_txt = self.btn_text if self.btn_text is not None else ("Browse Folders..." if self.type == "directory" else "Browse Files...")
+
+        # FIX: an earlier version had no validation at all here -- every key
+        # below was a plain, unguarded .get(key), meaning a missing key would
+        # silently resolve to None and get passed straight to a native
+        # configure() call, likely producing a confusing native error rather
+        # than a clear message naming what's missing. Matches the same
+        # hard-fail principle established for sCTkFileExplorer, sCTkSwitch,
+        # the label family, sCTkTableview, sCTkSpinbox, and sCTkSelector
+        # elsewhere in this project. disabled_map is deliberately NOT given
+        # the same hard-fail treatment -- its existing graceful fallback to
+        # the top-level/normal value when a disabled-specific override is
+        # missing is intentional and already correct, matching the same
+        # lenient pattern used for most of sCTkFileExplorer's disabled_map
+        # keys.
+        for required_key in ("entry_fg", "entry_border_color", "entry_text_color", "entry_font",
+                              "btn_fg", "btn_border_color", "btn_text_color", "btn_hover", "btn_font"):
+            if theme.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
+                )
 
         current_state = getattr(self, "_state", "normal")
         if current_state == "disabled":

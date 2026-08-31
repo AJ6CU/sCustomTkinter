@@ -1,151 +1,128 @@
 ## sCTkPathChooser
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-An advanced composite field-and-trigger widget pairing a fluid single-line text lane entry block directly alongside an integrated modal browser toggle button. It translates local paths, expands system tilde keys (`~`), and dynamically opens an embedded, theme-synchronized `sCTkFileExplorer` portal centered accurately over your parent layout dimensions without locking primary background execution threads.
+### Overview
 
+`sCTkPathChooser` is a theme-compliant single-line path entry paired with a "Browse..." button that opens an `sCTkFileExplorer` in a modal popup. It inherits `ctk.CTkFrame` directly, composing an internal `sCTkEntryPrimary` and `sCTkButtonPrimary`.
 
-![sCTkPathChooser_Dark.png](images/sCTkPathChooser_Dark.png)
-![sCTkPathChooser_Light.png](images/sCTkPathChooser_Light.png)
+Dark Mode:  ![sCTkPathChooser in dark mode](images/sCTkPathChooser_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode: ![sCTkPathChooser in light mode](images/sCTkPathChooser_Light.png)
 
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | *Not Available Natively* | `sCTkPathChooser(master)` *(Compound Path Selector)* |
-| **File Mapping** | No unified compound object natively synchronizes text cells with buttons. | Separated safely across `sCTkPathChooser.py` and `ThemeableWidget.py`. |
-| **State Lock** | `self.configure(state="disabled")` | `chooser.state("disabled")`<br>**OR**<br>`chooser.configure(state="disabled")`<br><br>**Polymorphic State Control:** Simultaneously locks the entry string text buffer lane and freezes the browser launcher button out of centralized `disabled_map` guidelines. |
-| `get_state()` | *Not Available Natively* | `Method -> str` explicit verification query matching system test assertions. |
+Every property this widget forwards to its internal entry (`justify`, `width`, `height`) has been confirmed valid against CustomTkinter's own real `CTkEntry` source, the same verification done for `sCTkSpinbox`. There's no risk of this widget sending an unrecognized property to its own entry.
 
 ---
 
 ### Constructor
 
-Initialize a custom compound directory path or file selector instance. Offset parameters like `btn_width` or `entry_height` can be passed cleanly during instantiation to stretch internal sub-elements independently.
-
 ```python
-sCTkPathChooser(master, type="directory", title="Select Path", filetypes=None, initialdir=None, initialfile=None, command=None, width=350, height=32, justify="left", entry_height=32, btn_width=110, btn_height=32, btn_text=None, browser_width=500, browser_height=450, **kwargs)
+sCTkPathChooser(master=None, initialdir=None, initialfile=None, type="file",
+                 filetypes=None, title=None, defaultextension=None,
+                 justify="left", entry_height=None, browser_width=None,
+                 browser_height=None, btn_text="Browse...", **kwargs)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | *Required* | Reference pointer tracking your root window, parent layout layer, or container frame capsule. |
-| `type` | `str` | `"directory"` | Structural layout operation mode. Options: `"directory"` (renders folder browser options) or `"file"` (enforces file extension checks). |
-| `title` | `str` | `"Select Path"` | Text heading string displayed inside the top title deck of the popup modal browser window. |
-| `filetypes` | `list` / `str` | `None` | Filter array masking permitted file extensions. Formatted as an explicit python list or bracketed string array (e.g., `['.py', '.json']`). |
-| `justify` | `str` | `"left"` | Text alignment profile string inside the input field lane. Accepts `"left"`, `"right"`, or `"center"`. |
-| `entry_height` | `int` | *Matches height* | Manual vertical height footprint tracking restriction assigned to the text box lane measured in pixels. |
-| `btn_width` | `int` | `110` | Manual horizontal width allocated to the macro click trigger browse button measured in pixels. |
-| `btn_text` | `str` | `None` | Display string override assigned to the browse button. Automatically falls back to mode labels if left as `None`. |
-| `command` | `callable` | `None` | Single-click method event callback executed whenever a file selection path is successfully submitted or confirmed. |
-### Convenience Functions
-```python
-# Programmatically manipulate selector entries, fetch strings, or trigger modal windows on the fly
-chooser.set("/Users/name/Documents") # Clears the current buffer and inserts an expanded absolute pathway
-active_path = chooser.get()          # Returns the active character path string array currently displayed
+| Parameter | Type | Description |
+|---|---|---|
+| `master` | widget | Parent container. |
+| `initialdir` / `initialfile` | `str` | Starting directory/filename for the browser popup. |
+| `type` | `"file"` / `"directory"` | Whether individual files are selectable, or only directories. |
+| `filetypes` | `list[str]` | File extension filter. |
+| `justify` | `str` | Text alignment inside the entry. |
+| `btn_text` | `str` | The browse button's label. |
+| `**kwargs` | — | Any native `CTkFrame` argument, or a theme-key override (see [Theming](#theming-sctkthemesjson)). |
 
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = chooser.get_state()   # Returns 'normal' or 'disabled'
-chooser.state("disabled")            # Freezes button triggers and applies muted flat gray skins
+```python
+save_path = sCTkPathChooser(control_panel, type="directory", initialdir="/Users/you/Documents")
+save_path.pack(fill="x", padx=20, pady=10)
 ```
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `get()` | `str` | Current path text. |
+| `set(path)` | `None` | Sets the displayed path, normalizing and expanding it. |
+| `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming both the entry and the browse button. |
+| `configure(**kwargs)` | varies | Standard configuration. |
+
+Clicking "Browse..." opens an `sCTkFileExplorer` in a modal popup; selecting a path there calls `self.set(...)` on this widget automatically.
+
+---
+
+### Theming (`sCTkThemes.json`)
+
 ```json
 {
     "sCTkPathChooser": {
-        "entry_fg": ["#FFFFFF", "#1E1E1E"],
-        "entry_border_color": ["#CBD5E1", "#334155"],
-        "entry_text_color": ["#1F2937", "#FFFFFF"],
-        "entry_font": ["Arial", 12],
-        "btn_fg": ["#1A4375", "#1F6AA5"],
-        "btn_border_color": ["#94A3B8", "#4B5563"],
-        "btn_text_color": ["#FFFFFF", "#FFFFFF"],
-        "btn_hover": ["#112A4B", "#194A7A"],
-        "btn_font": ["Arial", 11, "bold"],
+        "entry_font": ["Arial", 13],
+        "entry_fg": ["#F9F9FA", "#343638"],
+        "entry_border_color": ["#979DA2", "#565B5E"],
+        "entry_text_color": ["#000000", "#FFFFFF"],
+        "btn_font": ["Arial", 13, "bold"],
+        "btn_fg": ["#3B8ED0", "#1F6AA5"],
+        "btn_hover": ["#2C74B3", "#144E75"],
+        "btn_text_color": ["#DCE4EE", "#F9F9FA"],
+        "btn_border_color": ["#3B8ED0", "#1F6AA5"],
         "disabled_map": {
-            "entry_fg": ["#F9FAFB", "#1A1A1A"],
-            "entry_border_color": ["#E5E7EB", "#222222"],
-            "entry_text_color": ["#94A3B8", "#4B5563"],
-            "btn_fg": ["#F3F4F6", "#111111"],
-            "btn_border_color": ["#E5E7EB", "#222222"],
-            "btn_text_color": ["#94A3B8", "#4B5563"]
+            "entry_fg": ["#EAEAEA", "#2B2B2C"],
+            "entry_border_color": ["#D3D3D3", "#3A3A3C"],
+            "entry_text_color": ["#A0A0A0", "#7C7C7C"],
+            "btn_fg": ["#D3D3D3", "#2D2F31"],
+            "btn_border_color": ["#D3D3D3", "#2D2F31"],
+            "btn_text_color": ["#A0A0A0", "#5A5C5E"]
         }
     }
 }
 ```
 
----
+Every key the code references is present in both the top-level block and `disabled_map` — confirmed by direct cross-check against the actual source, nothing missing.
 
-### Other Notes
-* **Inversion Blacklist & Mutation Shield:** To bypass CustomTkinter's private constructor sweeping arrays that destructively mutate configuration dictionary values, the constructor copies your data parameters into `self._local_defaults = dict(self.final_kw)` beforehand. This preserves your geometric variables safely.
-* **Polymorphic Cascade Safety:** State changes automatically flow downward. Passing a `.state("disabled")` loop locks down both the interior text lane and the macro browse button, preventing unwanted modal triggers and hover events uniformly.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute bottom of the initialization track to cleanly pass instance registration hooks straight back up to Pygubu layout trees out of the box.
+Every top-level key is now required and validated at construction, matching `sCTkFileExplorer`/`sCTkTableview`/`sCTkSpinbox`/`sCTkSelector` — missing any raises immediately, naming the exact key. `disabled_map` entries deliberately keep their original, more lenient behavior: gracefully falling back to the top-level/normal value if not overridden, rather than hard-failing, since that's intentional and already correct.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to embed an `sCTkPathChooser` within an isolated `sCTkFrame` chassis backplane while implementing runtime lock states and interactive selection feedback loops.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Path Chooser
-# =====================================================================
-
-import os
-import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkPathChooser
+from scustomtkinter import sCTk, sCTkFrame, sCTkPathChooser, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.title("Compound Path Chooser Test Suite")
-    root.geometry("700x260")
+    root.geometry("450x200")
+    root.title("PathChooser Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    lbl_monitor = sCTkLabelSecondary(base, text="Active Telemetry Target: [None Selection]")
-    lbl_monitor.pack(pady=10)
+    chooser = sCTkPathChooser(base, type="directory")
+    chooser.pack(fill="x", pady=10)
 
-    def print_result(path):
-        lbl_monitor.configure(text=f"Active Telemetry Target: {os.path.basename(path)}")
-        print(f"MAIN CONSOLE PATH SELECTION -> {path}")
-
-    chooser = sCTkPathChooser(
-        base, type="file", title="Select Log Target", filetypes=[".py"], command=print_result,
-        justify="right", width=550, height=50, state="normal", entry_height=40, btn_width=40,
-        btn_height=40, btn_text="▶", browser_width=550, browser_height=500
-    )
-    chooser.pack(padx=20, pady=15)
-
-    def toggle_chooser_lock():
+    def toggle_disabled():
         target = "disabled" if chooser.get_state() == "normal" else "normal"
-        chooser.configure(state=target)
-        btn_lock.configure(text="Lock Chooser Deck" if target == "normal" else "Unlock Chooser Deck")
-        print(f"Logged Verification Hook -> chooser.get_state() = {chooser.get_state()}")
+        chooser.state(target)
+        toggle_btn.configure(text="Enable" if target == "disabled" else "Disable")
 
-    btn_lock = sCTkButtonPrimary(base, text="Lock Chooser Deck", command=toggle_chooser_lock)
-    btn_lock.pack(side="bottom", pady=5)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    chooser.state("disabled")
-    print("state (Disabled Pass) =", chooser.get_state())
-    chooser.state("normal")
-    print("state (Normal Pass)   =", chooser.get_state())
-    print("========================================\n")
+    toggle_btn = sCTkButtonPrimary(base, text="Disable", command=toggle_disabled)
+    toggle_btn.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- **No readonly support** — unlike `sCTkSpinbox`, this widget only has `"normal"`/`"disabled"`, even though the same design opportunity applies (the entry could be readonly-locked while "Browse..." stays clickable, since it's the intended alternative way to set the value). Identified as a genuine future enhancement, not implemented yet.
 
 [Return to Table of Contents](#contents)

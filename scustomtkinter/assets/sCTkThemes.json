@@ -383,6 +383,7 @@
         "entry_border_color": ["#CBD5E1", "#475569"],
         "row_active_text": ["#1F2937", "#F9FAFB"],
         "row_dimmed_text": ["#94A3B8", "#64748B"],
+        "button_color": ["#64748B", "#4B5563"],
         "disabled_map": {
             "btn_fg": ["#CBD5E1", "#334155"],
             "btn_border_color": ["#CBD5E1", "#334155"],
@@ -390,7 +391,8 @@
             "entry_fg": ["#F3F4F6", "#1F2937"],
             "entry_border_color": ["#CBD5E1", "#475569"],
             "entry_text_color": ["#94A3B8", "#64748B"],
-            "row_active_text": ["#94A3B8", "#64748B"]
+            "row_dimmed_text": ["#5A6672", "#3A4552"],
+            "button_color": ["#CBD5E1", "#334155"]
         }
     },
     "sCTkSelector": {
