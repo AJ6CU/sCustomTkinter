@@ -40,7 +40,37 @@ class sCTkFrame(ctk.CTkFrame, ThemeableWidget):
       - A no-op state()/get_state() pair, so generic test harnesses that call
         .state() uniformly across every widget type don't crash when handed a
         Frame. This is deliberate, not a bug -- see state()'s docstring.
+
+    WHITELIST GUARD: if a composite widget inherits sCTkFrame as its own base
+    class (e.g. sCTkSelector(sCTkFrame, ThemeableWidget)) and explicitly calls
+    ThemeableWidget.__init__ itself before calling super().__init__(), that
+    composite's own final_kw -- built from ITS theme block, which may contain
+    keys native ctk.CTkFrame knows nothing about -- would otherwise flow
+    straight through to super().__init__(master, **self.final_kw) here and
+    crash. _NATIVE_CTKFRAME_KWARGS filters final_kw down to only the keys the
+    real native CTkFrame.__init__ actually accepts (confirmed directly against
+    CustomTkinter's own source) before that call, discarding anything foreign.
+    This only matters for the Pattern-B composition scenario described above;
+    for direct construction of a plain sCTkFrame, final_kw already only
+    contains this widget's own theme keys, so the filter is a no-op. Note this
+    is independent of ThemeableWidget's run-once guard: that guard stops
+    final_kw from being silently overwritten by a second init call; this
+    whitelist stops whatever final_kw a widget legitimately has from being
+    blindly forwarded to a native constructor that can't handle all of it.
     """
+
+    # Confirmed directly against CustomTkinter's own ctk_frame.py source:
+    # def __init__(self, master, width=200, height=200, corner_radius=None,
+    #              border_width=None, bg_color="transparent", fg_color=None,
+    #              border_color=None, background_corner_colors=None,
+    #              overwrite_preferred_drawing_method=None, **kwargs)
+    # "master" is excluded here since it's always passed positionally, never
+    # part of the filtered kwargs dict.
+    _NATIVE_CTKFRAME_KWARGS = frozenset({
+        "width", "height", "corner_radius", "border_width", "bg_color",
+        "fg_color", "border_color", "background_corner_colors",
+        "overwrite_preferred_drawing_method",
+    })
 
     def __init__(self, master: Optional[Any] = None, **kwargs: Any) -> None:
         """
@@ -59,8 +89,11 @@ class sCTkFrame(ctk.CTkFrame, ThemeableWidget):
         # changes here never leak back into the shared theme registry.
         self._local_defaults = dict(self.final_kw)
 
-        # 3. Initialize CustomTkinter natively with the clean final kwargs array.
-        super().__init__(master, **self.final_kw)
+        # 3. Initialize CustomTkinter natively. Only forwards the subset of
+        # final_kw that native CTkFrame actually accepts -- see this class's
+        # docstring ("WHITELIST GUARD") for why this filtering exists.
+        native_kwargs = {k: v for k, v in self.final_kw.items() if k in self._NATIVE_CTKFRAME_KWARGS}
+        super().__init__(master, **native_kwargs)
 
         # 4. Register lifecycle handshake hook, notifying Pygubu-style consumers
         # that construction is complete.

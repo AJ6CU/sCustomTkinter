@@ -55,7 +55,32 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
     tracking repaints them automatically on a light/dark switch -- the same
     approach validated on sCTkComboBox, sCTkSegmentedButton, and the button
     family. Not separately re-confirmed for this specific widget.
+
+    WHITELIST GUARD: if a composite widget inherits sCTkFrameLabeledSecondary
+    as its own base class and explicitly calls ThemeableWidget.__init__ itself
+    before calling super().__init__(), that composite's own final_kw could
+    contain keys native ctk.CTkScrollableFrame knows nothing about. Confirmed
+    directly against CustomTkinter's own source, CTkScrollableFrame.__init__
+    has NO **kwargs catch-all at all -- every parameter is explicitly named,
+    so ANY unrecognized keyword reaching it raises TypeError immediately.
+    _NATIVE_CTKSCROLLABLEFRAME_KWARGS filters final_kw down to only the keys
+    the real native constructor accepts before that call. This only matters
+    for the Pattern-B composition scenario described above; for direct
+    construction of a plain sCTkFrameLabeledSecondary, final_kw already only
+    contains this widget's own theme keys, so the filter is a no-op.
     """
+
+    # Confirmed directly against CustomTkinter's own ctk_scrollable_frame.py
+    # source: every one of CTkScrollableFrame.__init__'s named parameters,
+    # excluding "master" (always passed positionally, never part of the
+    # filtered kwargs dict).
+    _NATIVE_CTKSCROLLABLEFRAME_KWARGS = frozenset({
+        "width", "height", "corner_radius", "border_width", "bg_color",
+        "fg_color", "border_color", "scrollbar_fg_color",
+        "scrollbar_button_color", "scrollbar_button_hover_color",
+        "label_fg_color", "label_text_color", "label_text", "label_font",
+        "label_anchor", "orientation",
+    })
 
     def __init__(self, master: Optional[Any] = None, **kwargs: Any) -> None:
         """
@@ -76,7 +101,11 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
         self._custom_disabled_map = dict(self._widget_disabled_map)
 
         # 3. Initialize CustomTkinter natively with the clean final kwargs array.
-        super().__init__(master, **self.final_kw)
+        # 3. Initialize CustomTkinter natively. Only forwards the subset of
+        # final_kw that native CTkScrollableFrame actually accepts -- see this
+        # class's docstring ("WHITELIST GUARD") for why this filtering exists.
+        native_kwargs = {k: v for k, v in self.final_kw.items() if k in self._NATIVE_CTKSCROLLABLEFRAME_KWARGS}
+        super().__init__(master, **native_kwargs)
 
         self._custom_current_state = "normal"
 

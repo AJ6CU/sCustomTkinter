@@ -44,7 +44,33 @@ class sCTkToplevel(ctk.CTkToplevel, ThemeableWidget):
     widget's overall minimalism; add single-argument passthrough
     (`return super().configure(pname)`) here if Pygubu-style introspection is
     ever needed for top-level windows specifically.
+
+    WHITELIST GUARD: if a composite widget inherits sCTkToplevel as its own
+    base class and explicitly calls ThemeableWidget.__init__ itself before
+    calling super().__init__(), that composite's own final_kw could contain
+    keys native ctk.CTkToplevel knows nothing about. This matters MORE here
+    than for most widgets: CTkToplevel's own __init__ explicitly calls
+    check_kwargs_empty(kwargs, raise_error=True) after popping its known-valid
+    keys, confirmed directly against CustomTkinter's own source -- meaning ANY
+    unrecognized keyword reaching it is GUARANTEED to raise, not just
+    incidentally likely to. _NATIVE_CTKTOPLEVEL_KWARGS filters final_kw down
+    to only the keys the real native constructor accepts before that call.
+    This only matters for the Pattern-B composition scenario described above;
+    for direct construction of a plain sCTkToplevel, final_kw already only
+    contains this widget's own theme keys (just fg_color), so the filter is a
+    no-op.
     """
+
+    # Confirmed directly against CustomTkinter's own ctk_toplevel.py source:
+    # CTkToplevel's own _valid_tk_toplevel_arguments set, plus fg_color as the
+    # one CTk-specific parameter defined separately in its __init__ signature.
+    # "master" is excluded here since it's always passed positionally, never
+    # part of the filtered kwargs dict.
+    _NATIVE_CTKTOPLEVEL_KWARGS = frozenset({
+        "bd", "borderwidth", "class", "container", "cursor", "height",
+        "highlightbackground", "highlightthickness", "menu", "relief",
+        "screen", "takefocus", "use", "visual", "width", "fg_color",
+    })
 
     def __init__(self, master: Optional[Any] = None, **kwargs: Any) -> None:
         """
@@ -60,8 +86,12 @@ class sCTkToplevel(ctk.CTkToplevel, ThemeableWidget):
         ThemeableWidget.__init__(self, kwargs)
         self._local_defaults = dict(self.final_kw)
 
-        # 2. Initialize CustomTkinter's native top-level window.
-        super().__init__(master, **self.final_kw)
+        # 2. Initialize CustomTkinter's native top-level window. Only forwards
+        # the subset of final_kw that native CTkToplevel actually accepts --
+        # see this class's docstring ("WHITELIST GUARD") for why this
+        # filtering exists.
+        native_kwargs = {k: v for k, v in self.final_kw.items() if k in self._NATIVE_CTKTOPLEVEL_KWARGS}
+        super().__init__(master, **native_kwargs)
 
         # 3. Register lifecycle handshake hook, notifying Pygubu-style consumers
         # that construction is complete.
