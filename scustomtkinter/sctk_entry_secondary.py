@@ -19,7 +19,13 @@ its own runtime color-swapping logic.
 IMPORTANT: disabling uses CTk's native state="disabled" -- confirmed correct
 by direct testing, matching every other widget in this library. See
 sCTkEntryPrimary's module docstring for the fuller history (an earlier version
-used native "readonly" on an unverified claim; tested and found unnecessary).
+used native "readonly" on an unverified claim; tested and found unnecessary
+for the disabled/normal distinction).
+
+Now supports a genuine three-state model: normal / readonly / disabled, same
+as sCTkEntryPrimary -- see that widget's module docstring for the full
+rationale and the readonly-specific caveat (state="readonly" is not
+independently confirmed by direct testing the way normal/disabled were).
 """
 from typing import Any, Optional
 import customtkinter as ctk
@@ -33,8 +39,8 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
       - Automatic light/dark theme resolution from sCTkThemes.json (via
         ThemeableWidget.__init__ -- see that class's docstring for what it does,
         and just as importantly, what it no longer does).
-      - A distinct enabled/disabled visual state, using CTk's native
-        state="disabled" (confirmed correct by direct testing).
+      - A genuine three-state visual model: normal / readonly / disabled --
+        see sCTkEntryPrimary's docstring for the full rationale.
       - Pygubu Designer property introspection for `state`, `fg_color`,
         `text_color`, `border_color`, and `placeholder_text_color` via a
         single-argument configure() call.
@@ -69,6 +75,10 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
         # here never leak back into the shared theme registry.
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
+        # readonly_map: see sCTkEntryPrimary's module docstring for the
+        # three-state model this supports. Required only when readonly is
+        # actually requested -- see _update_current_visual_state()'s validation.
+        self._custom_readonly_map = dict(self._widget_readonly_map)
 
         # Extract "state" from final_kw after ThemeableWidget's merge -- an
         # explicit state= kwarg correctly overrides any "state" the theme
@@ -128,7 +138,13 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
                     return ("state", "state", "state", "normal", str(self.state()))
 
                 if pname in ["fg_color", "text_color", "border_color", "placeholder_text_color"]:
-                    val = self._custom_disabled_map.get(pname) if self._custom_current_state == "disabled" else self._local_defaults.get(pname)
+                    current = self._custom_current_state
+                    if current == "disabled":
+                        val = self._custom_disabled_map.get(pname)
+                    elif current == "readonly":
+                        val = self._custom_readonly_map.get(pname)
+                    else:
+                        val = self._local_defaults.get(pname)
                     return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
 
                 return super().configure(pname)
@@ -179,18 +195,18 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
 
     def state(self, state_string: Optional[str] = None) -> str:
         """
-        Gets or sets the widget's enabled/disabled visual state.
+        Gets or sets the widget's normal/readonly/disabled visual state.
 
         Args:
             state_string: If None, returns the current state without changing
-                anything. Otherwise, only the literal string "disabled"
-                (case-insensitive) is treated as disabled; anything in
-                ("normal", "enabled", "active") is treated as enabled. Any
-                other value leaves the internal state flag unchanged, though
+                anything. Otherwise: "normal"/"enabled"/"active" all map to
+                "normal"; "readonly" (case-insensitive) maps to "readonly";
+                "disabled" (case-insensitive) maps to "disabled". Any other
+                value leaves the internal state flag unchanged, though
                 _update_current_visual_state() still runs.
 
         Returns:
-            The resulting state ("normal" or "disabled", lowercase).
+            The resulting state ("normal", "readonly", or "disabled", lowercase).
         """
         if state_string is None:
             return getattr(self, "_custom_current_state", "normal")
@@ -198,6 +214,8 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
         mode = str(state_string).lower()
         if mode in ("normal", "enabled", "active"):
             self._custom_current_state = "normal"
+        elif mode == "readonly":
+            self._custom_current_state = "readonly"
         elif mode == "disabled":
             self._custom_current_state = "disabled"
 
@@ -214,9 +232,27 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
         Passes raw (light, dark) tuples straight through to configure() instead
         of resolving to a single color first, so CTk's native tracking can
         handle appearance-mode repaints without help from _set_appearance_mode.
+
+        fg_color, border_color, text_color, and placeholder_text_color are
+        required to be present in readonly_map specifically when readonly is
+        the current state -- see sCTkEntryPrimary's identical method for the
+        full reasoning. This check only runs when readonly is actually
+        requested.
         """
-        is_disabled = self._custom_current_state == "disabled"
-        target_map = self._custom_disabled_map if is_disabled else self._local_defaults
+        current = self._custom_current_state
+
+        if current == "disabled":
+            target_map = self._custom_disabled_map
+        elif current == "readonly":
+            target_map = self._custom_readonly_map
+            for required_key in ("fg_color", "border_color", "text_color", "placeholder_text_color"):
+                if target_map.get(required_key) is None:
+                    raise KeyError(
+                        f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                        f"in readonly_map -- required because state 'readonly' was requested."
+                    )
+        else:
+            target_map = self._local_defaults
 
         config_payload = {}
         for key in ("fg_color", "border_color", "text_color", "placeholder_text_color"):
@@ -228,11 +264,12 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
             super().configure(**config_payload)
 
         # Confirmed correct by direct testing: native "disabled" properly
-        # blocks interaction.
-        if is_disabled:
+        # blocks interaction. state="readonly" is not independently confirmed
+        # here -- see sCTkEntryPrimary's module docstring.
+        if current == "disabled":
             super().configure(state="disabled")
         else:
-            super().configure(state="normal")
+            super().configure(state=current)
             self.after_idle(self._reset_cursor_if_showing_placeholder)
 
     def _reset_cursor_if_showing_placeholder(self) -> None:
@@ -243,7 +280,9 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
         method for the full reasoning, including why this deliberately avoids
         CTkEntry's private internal placeholder-tracking attributes in favor
         of comparing self.get() against self.cget("placeholder_text") via
-        public API only.
+        public API only, and the caveat that the readonly transition case is
+        a precaution, not independently confirmed the way the disabled<->normal
+        transition was.
         """
         placeholder = self.cget("placeholder_text")
         if placeholder and self.get() == placeholder:

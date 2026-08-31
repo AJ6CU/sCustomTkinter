@@ -17,8 +17,9 @@ inferred from the class layout.
 
 What this class DOES provide, and is genuinely used by every widget:
   - __init__: resolves this widget's block from sCTkThemes.json, merges it with any keyword
-    overrides passed to the constructor, and builds self.final_kw plus the disabled/pressed/alarm
-    color maps (self._widget_disabled_map / _widget_pressed_map / _widget_alarm_map).
+    overrides passed to the constructor, and builds self.final_kw plus the disabled/pressed/alarm/
+    readonly color maps (self._widget_disabled_map / _widget_pressed_map / _widget_alarm_map /
+    _widget_readonly_map).
   - _resolve_color / _convert_lists_to_tuples / _sanitize_value: color-normalization helpers,
     called directly (via self.) by each widget's own visual-state logic.
   - _finalize_themeable_lifecycle: Pygubu lifecycle hook, called directly by each widget's __init__.
@@ -31,6 +32,14 @@ runtime color-swapping, because each widget needs a different set of properties 
 a different state model -- normal/disabled/pressed/alarm) than any single shared method could know
 about without hardcoding every widget's valid property list in one place. See the docs audit notes
 for the reasoning behind not trying to re-centralize this.
+
+RUN-ONCE GUARD: __init__ now sets self._themeable_widget_initialized = True on its first call per
+instance, and returns immediately on any subsequent call. This matters specifically for widgets that
+compose an already-themed sCTk widget as their own base class (e.g. sCTkSelector(sCTkFrame,
+ThemeableWidget), sCTkTableview(sCTkScrollableFrame, ThemeableWidget)) -- without it, the base
+widget's own internal ThemeableWidget.__init__ call (triggered when the composite widget's
+super().__init__() cascades into it) would run a second time on the same instance, silently
+overwriting self.final_kw. See __init__'s own docstring for the full reasoning.
 """
 import os
 import json
@@ -95,7 +104,33 @@ class ThemeableWidget:
         Shared base mixin that resolves global theme lookups via introspection,
         extracts styling options, handles nested map sanitization, and filters
         custom layout properties to prevent native framework validation failures.
+
+        RUN-ONCE GUARD: if a widget composes an already-themed sCTk widget as its
+        own base class (e.g. sCTkSelector(sCTkFrame, ThemeableWidget)), that base
+        widget's own __init__ calls ThemeableWidget.__init__ again internally when
+        super().__init__() cascades into it. Without a guard, this second call
+        would run in full -- looking up the theme block again via
+        self.__class__.__name__ (which is always the OUTERMOST class, e.g.
+        "sCTkSelector", regardless of which base class's code is currently
+        executing) and completely overwriting self.final_kw from scratch. For a
+        widget that forwards its full final_kw to super().__init__() (like
+        sCTkSelector), this second call happens to be a harmless no-op today,
+        since it's re-merging already-merged data onto itself -- but that's
+        incidental, not guaranteed, and fragile against future changes. For a
+        widget that only forwards a few explicit constructor arguments (like
+        sCTkTableview passing just master/width/height), the second call is
+        actively destructive: it replaces the correctly-built final_kw with a far
+        sparser one, silently discarding whatever the first call correctly
+        resolved. This guard makes ThemeableWidget.__init__ idempotent per
+        instance, the same way a C header's #ifndef/#define guard prevents a
+        header's contents from being processed twice -- the first call does the
+        real work and marks itself done; every subsequent call on the same
+        instance returns immediately.
         """
+        if getattr(self, "_themeable_widget_initialized", False):
+            return
+        self._themeable_widget_initialized = True
+
         # 1. PYGUBU UTILITY PARAMETER INTERCEPTION & EXTRIPATION:
         # We pop these completely out of the incoming kwargs pass before running any
         # dictionary loops. This guarantees CustomTkinter never encounters them!
@@ -123,8 +158,15 @@ class ThemeableWidget:
         self._widget_disabled_map = ThemeableWidget._convert_lists_to_tuples(theme_defaults.get("disabled_map") or {})
         self._widget_pressed_map = ThemeableWidget._convert_lists_to_tuples(theme_defaults.get("pressed_map") or {})
         self._widget_alarm_map = ThemeableWidget._convert_lists_to_tuples(theme_defaults.get("alarm_map") or {})
+        # readonly_map: added to support a genuine three-state model (normal/
+        # readonly/disabled) on sCTkEntryPrimary/Secondary, for widgets like
+        # sCTkSpinbox that need ttk.Spinbox's real readonly semantics (arrows
+        # stay clickable, typing is blocked) rather than collapsing everything
+        # non-disabled into "normal". Added here, not as an Entry-specific
+        # hack, so any future widget can use the same pattern.
+        self._widget_readonly_map = ThemeableWidget._convert_lists_to_tuples(theme_defaults.get("readonly_map") or {})
 
-        forbidden_keys = {"disabled_map", "pressed_map", "alarm_map"}
+        forbidden_keys = {"disabled_map", "pressed_map", "alarm_map", "readonly_map"}
         CUSTOM_VECTOR_KEYS = {
             "dial_color", "shadow_color", "text_color", "pointer_color",
             "pointer_glow_color", "disabled_text_color", "disabled_dial_color",
