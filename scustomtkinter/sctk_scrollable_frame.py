@@ -324,6 +324,23 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         had no effect at all when this method was called this way. Moved
         here, into this method itself, so the toggle is enforced regardless
         of which entry point is used.
+
+        FIX: an earlier version only bound self.get_children() -- DIRECT
+        children, one level deep. A composite widget like sCTkEntryPrimary
+        isn't a single Tk widget under the hood; it has its own internal
+        sub-structure. If the cursor was over a sub-component that never got
+        individually bound, the scroll event simply never fired there at
+        all -- Tkinter doesn't bubble unbound events up to a parent's
+        binding. Ported from a separate, confirmed-smooth reference
+        implementation elsewhere in this project (sCTkScrollArea's
+        propagate_scroll_events()), which recurses through every descendant
+        at every level, not just direct children. Now does the same here:
+        get_children()'s existing top-level furniture filtering (excluding
+        this widget's own internal CTkScrollbar/CTkCanvas) is preserved for
+        the first level, then every child's own full descendant tree is
+        bound too, via plain winfo_children() recursion -- no furniture
+        filtering concern exists at that depth, since those are ordinary
+        user-placed content widgets and their own sub-components.
         """
         if bind and not self._USE_CUSTOM_SCROLL_BINDING:
             return
@@ -340,8 +357,17 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         except Exception:
             pass
 
+        def _collect_descendants(widget, collected):
+            if widget not in collected:
+                collected.append(widget)
+            try:
+                for child in widget.winfo_children():
+                    _collect_descendants(child, collected)
+            except Exception:
+                pass
+
         for child in self.get_children():
-            if child not in layers_to_bind: layers_to_bind.append(child)
+            _collect_descendants(child, layers_to_bind)
 
         for target_layer in layers_to_bind:
             for event_str in SCROLL_EVENTS:
