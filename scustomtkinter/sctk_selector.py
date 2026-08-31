@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkSelector - Piece 1 of 2
+sCTkSelector
 
 An advanced theme-compliant, scrollable option tree selector widget.
 Pairs an optional high-contrast search field lane with a dynamic listing frame card

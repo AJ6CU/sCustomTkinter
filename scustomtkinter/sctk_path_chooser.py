@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkPathChooser - Piece 1 of 4
+sCTkPathChooser
 
 A custom, compound theme-compliant path selection tool pairing an entry line with a browse button.
 Inherits cleanly and directly from ctk.CTkFrame to preserve 100% of native CustomTkinter loops.

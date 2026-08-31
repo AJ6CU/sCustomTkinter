@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkTabview - Piece 1 of 2
+sCTkTabview
 
 A theme-compliant custom multi-page tab container layout.
 Inherits from sCTkTabviewUI and ThemeableWidget to manage dense cockpit dashboard

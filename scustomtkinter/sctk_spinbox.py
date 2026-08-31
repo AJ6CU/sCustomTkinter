@@ -448,6 +448,24 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         is_disabled = current == "disabled"
         is_readonly = current == "readonly"
 
+        # FIX: an earlier version used .get(key, hardcoded_literal) throughout
+        # this method for entry_color/border_color/text_color/button_color/
+        # button_hover_color -- silently substituting a guessed value whenever
+        # the real theme was incomplete. Matches the same hard-fail principle
+        # applied to sCTkSwitch, the label family, and sCTkTableview elsewhere
+        # in this project.
+        for required_key in ("entry_color", "border_color", "button_color", "button_hover_color", "text_color"):
+            if self._local_defaults.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
+                )
+        for required_key in ("entry_color", "border_color", "text_color", "button_color"):
+            if self._custom_disabled_map.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                )
+
         if is_disabled:
             m = self._custom_disabled_map
         elif is_readonly:
@@ -462,7 +480,7 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             m = self._local_defaults
 
         dm = self._custom_disabled_map
-        d_b_text = self._resolve_color(dm.get("text_color", ("#94A3B8", "gray50")))
+        d_b_text = dm.get("text_color")
 
         # 🔑 NATIVE ACTION ROUTING:
         # Route the full three-way state through sCTkEntryPrimary's own
@@ -475,8 +493,8 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
 
         # Spinbox-specific color override, applied for all three states now.
         entry_override = {
-            "fg_color": m.get("entry_color", ("#FFFFFF", "#1E293B")),
-            "border_color": m.get("border_color", ("#CBD5E1", "#475569")),
+            "fg_color": m.get("entry_color"),
+            "border_color": m.get("border_color"),
         }
         if is_readonly:
             # text_color is only overridden for readonly -- normal/disabled
@@ -487,10 +505,10 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             entry_override["text_color"] = m.get("text_color")
         self.entry.configure(**entry_override)
 
-        b_color = self._resolve_color(self._local_defaults.get("button_color", ("#1A4375", "#1F6AA5")))
-        b_hover = self._resolve_color(self._local_defaults.get("button_hover_color", ("#112A4B", "#194A7A")))
-        b_text = self._resolve_color(self._local_defaults.get("text_color", ("#FFFFFF", "#FFFFFF")))
-        d_b_color = self._resolve_color(dm.get("button_color", ("#CBD5E1", "#374151")))
+        b_color = self._local_defaults.get("button_color")
+        b_hover = self._local_defaults.get("button_hover_color")
+        b_text = self._local_defaults.get("text_color")
+        d_b_color = dm.get("button_color")
 
         # Buttons only ever get normal/disabled -- never readonly.
         button_state = "disabled" if is_disabled else "normal"
@@ -504,3 +522,4 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
                     text_color_disabled=d_b_text,
                     state=button_state
                 )
+

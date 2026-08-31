@@ -432,7 +432,15 @@
         "cell_alt_bg_color": ["#D1DCEE", "#222C3A"],
         "cell_text_color": ["#1E293B", "#E2E8F0"],
         "cell_font": ["Arial", 13, "normal"],
-        "grid_line_color": ["#CBD5E1", "#334155"]
+        "grid_line_color": ["#CBD5E1", "#334155"],
+        "disabled_map": {
+            "header_bg_color": ["#CBD5E1", "#1E293B"],
+            "header_text_color": ["#94A3B8", "#64748B"],
+            "cell_bg_color": ["#F1F5F9", "#1F2937"],
+            "cell_alt_bg_color": ["#E2E8F0", "#263241"],
+            "cell_text_color": ["#94A3B8", "#64748B"],
+            "grid_line_color": ["#E2E8F0", "#293548"]
+        }
     },
     "sCTkSMeter": {
         "fg_color": ["#F4F7FA", "#0A0A0A"],

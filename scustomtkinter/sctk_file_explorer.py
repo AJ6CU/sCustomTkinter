@@ -153,24 +153,58 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         # 🔑 REGISTER LIFECYCLE HANDSHAKE HOOK: Maps registration signals back up to Pygubu windows cleanly
         self._finalize_themeable_lifecycle()
 
+    def _resolve_canvas_bg_color(self):
+        """
+        Determines what color to give the internal raw Canvas's background,
+        since a raw Tkinter Canvas cannot render CTk's "transparent"
+        pseudo-value at all.
+
+        FIX: an earlier version reached into ctk.ThemeManager.theme["CTkFrame"]
+        -- CustomTkinter's own native theme registry -- as an intermediate
+        fallback before reaching the hardcoded literal below. Every other
+        widget in this project exclusively uses sCTkThemes.json or a
+        documented literal; this was the only place reaching into native
+        CTk's own theme as an additional fallback layer. Removed -- goes
+        directly to the documented hardcoded pair instead, matching the same
+        precedent already established in sCTkFrameLabeledPrimary's
+        _hide_internal_scrollbars(): this isn't a "theme is incomplete"
+        situation (this widget's own fg_color being "transparent" is a
+        legitimate, common choice), it's "a raw canvas needs an actual
+        renderable color, and transparent isn't one" -- a different problem
+        with a different, accepted solution.
+        """
+        canvas_bg_raw = self.cget("fg_color")
+        if canvas_bg_raw == "transparent" or canvas_bg_raw is None:
+            return "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
+        resolved_hex = self._resolve_color(canvas_bg_raw)
+        if resolved_hex == "transparent":
+            return "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
+        return resolved_hex
+
     def _set_appearance_mode(self, mode_string):
-        """🔑 TRANSPARENCY CRASH PROTECTED CORE FIXED: Intercepts look sweeps and forces valid hex strings."""
+        """Intercepts appearance-mode changes and forces a valid hex string
+        onto the internal raw Canvas, which cannot render CTk's "transparent"."""
         super()._set_appearance_mode(mode_string)
         if hasattr(self, "canvas") and self.canvas.winfo_exists():
-            canvas_bg_raw = self.cget("fg_color")
-            if canvas_bg_raw == "transparent" or canvas_bg_raw is None:
-                canvas_bg_raw = ctk.ThemeManager.theme["CTkFrame"]["fg_color"]
-
-            resolved_hex = self._resolve_color(canvas_bg_raw)
-            if resolved_hex == "transparent":
-                resolved_hex = "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
-
-            self.canvas.configure(bg=resolved_hex)
+            self.canvas.configure(bg=self._resolve_canvas_bg_color())
             if hasattr(self, "path_to_show"): self._fill_explorer()
 
     def _process_live_theme_repaint(self):
         theme, d_map = self._local_defaults, self._custom_disabled_map
         current_state = getattr(self, "_state", "normal")
+
+        # FIX: an earlier version used hardcoded fallback literals for
+        # button_color (the scrollbar's color) -- and, in the enabled branch,
+        # reached into ctk.ThemeManager.theme["CTkScrollbar"] (native CTk's
+        # own theme registry) as an additional fallback layer, the only place
+        # in this project besides the canvas-background case above doing
+        # that. Both replaced with hard-fail validation, matching the
+        # principle established for sCTkSwitch, the label family, and
+        # sCTkTableview elsewhere in this project.
+        if theme.get("button_color") is None:
+            raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'button_color' at the top level.")
+        if d_map.get("button_color") is None:
+            raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'button_color' in disabled_map.")
 
         if current_state == "disabled":
             btn_fg = d_map.get("btn_fg", theme.get("btn_fg"))
@@ -179,23 +213,16 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             btn_hover, entry_fg = btn_fg, d_map.get("entry_fg", theme.get("entry_fg"))
             entry_border = d_map.get("entry_border_color", theme.get("entry_border_color"))
             entry_text = d_map.get("entry_text_color", theme.get("entry_text_color"))
-            sb_btn_color, sb_command = d_map.get("button_color", ("#CBD5E1", "#334155")), None
+            sb_btn_color, sb_command = d_map.get("button_color"), None
         else:
             btn_fg, btn_border = theme.get("btn_fg"), theme.get("btn_border_color")
             btn_text, btn_hover = theme.get("btn_text_color"), theme.get("btn_hover")
             entry_fg, entry_border = theme.get("entry_fg"), theme.get("entry_border_color")
             entry_text = theme.get("entry_text_color")
-            sb_btn_color = theme.get("button_color", ctk.ThemeManager.theme["CTkScrollbar"]["button_color"])
+            sb_btn_color = theme.get("button_color")
             sb_command = self.canvas.yview
 
-        canvas_bg_raw = self.cget("fg_color")
-        if canvas_bg_raw == "transparent" or canvas_bg_raw is None:
-            canvas_bg_raw = ctk.ThemeManager.theme["CTkFrame"]["fg_color"]
-
-        resolved_hex = self._resolve_color(canvas_bg_raw)
-        if resolved_hex == "transparent":
-            resolved_hex = "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
-        self.canvas.configure(bg=resolved_hex)
+        self.canvas.configure(bg=self._resolve_canvas_bg_color())
 
         if hasattr(self, "back_button") and self.back_button.winfo_exists():
             self.back_button.configure(state=current_state, font=theme.get("btn_font"),
@@ -497,13 +524,26 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             icon = self.folder_icon if is_dir else self.file_icon
             is_currently_highlighted = (full_path == current_selected)
 
+            # FIX: an earlier version used the hardcoded literal "gray50" for
+            # row_dimmed_text (in both branches below), and reached into
+            # ctk.ThemeManager.theme["CTkLabel"] (native CTk's own theme
+            # registry) as a fallback for row_active_text. Both replaced with
+            # hard-fail validation on first use, matching the principle
+            # established for sCTkSwitch, the label family, and
+            # sCTkTableview elsewhere in this project.
             if current_state == "disabled":
-                txt_color, row_widget_state, btn_bg = self._resolve_color(d_map.get("row_dimmed_text", "gray50")), "disabled", "transparent"
+                if d_map.get("row_dimmed_text") is None:
+                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_dimmed_text' in disabled_map.")
+                txt_color, row_widget_state, btn_bg = self._resolve_color(d_map.get("row_dimmed_text")), "disabled", "transparent"
             elif is_valid_row:
-                txt_color, row_widget_state = self._resolve_color(theme.get("row_active_text", ctk.ThemeManager.theme["CTkLabel"]["text_color"])), "normal"
+                if theme.get("row_active_text") is None:
+                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_active_text' at the top level.")
+                txt_color, row_widget_state = self._resolve_color(theme.get("row_active_text")), "normal"
                 btn_bg = self._resolve_color(theme.get("btn_fg")) if is_currently_highlighted else "transparent"
             else:
-                txt_color, row_widget_state, btn_bg = self._resolve_color(theme.get("row_dimmed_text", "gray50")), "disabled", "transparent"
+                if theme.get("row_dimmed_text") is None:
+                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_dimmed_text' at the top level.")
+                txt_color, row_widget_state, btn_bg = self._resolve_color(theme.get("row_dimmed_text")), "disabled", "transparent"
 
             item_btn = sCTkButtonSecondary(self.explorer_frame, text=f"{icon}{item}", anchor="w", fg_color=btn_bg, text_color=txt_color, state=row_widget_state, hover_color=self._resolve_color(theme.get("btn_hover")), command=lambda p=full_path: self._on_item_clicked(p))
             item_btn.grid(row=row_idx, column=0, sticky="ew", padx=2, pady=1)
@@ -556,3 +596,4 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             if (now - self._last_double_click_time) < 0.3: return
             self._last_double_click_time = now
             if self.double_click_command and callable(self.double_click_command): self.double_click_command(self, target_path)
+
