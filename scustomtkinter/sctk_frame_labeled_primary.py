@@ -20,8 +20,7 @@ color-swapping logic.
 
 "Disabled" here is purely visual -- there is no native way to lock a
 CTkFrame-derived container's own interactivity the way a control can be
-locked (see sCTkFrameOutlined's docstring for the same reasoning, explicitly
-confirmed there). Disabling this widget dims its own colors; it does NOT
+locked.  Disabling this widget dims its own colors; it does NOT
 automatically disable child widgets placed inside it -- that's the caller's
 responsibility, exactly as demonstrated in this project's own test harness
 for this widget (looping over the frame's children and calling

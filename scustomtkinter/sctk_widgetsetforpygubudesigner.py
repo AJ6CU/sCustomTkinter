@@ -37,8 +37,6 @@ from sCTkFrameLabeledPrimary import sCTkFrameLabeledPrimary
 from sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
 import sCTkFrameLabeledSecondarybo
 
-from sCTkFrameOutlined import sCTkFrameOutlined
-from sCTkFrameOutlinedbo import (sCTkFrameOutlinedBO, builder_id as sCTkFrameOutlined_builder_id)
 
 import sCTkLabelPrimarybo
 import sCTkLabelSecondarybo
@@ -99,11 +97,6 @@ class sCTkFrameForPreview(sCTkFrame):
         #  clickable on preview we need a hack.
         return super(tk.Frame, self).winfo_children()
 
-class sCTkFrameOutlinedForPreview(sCTkFrameOutlined):
-    def winfo_children(self):
-        # CTkFrameOUtline has a hidden canvas inside. So, to make it
-        #  clickable on preview we need a hack.
-        return super(tk.Frame, self).winfo_children()
 
 class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
     def winfo_children(self):
@@ -190,9 +183,6 @@ class sCTkSpinboxForPreview(sCTkSpinbox):
 class sCTkFramePreviewBO(sCTkFrameBO):
     class_ = sCTkFrameForPreview
 
-class sCTkFrameOutlinedForPreviewBO(sCTkFrameOutlinedBO):
-    class_ = sCTkFrameOutlinedForPreview
-
 class sCTkFrameLabeledPrimaryForPreviewBO(sCTkFrameLabeledPrimaryBO):
     class_ = sCTkFrameLabeledPrimaryForPreview
 
@@ -227,8 +217,6 @@ class sCTkPlugin(IDesignerPlugin):
 
         if builder_uid == sCTkFrame_builder_id:
             return sCTkFramePreviewBO
-        elif builder_uid == sCTkFrameOutlined_builder_id:
-            return sCTkFrameOutlinedForPreviewBO
         elif builder_uid == sCTkFrameLabeledPrimary_builder_id:
             return sCTkFrameLabeledPrimaryForPreviewBO
         elif builder_uid == sCTkPathChooser_builder_id:

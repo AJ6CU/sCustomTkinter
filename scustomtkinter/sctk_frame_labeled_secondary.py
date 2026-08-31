@@ -18,8 +18,7 @@ overrides have been removed entirely for this reason (see
 themeable_widget.py's docstring); this widget owns all of its own runtime
 color-swapping logic.
 
-"Disabled" here is purely visual, same reasoning as sCTkFrameLabeledPrimary
-and sCTkFrameOutlined -- there is no native way to lock a CTkFrame-derived
+"Disabled" here is purely visual,  -- there is no native way to lock a CTkFrame-derived
 container's own interactivity. Disabling this widget dims its own colors; it
 does NOT automatically disable child widgets placed inside it.
 

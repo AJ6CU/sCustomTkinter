@@ -176,9 +176,6 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 	- `sCTkFrameLabeledSecondary` -  Smaller fonts and border. Useful to group similar settings that you want to identify by a name.
 
 
-* <u>`sCTkFrameOutlined`</u>: A Frame with an outline. No real difference than a normal Frame where you added a border.
-
-
 * <u>Messagebox</u>: Used to communicate immediate and perhaps actionable information to the user. There are three types, Info, Warning and Error. And each can be configured for a customized single or two button response.
 	- `sCTkMessagebox.showinfo`
     - `sCTkMessagebox.showwarning`

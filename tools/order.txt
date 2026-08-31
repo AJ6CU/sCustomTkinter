@@ -34,7 +34,6 @@
 ../docs/src/sCTkFileExplorer.md
 ../docs/src/sCTkFrameLabeledPrimary.md
 ../docs/src/sCTkFrameLabeledSecondary.md
-../docs/src/sCTkFrameOutlined.md
 ../docs/src/sCTkMessagebox.md
 ../docs/src/sCTkPathChooser.md
 ../docs/src/sCTkScrollArea.md
@@ -43,5 +42,4 @@
 ../docs/src/sCTkSMeter.md
 ../docs/src/sCTkSMeterBar.md
 ../docs/src/sCTkSpinbox.md
-../docs/src/sCTkSwitchAlt.md
 ../docs/src/sCTkTableview.md
