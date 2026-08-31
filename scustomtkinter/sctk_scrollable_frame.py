@@ -438,3 +438,19 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     def get_all_children(self) -> list:
         """Equivalent to winfo_children(include_private=True)."""
         return self.winfo_children(include_private=True)
+
+    # TEMPORARY DIAGNOSTIC -- confirms whether native CTkScrollableFrame's
+    # own inherited _mouse_wheel_all handler is actually being invoked at
+    # all, given the surprising result that scrolling was completely
+    # unresponsive with the custom scroll system fully disabled (which
+    # should NOT happen if native's own bind_all("<MouseWheel>", ...) setup,
+    # confirmed present in CustomTkinter's own source, were working
+    # correctly for this wrapped widget). Calls through to the real native
+    # behavior via super() -- this does not change any actual scroll logic,
+    # only observes whether it runs. Remove once this question is settled.
+    def _mouse_wheel_all(self, event):
+        print(f"[NATIVE _mouse_wheel_all] t={time.time():.4f}  event.widget={event.widget}  "
+              f"self={self}  self._parent_canvas={getattr(self, '_parent_canvas', 'MISSING')}")
+        valid = self._check_if_valid_scroll(event.widget)
+        print(f"[NATIVE _mouse_wheel_all]   _check_if_valid_scroll result: {valid}")
+        return super()._mouse_wheel_all(event)
