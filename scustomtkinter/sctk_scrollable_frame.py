@@ -50,12 +50,26 @@ three platforms.
 """
 import sys
 import platform
+import time
 from typing import Any, Optional
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
 
 class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     """Themeable scrollable viewport container.
+
+    EXPERIMENTAL TOGGLE under investigation -- see
+    _USE_CUSTOM_SCROLL_BINDING below. Since this class inherits directly
+    from ctk.CTkScrollableFrame, calling super().__init__() already triggers
+    native CTk's own complete, working scroll-binding setup automatically
+    (confirmed directly against CustomTkinter's own source: a global
+    bind_all("<MouseWheel>", ...) combined with a _check_if_valid_scroll()
+    walk-up-the-hierarchy check that safely routes events to the right
+    frame even with multiple scrollable frames coexisting). This file's own
+    custom scroll-binding system, added on top, may be entirely redundant
+    with -- and actively competing against -- that already-running native
+    system, rather than solving a problem native CTk doesn't already handle.
+    Under active investigation; not yet resolved.
 
     Adds to native ctk.CTkScrollableFrame:
       - Automatic light/dark theme resolution from sCTkThemes.json (via
@@ -119,6 +133,20 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         "label_fg_color", "label_text_color", "label_text", "label_font",
         "label_anchor", "orientation",
     })
+
+    # EXPERIMENTAL TOGGLE, under active investigation -- see class docstring.
+    # True (default): preserves current behavior -- calling
+    #   _finalize_split_bindings() sets up this file's own custom scroll
+    #   system (_toggle_scroll_bindings/_process_scroll_wheel/
+    #   _process_mac_touchpad_scroll), IN ADDITION to whatever native
+    #   ctk.CTkScrollableFrame already set up automatically via inheritance.
+    # False: _finalize_split_bindings()/_toggle_scroll_bindings() become
+    #   no-ops. Scrolling relies ENTIRELY on whatever native CTkScrollableFrame
+    #   already provides automatically via super().__init__() -- no custom
+    #   binding of any kind. Untested as of this writing; flip this to False
+    #   to find out whether the reported erratic touchpad behavior disappears
+    #   when the custom system isn't also running alongside native's own.
+    _USE_CUSTOM_SCROLL_BINDING = True
 
     def __init__(self, master: Optional[Any] = None, **kwargs: Any) -> None:
         """
@@ -307,6 +335,12 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                 if delta_y != 0:
                     MAC_SCROLL_SENSITIVITY = 3
                     scaled_scroll = -MAC_SCROLL_SENSITIVITY if delta_y > 0 else MAC_SCROLL_SENSITIVITY
+                    # TEMPORARY DIAGNOSTIC -- remove once the double-firing
+                    # question is settled. Timestamp lets you compare against
+                    # _process_scroll_wheel's print to see if both fire for
+                    # the same physical gesture.
+                    print(f"[TouchpadScroll] t={time.time():.4f}  raw_delta={event.delta}  "
+                          f"decoded_delta_y={delta_y}  scaled_scroll={scaled_scroll}")
                     parent_widget.yview_scroll(scaled_scroll, "units")
         except Exception:
             pass
@@ -322,6 +356,10 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                     MAC_SCROLL_SENSITIVITY = 3
                     scaled_scroll = int(-MAC_SCROLL_SENSITIVITY * delta) if abs(delta) >= 1 else (
                         -MAC_SCROLL_SENSITIVITY if delta > 0 else MAC_SCROLL_SENSITIVITY)
+                    # TEMPORARY DIAGNOSTIC -- see _process_mac_touchpad_scroll's
+                    # identical note.
+                    print(f"[MouseWheel/Darwin] t={time.time():.4f}  raw_delta={delta}  "
+                          f"scaled_scroll={scaled_scroll}")
                     parent_widget.yview_scroll(scaled_scroll, "units")
                 elif sys_platform == "Linux":
                     if event.num == 4: parent_widget.yview_scroll(-1, "units")
@@ -341,7 +379,17 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         return delta_x, delta_y
 
     def _finalize_split_bindings(self):
-        """Standard layout binding connection pass [1.1]. Call this yourself after placing the widget."""
+        """
+        Standard layout binding connection pass [1.1]. Call this yourself
+        after placing the widget.
+
+        EXPERIMENTAL: gated on _USE_CUSTOM_SCROLL_BINDING -- see class
+        docstring. When False, this becomes a no-op, and scrolling relies
+        entirely on whatever native ctk.CTkScrollableFrame already set up
+        automatically via inheritance.
+        """
+        if not self._USE_CUSTOM_SCROLL_BINDING:
+            return
         self._toggle_scroll_bindings(bind=True)
 
     # =========================================================================
