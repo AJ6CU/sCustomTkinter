@@ -183,6 +183,16 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # 4. Apply initial theming.
         self._update_current_visual_state()
 
+        # FIX: accumulator state for _process_mac_touchpad_scroll's
+        # threshold-gated scrolling -- see that method's docstring. Ported
+        # from a separate, confirmed-smooth reference implementation
+        # (sCTkScrollbar/sCTkScrollArea) after direct A/B testing showed the
+        # per-event scroll approach previously used here caused a
+        # hang-then-catch-up pattern on real trackpad hardware that this
+        # accumulator approach does not.
+        self._touchpad_accumulated_delta = 0.0
+        self._touchpad_last_direction = 0
+
         # 5. Register lifecycle handshake hook, notifying Pygubu-style consumers
         # that construction is complete.
         #
@@ -357,35 +367,57 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         throughout via native CTk's own inherited handling). This method is
         the sole channel for trackpad scrolling, not a redundant addition.
 
-        FIX: an earlier version discarded delta_y's actual magnitude
-        entirely, using only its sign -- confirmed by direct testing:
-        decoded_delta_y varied from 1 to 14+ across real trackpad gestures,
-        while scaled_scroll was always a fixed +/-3 regardless. A slow,
-        tiny finger movement and a fast, large one produced identical
-        scroll output. Now scales proportionally to the real magnitude
-        instead, divided by a tunable damping factor (matching the
-        maintainer's own recollection that this touchpad's raw delta stream
-        is high-resolution enough to need decimation, not zero scaling),
-        with a floor of 1 so small genuine movements still produce visible
-        movement rather than being rounded down to nothing.
+        FIX: an earlier version called yview_scroll() immediately on every
+        single event, using a scroll amount that discarded delta_y's actual
+        magnitude entirely (a fixed +/-3 regardless of whether delta_y was 1
+        or 14+). Confirmed by direct A/B testing against a separate,
+        independently-working reference implementation
+        (sCTkScrollbar/sCTkScrollArea, elsewhere in this project) that
+        scrolling immediately on every rapid-fire event -- real trackpad
+        gestures were observed generating events roughly every 10ms during
+        fast movement -- causes a hang-then-catch-up pattern, while an
+        accumulate-then-threshold-gate approach does not. Replaced the
+        per-event immediate-scroll logic with accumulation: raw delta_y is
+        summed across events, and yview_scroll() only fires once the running
+        total crosses a threshold, then resets to zero. Faster gestures
+        naturally cross the threshold more often, so overall scroll rate
+        still scales with gesture speed without needing to vary the size of
+        each individual scroll call. Direction reversal immediately resets
+        the accumulator, so a quick reversal doesn't inherit leftover
+        momentum from the opposite direction.
         """
         try:
             parent_widget = self.nametowidget(self.winfo_parent())
             if parent_widget and hasattr(parent_widget, "yview_scroll"):
                 delta_x, delta_y = self._decode_mac_touchpad_delta(event.delta)
                 if delta_y != 0:
-                    # Tunable -- larger value = more decimation/damping of
-                    # the raw high-resolution delta stream. Adjust this one
-                    # constant while testing to find what feels right;
-                    # nothing else in this method should need to change.
-                    TOUCHPAD_SCROLL_DIVISOR = 3
-                    magnitude = max(1, abs(delta_y) // TOUCHPAD_SCROLL_DIVISOR)
-                    scaled_scroll = -magnitude if delta_y > 0 else magnitude
+                    current_tick_direction = 1 if delta_y > 0 else -1
+                    if current_tick_direction != self._touchpad_last_direction and self._touchpad_last_direction != 0:
+                        self._touchpad_accumulated_delta = 0.0
+                    self._touchpad_last_direction = current_tick_direction
+
+                    self._touchpad_accumulated_delta += delta_y
+
+                    # Tunable -- larger value = more decimation of the raw
+                    # high-resolution delta stream before a scroll actually
+                    # happens. Ported from the confirmed-smooth reference
+                    # implementation's own threshold value; adjust this one
+                    # constant while testing to find what feels right.
+                    TOUCHPAD_ACCUMULATION_THRESHOLD = 12.0
+                    scaled_scroll = 0
+                    if abs(self._touchpad_accumulated_delta) >= TOUCHPAD_ACCUMULATION_THRESHOLD:
+                        scaled_scroll = -1 if self._touchpad_accumulated_delta > 0 else 1
+                        parent_widget.yview_scroll(scaled_scroll, "units")
+                        self._touchpad_accumulated_delta = 0.0
+
                     # TEMPORARY DIAGNOSTIC -- keep while tuning
-                    # TOUCHPAD_SCROLL_DIVISOR above; remove once satisfied.
+                    # TOUCHPAD_ACCUMULATION_THRESHOLD above; remove once
+                    # satisfied. scaled_scroll of 0 means this event only
+                    # contributed to the accumulator without crossing the
+                    # threshold yet -- no scroll happened on this event.
                     print(f"[TouchpadScroll] t={time.time():.4f}  raw_delta={event.delta}  "
-                          f"decoded_delta_y={delta_y}  scaled_scroll={scaled_scroll}")
-                    parent_widget.yview_scroll(scaled_scroll, "units")
+                          f"decoded_delta_y={delta_y}  accumulated={self._touchpad_accumulated_delta:.2f}  "
+                          f"scaled_scroll={scaled_scroll}")
         except Exception:
             pass
 
