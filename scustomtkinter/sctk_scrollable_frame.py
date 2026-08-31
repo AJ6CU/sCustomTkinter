@@ -415,7 +415,7 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                     # satisfied. scaled_scroll of 0 means this event only
                     # contributed to the accumulator without crossing the
                     # threshold yet -- no scroll happened on this event.
-                    print(f"[TouchpadScroll] t={time.time():.4f}  raw_delta={event.delta}  "
+                    print(f"[TouchpadScroll] t={time.time():.4f}  event.widget={event.widget}  raw_delta={event.delta}  "
                           f"decoded_delta_y={delta_y}  accumulated={self._touchpad_accumulated_delta:.2f}  "
                           f"scaled_scroll={scaled_scroll}")
         except Exception:
