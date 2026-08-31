@@ -14,7 +14,7 @@
 
 `sCTkFrame` is a themeable subclass of `customtkinter.CTkFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`. Unlike every other widget in this library, it has no disabled state and no per-state color swapping — frames are containers, not interactive controls, so there's nothing to dim or lock.
 
-Dark Mode: ![sCTkFrame in dark mode](images/sCTkFrame_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Dark Mode:  ![sCTkFrame in dark mode](images/sCTkFrame_Dark.png)&emsp; &emsp; &emsp; &emsp;
 Light Mode: ![sCTkFrame in light mode](images/sCTkFrame_Light.png)
 
 ---
@@ -65,6 +65,8 @@ Everything is applied once, at construction — there's no `disabled_map` for th
 With `border_width` at `0`, `border_color` never actually renders visibly regardless of its value — the two are set to the neutral Tkinter color name `"gray"` for both light and dark mode here, but that's moot while the border has no width.
 
 Colors are passed through as raw `(light, dark)` tuples at construction and never touched again, so CustomTkinter's own native appearance-mode tracking handles light/dark repaints on its own — there's no `_set_appearance_mode()` override here, since there's nothing for one to re-trigger. This is the same underlying mechanism validated more deliberately on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family.
+
+**Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkFrame` directly (rather than placing it as a child), construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkFrame` actually accepts (confirmed directly against CustomTkinter's source) to its own native constructor call, so any of your composite's own theme keys that `CTkFrame` wouldn't recognize are filtered out rather than causing a `TypeError`. This only matters for that composition pattern — constructing a plain `sCTkFrame` directly is unaffected either way.
 
 ---
 

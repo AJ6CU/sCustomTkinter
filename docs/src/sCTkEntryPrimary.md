@@ -12,12 +12,12 @@
 
 ### Overview
 
-`sCTkEntryPrimary` is a themeable subclass of `customtkinter.CTkEntry` — the higher-emphasis of the library's two entry-field tiers (see also `sCTkEntrySecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state.
+`sCTkEntryPrimary` is a themeable subclass of `customtkinter.CTkEntry` — the higher-emphasis of the library's two entry-field tiers (see also `sCTkEntrySecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a genuine three-state visual model: normal, readonly, and disabled.
 
 Dark Mode:	![sCTkEntryPrimary in dark mode](images/sCTkEntryPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
 Light Mode:	![sCTkEntryPrimary in light mode](images/sCTkEntryPrimary_Light.png)
 
-Disabling uses CTk's native `state="disabled"` — confirmed correct by direct testing, consistent with every other widget in this library. An earlier version used native `"readonly"` instead, based on an unverified claim about avoiding a rendering issue; tested directly and found unnecessary.
+All three states use CTk's native `state` option (`"normal"`, `"readonly"`, `"disabled"`). `normal`/`disabled` are confirmed correct by direct testing, consistent with every other widget in this library. `readonly` was added specifically to support `sCTkSpinbox`'s own readonly mode correctly (its entry can't be typed into directly, but the increment/decrement arrows stay clickable) — matching real `ttk.Spinbox` semantics, which distinguish readonly (arrows still work) from disabled (nothing works). Confirmed directly against CustomTkinter's own source: native `CTkEntry` already has full, deliberate support for a `"readonly"` state distinct from `"disabled"` — including a placeholder-text rule worth knowing about (see [Known Limitations](#known-limitations)).
 
 ---
 
@@ -46,7 +46,7 @@ freq_entry.pack(fill="x", padx=40, pady=10)
 
 | Method | Returns | Description |
 |---|---|---|
-| `state(state_string=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Uses CTk's native `state="disabled"`, confirmed correct by direct testing. |
+| `state(state_string=None)` | `str` | Gets or sets the widget's visual state. `"normal"`/`"enabled"`/`"active"` all map to `"normal"`; `"readonly"` maps to `"readonly"`; `"disabled"` maps to `"disabled"`. All three use CTk's native `state` option. |
 | `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
 | `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `text_color`, `border_color`, and `placeholder_text_color`. Queries for any other property name fall through to the native `CTkEntry.configure`. |
 
@@ -55,7 +55,7 @@ freq_entry.pack(fill="x", padx=40, pady=10)
 ### Theming (`sCTkThemes.json`)
 
 - **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
-- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `text_color`, and `placeholder_text_color` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `text_color`, and `placeholder_text_color` are recomputed from the theme's normal values, its `disabled_map`, or its `readonly_map` every time you call `state()`.
 
 ```json
 {
@@ -71,10 +71,20 @@ freq_entry.pack(fill="x", padx=40, pady=10)
             "fg_color": ["#F3F4F6", "#1F2937"],
             "border_color": ["#CBD5E1", "#475569"],
             "text_color": ["#94A3B8", "#64748B"]
+        },
+        "readonly_map": {
+            "fg_color": ["#F8FAFC", "#1F2937"],
+            "border_color": ["#64748B", "#94A3B8"],
+            "text_color": ["#1F2937", "#F9FAFB"],
+            "placeholder_text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
+
+**`readonly_map` requires all four keys** (`fg_color`, `border_color`, `text_color`, `placeholder_text_color`) whenever `readonly` is actually requested — if any are missing, `state("readonly")` raises immediately rather than falling back to a guessed color. This check only runs when readonly is used, so existing code that never requests it is unaffected regardless of whether `readonly_map` is present.
+
+The design intent behind the values above: `text_color` in `readonly_map` deliberately matches `normal`'s `text_color` exactly — readonly means "you can still read this clearly, you just can't edit it," a different message from disabled's "this is inactive." `border_color` is the primary visual cue distinguishing readonly from normal, using a muted "locked" tone distinct from both normal's vivid border and disabled's washed-out one.
 
 `placeholder_text_color` is a genuinely distinct, themed value — not a fallback to `text_color`. This follows CustomTkinter's own convention: in the library's stock `dark-blue` theme, `text_color` is `["gray14", "gray84"]` while `placeholder_text_color` is a visibly more muted `["gray52", "gray62"]`. The value here reuses the muted gray already established throughout this theme file for disabled states — deliberate, but worth knowing if you'd rather placeholder text and disabled text look distinguishable from each other.
 
@@ -144,7 +154,9 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
-- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
+- `state()` only recognizes `"disabled"`, `"readonly"`, and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
+- **`readonly` never deactivates placeholder text, even on focus** — confirmed directly against CustomTkinter's own source: native `CTkEntry`'s internal placeholder logic explicitly skips clearing the placeholder whenever `state` is `"readonly"`. This makes sense (there's no reason to clear a placeholder for typing on a field that can't be typed into), but it means a readonly field showing placeholder text will keep showing it indefinitely, regardless of focus.
+- The disable/enable-cycle cursor-position fix (`_reset_cursor_if_showing_placeholder`) is also applied on transitions into `readonly`, as a precaution — but this specific transition (unlike normal↔disabled, which is directly confirmed by testing) has not been independently verified. Given the point above, this is likely lower-risk than it might otherwise seem, since a readonly field showing placeholder text stays in that state continuously rather than toggling.
 - Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 

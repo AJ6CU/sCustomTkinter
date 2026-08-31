@@ -80,6 +80,8 @@ channel_panel.pack(expand=True, fill="both", padx=25, pady=25)
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
+**Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkFrameLabeledPrimary` directly, construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkScrollableFrame` actually accepts (confirmed directly against CustomTkinter's source, which has no fallback `**kwargs` at all — every parameter is explicitly named, so this matters more here than for most widgets). This only matters for that composition pattern — constructing a plain `sCTkFrameLabeledPrimary` directly is unaffected either way.
+
 ---
 
 ### Example
