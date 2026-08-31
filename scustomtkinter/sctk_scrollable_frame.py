@@ -341,6 +341,14 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         bound too, via plain winfo_children() recursion -- no furniture
         filtering concern exists at that depth, since those are ordinary
         user-placed content widgets and their own sub-components.
+        FIX: an earlier version also never bound the scrollbar itself.
+        self._scrollbar is a SIBLING of _parent_canvas (both children of
+        _parent_frame), not a descendant of self (the content area) --
+        get_children()'s recursion, which walks down from self, never
+        reaches it. Confirmed by direct testing: binding _parent_frame
+        doesn't help either, since Tk doesn't bubble events from an
+        unrelated sibling up through an ancestor's own independent binding.
+        Scrollbar and its own descendants are now explicitly added.
         """
         if bind and not self._USE_CUSTOM_SCROLL_BINDING:
             return
@@ -368,6 +376,9 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
 
         for child in self.get_children():
             _collect_descendants(child, layers_to_bind)
+
+        if hasattr(self, "_scrollbar") and self._scrollbar is not None:
+            _collect_descendants(self._scrollbar, layers_to_bind)
 
         for target_layer in layers_to_bind:
             for event_str in SCROLL_EVENTS:
