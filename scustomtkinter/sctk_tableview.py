@@ -49,8 +49,16 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         # in this project: required keys must be present in both the
         # top-level theme block and disabled_map, or construction raises
         # immediately with a clear message naming exactly what's missing.
-        for required_key in ("header_bg_color", "header_text_color", "header_font",
-                              "cell_text_color", "cell_font", "grid_line_color"):
+        #
+        # Colors need a disabled_map entry too, since they visually change
+        # when disabled. Fonts don't -- BUG, confirmed by direct testing: an
+        # earlier version of this validation incorrectly bundled
+        # header_font/cell_font into this same loop, requiring them in
+        # disabled_map too, even though no widget in this project uses a
+        # disabled-state font variant (fonts are always top-level-only).
+        # Split into two separate loops below to fix this.
+        for required_key in ("header_bg_color", "header_text_color",
+                              "cell_text_color", "grid_line_color"):
             if self._switch_theme_profile.get(required_key) is None:
                 raise KeyError(
                     f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
@@ -59,6 +67,14 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
             if self._custom_disabled_map.get(required_key) is None:
                 raise KeyError(
                     f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                )
+
+        # Fonts only need to exist at the top level.
+        for required_key in ("header_font", "cell_font"):
+            if self._switch_theme_profile.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
                 )
 
         # cell_bg_color/cell_alt_bg_color are different: they have a genuine
