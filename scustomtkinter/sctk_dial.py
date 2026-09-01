@@ -10,15 +10,41 @@ import math
 import time
 import ast
 import customtkinter as ctk
+from . import themeable_widget as _tw
 from .themeable_widget import ThemeableWidget
 class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     """Abstract Base Class for theme-adaptive mechanical rotary encoder widgets."""
 
     def __init__(self, master=None, divisions=24, state="normal", width=120, height=120, **kw):
         ThemeableWidget.__init__(self, kw)
-        self._local_defaults = dict(self.final_kw)
-        print(
-            f"[{self.__class__.__name__}] final_kw={sorted(self.final_kw)}  disabled_map={sorted(self._widget_disabled_map)}")
+        # THEME SOURCE -- read the RAW block, not final_kw.
+        #
+        # ThemeableWidget maintains a CUSTOM_VECTOR_KEYS set (dial_color,
+        # shadow_color, text_color, pointer_color, pointer_glow_color,
+        # diameter, ...) which it deliberately strips out of final_kw for
+        # vector widgets like this one, so they never reach the native
+        # CTkFrame constructor and raise ValueError. That stripping is
+        # correct. What was wrong was reading colours back out of final_kw
+        # afterwards: those keys were never in there.
+        #
+        # FIX: every `.get(key) or ("#hex", "#hex")` in the old draw code was
+        # therefore ALWAYS taking the hardcoded fallback -- this widget family
+        # has never rendered its configured theme colours at all. The values
+        # in sCTkThemes.json for dial_color, shadow_color, text_color and
+        # pointer_glow_color were decorative. Surfaced by _validate_theme_keys()
+        # the first time fail-loud checking was applied here.
+        #
+        # Module-attribute access rather than a direct name import, because
+        # load_initial_framework_themes() REBINDS GLOBAL_THEME_REGISTRY on
+        # load; a `from ... import GLOBAL_THEME_REGISTRY` would capture the
+        # empty dict that existed at import time.
+        raw_block = _tw.GLOBAL_THEME_REGISTRY.get(self.__class__.__name__) or {}
+        raw_colors = {k: v for k, v in raw_block.items() if not isinstance(v, dict)}
+        self._local_defaults = ThemeableWidget._convert_lists_to_tuples(raw_colors)
+        # final_kw still wins where it has a value, so constructor overrides
+        # and non-vector theme keys keep their existing precedence.
+        self._local_defaults.update(self.final_kw)
+
         self._custom_disabled_map = dict(self._widget_disabled_map)
         self._validate_theme_keys()
 
