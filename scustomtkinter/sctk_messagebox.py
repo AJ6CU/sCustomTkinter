@@ -4,7 +4,8 @@ sCTkMessage
 
 An advanced, themeable dialog window system subclassed from ctk.CTkToplevel.
 Supports customizable single prompt text or dual choice prompts returning boolean states.
-Derived from Selector class by Fastattack, 2024.
+Derived from Message class by Fastattack, 2024.
+https://github.com/fastattackv/MoreCustomTkinterWidget
 """
 import os
 import textwrap

@@ -1,6 +1,7 @@
 # Introduction
 
-This reference manual is split into the following sections:
+The next two sections provide information on Theming and Scrolling. Both important concepts to understand to best use this library.
+The rest of the manual is reference in nature and split into the following sections:
 * Containers
 * Controls and Display
 * Menus

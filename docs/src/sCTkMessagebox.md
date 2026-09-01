@@ -1,4 +1,5 @@
 ## sCTkMessagebox
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
 * [API Constructor Reference](#api-constructor-reference)

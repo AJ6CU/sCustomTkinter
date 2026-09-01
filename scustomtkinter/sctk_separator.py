@@ -6,8 +6,8 @@ An advanced Separator widget supporting custom section header text,
 dashed line patterns, corner roundness, and responsive orientation modes.
 Inherits cleanly and directly from ctk.CTkBaseClass to preserve native canvas draw engines.
 
-Derived from Selector class by Fastattack, 2024.
-https://github.com
+Derived from Separator class by Fastattack, 2024.
+https://github.com/fastattackv/MoreCustomTkinterWidgets
 """
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget

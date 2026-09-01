@@ -5,6 +5,9 @@ sCTkSelector
 An advanced theme-compliant, scrollable option tree selector widget.
 Pairs an optional high-contrast search field lane with a dynamic listing frame card
 to manage multi-state checkbox row configurations natively.
+
+Derived from Selector class by Fastattack, 2024.
+https://github.com/fastattackv/MoreCustomTkinterWidgets
 """
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget

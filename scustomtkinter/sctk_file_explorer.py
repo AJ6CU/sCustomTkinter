@@ -4,6 +4,9 @@ sCTkFileExplorer
 
 A theme-compliant, highly configurable custom file explorer wrapper component.
 Inherits cleanly and directly from ctk.CTkFrame to preserve native features.
+
+Derived from FileExplorer class by Fastattack, 2024.
+https://github.com/fastattackv/MoreCustomTkinterWidgets
 """
 import os
 import time

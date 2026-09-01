@@ -1,6 +1,6 @@
 ## sCTkSeparator
 
-(Derived from Selector class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com) )
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
 * [System Architecture Overview](#system-architecture-overview)
