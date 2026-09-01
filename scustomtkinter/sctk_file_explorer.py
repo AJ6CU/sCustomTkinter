@@ -251,7 +251,35 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         if hasattr(self, "path_to_show"): self._fill_explorer()
 
     def _configure_frame(self, event=None):
-        self.after(10, lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.after(10, self._update_scrollregion)
+
+    def _update_scrollregion(self):
+        """
+        Sets the canvas scroll region to the content bounds, expanded to at
+        least the visible canvas height.
+
+        FIX: this previously set scrollregion straight from bbox("all"). When
+        the files don't fill the frame that region is SHORTER than the visible
+        canvas, and Tk will still scroll within it -- so dragging the
+        scrollbar pushed the rows down to the bottom of the frame with empty
+        space above them, instead of doing nothing. Growing the region to the
+        canvas height when content is shorter leaves yview with nowhere to go,
+        which is the intended "content fits, so scrolling does nothing"
+        behavior.
+        """
+        try:
+            if not self.canvas.winfo_exists():
+                return
+            bounds = self.canvas.bbox("all")
+            if not bounds:
+                return
+            x0, y0, x1, y1 = bounds
+            visible_height = self.canvas.winfo_height()
+            if (y1 - y0) < visible_height:
+                y1 = y0 + visible_height
+            self.canvas.configure(scrollregion=(x0, y0, x1, y1))
+        except Exception:
+            pass
 
     def _user_path_changed(self, *args):
         if not self.change_path: return
