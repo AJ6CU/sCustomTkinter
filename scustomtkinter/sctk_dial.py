@@ -17,6 +17,8 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     def __init__(self, master=None, divisions=24, state="normal", width=120, height=120, **kw):
         ThemeableWidget.__init__(self, kw)
         self._local_defaults = dict(self.final_kw)
+        print(
+            f"[{self.__class__.__name__}] final_kw={sorted(self.final_kw)}  disabled_map={sorted(self._widget_disabled_map)}")
         self._custom_disabled_map = dict(self._widget_disabled_map)
         self._validate_theme_keys()
 
