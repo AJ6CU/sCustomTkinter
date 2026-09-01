@@ -16,13 +16,19 @@ overrides have been removed entirely for this reason (see
 themeable_widget.py's docstring); this widget owns all of its own runtime
 color-swapping logic.
 
-Unlike sCTkFrameLabeledPrimary/Secondary (which also wrap CTkScrollableFrame),
-this class has NO disabled-state concept at all -- there is no state() or
-get_state() here. This matches sCTkFrame's own "no disabled concept" design;
-disabling children placed inside this frame is entirely the caller's
-responsibility (see this project's own test harness for this widget, which
-maintains its own separate enabled/disabled flag and loops over
-get_children() to disable them individually).
+Unlike sCTkFrame (which has no disabled concept at all), this class DOES
+have a disabled state, via configure(state="disabled")/get_state(). That's
+justified here where it isn't for a plain frame: this widget owns real
+behavior to disable, not just colors. Disabling dims the border and the
+scrollbar and stops all scrolling -- wheel, trackpad, and scrollbar drag.
+
+It does NOT cascade to child widgets. Disabling children placed inside this
+frame is entirely the caller's responsibility, exactly as with the labeled
+frame variants -- loop over get_children() and configure(state=...) each one.
+
+state and scroll_enabled are independent axes; see _scroll_effective(). A
+frame explicitly set non-scrolling stays non-scrolling across a
+disable/enable round trip rather than being switched on by the state change.
 
 SCROLL BINDINGS ARE AUTOMATIC. __init__ binds <Map>, so scroll handling
 activates by itself the first time the widget becomes visible via
@@ -89,11 +95,13 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         ThemeableWidget.__init__ -- see that class's docstring for what it does,
         and just as importantly, what it no longer does).
       - Pygubu Designer property introspection for `fg_color`,
-        `label_fg_color`, `scrollbar_button_color`, and `border_color` via a
-        single-argument configure() call. Unlike most widgets in this
-        library, these never vary by state (this widget has no disabled
-        state at all), so the returned query tuple's `default` and `current`
-        positions are always identical.
+        `label_fg_color`, `scrollbar_button_color`, `border_color`, `state`,
+        and `scroll_enabled` via a single-argument configure() call. For the
+        color keys the returned tuple's `default` and `current` positions are
+        identical; for `state` and `scroll_enabled` they can differ, since
+        those two carry live runtime values.
+      - A disabled state (see module docstring): dims border and scrollbar
+        and stops all scroll input. Does not cascade to children.
       - Manual scrollbar re-theming: `scrollbar_button_color`/
         `scrollbar_button_hover_color` are pushed to the internal scrollbar
         directly, since they aren't automatically covered by a single
@@ -184,6 +192,51 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # here never leak back into the shared theme registry.
         self._local_defaults = dict(self.final_kw)
 
+        # 2a. Capture the disabled-state color map. Read from
+        # self._widget_disabled_map, NOT from final_kw: ThemeableWidget.__init__
+        # deliberately excludes "disabled_map" from final_kw, so reading it
+        # there yields an empty dict and every disabled lookup silently falls
+        # back -- the confirmed bug pattern fixed in sCTkSwitch, sCTkSpinbox,
+        # and sCTkTableview elsewhere in this project.
+        self._custom_disabled_map = dict(self._widget_disabled_map)
+
+        # 2b. Hard-fail on theme gaps rather than substituting a guessed
+        # color, matching the principle established across this project.
+        # Only the keys that actually change when disabled are required in
+        # disabled_map; fg_color deliberately is NOT among them (the content
+        # background stays put when disabled -- only the border and the now-
+        # inert scrollbar dim).
+        for required_key in ("border_color", "scrollbar_button_color"):
+            if self._local_defaults.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing "
+                    f"'{required_key}' at the top level of sCTkThemes.json."
+                )
+            if self._custom_disabled_map.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing "
+                    f"'{required_key}' in disabled_map."
+                )
+        if self._local_defaults.get("scrollbar_button_hover_color") is None:
+            raise KeyError(
+                f"'{self.__class__.__name__}' theme block is missing "
+                f"'scrollbar_button_hover_color' at the top level of sCTkThemes.json."
+            )
+
+        # 2c. State and scroll intent. Both must exist before step 4's
+        # _update_current_visual_state() call, which reads them.
+        #
+        # These are two INDEPENDENT axes, deliberately not collapsed into one.
+        # _state is the user-facing enabled/disabled presentation;
+        # _scroll_enabled is the developer's own intent about whether this
+        # frame should scroll at all. Effective scrolling is the AND of the
+        # two -- see _scroll_effective(). Because state changes never write
+        # to _scroll_enabled, a frame that was constructed or configured
+        # non-scrolling stays non-scrolling after a disable/enable round
+        # trip, instead of being silently switched on by the state change.
+        self._state = str(self._local_defaults.get("state", "normal"))
+        self._scroll_enabled = bool(self._local_defaults.get("scroll_enabled", True))
+
         # 3. Initialize CustomTkinter natively with the clean final kwargs array.
         # 3. Initialize CustomTkinter natively. Only forwards the subset of
         # final_kw that native CTkScrollableFrame actually accepts -- see this
@@ -213,13 +266,8 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # frame that doesn't scroll by default is a confusing thing to ship,
         # given what the widget's own name promises.
         #
-        # self._scroll_enabled is the single source of truth for "should this
-        # widget respond to scroll input", read here from final_kw so
-        # scroll_enabled=False can be passed straight to the constructor and
-        # take effect before <Map> ever fires. Not a native CTk keyword; the
-        # _NATIVE_CTKSCROLLABLEFRAME_KWARGS filter above already kept it out
-        # of super().__init__().
-        self._scroll_enabled = bool(self._local_defaults.get("scroll_enabled", True))
+        # _state and _scroll_enabled were both established in step 2c, since
+        # step 4 above needs them.
         self.bind("<Map>", self._on_map_auto_bind_scroll, add="+")
 
         # 6. Register lifecycle handshake hook, notifying Pygubu-style consumers
@@ -254,7 +302,50 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
             event: The Tkinter <Map> event. Accepted and ignored; present only
                 because Tkinter passes it to every bound callback.
         """
-        self._toggle_scroll_bindings(bind=self._scroll_enabled)
+        self._toggle_scroll_bindings(bind=self._scroll_effective())
+
+    def _scroll_effective(self) -> bool:
+        """
+        Whether this widget should actually respond to scroll input right now.
+
+        The AND of the two independent axes described in __init__ step 2c:
+
+            scroll_enabled | state     | scrolls?
+            ---------------+-----------+---------
+            True           | normal    | yes
+            True           | disabled  | no
+            False          | normal    | no
+            False          | disabled  | no
+
+        Every place that binds or unbinds routes through here rather than
+        reading either flag directly, so the two can't drift apart.
+
+        Returns:
+            True only if scrolling is both wanted and permitted.
+        """
+        return self._scroll_enabled and self._state == "normal"
+
+    def is_scrolling(self) -> bool:
+        """
+        Whether this widget currently responds to scroll input.
+
+        Distinct from cget("scroll_enabled"), which reports stored INTENT.
+        A frame with scroll_enabled=True that has been disabled via
+        configure(state="disabled") reports True from cget and False from
+        here -- that difference is the point: the intent survives the state
+        change so it can be restored when the state goes back to normal.
+
+        Returns:
+            The live effective scroll state.
+        """
+        return self._scroll_effective()
+
+    def get_state(self) -> str:
+        """
+        Returns the current state, "normal" or "disabled". Mirrors the same
+        accessor on sCTkFrameLabeledPrimary/Secondary.
+        """
+        return self._state
 
     def enable_scroll(self) -> None:
         """
@@ -363,6 +454,10 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                 pname = args[0]
                 if pname in ["fg_color", "label_fg_color", "scrollbar_button_color", "border_color"]:
                     return (pname, pname, pname, str(self._local_defaults.get(pname)), str(self._local_defaults.get(pname)))
+                if pname == "state":
+                    return (pname, pname, pname,
+                            str(self._local_defaults.get("state", "normal")),
+                            str(self._state))
                 if pname == "scroll_enabled":
                     # Unlike the color properties above, this one reports live
                     # state in the `current` position: `default` is the value
@@ -389,8 +484,18 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
             # Apply immediately rather than waiting for the next <Map>:
             # enable_scroll() on an already-visible widget has to take effect
             # now, and disable_scroll() has to tear bindings down now.
-            # _toggle_scroll_bindings() is idempotent either way.
-            self._toggle_scroll_bindings(bind=new_state)
+            # _toggle_scroll_bindings() is idempotent either way. Routed
+            # through _scroll_effective() so enable_scroll() on a widget
+            # that's currently state="disabled" records the intent without
+            # actually re-enabling scrolling behind the disabled presentation.
+            self._toggle_scroll_bindings(bind=self._scroll_effective())
+
+        # state is likewise this library's own property, not a native CTk one,
+        # and must be popped before the super() call for the same reason.
+        if "state" in kwargs:
+            self._state = str(kwargs.pop("state"))
+            self._toggle_scroll_bindings(bind=self._scroll_effective())
+            self._update_current_visual_state()
 
         # Re-checked after the pop: configure(scroll_enabled=...) on its own
         # leaves kwargs empty, and there's no reason to repaint for it.
@@ -425,6 +530,8 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         """
         if attribute_name == "scroll_enabled":
             return self._scroll_enabled
+        if attribute_name == "state":
+            return self._state
         return super().cget(attribute_name)
 
     def _update_current_visual_state(self) -> None:
@@ -437,11 +544,20 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         of resolving to a single color first, so CTk's native tracking can
         handle appearance-mode repaints without help from _set_appearance_mode.
         Every value here traces back to sCTkThemes.json; there are no
-        hardcoded colors in this method.
+        hardcoded colors in this method. The .get() calls carry no fallback
+        because __init__ already hard-failed on any missing key.
         """
+        is_disabled = self._state == "disabled"
+
+        def themed(key: str) -> Any:
+            """Disabled-state value when disabled and one exists, else normal."""
+            if is_disabled and self._custom_disabled_map.get(key) is not None:
+                return self._custom_disabled_map[key]
+            return self._local_defaults.get(key)
+
         config_payload = {}
         for key in ("fg_color", "border_color", "label_fg_color"):
-            val = self._local_defaults.get(key)
+            val = themed(key)
             if val is not None:
                 config_payload[key] = val
 
@@ -452,8 +568,13 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # by the configure() call above.
         if hasattr(self, "_scrollbar") and self._scrollbar:
             try:
-                normal_bar = self._local_defaults.get("scrollbar_button_color", ("#94A3B8", "#475569"))
-                normal_hover = self._local_defaults.get("scrollbar_button_hover_color", ("#64748B", "#334155"))
+                normal_bar = themed("scrollbar_button_color")
+                # When disabled the scrollbar is inert (drag is blocked), so
+                # it must not light up on hover either -- collapse hover to
+                # the same dimmed color rather than leaving the bright normal
+                # hover in place, which would falsely advertise it as live.
+                normal_hover = (normal_bar if is_disabled
+                                else self._local_defaults.get("scrollbar_button_hover_color"))
                 self._scrollbar.configure(button_color=normal_bar, button_hover_color=normal_hover)
 
                 if hasattr(self._scrollbar, "_draw"):
@@ -791,7 +912,11 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         """
         if not self._USE_CUSTOM_SCROLL_BINDING:
             return
-        self._toggle_scroll_bindings(bind=True)
+        # Routed through _scroll_effective() rather than forcing bind=True:
+        # composite widgets in this project call this after rebuilding their
+        # content, and a rebuild must not silently re-enable scrolling on a
+        # frame that is disabled or was explicitly set non-scrolling.
+        self._toggle_scroll_bindings(bind=self._scroll_effective())
 
     # =========================================================================
     # END UNCHANGED SCROLL-HANDLING METHODS
