@@ -47,9 +47,22 @@ log_viewport.pack(padx=20, pady=20, fill="both", expand=True)
 
 ### Scrolling and State
 
-Scroll bindings are **automatic**. The constructor binds `<Map>`, so scroll handling activates by itself the first time the widget becomes visible via `pack()`/`grid()`/`place()`, and again on any later remap (so content added while the frame was hidden is picked up when it reappears).
+Scroll bindings are **automatic** and self-maintaining. No activation call is needed, and content added after the widget is placed is picked up on its own.
 
-`<Map>` is used rather than binding directly in the constructor because the binding logic inspects the widget's real parent hierarchy via `winfo_parent()`, which isn't fully realized at construction time. `<Map>` is the earliest point at which it is.
+Getting that reliable took four independent mechanisms, each covering a gap the others don't. All are idempotent — bindings are always torn down before being rebuilt, so nothing accumulates no matter how often they fire.
+
+| Mechanism | Covers |
+|---|---|
+| `<Map>` on the widget | Later remaps, e.g. after `pack_forget()` then re-placement |
+| `<Map>` on `_parent_frame` | The widget the geometry manager actually sees |
+| `after_idle()` at construction | Initial activation, independent of mapping semantics |
+| `<Configure>`, debounced | Content added *after* activation |
+
+**Why `<Map>` alone isn't enough.** `CTkScrollableFrame` isn't the widget you place. It builds an internal `_parent_frame` and canvas, inserts *itself* into that canvas via `create_window()`, and overrides `pack()`/`grid()`/`place()` to operate on `_parent_frame`. So the widget is a canvas-window child, and may never receive `<Map>` the way an ordinarily-managed widget does. `after_idle()` is what actually establishes bindings in practice — it fires once Tk goes idle, after setup code has run and placement has happened, without depending on mapping at all.
+
+**Why the content rebind is needed.** Activation happens once, at a moment when the frame is usually still empty — callers construct, place, and *then* populate. Confirmed by live testing: a `sCTkTableview` bound at activation time collected 16 layers (frame, canvas, header cells) because `load_dataset()` hadn't run yet; the 32 data cells created afterwards were never bound, so the widget scrolled beside its rows but not over them. `<Configure>` fires when children change the frame's layout, so it catches every content-adding path without callers having to remember anything. It's debounced through `after_idle` because building a table fires it once per cell — one rebind instead of 32, run after the burst rather than during it, so it sees the finished tree.
+
+> **Do not replace `tk.Misc.bind(self, ...)` with `self.bind(...)` in this widget.** CustomTkinter overrides `CTkScrollableFrame.bind()` to forward every binding to `self._parent_canvas` instead of attaching it to the widget. An earlier version used `self.bind()`, and the binding never landed on the frame — scroll bindings were silently never installed, and the widget only appeared to scroll where native CustomTkinter's own global `bind_all` handler happened to cover for it. `tk.Misc.bind` called unbound reaches the real Tkinter implementation. This looks like a needless complication and is not.
 
 **`state` and `scroll_enabled` are two independent axes**, deliberately not collapsed into one. `state` is the user-facing enabled/disabled presentation; `scroll_enabled` is the developer's own intent about whether this frame should scroll at all. Effective scrolling is the AND of the two:
 
@@ -75,7 +88,7 @@ for item in many_items:
 frame.enable_scroll()
 ```
 
-Calling `disable_scroll()` before placement correctly suppresses the automatic `<Map>` activation rather than being overridden by it. Passing `scroll_enabled=False` to the constructor achieves the same starting state without the separate call.
+Calling `disable_scroll()` before placement correctly suppresses automatic activation rather than being overridden by it — every activation path routes through the same effective-state check. Passing `scroll_enabled=False` to the constructor achieves the same starting state without the separate call.
 
 ---
 
@@ -93,7 +106,7 @@ Calling `disable_scroll()` before placement correctly suppresses the automatic `
 | `winfo_children(include_private=False)` | `list` | By default, filters out children whose exact class name is `"CTkScrollbar"`, `"CTkCanvas"`, or `"Canvas"` — internal furniture this widget creates for its own scrolling machinery. **Confirmed correct by direct, live testing** — printing `get_children()` alongside the widget's internal `_parent_frame.winfo_children()` confirmed the real content widgets are found correctly by this method, and are *not* reachable via `_parent_frame` at all (they're nested deeper, inside the internal scrolling canvas). Pass `include_private=True` for the raw, unfiltered list. |
 | `get_children()` | `list` | Equivalent to `winfo_children(include_private=False)`. |
 | `get_all_children()` | `list` | Equivalent to `winfo_children(include_private=True)`. |
-| `_finalize_split_bindings()` | `None` | **Retained for compatibility; no longer required.** Calling this after placement was once mandatory. Existing callers are harmless — the underlying toggle is idempotent — but new code shouldn't need it. Composite widgets that rebuild their content dynamically (`sCTkFileExplorer`, `sCTkTableview`) do still call it deliberately, to bind rows created after the initial `<Map>`. It respects the current state rather than forcing scrolling on. |
+| `_finalize_split_bindings()` | `None` | **Retained for compatibility; no longer required.** Calling this after placement was once mandatory, and calling it after rebuilding content was the way to bind newly-created rows. The debounced `<Configure>` rebind now handles both automatically. Existing callers are harmless — the underlying toggle is idempotent — but new code shouldn't need it. It respects the current effective state rather than forcing scrolling on. |
 
 **On the scroll-handling itself:** the platform-specific event processing is maintainer-verified, hard-won working code, left untouched during this project's audit. It binds standard wheel and platform-specific touchpad events across multiple layers (this widget, its parent canvas if one exists, that canvas's own parent in turn, the scrollbar, and every content descendant at every depth) using regular, scoped `.bind()` calls — never `bind_all()`. It handles three genuinely different platform behaviors: Windows' `/120`-scaled `<MouseWheel>` delta, Linux's discrete `<Button-4>`/`<Button-5>` events (no continuous delta at all on Linux), and macOS's own `<MouseWheel>` scaling plus a separate, higher-precision `<TouchpadScroll>` synthetic event — which packs a two-axis scroll delta into a single 32-bit integer, decoded via bit-shifting into signed 16-bit X and Y components.
 
@@ -138,7 +151,13 @@ Only the keys that genuinely change when disabled are required in `disabled_map`
 
 **Validation is scoped to direct construction.** A subclass inheriting this class (such as `sCTkTableview`) reaches this constructor with `final_kw` built from *its own* theme block — `ThemeableWidget`'s run-once guard means the parent never rebuilds it. Validating this widget's keys against a subclass's block would demand scrollbar colors from, say, the `sCTkTableview` block and raise on every construction. Subclasses own their own theme contract and validate it themselves, so this check runs only for the concrete class.
 
-Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family.
+
+**Runtime color overrides persist.** `configure()` records any of the tracked theme keys — `fg_color`, `border_color`, `label_fg_color`, `scrollbar_button_color`, `scrollbar_button_hover_color` — into the widget's stored defaults *before* repainting, so an override survives the repaint, later state changes, and appearance-mode switches. This matches CustomTkinter's own semantics, where `configure(fg_color=...)` sticks.
+
+Two consequences worth knowing. Passing a single color replaces the theme's `(light, dark)` tuple for that key, so **that property stops following light/dark** — which is what asking for one specific color means. And `disabled_map` still wins while disabled: an override sets the *normal*-state color.
+
+`scroll_enabled` is deliberately excluded from this write-back, so the Pygubu query can report construction-time default and live value separately.
 
 **Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkScrollableFrame` directly, construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkScrollableFrame` actually accepts (confirmed directly against CustomTkinter's source, which has no fallback `**kwargs` at all — every parameter is explicitly named, so this matters more here than for most widgets).
 
@@ -192,6 +211,7 @@ if __name__ == "__main__":
 - **The scrollbar is made inert, not hidden.** When disabled it can't be dragged and doesn't respond to hover, but it stays visible. CustomTkinter's scrollbar has no native disabled state to lock, so there's no greyed-out appearance to switch to either. Hiding it entirely is a separate technique, used elsewhere in this project (`sCTkFrameLabeledPrimary`/`Secondary`) via color-matching and zero width.
 - **`winfo_children()`'s default filtering is a class-name check, not an identity check** — a plain, un-themed `customtkinter.CTkCanvas`/`CTkScrollbar`/`Canvas` added directly as a real child (not internal furniture) would be incorrectly filtered out too, since its class name matches. Themed `sCTk`-prefixed widgets are unaffected.
 - **`_parent_frame`'s `width`/`height` don't reflect the real configured size** — confirmed by direct testing: reading `width`/`height` through the outer widget correctly returns the real value, but the same properties read through the internal `_parent_frame` attribute always report `0`, regardless of the widget's actual size. `fg_color`, `border_color`, and `border_width` are reliable through either path; `width`/`height` are not. There's no current code path in this widget that relies on `_parent_frame` for sizing, so this is a trap for future changes, not an active bug.
+- **The debounced rebind also runs on genuine resizes.** `<Configure>` doesn't distinguish "a child was added" from "the window was dragged", so resizing rebinds too. It's one coalesced pass rather than one per event, but on a very large content tree it is not free.
 - **The nested-frame boundary guard is reasoned, not yet live-tested.** The logic mirrors native CustomTkinter's own guard and is straightforward, but an actual nested scrollable frame (or an `sCTkSelector`/`sCTkTableview` placed inside another scrollable frame) hasn't been exercised against it yet.
 - **A separate `Canvas` + scrollbar placed inside this frame is not guarded.** The nested-frame boundary check keys on `CTkScrollableFrame` specifically. An independent scrolling region built directly on a plain `Canvas` would still be walked into and bound to this frame's handler, stacking an unwanted scroll behavior on top of its own. Guarding this would need an explicit opt-out convention, since a plain `Canvas` has no generic way to declare itself an independent scroll region.
 - **Single-argument color queries return `str(value)`**, where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. A known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.

@@ -67,8 +67,9 @@ import tkinter as tk
 from typing import Any, Optional
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
+from .sctk_scroll_mixin import ScrollBindingMixin
 
-class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
+class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableWidget):
     """Themeable scrollable viewport container.
 
     RESOLVED INVESTIGATION -- see _USE_CUSTOM_SCROLL_BINDING below. This
@@ -277,151 +278,90 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # 4. Apply initial theming.
         self._update_current_visual_state()
 
-        # FIX: accumulator state for _process_mac_touchpad_scroll's
-        # threshold-gated scrolling -- see that method's docstring. Ported
-        # from a separate, confirmed-smooth reference implementation
-        # (sCTkScrollbar/sCTkScrollArea) after direct A/B testing showed the
-        # per-event scroll approach previously used here caused a
-        # hang-then-catch-up pattern on real trackpad hardware that this
-        # accumulator approach does not.
-        self._touchpad_accumulated_delta = 0.0
-        self._touchpad_last_direction = 0
+        # Touchpad accumulator state, owned by ScrollBindingMixin. Must run
+        # before any binding happens.
+        self._init_scroll_state()
 
-        # 5. Scroll activation. Bindings now come up automatically the first
-        # (and every) time this widget actually becomes visible via
-        # pack()/grid()/place() -- see _on_map_auto_bind_scroll()'s docstring.
-        # An earlier version required the caller to remember a separate,
-        # manual _finalize_split_bindings() call after placement; a scrollable
-        # frame that doesn't scroll by default is a confusing thing to ship,
-        # given what the widget's own name promises.
+        # 5. Scroll activation. Bindings come up automatically -- no caller
+        # action required. An earlier version needed a manual
+        # _finalize_split_bindings() call after placement; a scrollable frame
+        # that doesn't scroll by default is a confusing thing to ship, given
+        # what the widget's own name promises.
         #
         # _state and _scroll_enabled were both established in step 2c, since
         # step 4 above needs them.
         #
-        # CRITICAL -- tk.Misc.bind, NOT self.bind. CustomTkinter overrides
-        # CTkScrollableFrame.bind() to forward every binding to
-        # self._parent_canvas instead of attaching it to this widget. An
-        # earlier version of this line used self.bind(), so the <Map> binding
-        # never landed on the frame and the handler below never ran: scroll
-        # bindings were silently never installed, and the widget only appeared
-        # to scroll where native CTk's own global bind_all handler happened to
-        # cover for it. Confirmed by live testing -- a manual
-        # _toggle_scroll_bindings(bind=True) after startup made scrolling work
-        # immediately, proving the bindings had simply never been established.
-        #
-        # Calling tk.Misc.bind unbound reaches the real Tkinter implementation
-        # and attaches to this widget, which is what <Map> has to observe.
-        tk.Misc.bind(self, "<Map>", self._on_map_auto_bind_scroll, add="+")
+        # ScrollBindingMixin installs all four activation mechanisms -- <Map>
+        # on this widget, <Map> on _parent_frame, after_idle(), and the
+        # debounced <Configure> content rebind -- and documents why each is
+        # needed. _parent_frame is passed because it is the widget the
+        # geometry manager actually sees; this widget itself is a canvas-window
+        # child and may never receive <Map> at all.
+        self._install_scroll_activation(
+            extra_map_widget=getattr(self, "_parent_frame", None))
 
-        # SECOND, INDEPENDENT ACTIVATION PATH.
-        #
-        # <Map> alone proved unreliable here. CTkScrollableFrame is not the
-        # widget that actually gets packed: it builds an internal
-        # _parent_frame plus a canvas, places ITSELF inside that canvas via
-        # create_window(), and overrides pack()/grid()/place() to operate on
-        # _parent_frame. So `self` is a canvas-window child, and may never
-        # receive <Map> the way an ordinarily-managed widget does.
-        #
-        # after_idle() fires once Tk goes idle -- after all module-level setup
-        # code has run and pack() has been called, but before the window is
-        # displayed. That's a reliable moment to bind, and it doesn't depend
-        # on any mapping semantics. Both paths are kept because
-        # _toggle_scroll_bindings() is idempotent, and <Map> still usefully
-        # re-binds on a later remap after pack_forget()/grid_forget().
-        #
-        # _parent_frame is the widget the geometry manager actually sees, so
-        # it gets a <Map> binding too.
+    # ------------------------------------------------------------------
+    # ScrollBindingMixin contract
+    # ------------------------------------------------------------------
+    def _scroll_target(self):
+        """
+        The widget to scroll: this frame's parent canvas, resolved through the
+        Tk widget path rather than a CustomTkinter private attribute.
+
+        Returns:
+            The canvas, or None if the hierarchy isn't realized yet.
+        """
         try:
-            if hasattr(self, "_parent_frame") and self._parent_frame is not None:
-                tk.Misc.bind(self._parent_frame, "<Map>", self._on_map_auto_bind_scroll, add="+")
+            parent_widget = self.nametowidget(self.winfo_parent())
+            if parent_widget and parent_widget.__class__.__name__ == "Canvas":
+                return parent_widget
         except Exception:
             pass
-        self.after_idle(self._on_map_auto_bind_scroll)
+        return None
 
-        # CONTENT-CHANGE REBIND.
-        #
-        # Activation above happens once, at a moment when the frame may still
-        # be empty. Confirmed by live testing: a Tableview bound at <Map> time
-        # collected 16 layers -- the frame, canvas and header cells -- because
-        # load_dataset() hadn't run yet. The 32 data cells created afterwards
-        # were never bound, so the widget scrolled beside its rows but not
-        # over them. Content added after activation is the normal case, not an
-        # edge case: callers construct, place, and then populate.
-        #
-        # <Configure> fires whenever children change the frame's layout, so it
-        # catches every content-adding path without callers having to remember
-        # a manual call. It's debounced through after_idle because building a
-        # table fires it once per cell -- 32 rebinds where one will do.
-        self._scroll_rebind_pending = False
-        tk.Misc.bind(self, "<Configure>", self._schedule_scroll_rebind, add="+")
-
-    def _schedule_scroll_rebind(self, event: Any = None) -> None:
+    def _scroll_layers(self):
         """
-        Requests a scroll rebind, coalescing bursts into a single pass.
+        Every widget that should respond to a scroll event over this frame:
+        the frame itself, its parent canvas and that canvas's own parent, the
+        internal scrollbar, and the full content tree.
 
-        Bound to <Configure>, which fires once per child added. The pending
-        flag means a burst of additions schedules exactly one rebind, run
-        after the burst finishes rather than during it -- so the rebind sees
-        the finished widget tree, not a partial one.
+        The content walk stops at nested CTkScrollableFrame boundaries -- see
+        ScrollBindingMixin._collect_scroll_descendants().
 
-        Args:
-            event: The Tkinter <Configure> event. Accepted and ignored.
+        Returns:
+            An ordered, deduplicated list of widgets.
         """
-        if self._scroll_rebind_pending:
-            return
-        self._scroll_rebind_pending = True
-        try:
-            self.after_idle(self._run_scheduled_scroll_rebind)
-        except Exception:
-            # Widget destroyed mid-flight; nothing to rebind.
-            self._scroll_rebind_pending = False
+        layers = [self]
 
-    def _run_scheduled_scroll_rebind(self) -> None:
-        """Executes a coalesced rebind. See _schedule_scroll_rebind()."""
-        self._scroll_rebind_pending = False
-        try:
-            if not self.winfo_exists():
-                return
-        except Exception:
-            return
-        # Routed through the same handler as the initial activation so both
-        # paths stay identical -- there is deliberately no separate rebind
-        # logic to drift out of sync.
-        self._on_map_auto_bind_scroll(None)
+        canvas = self._scroll_target()
+        if canvas is not None:
+            layers.append(canvas)
+            try:
+                grandparent = self.nametowidget(canvas.winfo_parent())
+                if grandparent:
+                    layers.append(grandparent)
+            except Exception:
+                pass
 
-        # 6. Register lifecycle handshake hook, notifying Pygubu-style consumers
-        # that construction is complete.
-        self._finalize_themeable_lifecycle()
+        # The scrollbar is a SIBLING of the canvas, not a descendant of this
+        # frame, so the content walk below would never reach it -- it has to
+        # be added explicitly or the wheel does nothing while the pointer is
+        # over the scrollbar itself.
+        if getattr(self, "_scrollbar", None) is not None:
+            self._collect_scroll_descendants(self._scrollbar, layers)
 
-    def _on_map_auto_bind_scroll(self, event: Any = None) -> None:
-        """
-        Bound to <Map> in __init__ -- fires automatically the first time, and
-        every subsequent time, this widget actually becomes visible via
-        pack()/grid()/place(). This is what makes scroll bindings automatic,
-        without the caller needing to remember a separate call.
+        self._collect_scroll_descendants(self, layers)
+        return layers
 
-        Deliberately re-fires on every remap, not just the first: if this
-        widget is later pack_forget()'d/grid_forget()'d and then re-placed
-        (e.g. after new content was added while it was hidden), this re-runs
-        the full binding pass and picks up anything new.
-        _toggle_scroll_bindings()'s unbind-then-rebind pattern makes repeated
-        calls safe, with no risk of duplicate bindings piling up.
+    def _scroll_permitted(self) -> bool:
+        """The AND of scroll_enabled and state. See _scroll_effective()."""
+        return self._scroll_effective()
 
-        Respects an explicit scroll_enabled=False rather than silently
-        overriding it -- but does NOT simply return early in that case. When
-        scrolling is disabled this still runs a full pass, installing the
-        blocking handlers described in _toggle_scroll_bindings(bind=False).
-        That matters for the construct-then-disable-then-pack ordering: at
-        the time disable_scroll() is called before placement, the widget's
-        parent hierarchy isn't realized and get_children() is typically
-        empty, so that earlier pass has almost nothing to install onto. This
-        is the first moment the real layer list exists.
+    def _scroll_drag_targets(self):
+        """The internal scrollbar, whose dragging is blocked when disabled."""
+        bar = getattr(self, "_scrollbar", None)
+        return [bar] if bar is not None else []
 
-        Args:
-            event: The Tkinter <Map> event. Accepted and ignored; present only
-                because Tkinter passes it to every bound callback.
-        """
-        self._toggle_scroll_bindings(bind=self._scroll_effective())
 
     def _scroll_effective(self) -> bool:
         """
@@ -505,7 +445,7 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         Blocks native CTk's own global mouse-wheel handling as well as this
         file's custom bindings, and blocks click-and-drag on the internal
         scrollbar -- see _toggle_scroll_bindings(bind=False) and
-        _set_scrollbar_drag_blocked() for the two mechanisms involved.
+        ScrollBindingMixin._set_scroll_drag_blocked() for the two mechanisms.
 
         NOTE: the scrollbar remains VISIBLE, just inert -- it can't be
         dragged, but it isn't hidden. CustomTkinter's scrollbar has no
@@ -734,311 +674,6 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     # docstring. Do not modify without extensive real-device testing.
     # =========================================================================
 
-    def _toggle_scroll_bindings(self, bind=True):
-        """The parent canvas intercept engine routing mouse wheels and touchpad events [1.1].
-
-        INTERNAL. Callers outside this class should use enable_scroll() /
-        disable_scroll() or configure(scroll_enabled=...) instead. This method
-        only manipulates bindings; it does NOT update self._scroll_enabled, so
-        calling it directly with bind=False leaves that flag stale and the
-        next <Map> will happily rebind. The public entry points set the flag
-        and call this, in that order, which is why they're the supported path.
-
-        Args:
-            bind: True (re)establishes every scroll binding -- safe to call
-                repeatedly, since existing bindings are always removed first
-                before any new ones are added, so nothing accumulates or
-                duplicates. False removes every binding and adds nothing back.
-
-        EXPERIMENTAL: gated on _USE_CUSTOM_SCROLL_BINDING -- see class
-        docstring. FIX: an earlier version of this gate lived only in
-        _finalize_split_bindings(), which callers could bypass entirely by
-        calling this method directly -- meaning setting the toggle to False
-        had no effect at all when it was reached that way. Moved here, into
-        this method itself, so the toggle is enforced regardless of which
-        entry point is used.
-
-        FIX: an earlier version only bound self.get_children() -- DIRECT
-        children, one level deep. A composite widget like sCTkEntryPrimary
-        isn't a single Tk widget under the hood; it has its own internal
-        sub-structure. If the cursor was over a sub-component that never got
-        individually bound, the scroll event simply never fired there at
-        all -- Tkinter doesn't bubble unbound events up to a parent's
-        binding. Ported from a separate, confirmed-smooth reference
-        implementation elsewhere in this project (sCTkScrollArea's
-        propagate_scroll_events()), which recurses through every descendant
-        at every level, not just direct children. Now does the same here:
-        get_children()'s existing top-level furniture filtering (excluding
-        this widget's own internal CTkScrollbar/CTkCanvas) is preserved for
-        the first level, then every child's own full descendant tree is
-        bound too, via plain winfo_children() recursion -- no furniture
-        filtering concern exists at that depth, since those are ordinary
-        user-placed content widgets and their own sub-components.
-        FIX: an earlier version also never bound the scrollbar itself.
-        self._scrollbar is a SIBLING of _parent_canvas (both children of
-        _parent_frame), not a descendant of self (the content area) --
-        get_children()'s recursion, which walks down from self, never
-        reaches it. Confirmed by direct testing: binding _parent_frame
-        doesn't help either, since Tk doesn't bubble events from an
-        unrelated sibling up through an ancestor's own independent binding.
-        Scrollbar and its own descendants are now explicitly added.
-        """
-        if bind and not self._USE_CUSTOM_SCROLL_BINDING:
-            return
-        SCROLL_EVENTS = ["<MouseWheel>", "<TouchpadScroll>", "<Button-4>", "<Button-5>"]
-        layers_to_bind = [self]
-        try:
-            parent_path = self.winfo_parent()
-            parent_widget = self.nametowidget(parent_path)
-            if parent_widget and parent_widget.__class__.__name__ == "Canvas":
-                layers_to_bind.append(parent_widget)
-                grandparent_path = parent_widget.winfo_parent()
-                grandparent_widget = self.nametowidget(grandparent_path)
-                if grandparent_widget: layers_to_bind.append(grandparent_widget)
-        except Exception:
-            pass
-
-        def _collect_descendants(widget, collected):
-            # FIX: stop the recursion at a nested CTkScrollableFrame boundary
-            # (covers sCTkScrollableFrame and anything built on it, such as
-            # sCTkSelector/sCTkTableview). Without this, an inner scrollable
-            # frame placed inside an outer one would have its canvas,
-            # scrollbar, and entire content tree bound to the OUTER frame's
-            # handler as well as its own -- and since every bind below uses
-            # add="+", both handlers fire on the same event, scrolling both
-            # frames at once. Native CTk guards the same boundary in
-            # _check_if_valid_scroll (comparing _parent_canvas identity); this
-            # is the equivalent for the custom binding system.
-            if widget is not self and isinstance(widget, ctk.CTkScrollableFrame):
-                return
-            if widget not in collected:
-                collected.append(widget)
-            try:
-                for child in widget.winfo_children():
-                    _collect_descendants(child, collected)
-            except Exception:
-                pass
-
-        for child in self.get_children():
-            _collect_descendants(child, layers_to_bind)
-
-        if hasattr(self, "_scrollbar") and self._scrollbar is not None:
-            _collect_descendants(self._scrollbar, layers_to_bind)
-
-        for target_layer in layers_to_bind:
-            for event_str in SCROLL_EVENTS:
-                try: target_layer.unbind(event_str)
-                except Exception: pass
-
-                if bind:
-                    if "Touchpad" in event_str:
-                        if sys.platform == "darwin":
-                            target_layer.bind("<TouchpadScroll>", self._process_mac_touchpad_scroll, add="+")
-                    else:
-                        target_layer.bind(event_str, self._process_scroll_wheel, add="+")
-                else:
-                    # FIX: unbinding alone does NOT stop this frame scrolling.
-                    # Native CTkScrollableFrame.__init__ installs its own
-                    # bind_all("<MouseWheel>") handler, which is entirely
-                    # independent of this file's custom system and survives
-                    # any unbind() here -- confirmed empirically earlier in
-                    # this project's audit, where disabling the custom system
-                    # left mouse-wheel scrolling fully working via native's
-                    # path while killing the trackpad channel completely.
-                    #
-                    # unbind_all() is not an option: bind_all is APPLICATION-
-                    # global, so it would disable scrolling for every other
-                    # scrollable frame in the app too.
-                    #
-                    # Instead, install a handler that returns "break". Tk
-                    # dispatches bindings by bindtag in order -- widget,
-                    # class, toplevel, then "all" -- and bind_all lands on
-                    # that final "all" tag. A widget-level handler returning
-                    # "break" halts the chain before it gets there, so
-                    # native's global handler never sees events originating
-                    # inside this frame, while remaining untouched for every
-                    # other widget in the application.
-                    try:
-                        if "Touchpad" in event_str:
-                            if sys.platform == "darwin":
-                                target_layer.bind("<TouchpadScroll>", self._block_scroll_event, add="+")
-                        else:
-                            target_layer.bind(event_str, self._block_scroll_event, add="+")
-                    except Exception:
-                        pass
-
-        # Scrollbar dragging is a separate input channel from wheel/trackpad
-        # events and needs its own mechanism -- see
-        # _set_scrollbar_drag_blocked() for why unbind() and add="+" both
-        # fail here.
-        self._set_scrollbar_drag_blocked(not bind)
-
-    def _block_scroll_event(self, event: Any = None) -> str:
-        """
-        Swallows a scroll event so it never reaches native CTk's global
-        bind_all handler. Installed on every layer by
-        _toggle_scroll_bindings(bind=False); see that method for why merely
-        unbinding is insufficient.
-
-        Args:
-            event: The Tkinter scroll event. Accepted and ignored.
-
-        Returns:
-            "break", which tells Tk to stop processing this event -- no later
-            bindtag in the chain, including "all", will fire for it.
-        """
-        return "break"
-
-    # Drag-blocking bindtag, unique per instance so two scrollable frames in
-    # the same application can be disabled independently.
-    @property
-    def _drag_block_tag(self) -> str:
-        return f"sCTkScrollDragBlock{id(self)}"
-
-    def _set_scrollbar_drag_blocked(self, blocked: bool) -> None:
-        """
-        Blocks or restores click-and-drag on this widget's internal scrollbar.
-
-        Deliberately does NOT use unbind(). Tk's unbind() removes EVERY
-        binding for an event on a widget, not just ours -- calling it on the
-        scrollbar's <Button-1> would destroy CTkScrollbar's own drag handler
-        permanently, with no way for enable_scroll() to restore it. Binding a
-        blocker with add="+" doesn't work either: handlers on one widget fire
-        in the order they were added, and CTk's was added during its own
-        construction, so ours would run after the drag had already been
-        handled -- returning "break" at that point is too late.
-
-        Uses bindtags instead, which is the mechanism Tk provides for exactly
-        this. Every widget has an ordered list of tags (by default: the widget
-        itself, its class, its toplevel, then "all"), and bindings fire in
-        that order. Inserting a private tag at the FRONT means the blocker
-        below runs before any of CTk's own bindings, so "break" stops them
-        before they execute. Restoring is just removing the tag again --
-        CTk's bindings are never touched at any point.
-
-        The tag name embeds id(self), so disabling one frame has no effect on
-        any other scrollable frame in the same application.
-
-        Args:
-            blocked: True installs the block, False removes it.
-        """
-        if not hasattr(self, "_scrollbar") or self._scrollbar is None:
-            return
-
-        tag = self._drag_block_tag
-        DRAG_EVENTS = ("<Button-1>", "<B1-Motion>", "<ButtonRelease-1>")
-
-        # Class-level bindings for the private tag. Safe to (re)establish:
-        # bind_class on a tag nothing else uses can't collide with anything.
-        for event_str in DRAG_EVENTS:
-            try:
-                self.bind_class(tag, event_str, self._block_scroll_event)
-            except Exception:
-                pass
-
-        # The scrollbar is a CTk composite -- the actual click lands on its
-        # internal canvas, not the outer frame -- so the tag has to go on the
-        # scrollbar and everything inside it.
-        targets = [self._scrollbar]
-        try:
-            targets.extend(self._scrollbar.winfo_children())
-        except Exception:
-            pass
-
-        for widget in targets:
-            try:
-                tags = list(widget.bindtags())
-                if blocked and tag not in tags:
-                    widget.bindtags(tuple([tag] + tags))
-                elif not blocked and tag in tags:
-                    widget.bindtags(tuple(t for t in tags if t != tag))
-            except Exception:
-                pass
-
-    def _process_mac_touchpad_scroll(self, event):
-        """
-        Processes Apple high-precision touch masks on the true master canvas [1.1].
-
-        FIX: confirmed by direct testing that trackpad gestures on this
-        system generate ONLY <TouchpadScroll> events, never <MouseWheel> --
-        the earlier double-firing/competing-systems theory is disproven
-        (disabling this widget's own custom scroll system entirely produced
-        zero trackpad response, while an external mouse's wheel kept working
-        throughout via native CTk's own inherited handling). This method is
-        the sole channel for trackpad scrolling, not a redundant addition.
-
-        FIX: an earlier version called yview_scroll() immediately on every
-        single event, using a scroll amount that discarded delta_y's actual
-        magnitude entirely (a fixed +/-3 regardless of whether delta_y was 1
-        or 14+). Confirmed by direct A/B testing against a separate,
-        independently-working reference implementation
-        (sCTkScrollbar/sCTkScrollArea, elsewhere in this project) that
-        scrolling immediately on every rapid-fire event -- real trackpad
-        gestures were observed generating events roughly every 10ms during
-        fast movement -- causes a hang-then-catch-up pattern, while an
-        accumulate-then-threshold-gate approach does not. Replaced the
-        per-event immediate-scroll logic with accumulation: raw delta_y is
-        summed across events, and yview_scroll() only fires once the running
-        total crosses a threshold, then resets to zero. Faster gestures
-        naturally cross the threshold more often, so overall scroll rate
-        still scales with gesture speed without needing to vary the size of
-        each individual scroll call. Direction reversal immediately resets
-        the accumulator, so a quick reversal doesn't inherit leftover
-        momentum from the opposite direction.
-        """
-        try:
-            parent_widget = self.nametowidget(self.winfo_parent())
-            if parent_widget and hasattr(parent_widget, "yview_scroll"):
-                delta_x, delta_y = self._decode_mac_touchpad_delta(event.delta)
-                if delta_y != 0:
-                    current_tick_direction = 1 if delta_y > 0 else -1
-                    if current_tick_direction != self._touchpad_last_direction and self._touchpad_last_direction != 0:
-                        self._touchpad_accumulated_delta = 0.0
-                    self._touchpad_last_direction = current_tick_direction
-
-                    self._touchpad_accumulated_delta += delta_y
-
-                    # Tunable -- larger value = more decimation of the raw
-                    # high-resolution delta stream before a scroll actually
-                    # happens. Ported from the confirmed-smooth reference
-                    # implementation's own threshold value; adjust this one
-                    # constant while testing to find what feels right.
-                    TOUCHPAD_ACCUMULATION_THRESHOLD = 12.0
-                    if abs(self._touchpad_accumulated_delta) >= TOUCHPAD_ACCUMULATION_THRESHOLD:
-                        scaled_scroll = -1 if self._touchpad_accumulated_delta > 0 else 1
-                        parent_widget.yview_scroll(scaled_scroll, "units")
-                        self._touchpad_accumulated_delta = 0.0
-        except Exception:
-            pass
-
-    def _process_scroll_wheel(self, event):
-        """Processes cross-platform standard mouse wheels and physical tuning knobs [1.1]."""
-        try:
-            parent_widget = self.nametowidget(self.winfo_parent())
-            if parent_widget and hasattr(parent_widget, "yview_scroll"):
-                sys_platform = platform.system()
-                if sys_platform == "Darwin":
-                    delta = event.delta
-                    MAC_SCROLL_SENSITIVITY = 3
-                    scaled_scroll = int(-MAC_SCROLL_SENSITIVITY * delta) if abs(delta) >= 1 else (
-                        -MAC_SCROLL_SENSITIVITY if delta > 0 else MAC_SCROLL_SENSITIVITY)
-                    parent_widget.yview_scroll(scaled_scroll, "units")
-                elif sys_platform == "Linux":
-                    if event.num == 4: parent_widget.yview_scroll(-1, "units")
-                    elif event.num == 5: parent_widget.yview_scroll(1, "units")
-                else:
-                    parent_widget.yview_scroll(int(-1 * (event.delta / 120)), "units")
-        except Exception:
-            pass
-
-    def _decode_mac_touchpad_delta(self, raw_delta):
-        """DIAL-VERIFIED PHYSICS MASK: Decodes macOS touchpad bitmasks [1.1]."""
-        raw = raw_delta & 0xFFFFFFFF
-        delta_x = (raw >> 16) & 0xFFFF
-        if delta_x >= 0x8000: delta_x -= 0x10000
-        delta_y = raw & 0xFFFF
-        if delta_y >= 0x8000: delta_y -= 0x10000
-        return delta_x, delta_y
 
     def _finalize_split_bindings(self):
         """

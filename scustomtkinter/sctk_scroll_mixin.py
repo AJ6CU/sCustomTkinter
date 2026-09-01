@@ -55,6 +55,7 @@ and may optionally override:
 Hosts must call _init_scroll_state() once, before any binding happens.
 """
 import sys
+import tkinter as tk
 import platform
 
 import customtkinter as ctk
@@ -119,6 +120,120 @@ class ScrollBindingMixin:
         """Initializes the touchpad accumulator. Call once, before binding."""
         self._touchpad_accumulated_delta = 0.0
         self._touchpad_last_direction = 0
+        self._scroll_rebind_pending = False
+
+    def _install_scroll_activation(self, extra_map_widget=None) -> None:
+        """
+        Establishes automatic scroll activation and content-change rebinding.
+
+        Call once from the host's __init__, after the widget hierarchy exists.
+        Requires _init_scroll_state() to have run first.
+
+        FOUR MECHANISMS, each covering a gap the others don't. All are
+        idempotent -- _toggle_scroll_bindings() always tears down before
+        rebuilding -- so overlapping coverage costs nothing:
+
+          <Map> on self          later remaps, e.g. pack_forget() then re-place
+          <Map> on extra widget  the widget the geometry manager actually sees
+          after_idle()           initial activation, independent of mapping
+          <Configure>, debounced content added AFTER activation
+
+        WHY <Map> ALONE ISN'T ENOUGH. CTkScrollableFrame is not the widget
+        that gets placed: it builds an internal _parent_frame plus a canvas,
+        inserts ITSELF into that canvas via create_window(), and overrides
+        pack()/grid()/place() to operate on _parent_frame. The widget is
+        therefore a canvas-window child and may never receive <Map> the way an
+        ordinarily-managed widget does. after_idle() is what actually
+        establishes bindings in practice -- it fires once Tk goes idle, after
+        setup code has run and placement has happened, with no dependence on
+        mapping semantics at all.
+
+        WHY THE CONTENT REBIND IS NEEDED. Activation happens once, at a moment
+        when the frame is usually still empty -- callers construct, place, and
+        THEN populate. Confirmed by live testing: an sCTkTableview bound at
+        activation time collected 16 layers (frame, canvas, header cells)
+        because load_dataset() hadn't run yet, and the 32 data cells created
+        afterwards were never bound, so it scrolled beside its rows but not
+        over them.
+
+        CRITICAL -- tk.Misc.bind, NOT self.bind. CustomTkinter overrides
+        CTkScrollableFrame.bind() to forward every binding to
+        self._parent_canvas instead of attaching it to the widget. An earlier
+        version used self.bind(), so bindings never landed on the frame and
+        scroll handling was silently never installed -- the widget only
+        appeared to scroll where native CTk's own global bind_all handler
+        happened to cover for it. Calling tk.Misc.bind unbound reaches the
+        real Tkinter implementation. This looks like a needless complication
+        and is not.
+
+        Args:
+            extra_map_widget: An additional widget to watch for <Map>,
+                typically the host's internal _parent_frame -- the widget the
+                geometry manager actually sees. Optional.
+        """
+        tk.Misc.bind(self, "<Map>", self._activate_scroll_bindings, add="+")
+
+        if extra_map_widget is not None:
+            try:
+                tk.Misc.bind(extra_map_widget, "<Map>", self._activate_scroll_bindings, add="+")
+            except Exception:
+                pass
+
+        try:
+            self.after_idle(self._activate_scroll_bindings)
+        except Exception:
+            pass
+
+        tk.Misc.bind(self, "<Configure>", self._schedule_scroll_rebind, add="+")
+
+    def _activate_scroll_bindings(self, event=None) -> None:
+        """
+        Binds or blocks scroll handling according to the host's current
+        permitted state. The single entry point every activation path uses,
+        so none of them can drift apart.
+
+        Deliberately does NOT return early when scrolling isn't permitted: it
+        runs a full pass to install the BLOCKING handlers described in
+        _toggle_scroll_bindings(). That matters for the
+        construct-then-disable-then-place ordering, where the earlier pass had
+        no realized hierarchy to install onto.
+
+        Args:
+            event: The Tkinter event, when called from a binding. Ignored.
+        """
+        self._toggle_scroll_bindings(bind=self._scroll_permitted())
+
+    def _schedule_scroll_rebind(self, event=None) -> None:
+        """
+        Requests a rebind, coalescing bursts into a single pass.
+
+        Bound to <Configure>, which fires once per child added. The pending
+        flag means a burst of additions schedules exactly one rebind, run
+        after the burst finishes rather than during it -- so the rebind sees
+        the finished widget tree, not a partial one. Building a table fires
+        <Configure> once per cell; this makes that one rebind instead of 32.
+
+        Args:
+            event: The Tkinter <Configure> event. Ignored.
+        """
+        if getattr(self, "_scroll_rebind_pending", False):
+            return
+        self._scroll_rebind_pending = True
+        try:
+            self.after_idle(self._run_scheduled_scroll_rebind)
+        except Exception:
+            # Widget destroyed mid-flight; nothing to rebind.
+            self._scroll_rebind_pending = False
+
+    def _run_scheduled_scroll_rebind(self) -> None:
+        """Executes a coalesced rebind. See _schedule_scroll_rebind()."""
+        self._scroll_rebind_pending = False
+        try:
+            if not self.winfo_exists():
+                return
+        except Exception:
+            return
+        self._activate_scroll_bindings(None)
 
     # ------------------------------------------------------------------
     # Layer collection
@@ -178,6 +293,16 @@ class ScrollBindingMixin:
         disabling one left the other scrolling normally with both a mouse
         wheel and a trackpad.
         """
+        # Hosts may expose _USE_CUSTOM_SCROLL_BINDING as a kill switch for the
+        # custom binding system, falling back to whatever native CustomTkinter
+        # provides. Checked here rather than at the call sites so it can't be
+        # bypassed by reaching this method through a different entry point --
+        # the exact bug that made the toggle ineffective in an earlier
+        # sCTkScrollableFrame revision. Defaults to enabled for hosts that
+        # don't define it.
+        if bind and not getattr(self, "_USE_CUSTOM_SCROLL_BINDING", True):
+            return
+
         layers = self._scroll_layers()
 
         for layer in layers:
