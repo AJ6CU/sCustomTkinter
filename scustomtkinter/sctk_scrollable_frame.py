@@ -384,9 +384,9 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                 return
         except Exception:
             return
-        # Routed through the activation handler rather than calling
-        # _toggle_scroll_bindings directly, so the temporary diagnostic sees
-        # rebinds too. Collapse to a direct call when that diagnostic goes.
+        # Routed through the same handler as the initial activation so both
+        # paths stay identical -- there is deliberately no separate rebind
+        # logic to drift out of sync.
         self._on_map_auto_bind_scroll(None)
 
         # 6. Register lifecycle handshake hook, notifying Pygubu-style consumers
@@ -422,20 +422,6 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                 because Tkinter passes it to every bound callback.
         """
         self._toggle_scroll_bindings(bind=self._scroll_effective())
-
-        # TEMPORARY DIAGNOSTIC -- remove once activation is confirmed working.
-        # Prints only when the bound-layer count CHANGES, so the <Configure>
-        # rebind doesn't flood the console on every resize. Watch for the
-        # count climbing as content is added: that's the rebind working.
-        try:
-            count = getattr(self, "_scroll_layer_count", None)
-            if count != getattr(self, "_scroll_layer_count_reported", None):
-                self._scroll_layer_count_reported = count
-                src = type(event.widget).__name__ if event is not None else "after_idle"
-                print(f"[ScrollActivate] {type(self).__name__} id={id(self)} via={src} "
-                      f"layers={count} effective={self._scroll_effective()}")
-        except Exception as exc:
-            print(f"[ScrollActivate] diagnostic failed: {exc}")
 
     def _scroll_effective(self) -> bool:
         """
@@ -885,10 +871,6 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # events and needs its own mechanism -- see
         # _set_scrollbar_drag_blocked() for why unbind() and add="+" both
         # fail here.
-        # Recorded for the temporary activation diagnostic in
-        # _on_map_auto_bind_scroll(); remove alongside it.
-        self._scroll_layer_count = len(layers_to_bind)
-
         self._set_scrollbar_drag_blocked(not bind)
 
     def _block_scroll_event(self, event: Any = None) -> str:
