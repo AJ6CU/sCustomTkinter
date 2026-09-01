@@ -113,6 +113,27 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
         # native layout bar safely. Applied once here rather than in
         # _apply_custom_theme_colors(), since neither changes with state --
         # re-pushing them on every repaint would be wasted work.
+        #
+        # NOTE: segmented_button_height is currently a NO-OP visually, and
+        # that is expected, not a bug. The height is genuinely applied --
+        # _segmented_button.cget("height") reports it back correctly -- but
+        # CTkTabview grids the segmented button into a row whose minsize comes
+        # from its own private spacing constants, and overlaps it with the
+        # page frame below to get the connected-tab look. A taller button is
+        # clipped by that row rather than expanding it; confirmed by direct
+        # testing with a height of 128, which reported back correctly and
+        # changed nothing on screen.
+        #
+        # Kept, and kept required in the theme, deliberately: it costs
+        # nothing, keeps the theme contract stable, and is already wired end
+        # to end, so if a future CustomTkinter release exposes the strip
+        # height only the application step changes. Making it work today would
+        # mean writing CTkTabview's private _top_spacing /
+        # _top_button_overhang and re-running _configure_grid(), a CTk
+        # internals dependency that could break on any upstream release.
+        #
+        # This is a CTkTabview layout constraint, NOT a segmented button
+        # limitation -- a standalone sCTkSegmentedButton honors height fine.
         if hasattr(self, "_segmented_button") and self._segmented_button:
             try:
                 self._segmented_button.configure(font=target_font, height=target_button_height)
@@ -350,3 +371,4 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
             try: super()._set_appearance_mode(mode_string)
             except Exception: pass
         self._apply_custom_theme_colors()
+

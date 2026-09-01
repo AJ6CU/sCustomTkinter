@@ -338,6 +338,57 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
             pass
         self.after_idle(self._on_map_auto_bind_scroll)
 
+        # CONTENT-CHANGE REBIND.
+        #
+        # Activation above happens once, at a moment when the frame may still
+        # be empty. Confirmed by live testing: a Tableview bound at <Map> time
+        # collected 16 layers -- the frame, canvas and header cells -- because
+        # load_dataset() hadn't run yet. The 32 data cells created afterwards
+        # were never bound, so the widget scrolled beside its rows but not
+        # over them. Content added after activation is the normal case, not an
+        # edge case: callers construct, place, and then populate.
+        #
+        # <Configure> fires whenever children change the frame's layout, so it
+        # catches every content-adding path without callers having to remember
+        # a manual call. It's debounced through after_idle because building a
+        # table fires it once per cell -- 32 rebinds where one will do.
+        self._scroll_rebind_pending = False
+        tk.Misc.bind(self, "<Configure>", self._schedule_scroll_rebind, add="+")
+
+    def _schedule_scroll_rebind(self, event: Any = None) -> None:
+        """
+        Requests a scroll rebind, coalescing bursts into a single pass.
+
+        Bound to <Configure>, which fires once per child added. The pending
+        flag means a burst of additions schedules exactly one rebind, run
+        after the burst finishes rather than during it -- so the rebind sees
+        the finished widget tree, not a partial one.
+
+        Args:
+            event: The Tkinter <Configure> event. Accepted and ignored.
+        """
+        if self._scroll_rebind_pending:
+            return
+        self._scroll_rebind_pending = True
+        try:
+            self.after_idle(self._run_scheduled_scroll_rebind)
+        except Exception:
+            # Widget destroyed mid-flight; nothing to rebind.
+            self._scroll_rebind_pending = False
+
+    def _run_scheduled_scroll_rebind(self) -> None:
+        """Executes a coalesced rebind. See _schedule_scroll_rebind()."""
+        self._scroll_rebind_pending = False
+        try:
+            if not self.winfo_exists():
+                return
+        except Exception:
+            return
+        # Routed through the activation handler rather than calling
+        # _toggle_scroll_bindings directly, so the temporary diagnostic sees
+        # rebinds too. Collapse to a direct call when that diagnostic goes.
+        self._on_map_auto_bind_scroll(None)
+
         # 6. Register lifecycle handshake hook, notifying Pygubu-style consumers
         # that construction is complete.
         self._finalize_themeable_lifecycle()
@@ -373,15 +424,16 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         self._toggle_scroll_bindings(bind=self._scroll_effective())
 
         # TEMPORARY DIAGNOSTIC -- remove once activation is confirmed working.
-        # Reports which path activated and how many layers were bound. A low
-        # layer count means only the frame/canvas machinery was found and no
-        # content widgets were bound, which is what "scrolls beside the rows
-        # but not over them" looks like.
+        # Prints only when the bound-layer count CHANGES, so the <Configure>
+        # rebind doesn't flood the console on every resize. Watch for the
+        # count climbing as content is added: that's the rebind working.
         try:
-            src = type(event.widget).__name__ if event is not None else "after_idle"
-            print(f"[ScrollActivate] {type(self).__name__} id={id(self)} via={src} "
-                  f"layers={getattr(self, '_scroll_layer_count', '?')} "
-                  f"effective={self._scroll_effective()}")
+            count = getattr(self, "_scroll_layer_count", None)
+            if count != getattr(self, "_scroll_layer_count_reported", None):
+                self._scroll_layer_count_reported = count
+                src = type(event.widget).__name__ if event is not None else "after_idle"
+                print(f"[ScrollActivate] {type(self).__name__} id={id(self)} via={src} "
+                      f"layers={count} effective={self._scroll_effective()}")
         except Exception as exc:
             print(f"[ScrollActivate] diagnostic failed: {exc}")
 

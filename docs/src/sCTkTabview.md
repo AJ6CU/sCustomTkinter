@@ -96,6 +96,7 @@ All four state paths — `state()`, `get_state()`, `cget("state")`, and `configu
 {
     "sCTkTabview": {
         "font": ["Arial", 15, "normal"],
+        "segmented_button_height": 36,
         "fg_color": ["#FFFFFF", "#111827"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
         "segmented_button_fg_color": ["#9E9E9E", "#111827"],
@@ -120,11 +121,11 @@ The split between the two blocks:
 | Keys | Required in |
 | :--- | :--- |
 | `text_color`, `segmented_button_fg_color`, `segmented_button_selected_color`, `segmented_button_unselected_color` | top level **and** `disabled_map` |
-| `segmented_button_selected_hover_color`, `segmented_button_unselected_hover_color`, `font` | top level only |
+| `segmented_button_selected_hover_color`, `segmented_button_unselected_hover_color`, `font`, `segmented_button_height` | top level only |
 
-The two hover colors deliberately have no `disabled_map` entry. A disabled tab bar must not light up under the cursor, so when disabled, hover collapses to the corresponding non-hover disabled color. There is no meaningful "dimmed hover" distinct from "dimmed", so requiring a separate key would only invite them to drift apart. `font` is top-level only because no widget in this project has a disabled-state font variant.
+The two hover colors deliberately have no `disabled_map` entry. A disabled tab bar must not light up under the cursor, so when disabled, hover collapses to the corresponding non-hover disabled color. There is no meaningful "dimmed hover" distinct from "dimmed", so requiring a separate key would only invite them to drift apart. `font` and `segmented_button_height` are top level only because neither changes with state.
 
-`font` is intercepted before native construction and forwarded to the internal segmented button, since `CTkTabview` itself accepts no `font` keyword.
+`font` and `segmented_button_height` are both intercepted before native construction and forwarded to the internal segmented button. This is not optional: `CTkTabview` names every parameter explicitly with no `**kwargs` catch-all, so any key it doesn't recognize raises `ValueError` from its constructor. They're applied once rather than on every repaint, since neither varies by state. See [Known Limitations](#limitations) regarding what `segmented_button_height` actually achieves.
 
 **Validation is scoped to direct construction.** A subclass reaches this constructor with `final_kw` built from *its own* theme block — `ThemeableWidget`'s run-once guard means it is never rebuilt — so validating these keys against a subclass's block would raise on every construction. Subclasses own their own theme contract.
 
@@ -199,6 +200,13 @@ if __name__ == "__main__":
 <a name="limitations"></a>
 ### Known Limitations
 
+- **`segmented_button_height` is currently a no-op, retained for possible future use.** The value is applied to the internal segmented button and `cget("height")` reports it back accurately, but the visible tab strip does **not** grow to match. `CTkTabview` grids the segmented button into a row whose `minsize` comes from its own private spacing constants, and deliberately overlaps the button with the page frame below to produce the connected-tab look. A taller button is clipped by that row rather than expanding it. Confirmed by direct testing: a height of 128 reported back correctly and produced no visible change.
+
+  The key is deliberately kept, and kept **required**, rather than removed. It costs nothing, it keeps the theme contract stable, and it's already wired end-to-end — so if a future CustomTkinter release exposes the strip height, or the internals approach below is revisited, only the application step changes. Do not treat it as broken and delete it; changing the number is expected to do nothing today.
+
+  Making the strip actually taller would mean writing `CTkTabview`'s private `_top_spacing` / `_top_button_overhang` attributes and re-running its `_configure_grid()` — a dependency on CustomTkinter internals that could break on any upstream release. Deliberately not done.
+
+  Note this is a `CTkTabview` layout constraint, **not** a limitation of the segmented button: a standalone `sCTkSegmentedButton` honors `height` normally.
 - **Disabling does not cascade to children.** It dims the tab bar and locks tab selection, but widgets placed inside a page are unaffected — disabling them is the caller's responsibility.
 - **`add()` and `tab()` return a different type than the native widget.** Code doing an `isinstance` check against `ctk.CTkFrame`, or reaching for CTkFrame-specific internals on a tab page, would notice. `ctk.CTkTabview.tab(widget, name)` still reaches the native shell.
 - **The internal segmented button is a native `CTkSegmentedButton`**, not `sCTkSegmentedButton`. It is created inside `CTkTabview.__init__` and re-themed afterwards by pushing colors onto it. Replacing it with the themed variant would let it theme itself and remove most of that code, but the swap hasn't been made.
