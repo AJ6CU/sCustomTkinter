@@ -14,8 +14,8 @@
 
 `sCTkRadioButton` is a themeable subclass of `customtkinter.CTkRadioButton`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"` — confirmed by direct testing to correctly block clicks.
 
-Dark Mode:  ![sCTkRadioButton in dark mode](images/sCTkRadioButton_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkRadioButton in light mode](images/sCTkRadioButton_Light.png)
+  ![sCTkRadioButton in dark mode](images/sCTkRadioButton_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkRadioButton in light mode](images/sCTkRadioButton_Light.png)
 
 ---
 

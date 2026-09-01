@@ -14,8 +14,8 @@
 
 `sCTkTextboxSecondary` is a themeable subclass of `customtkinter.CTkTextbox` — a multi-line text area, the lower-emphasis of the library's two textbox tiers (see also `sCTkTextboxPrimary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"`.
 
-Dark Mode:  ![sCTkTextboxSecondary in dark mode](images/sCTkTextboxSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkTextboxSecondary in light mode](images/sCTkTextboxSecondary_Light.png)
+  ![sCTkTextboxSecondary in dark mode](images/sCTkTextboxSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkTextboxSecondary in light mode](images/sCTkTextboxSecondary_Light.png)
 
 If `fg_color` resolves to `"transparent"` at construction, the widget copies its parent's actual `fg_color` instead — same rationale as `sCTkTextboxPrimary`'s identical fallback.
 

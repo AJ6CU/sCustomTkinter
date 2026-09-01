@@ -14,8 +14,8 @@
 
 `sCTkEntryPrimary` is a themeable subclass of `customtkinter.CTkEntry` — the higher-emphasis of the library's two entry-field tiers (see also `sCTkEntrySecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a genuine three-state visual model: normal, readonly, and disabled.
 
-Dark Mode:	![sCTkEntryPrimary in dark mode](images/sCTkEntryPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:	![sCTkEntryPrimary in light mode](images/sCTkEntryPrimary_Light.png)
+	![sCTkEntryPrimary in dark mode](images/sCTkEntryPrimary_Dark.png) &emsp; &emsp; &emsp; &emsp;
+	![sCTkEntryPrimary in light mode](images/sCTkEntryPrimary_Light.png)
 
 All three states use CTk's native `state` option (`"normal"`, `"readonly"`, `"disabled"`). `normal`/`disabled` are confirmed correct by direct testing, consistent with every other widget in this library. `readonly` was added specifically to support `sCTkSpinbox`'s own readonly mode correctly (its entry can't be typed into directly, but the increment/decrement arrows stay clickable) — matching real `ttk.Spinbox` semantics, which distinguish readonly (arrows still work) from disabled (nothing works). Confirmed directly against CustomTkinter's own source: native `CTkEntry` already has full, deliberate support for a `"readonly"` state distinct from `"disabled"` — including a placeholder-text rule worth knowing about (see [Known Limitations](#known-limitations)).
 

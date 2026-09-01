@@ -557,8 +557,8 @@ if __name__ == "__main__":
 
 `sCTkFrame` is a themeable subclass of `customtkinter.CTkFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`. Unlike every other widget in this library, it has no disabled state and no per-state color swapping — frames are containers, not interactive controls, so there's nothing to dim or lock.
 
-Dark Mode:  <img src="src/images/sCTkFrame_Dark.png" alt="sCTkFrame in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkFrame_Light.png" alt="sCTkFrame in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkFrame_Dark.png" alt="sCTkFrame in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkFrame_Light.png" alt="sCTkFrame in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -668,8 +668,8 @@ if __name__ == "__main__":
 
 `sCTkScrollableFrame` is a themeable subclass of `customtkinter.CTkScrollableFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, plus carefully-tuned cross-platform mouse wheel and macOS trackpad scroll handling that native CustomTkinter doesn't reliably provide on its own.
 
-Dark Mode:  <img src="src/images/sCTkScrollableFrame_Dark.png" alt="sCTkScrollableFrame in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkScrollableFrame_Light.png" alt="sCTkScrollableFrame in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkScrollableFrame_Dark.png" alt="sCTkScrollableFrame in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkScrollableFrame_Light.png" alt="sCTkScrollableFrame in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 Unlike `sCTkFrame`, this widget **does** have a disabled state. That's justified here where it isn't for a plain frame: this widget owns real behavior to disable, not just colors. Disabling dims the border and scrollbar and stops all scrolling — wheel, trackpad, and scrollbar drag alike.
 
@@ -876,8 +876,8 @@ These are the basic everyday widgets that you will use frequently.  There are so
 
 `sCTkButtonPrimary` is a themeable subclass of `customtkinter.CTkButton` — the most prominent of the library's three button tiers (see also `sCTkButtonSecondary`, `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a four-state visual model (not just enabled/disabled, but also pressed and alarm), and Pygubu Designer property introspection.
 
-Dark Mode:  <img src="src/images/sCTkButtonPrimary_Dark.png" alt="sCTkButtonPrimary_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkButtonPrimary_Light.png" alt="sCTkButtonPrimary_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkButtonPrimary_Dark.png" alt="sCTkButtonPrimary_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkButtonPrimary_Light.png" alt="sCTkButtonPrimary_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -1021,8 +1021,8 @@ if __name__ == "__main__":
 
 `sCTkButtonSecondary` is a themeable subclass of `customtkinter.CTkButton` — a lower-emphasis sibling of `sCTkButtonPrimary` (see also `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, and pressed — no "alarm" state, unlike Primary), and Pygubu Designer property introspection.
 
-Dark Mode:  <img src="src/images/sCTkButtonSecondary_Dark.png" alt="sCTkButtonSecondary_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkButtonSecondary_Light.png" alt="sCTkButtonSecondary_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkButtonSecondary_Dark.png" alt="sCTkButtonSecondary_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkButtonSecondary_Light.png" alt="sCTkButtonSecondary_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -1158,8 +1158,8 @@ if __name__ == "__main__":
 `sCTkButtonTertiary` is a themeable subclass of `customtkinter.CTkButton` — the lowest-emphasis of the library's three button tiers (see also `sCTkButtonPrimary`, `sCTkButtonSecondary`), styled as an outline button: border and text only, no filled background. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, pressed), and Pygubu Designer property introspection.
 
 
-Dark Mode:  <img src="src/images/sCTkButtonTertiary_Dark.png" alt="sCTkButtonTertiary_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkButtonTertiary_Light.png" alt="sCTkButtonTertiary_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkButtonTertiary_Dark.png" alt="sCTkButtonTertiary_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkButtonTertiary_Light.png" alt="sCTkButtonTertiary_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 ---
 
 ### Constructor
@@ -1289,8 +1289,8 @@ if __name__ == "__main__":
 
 `sCTkCheckBox` is a themeable subclass of `customtkinter.CTkCheckBox`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, including the checkmark color itself, and a distinct enabled/disabled visual state.
 
-Dark Mode:  <img src="src/images/sCTkCheckBox_Dark.png" alt="sCTkCheckBox_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkCheckBox_Light.png" alt="sCTkCheckBox_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkCheckBox_Dark.png" alt="sCTkCheckBox_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkCheckBox_Light.png" alt="sCTkCheckBox_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 ---
 
 ### Constructor
@@ -1417,8 +1417,8 @@ if __name__ == "__main__":
 
 `sCTkEntryPrimary` is a themeable subclass of `customtkinter.CTkEntry` — the higher-emphasis of the library's two entry-field tiers (see also `sCTkEntrySecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a genuine three-state visual model: normal, readonly, and disabled.
 
-Dark Mode:	<img src="src/images/sCTkEntryPrimary_Dark.png" alt="sCTkEntryPrimary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:	<img src="src/images/sCTkEntryPrimary_Light.png" alt="sCTkEntryPrimary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkEntryPrimary_Dark.png" alt="sCTkEntryPrimary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;"> &emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkEntryPrimary_Light.png" alt="sCTkEntryPrimary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 All three states use CTk's native `state` option (`"normal"`, `"readonly"`, `"disabled"`). `normal`/`disabled` are confirmed correct by direct testing, consistent with every other widget in this library. `readonly` was added specifically to support `sCTkSpinbox`'s own readonly mode correctly (its entry can't be typed into directly, but the increment/decrement arrows stay clickable) — matching real `ttk.Spinbox` semantics, which distinguish readonly (arrows still work) from disabled (nothing works). Confirmed directly against CustomTkinter's own source: native `CTkEntry` already has full, deliberate support for a `"readonly"` state distinct from `"disabled"` — including a placeholder-text rule worth knowing about (see [Known Limitations](#known-limitations)).
 
@@ -1583,8 +1583,8 @@ if __name__ == "__main__":
 
 `sCTkEntrySecondary` is a themeable subclass of `customtkinter.CTkEntry` — the lower-emphasis of the library's two entry-field tiers (see also `sCTkEntryPrimary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a genuine three-state visual model: normal, readonly, and disabled.
 
-Dark Mode:	<img src="src/images/sCTkEntrySecondary_Dark.png" alt="sCTkEntrySecondary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:	<img src="src/images/sCTkEntrySecondary_Light.png" alt="sCTkEntrySecondary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkEntrySecondary_Dark.png" alt="sCTkEntrySecondary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkEntrySecondary_Light.png" alt="sCTkEntrySecondary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 
 All three states use CTk's native `state` option (`"normal"`, `"readonly"`, `"disabled"`) — see `sCTkEntryPrimary`'s documentation for the full rationale and the readonly-specific placeholder behavior worth knowing about.
@@ -1718,8 +1718,8 @@ if __name__ == "__main__":
 
 `sCTkLabelPrimary` is a themeable subclass of `customtkinter.CTkLabel` — the most prominent of the library's three label tiers (see also `sCTkLabelSecondary`, `sCTkLabelTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim — there's no click-blocking concern the way there is for buttons or checkboxes.
 
-Dark Mode:	<img src="src/images/sCTkLabelPrimary_Dark.png" alt="sCTkLabelPrimary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:	<img src="src/images/sCTkLabelPrimary_Light.png" alt="sCTkLabelPrimary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkLabelPrimary_Dark.png" alt="sCTkLabelPrimary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkLabelPrimary_Light.png" alt="sCTkLabelPrimary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -1837,8 +1837,8 @@ if __name__ == "__main__":
 
 `sCTkLabelSecondary` is a themeable subclass of `customtkinter.CTkLabel` — the mid-emphasis tier of the library's three label styles, between `sCTkLabelPrimary` and `sCTkLabelTertiary`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim.
 
-Dark Mode:	<img src="src/images/sCTkLabelSecondary_Dark.png" alt="sCTkLabelSecondary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:	<img src="src/images/sCTkLabelSecondary_Light.png" alt="sCTkLabelSecondary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkLabelSecondary_Dark.png" alt="sCTkLabelSecondary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkLabelSecondary_Light.png" alt="sCTkLabelSecondary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -1956,8 +1956,8 @@ if __name__ == "__main__":
 
 `sCTkLabelTertiary` is a themeable subclass of `customtkinter.CTkLabel` — the lowest-emphasis of the library's three label tiers (see also `sCTkLabelPrimary`, `sCTkLabelSecondary`), intended for inline descriptions, sub-legends, or auxiliary notices. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim.
 
-Dark Mode:	<img src="src/images/sCTkLabelTertiary_Dark.png" alt="sCTkLabelTertiary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:	<img src="src/images/sCTkLabelTertiary_Light.png" alt="sCTkLabelTertiary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkLabelTertiary_Dark.png" alt="sCTkLabelTertiary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkLabelTertiary_Light.png" alt="sCTkLabelTertiary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -2075,8 +2075,8 @@ if __name__ == "__main__":
 
 `sCTkProgressBar` is a themeable subclass of `customtkinter.CTkProgressBar`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a purely visual "disabled" state — progress bars have no click behavior to block, so disabling one only dims its colors.
 
-Dark Mode:  <img src="src/images/sCTkProgressBar_Dark.png" alt="sCTkProgressBar in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkProgressBar_Light.png" alt="sCTkProgressBar in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkProgressBar_Dark.png" alt="sCTkProgressBar in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkProgressBar_Light.png" alt="sCTkProgressBar in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -2194,8 +2194,8 @@ if __name__ == "__main__":
 
 `sCTkRadioButton` is a themeable subclass of `customtkinter.CTkRadioButton`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"` — confirmed by direct testing to correctly block clicks.
 
-Dark Mode:  <img src="src/images/sCTkRadioButton_Dark.png" alt="sCTkRadioButton in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkRadioButton_Light.png" alt="sCTkRadioButton in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkRadioButton_Dark.png" alt="sCTkRadioButton in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkRadioButton_Light.png" alt="sCTkRadioButton in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -2312,8 +2312,8 @@ if __name__ == "__main__":
 
 `sCTkScrollbar` is a themeable scrollbar — a subclass of `ctk.CTkScrollbar` with color resolution from `sCTkThemes.json` and orientation-aware default sizing. It's designed to pair with [`sCTkScrollArea`](sCTkScrollArea.md), which needs an external scrollbar, but works anywhere a `CTkScrollbar` would.
 
-Dark Mode: <img src="src/images/sCTkScrollbar_Dark.png" alt="sCTkScrollbar_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkScrollbar_Light.png" alt="sCTkScrollbar_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkScrollbar_Dark.png" alt="sCTkScrollbar_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkScrollbar_Light.png" alt="sCTkScrollbar_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 **This widget contains no scroll-handling logic.** It's a scrollbar: it renders a draggable bar and reports its position. Wheel and trackpad handling belongs to the scrolling container — see [`ScrollBindingMixin`](ScrollBindingMixin.md). An earlier version of this page credited the scrollbar with an "inertial micro-delta aggregator"; that logic lives in `sCTkScrollArea`, not here.
 
@@ -2451,8 +2451,8 @@ if __name__ == "__main__":
 
 `sCTkSegmentedButton` is a themeable subclass of `customtkinter.CTkSegmentedButton` — a horizontal strip of connected text buttons where selecting one automatically unselects the others, similar to a row of radio buttons. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state, and per-segment text-color handling for the currently selected segment.
 
-Dark Mode: <img src="src/images/sCTkSegmentedButton_Dark.png" alt="sCTkSegmentedButton_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkSegmentedButton_Light.png" alt="sCTkSegmentedButton_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkSegmentedButton_Dark.png" alt="sCTkSegmentedButton_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSegmentedButton_Light.png" alt="sCTkSegmentedButton_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 ---
 
 ### Constructor
@@ -2599,8 +2599,8 @@ if __name__ == "__main__":
 
 `sCTkSlider` is a themeable subclass of `customtkinter.CTkSlider`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Unlike every other widget in this library, its state isn't tracked in a separate instance attribute — it reads and writes CustomTkinter's own native `state` property directly, treating it as the single source of truth.
 
-Dark Mode:  <img src="src/images/sCTkSlider_Dark.png" alt="sCTkSlider in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkSlider_Light.png" alt="sCTkSlider in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkSlider_Dark.png" alt="sCTkSlider in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSlider_Light.png" alt="sCTkSlider in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -2723,8 +2723,8 @@ if __name__ == "__main__":
 
 `sCTkSwitch` is a themeable subclass of `customtkinter.CTkSwitch`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state that dims every color property, not just the label text. A previously separate widget, `sCTkSwitchAlt`, existed specifically to work around limitations that have since been resolved directly in this widget and has been retired.
 
-Dark Mode:  <img src="src/images/sCTkSwitch_Dark.png" alt="sCTkSwitch in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkSwitch_Light.png" alt="sCTkSwitch in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkSwitch_Dark.png" alt="sCTkSwitch in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSwitch_Light.png" alt="sCTkSwitch in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 Disabling combines two mechanisms: CustomTkinter's native `state="disabled"`, and a bindtag-based click interceptor that prepends a dedicated binding returning `"break"` on click. This is more robust than a simple event-unbind, since it intercepts clicks regardless of which internal level the native click handler is actually bound at.
 
@@ -2844,8 +2844,8 @@ if __name__ == "__main__":
 
 `sCTkTabview` is a themeable multi-page tab container — a subclass of `customtkinter.CTkTabview` with automatic light/dark theme resolution from `sCTkThemes.json`, a disabled state, and Pygubu Designer support.
 
-Dark Mode:  <img src="src/images/sCTkTabview_Dark.png" alt="sCTkTabview_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkTabview_Light.png" alt="sCTkTabview_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkTabview_Dark.png" alt="sCTkTabview_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkTabview_Light.png" alt="sCTkTabview_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 Its one structural difference from the native widget: `add()` and `tab()` return an **`sCTkFrame`**, not a `ctk.CTkFrame`. See [Tab Pages](#tab-pages).
 
@@ -3076,8 +3076,8 @@ if __name__ == "__main__":
 
 `sCTkTextboxPrimary` is a themeable subclass of `customtkinter.CTkTextbox` — a multi-line text area, the higher-emphasis of the library's two textbox tiers (see also `sCTkTextboxSecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"`.
 
-Dark Mode:  <img src="src/images/sCTkTextboxPrimary_Dark.png" alt="sCTkTextboxPrimary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkTextboxPrimary_Light.png" alt="sCTkTextboxPrimary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkTextboxPrimary_Dark.png" alt="sCTkTextboxPrimary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkTextboxPrimary_Light.png" alt="sCTkTextboxPrimary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 If `fg_color` resolves to `"transparent"` at construction, the widget copies its parent's actual `fg_color` instead, since `CTkTextbox` doesn't render true transparency the way canvas-based widgets can.
 
@@ -3200,8 +3200,8 @@ if __name__ == "__main__":
 
 `sCTkTextboxSecondary` is a themeable subclass of `customtkinter.CTkTextbox` — a multi-line text area, the lower-emphasis of the library's two textbox tiers (see also `sCTkTextboxPrimary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"`.
 
-Dark Mode:  <img src="src/images/sCTkTextboxSecondary_Dark.png" alt="sCTkTextboxSecondary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkTextboxSecondary_Light.png" alt="sCTkTextboxSecondary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkTextboxSecondary_Dark.png" alt="sCTkTextboxSecondary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkTextboxSecondary_Light.png" alt="sCTkTextboxSecondary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 If `fg_color` resolves to `"transparent"` at construction, the widget copies its parent's actual `fg_color` instead — same rationale as `sCTkTextboxPrimary`'s identical fallback.
 
@@ -3326,8 +3326,8 @@ Not a lot of choices here, but they should suffice.
 
 `sCTkComboBox` is a themeable subclass of `customtkinter.CTkComboBox`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state (separate from, but synchronized with, the widget's native interactive lock), and Pygubu Designer property introspection support.
 
-Dark Mode:  <img src="src/images/sCTkComboBox_Dark.png" alt="sCTkComboBox in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkComboBox_Light.png" alt="sCTkComboBox in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkComboBox_Dark.png" alt="sCTkComboBox in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkComboBox_Light.png" alt="sCTkComboBox in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -3461,8 +3461,8 @@ if __name__ == "__main__":
 
 `sCTkOptionMenuPrimary` is a themeable subclass of `customtkinter.CTkOptionMenu` — a dropdown option-selection button. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. See also `sCTkOptionMenuSecondary`, a composite bordered variant with a different internal architecture.
 
-Dark Mode: <img src="src/images/sCTkOptionMenuPrimary_Dark.png" alt="sCTkOptionMenuPrimary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkOptionMenuPrimary_Light.png" alt="sCTkOptionMenuPrimary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkOptionMenuPrimary_Dark.png" alt="sCTkOptionMenuPrimary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkOptionMenuPrimary_Light.png" alt="sCTkOptionMenuPrimary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -3593,8 +3593,8 @@ if __name__ == "__main__":
 
 `sCTkOptionMenuSecondary` is a themeable, composite bordered dropdown option-selection menu. Unlike every other widget in this library, it is **not** a direct subclass of the widget it wraps — it's a `customtkinter.CTkFrame` containing a plain, native `customtkinter.CTkOptionMenu` inside it, giving the dropdown a themed border the native widget has no way to draw on its own. See also `sCTkOptionMenuPrimary`, a simpler direct-subclass variant.
 
-Dark Mode: <img src="src/images/sCTkOptionMenuSecondary_Dark.png" alt="sCTkOptionMenuSecondary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:	<img src="src/images/sCTkOptionMenuSecondary_Light.png" alt="sCTkOptionMenuSecondary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkOptionMenuSecondary_Dark.png" alt="sCTkOptionMenuSecondary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkOptionMenuSecondary_Light.png" alt="sCTkOptionMenuSecondary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 Because configuring the outer widget affects the frame (border, background, size) while the dropdown itself is a separate inner object, most of this widget's behavior comes from keeping those two pieces in sync — see [Theming](#theming-sctkthemesjson) for how that split works.
 
@@ -3722,7 +3722,7 @@ These are all the extra widgets that were added to the stock set provided with `
 
 Abstract base class for the rotary dial family. It owns the canvas rendering, the mouse and scroll interaction model, the theme contract, and the state machine shared by [`sCTkDialContinuous`](sCTkDialContinuous.md), [`sCTkDialSelector`](sCTkDialSelector.md), and [`sCTkDialRange`](sCTkDialRange.md).
 
-<img src="src/images/sCTkDial_All_Dark.png" alt="sCTkDial_All_Dark.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkDial_All_Dark.png" alt="sCTkDial_All_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 This page is the reference for how dials are drawn and themed. The three variant pages describe only what differs.
 
@@ -3865,8 +3865,8 @@ The body is now roughly twenty shaded ovals plus ticks and labels, none of which
 An infinite flywheel tuning encoder module tracking signed velocity delta step increments across an endless 360-degree rotation path (ideal for high-fidelity radio VFO controls, audio mixers, and multi-channel squelch encoders).
 
 
-Dark Mode:  <img src="src/images/sCTkDialContinuous_Dark.png" alt="sCTkDialContinuous_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkDialContinuous_Light.png" alt="sCTkDialContinuous_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkDialContinuous_Dark.png" alt="sCTkDialContinuous_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkDialContinuous_Light.png" alt="sCTkDialContinuous_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 
 ### API Property Reference
@@ -4070,8 +4070,8 @@ if __name__ == "__main__":
 A concrete rotary encoder range variant designed for hard-bounded linear controls (e.g., AF/RF volume gain level sliders, squelch limits, or power thresholds). It enforces absolute mechanical dead stops at outer thresholds, preventing directional wraparound loops.
 
 
-Dark Mode:  <img src="src/images/sCTkDialRange_Dark.png" alt="sCTkDialRange_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkDialRange_Light.png" alt="sCTkDialRange_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkDialRange_Dark.png" alt="sCTkDialRange_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkDialRange_Light.png" alt="sCTkDialRange_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 
 ### API Property Reference
@@ -4259,8 +4259,8 @@ if __name__ == "__main__":
 A concrete rotary encoder switch variant designed for stepped selector controls (e.g., band configurations, operating modes, or filter sub-selections). It uses an explicit bounding arc configuration and outputs a clean integer mapping parameter tracking list item indices natively.
 
 
-Dark Mode:  <img src="src/images/sCTkDialSelector_Dark.png" alt="sCTkDialSelector_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkDialSelector_Light.png" alt="sCTkDialSelector_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkDialSelector_Dark.png" alt="sCTkDialSelector_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkDialSelector_Light.png" alt="sCTkDialSelector_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 
 ### API Property Reference
@@ -4449,8 +4449,8 @@ if __name__ == "__main__":
 
 `sCTkFileExplorer` is a theme-compliant, scrollable file/folder browser — a back button, an editable current-path entry, and a scrollable list of clickable file/folder rows. It inherits `ctk.CTkFrame`, `ScrollBindingMixin`, and `ThemeableWidget`, and builds its own scrolling machinery internally (a raw `tkinter.Canvas` plus a `CTkScrollbar`) rather than composing `sCTkScrollableFrame`.
 
-Dark Mode:  <img src="src/images/sCTkFileExplorer_Dark.png" alt="sCTkFileExplorer in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkFileExplorer_Light.png" alt="sCTkFileExplorer in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkFileExplorer_Dark.png" alt="sCTkFileExplorer in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkFileExplorer_Light.png" alt="sCTkFileExplorer in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 **Scroll handling comes from `ScrollBindingMixin`,** the library's single shared implementation, also used by `sCTkScrollableFrame`. This widget supplies two hooks — `_scroll_target()` returns its own internal canvas (no `winfo_parent()` lookup needed, unlike `sCTkScrollableFrame`), and `_scroll_layers()` assembles the widget, canvas, scrollbar, and full row tree.
 
@@ -4599,8 +4599,8 @@ if __name__ == "__main__":
 
 `sCTkFrameLabeledPrimary` is a themeable, high-emphasis labeled container panel — the more prominent of the library's two labeled frame tiers (see also `sCTkFrameLabeledSecondary`). It's built on `customtkinter.CTkScrollableFrame`, but deliberately used purely for its native title-label feature — the model here is `ttk.LabelFrame`, which never scrolls. Scrolling is intentionally suppressed; this is a labeled, bordered panel, not a scroll viewport.
 
-Dark Mode:  <img src="src/images/sCTkFrameLabeledPrimary_Dark.png" alt="sCTkFrameLabeledPrimary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkFrameLabeledPrimary_Light.png" alt="sCTkFrameLabeledPrimary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkFrameLabeledPrimary_Dark.png" alt="sCTkFrameLabeledPrimary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkFrameLabeledPrimary_Light.png" alt="sCTkFrameLabeledPrimary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -4732,8 +4732,8 @@ if __name__ == "__main__":
 
 `sCTkFrameLabeledSecondary` is a themeable, lower-emphasis labeled container panel — see also `sCTkFrameLabeledPrimary`. It's built on `customtkinter.CTkScrollableFrame`, but deliberately used purely for its native title-label feature — the model here is `ttk.LabelFrame`, which never scrolls. Scrolling is intentionally suppressed; this is a labeled, bordered panel, not a scroll viewport.
 
-Dark Mode:  <img src="src/images/sCTkFrameLabeledSecondary_Dark.png" alt="sCTkFrameLabeledSecondary in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkFrameLabeledSecondary_Light.png" alt="sCTkFrameLabeledSecondary in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkFrameLabeledSecondary_Dark.png" alt="sCTkFrameLabeledSecondary in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkFrameLabeledSecondary_Light.png" alt="sCTkFrameLabeledSecondary in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 ---
 
@@ -4868,8 +4868,8 @@ The `sCTkMessagebox` is an advanced, themeable dialog window system designed to 
 ---
 
 
-Dark Mode:	<img src="src/images/sCTkMessagebox_Dark.png" alt="sCTkMessagebox_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:	<img src="src/images/sCTkMessagebox_Light.png" alt="sCTkMessagebox_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkMessagebox_Dark.png" alt="sCTkMessagebox_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkMessagebox_Light.png" alt="sCTkMessagebox_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 
 ### API Constructor Reference
@@ -5087,8 +5087,8 @@ if __name__ == "__main__":
 
 `sCTkPathChooser` is a theme-compliant single-line path entry paired with a "Browse..." button that opens an `sCTkFileExplorer` in a modal popup. It inherits `ctk.CTkFrame` directly, composing an internal `sCTkEntryPrimary` and `sCTkButtonPrimary`.
 
-Dark Mode:  <img src="src/images/sCTkPathChooser_Dark.png" alt="sCTkPathChooser in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkPathChooser_Light.png" alt="sCTkPathChooser in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkPathChooser_Dark.png" alt="sCTkPathChooser in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkPathChooser_Light.png" alt="sCTkPathChooser in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 Every property this widget forwards to its internal entry (`justify`, `width`, `height`) has been confirmed valid against CustomTkinter's own real `CTkEntry` source, the same verification done for `sCTkSpinbox`. There's no risk of this widget sending an unrecognized property to its own entry.
 
@@ -5547,8 +5547,8 @@ Hosts may also define `_USE_CUSTOM_SCROLL_BINDING = False` as a kill switch, fal
 
 `sCTkSelector` is a theme-compliant, scrollable multi-select (or single-select) list of checkboxes, with an optional live-filtering search field. It's built by composing a themed frame, an `sCTkScrollableFrame` for the checkbox list, and one `sCTkCheckBox` per item — not by subclassing a single native CustomTkinter widget.
 
-Dark Mode:  <img src="src/images/sCTkSelector_Dark.png" alt="sCTkSelector in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkSelector_Light.png" alt="sCTkSelector in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkSelector_Dark.png" alt="sCTkSelector in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSelector_Light.png" alt="sCTkSelector in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 This widget inherits `sCTkFrame` directly (rather than raw `ctk.CTkFrame`) — a composition pattern that previously carried a real risk of `ThemeableWidget.__init__` running twice per instance and silently corrupting this widget's own resolved theme data. That risk is now fully closed: `ThemeableWidget` has a run-once guard preventing the double-init, and `sCTkFrame` itself filters its inbound kwargs down to only what native `CTkFrame` actually accepts before its own constructor call. Neither fix required any change to this widget.
 
@@ -5683,8 +5683,8 @@ The *sCTkSeparator* is an advanced, themeable divider widget for CustomTkinter. 
 
 --- 
 
-Dark Mode:  <img src="src/images/sCTkSeparator_Dark.png" alt="sCTkSeparator_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkSeparator_Light.png" alt="sCTkSeparator_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkSeparator_Dark.png" alt="sCTkSeparator_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSeparator_Light.png" alt="sCTkSeparator_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 
 ### System Architecture Overview
@@ -5869,8 +5869,8 @@ if __name__ == "__main__":
 The `sCTkSMeter` is a standalone, theme-adaptive analog S-Meter/Power Output gauge instrument designed specifically for ham radio transceiver desktop interfaces. Natively inheriting container footprints from `customtkinter.CTkFrame`, it delivers smooth telemetry tracking sweeps without the overhead of extraneous nesting modules.
 
 
-Dark Mode:  <img src="src/images/sCTkSMeter_Dark.png" alt="sCTkSMeter_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkSMeter_Light.png" alt="sCTkSMeter_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkSMeter_Dark.png" alt="sCTkSMeter_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSMeter_Light.png" alt="sCTkSMeter_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 
 ---
@@ -6024,8 +6024,8 @@ if __name__ == "__main__":
 The `sCTkSMeterBar` is a standalone, low-profile horizontal discrete 30-segment LED bar instrumentation widget displaying independent telemetry tracks for incoming receiver S-Units, transmitter SWR ratio levels, and forward RF Power output percentage. Like all sCTk widgets, it is fully theme-adaptive.
 
 
-Dark Mode:  <img src="src/images/sCTkSMeterBar_Dark.png" alt="sCTkSMeterBar_Dark.png" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode:  <img src="src/images/sCTkSMeterBar_Light.png" alt="sCTkSMeterBar_Light.png" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkSMeterBar_Dark.png" alt="sCTkSMeterBar_Dark.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSMeterBar_Light.png" alt="sCTkSMeterBar_Light.png" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 
 ---
@@ -6215,8 +6215,8 @@ if __name__ == "__main__":
 
 `sCTkSpinbox` is a theme-compliant subclass of `customtkinter.CTkFrame` that composes an internal `sCTkEntryPrimary` alongside two increment/decrement buttons. It supports two operating modes: stepping a numeric value between `from_` and `to` in increments of `step_size`, or cycling through a fixed list of string values.
 
-Dark Mode:  <img src="src/images/sCTkSpinbox_Dark.png" alt="sCTkSpinbox in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkSpinbox_Light.png" alt="sCTkSpinbox in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkSpinbox_Dark.png" alt="sCTkSpinbox in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSpinbox_Light.png" alt="sCTkSpinbox in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 Like `sCTkEntryPrimary`, this widget has a genuine three-state model — normal, readonly, and disabled — matching real `ttk.Spinbox` semantics. The key distinction: in readonly mode, the entry can't be typed into directly, but the increment/decrement buttons stay fully clickable, since they're the intended alternative way to change the value. The buttons themselves only ever report `"normal"` or `"disabled"` — `"readonly"` isn't a real native `CTkButton` concept, and there's no reason for the buttons to look any different in readonly mode, since nothing about their own behavior changes.
 
@@ -6369,8 +6369,8 @@ if __name__ == "__main__":
 
 `sCTkTableview` is a theme-compliant, scrollable grid of labeled cells — a simple spreadsheet-like table, with optional zebra-striped rows, click and edit callbacks, and in-place cell editing. It's built by inheriting `sCTkScrollableFrame` directly, using its scrolling and label feature, then laying out its own header row and cell grid on top.
 
-Dark Mode:  <img src="src/images/sCTkTableview_Dark.png" alt="sCTkTableview in dark mode" style="border: 1px solid #d3d3d3;">&emsp; &emsp; &emsp; &emsp;
-Light Mode: <img src="src/images/sCTkTableview_Light.png" alt="sCTkTableview in light mode" style="border: 1px solid #d3d3d3;">
+<img src="src/images/sCTkTableview_Dark.png" alt="sCTkTableview in dark mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkTableview_Light.png" alt="sCTkTableview in light mode" style="border: 1px solid #555555; max-width: 300px; width: 100%;">
 
 This widget inherits `sCTkScrollableFrame` directly — the same composition pattern used by `sCTkSelector` — and previously needed a fragile workaround for it: temporarily overwriting its own `self.__class__.__name__` during construction, to trick `sCTkScrollableFrame`'s internal `ThemeableWidget.__init__` call into reading a harmless theme block instead of corrupting this widget's own. That workaround has been removed entirely. `ThemeableWidget`'s run-once guard now prevents the double-init outright, and `sCTkScrollableFrame` itself filters its inbound kwargs down to only what native `CTkScrollableFrame` actually accepts — confirmed directly against CustomTkinter's source to have no `**kwargs` catch-all at all, so this filtering matters more here than for almost any other widget in this project.
 

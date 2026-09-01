@@ -14,8 +14,8 @@
 
 `sCTkSlider` is a themeable subclass of `customtkinter.CTkSlider`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Unlike every other widget in this library, its state isn't tracked in a separate instance attribute — it reads and writes CustomTkinter's own native `state` property directly, treating it as the single source of truth.
 
-Dark Mode:  ![sCTkSlider in dark mode](images/sCTkSlider_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkSlider in light mode](images/sCTkSlider_Light.png)
+  ![sCTkSlider in dark mode](images/sCTkSlider_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkSlider in light mode](images/sCTkSlider_Light.png)
 
 ---
 

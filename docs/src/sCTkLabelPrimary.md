@@ -14,8 +14,8 @@
 
 `sCTkLabelPrimary` is a themeable subclass of `customtkinter.CTkLabel` — the most prominent of the library's three label tiers (see also `sCTkLabelSecondary`, `sCTkLabelTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim — there's no click-blocking concern the way there is for buttons or checkboxes.
 
-Dark Mode:	![sCTkLabelPrimary in dark mode](images/sCTkLabelPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:	![sCTkLabelPrimary in light mode](images/sCTkLabelPrimary_Light.png)
+	![sCTkLabelPrimary in dark mode](images/sCTkLabelPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+	![sCTkLabelPrimary in light mode](images/sCTkLabelPrimary_Light.png)
 
 ---
 

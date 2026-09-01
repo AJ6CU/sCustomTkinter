@@ -14,8 +14,8 @@
 
 `sCTkSpinbox` is a theme-compliant subclass of `customtkinter.CTkFrame` that composes an internal `sCTkEntryPrimary` alongside two increment/decrement buttons. It supports two operating modes: stepping a numeric value between `from_` and `to` in increments of `step_size`, or cycling through a fixed list of string values.
 
-Dark Mode:  ![sCTkSpinbox in dark mode](images/sCTkSpinbox_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkSpinbox in light mode](images/sCTkSpinbox_Light.png)
+  ![sCTkSpinbox in dark mode](images/sCTkSpinbox_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkSpinbox in light mode](images/sCTkSpinbox_Light.png)
 
 Like `sCTkEntryPrimary`, this widget has a genuine three-state model — normal, readonly, and disabled — matching real `ttk.Spinbox` semantics. The key distinction: in readonly mode, the entry can't be typed into directly, but the increment/decrement buttons stay fully clickable, since they're the intended alternative way to change the value. The buttons themselves only ever report `"normal"` or `"disabled"` — `"readonly"` isn't a real native `CTkButton` concept, and there's no reason for the buttons to look any different in readonly mode, since nothing about their own behavior changes.
 

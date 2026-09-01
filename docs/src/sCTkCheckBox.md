@@ -15,8 +15,8 @@
 
 `sCTkCheckBox` is a themeable subclass of `customtkinter.CTkCheckBox`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, including the checkmark color itself, and a distinct enabled/disabled visual state.
 
-Dark Mode:  ![sCTkCheckBox_Dark.png](images/sCTkCheckBox_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:  ![sCTkCheckBox_Light.png](images/sCTkCheckBox_Light.png)
+  ![sCTkCheckBox_Dark.png](images/sCTkCheckBox_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkCheckBox_Light.png](images/sCTkCheckBox_Light.png)
 ---
 
 ### Constructor

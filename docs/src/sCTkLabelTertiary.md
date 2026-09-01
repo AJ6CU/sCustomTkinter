@@ -14,8 +14,8 @@
 
 `sCTkLabelTertiary` is a themeable subclass of `customtkinter.CTkLabel` — the lowest-emphasis of the library's three label tiers (see also `sCTkLabelPrimary`, `sCTkLabelSecondary`), intended for inline descriptions, sub-legends, or auxiliary notices. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim.
 
-Dark Mode:	![sCTkLabelTertiary in dark mode](images/sCTkLabelTertiary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:	![sCTkLabelTertiary in light mode](images/sCTkLabelTertiary_Light.png)
+	![sCTkLabelTertiary in dark mode](images/sCTkLabelTertiary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+	![sCTkLabelTertiary in light mode](images/sCTkLabelTertiary_Light.png)
 
 ---
 

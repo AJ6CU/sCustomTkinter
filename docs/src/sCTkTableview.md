@@ -14,8 +14,8 @@
 
 `sCTkTableview` is a theme-compliant, scrollable grid of labeled cells — a simple spreadsheet-like table, with optional zebra-striped rows, click and edit callbacks, and in-place cell editing. It's built by inheriting `sCTkScrollableFrame` directly, using its scrolling and label feature, then laying out its own header row and cell grid on top.
 
-Dark Mode:  ![sCTkTableview in dark mode](images/sCTkTableview_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkTableview in light mode](images/sCTkTableview_Light.png)
+  ![sCTkTableview in dark mode](images/sCTkTableview_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkTableview in light mode](images/sCTkTableview_Light.png)
 
 This widget inherits `sCTkScrollableFrame` directly — the same composition pattern used by `sCTkSelector` — and previously needed a fragile workaround for it: temporarily overwriting its own `self.__class__.__name__` during construction, to trick `sCTkScrollableFrame`'s internal `ThemeableWidget.__init__` call into reading a harmless theme block instead of corrupting this widget's own. That workaround has been removed entirely. `ThemeableWidget`'s run-once guard now prevents the double-init outright, and `sCTkScrollableFrame` itself filters its inbound kwargs down to only what native `CTkScrollableFrame` actually accepts — confirmed directly against CustomTkinter's source to have no `**kwargs` catch-all at all, so this filtering matters more here than for almost any other widget in this project.
 

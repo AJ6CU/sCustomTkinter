@@ -15,8 +15,8 @@
 
 `sCTkFileExplorer` is a theme-compliant, scrollable file/folder browser — a back button, an editable current-path entry, and a scrollable list of clickable file/folder rows. It inherits `ctk.CTkFrame`, `ScrollBindingMixin`, and `ThemeableWidget`, and builds its own scrolling machinery internally (a raw `tkinter.Canvas` plus a `CTkScrollbar`) rather than composing `sCTkScrollableFrame`.
 
-Dark Mode:  ![sCTkFileExplorer in dark mode](images/sCTkFileExplorer_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkFileExplorer in light mode](images/sCTkFileExplorer_Light.png)
+  ![sCTkFileExplorer in dark mode](images/sCTkFileExplorer_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkFileExplorer in light mode](images/sCTkFileExplorer_Light.png)
 
 **Scroll handling comes from `ScrollBindingMixin`,** the library's single shared implementation, also used by `sCTkScrollableFrame`. This widget supplies two hooks — `_scroll_target()` returns its own internal canvas (no `winfo_parent()` lookup needed, unlike `sCTkScrollableFrame`), and `_scroll_layers()` assembles the widget, canvas, scrollbar, and full row tree.
 

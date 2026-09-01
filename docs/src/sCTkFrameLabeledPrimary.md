@@ -14,8 +14,8 @@
 
 `sCTkFrameLabeledPrimary` is a themeable, high-emphasis labeled container panel — the more prominent of the library's two labeled frame tiers (see also `sCTkFrameLabeledSecondary`). It's built on `customtkinter.CTkScrollableFrame`, but deliberately used purely for its native title-label feature — the model here is `ttk.LabelFrame`, which never scrolls. Scrolling is intentionally suppressed; this is a labeled, bordered panel, not a scroll viewport.
 
-Dark Mode:  ![sCTkFrameLabeledPrimary in dark mode](images/sCTkFrameLabeledPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkFrameLabeledPrimary in light mode](images/sCTkFrameLabeledPrimary_Light.png)
+  ![sCTkFrameLabeledPrimary in dark mode](images/sCTkFrameLabeledPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkFrameLabeledPrimary in light mode](images/sCTkFrameLabeledPrimary_Light.png)
 
 ---
 

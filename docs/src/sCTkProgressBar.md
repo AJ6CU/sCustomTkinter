@@ -14,8 +14,8 @@
 
 `sCTkProgressBar` is a themeable subclass of `customtkinter.CTkProgressBar`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a purely visual "disabled" state — progress bars have no click behavior to block, so disabling one only dims its colors.
 
-Dark Mode:  ![sCTkProgressBar in dark mode](images/sCTkProgressBar_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkProgressBar in light mode](images/sCTkProgressBar_Light.png)
+  ![sCTkProgressBar in dark mode](images/sCTkProgressBar_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkProgressBar in light mode](images/sCTkProgressBar_Light.png)
 
 ---
 

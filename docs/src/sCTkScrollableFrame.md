@@ -15,8 +15,8 @@
 
 `sCTkScrollableFrame` is a themeable subclass of `customtkinter.CTkScrollableFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, plus carefully-tuned cross-platform mouse wheel and macOS trackpad scroll handling that native CustomTkinter doesn't reliably provide on its own.
 
-Dark Mode:  ![sCTkScrollableFrame in dark mode](images/sCTkScrollableFrame_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkScrollableFrame in light mode](images/sCTkScrollableFrame_Light.png)
+  ![sCTkScrollableFrame in dark mode](images/sCTkScrollableFrame_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkScrollableFrame in light mode](images/sCTkScrollableFrame_Light.png)
 
 Unlike `sCTkFrame`, this widget **does** have a disabled state. That's justified here where it isn't for a plain frame: this widget owns real behavior to disable, not just colors. Disabling dims the border and scrollbar and stops all scrolling — wheel, trackpad, and scrollbar drag alike.
 

@@ -14,8 +14,8 @@
 
 `sCTkOptionMenuSecondary` is a themeable, composite bordered dropdown option-selection menu. Unlike every other widget in this library, it is **not** a direct subclass of the widget it wraps — it's a `customtkinter.CTkFrame` containing a plain, native `customtkinter.CTkOptionMenu` inside it, giving the dropdown a themed border the native widget has no way to draw on its own. See also `sCTkOptionMenuPrimary`, a simpler direct-subclass variant.
 
-Dark Mode: ![sCTkOptionMenuSecondary in dark mode](images/sCTkOptionMenuSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:	![sCTkOptionMenuSecondary in light mode](images/sCTkOptionMenuSecondary_Light.png)
+ ![sCTkOptionMenuSecondary in dark mode](images/sCTkOptionMenuSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+	![sCTkOptionMenuSecondary in light mode](images/sCTkOptionMenuSecondary_Light.png)
 
 Because configuring the outer widget affects the frame (border, background, size) while the dropdown itself is a separate inner object, most of this widget's behavior comes from keeping those two pieces in sync — see [Theming](#theming-sctkthemesjson) for how that split works.
 

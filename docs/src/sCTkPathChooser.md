@@ -14,8 +14,8 @@
 
 `sCTkPathChooser` is a theme-compliant single-line path entry paired with a "Browse..." button that opens an `sCTkFileExplorer` in a modal popup. It inherits `ctk.CTkFrame` directly, composing an internal `sCTkEntryPrimary` and `sCTkButtonPrimary`.
 
-Dark Mode:  ![sCTkPathChooser in dark mode](images/sCTkPathChooser_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkPathChooser in light mode](images/sCTkPathChooser_Light.png)
+  ![sCTkPathChooser in dark mode](images/sCTkPathChooser_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkPathChooser in light mode](images/sCTkPathChooser_Light.png)
 
 Every property this widget forwards to its internal entry (`justify`, `width`, `height`) has been confirmed valid against CustomTkinter's own real `CTkEntry` source, the same verification done for `sCTkSpinbox`. There's no risk of this widget sending an unrecognized property to its own entry.
 

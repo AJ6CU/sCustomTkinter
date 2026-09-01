@@ -14,8 +14,8 @@
 
 `sCTkFrameLabeledSecondary` is a themeable, lower-emphasis labeled container panel — see also `sCTkFrameLabeledPrimary`. It's built on `customtkinter.CTkScrollableFrame`, but deliberately used purely for its native title-label feature — the model here is `ttk.LabelFrame`, which never scrolls. Scrolling is intentionally suppressed; this is a labeled, bordered panel, not a scroll viewport.
 
-Dark Mode:  ![sCTkFrameLabeledSecondary in dark mode](images/sCTkFrameLabeledSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkFrameLabeledSecondary in light mode](images/sCTkFrameLabeledSecondary_Light.png)
+  ![sCTkFrameLabeledSecondary in dark mode](images/sCTkFrameLabeledSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkFrameLabeledSecondary in light mode](images/sCTkFrameLabeledSecondary_Light.png)
 
 ---
 

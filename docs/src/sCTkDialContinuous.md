@@ -13,8 +13,8 @@
 An infinite flywheel tuning encoder module tracking signed velocity delta step increments across an endless 360-degree rotation path (ideal for high-fidelity radio VFO controls, audio mixers, and multi-channel squelch encoders).
 
 
-Dark Mode:  ![sCTkDialContinuous_Dark.png](images/sCTkDialContinuous_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:  ![sCTkDialContinuous_Light.png](images/sCTkDialContinuous_Light.png)
+  ![sCTkDialContinuous_Dark.png](images/sCTkDialContinuous_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkDialContinuous_Light.png](images/sCTkDialContinuous_Light.png)
 
 
 ### API Property Reference

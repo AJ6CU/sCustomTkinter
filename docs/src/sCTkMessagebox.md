@@ -17,8 +17,8 @@ The `sCTkMessagebox` is an advanced, themeable dialog window system designed to 
 ---
 
 
-Dark Mode:	![sCTkMessagebox_Dark.png](images/sCTkMessagebox_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:	![sCTkMessagebox_Light.png](images/sCTkMessagebox_Light.png)
+	![sCTkMessagebox_Dark.png](images/sCTkMessagebox_Dark.png)&emsp; &emsp; &emsp; &emsp;
+	![sCTkMessagebox_Light.png](images/sCTkMessagebox_Light.png)
 
 
 ### API Constructor Reference

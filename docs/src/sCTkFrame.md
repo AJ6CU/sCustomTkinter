@@ -14,8 +14,8 @@
 
 `sCTkFrame` is a themeable subclass of `customtkinter.CTkFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`. Unlike every other widget in this library, it has no disabled state and no per-state color swapping — frames are containers, not interactive controls, so there's nothing to dim or lock.
 
-Dark Mode:  ![sCTkFrame in dark mode](images/sCTkFrame_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkFrame in light mode](images/sCTkFrame_Light.png)
+  ![sCTkFrame in dark mode](images/sCTkFrame_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkFrame in light mode](images/sCTkFrame_Light.png)
 
 ---
 

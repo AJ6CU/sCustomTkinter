@@ -15,8 +15,8 @@
 
 `sCTkButtonSecondary` is a themeable subclass of `customtkinter.CTkButton` — a lower-emphasis sibling of `sCTkButtonPrimary` (see also `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, and pressed — no "alarm" state, unlike Primary), and Pygubu Designer property introspection.
 
-Dark Mode:  ![sCTkButtonSecondary_Dark.png](images/sCTkButtonSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:  ![sCTkButtonSecondary_Light.png](images/sCTkButtonSecondary_Light.png)
+  ![sCTkButtonSecondary_Dark.png](images/sCTkButtonSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkButtonSecondary_Light.png](images/sCTkButtonSecondary_Light.png)
 
 ---
 

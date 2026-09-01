@@ -14,8 +14,8 @@
 
 `sCTkTextboxPrimary` is a themeable subclass of `customtkinter.CTkTextbox` — a multi-line text area, the higher-emphasis of the library's two textbox tiers (see also `sCTkTextboxSecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"`.
 
-Dark Mode:  ![sCTkTextboxPrimary in dark mode](images/sCTkTextboxPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkTextboxPrimary in light mode](images/sCTkTextboxPrimary_Light.png)
+  ![sCTkTextboxPrimary in dark mode](images/sCTkTextboxPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkTextboxPrimary in light mode](images/sCTkTextboxPrimary_Light.png)
 
 If `fg_color` resolves to `"transparent"` at construction, the widget copies its parent's actual `fg_color` instead, since `CTkTextbox` doesn't render true transparency the way canvas-based widgets can.
 

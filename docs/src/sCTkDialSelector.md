@@ -13,8 +13,8 @@
 A concrete rotary encoder switch variant designed for stepped selector controls (e.g., band configurations, operating modes, or filter sub-selections). It uses an explicit bounding arc configuration and outputs a clean integer mapping parameter tracking list item indices natively.
 
 
-Dark Mode:  ![sCTkDialSelector_Dark.png](images/sCTkDialSelector_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:  ![sCTkDialSelector_Light.png](images/sCTkDialSelector_Light.png)
+  ![sCTkDialSelector_Dark.png](images/sCTkDialSelector_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkDialSelector_Light.png](images/sCTkDialSelector_Light.png)
 
 
 ### API Property Reference

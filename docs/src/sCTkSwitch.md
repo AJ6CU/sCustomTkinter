@@ -14,8 +14,8 @@
 
 `sCTkSwitch` is a themeable subclass of `customtkinter.CTkSwitch`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state that dims every color property, not just the label text. A previously separate widget, `sCTkSwitchAlt`, existed specifically to work around limitations that have since been resolved directly in this widget and has been retired.
 
-Dark Mode:  ![sCTkSwitch in dark mode](images/sCTkSwitch_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkSwitch in light mode](images/sCTkSwitch_Light.png)
+  ![sCTkSwitch in dark mode](images/sCTkSwitch_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkSwitch in light mode](images/sCTkSwitch_Light.png)
 
 Disabling combines two mechanisms: CustomTkinter's native `state="disabled"`, and a bindtag-based click interceptor that prepends a dedicated binding returning `"break"` on click. This is more robust than a simple event-unbind, since it intercepts clicks regardless of which internal level the native click handler is actually bound at.
 

@@ -17,8 +17,8 @@
 `sCTkButtonTertiary` is a themeable subclass of `customtkinter.CTkButton` — the lowest-emphasis of the library's three button tiers (see also `sCTkButtonPrimary`, `sCTkButtonSecondary`), styled as an outline button: border and text only, no filled background. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, pressed), and Pygubu Designer property introspection.
 
 
-Dark Mode:  ![sCTkButtonTertiary_Dark.png](images/sCTkButtonTertiary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:  ![sCTkButtonTertiary_Light.png](images/sCTkButtonTertiary_Light.png)
+  ![sCTkButtonTertiary_Dark.png](images/sCTkButtonTertiary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkButtonTertiary_Light.png](images/sCTkButtonTertiary_Light.png)
 ---
 
 ### Constructor

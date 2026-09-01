@@ -14,8 +14,8 @@
 
 `sCTkEntrySecondary` is a themeable subclass of `customtkinter.CTkEntry` — the lower-emphasis of the library's two entry-field tiers (see also `sCTkEntryPrimary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a genuine three-state visual model: normal, readonly, and disabled.
 
-Dark Mode:	![sCTkEntrySecondary in dark mode](images/sCTkEntrySecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:	![sCTkEntrySecondary in light mode](images/sCTkEntrySecondary_Light.png)
+	![sCTkEntrySecondary in dark mode](images/sCTkEntrySecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+	![sCTkEntrySecondary in light mode](images/sCTkEntrySecondary_Light.png)
 
 
 All three states use CTk's native `state` option (`"normal"`, `"readonly"`, `"disabled"`) — see `sCTkEntryPrimary`'s documentation for the full rationale and the readonly-specific placeholder behavior worth knowing about.

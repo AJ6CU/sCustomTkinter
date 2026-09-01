@@ -18,8 +18,8 @@ The *sCTkSeparator* is an advanced, themeable divider widget for CustomTkinter. 
 
 --- 
 
-Dark Mode:  ![sCTkSeparator_Dark.png](images/sCTkSeparator_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:  ![sCTkSeparator_Light.png](images/sCTkSeparator_Light.png)
+  ![sCTkSeparator_Dark.png](images/sCTkSeparator_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkSeparator_Light.png](images/sCTkSeparator_Light.png)
 
 
 ### System Architecture Overview

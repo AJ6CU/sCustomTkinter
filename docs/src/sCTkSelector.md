@@ -16,8 +16,8 @@
 
 `sCTkSelector` is a theme-compliant, scrollable multi-select (or single-select) list of checkboxes, with an optional live-filtering search field. It's built by composing a themed frame, an `sCTkScrollableFrame` for the checkbox list, and one `sCTkCheckBox` per item — not by subclassing a single native CustomTkinter widget.
 
-Dark Mode:  ![sCTkSelector in dark mode](images/sCTkSelector_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkSelector in light mode](images/sCTkSelector_Light.png)
+  ![sCTkSelector in dark mode](images/sCTkSelector_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkSelector in light mode](images/sCTkSelector_Light.png)
 
 This widget inherits `sCTkFrame` directly (rather than raw `ctk.CTkFrame`) — a composition pattern that previously carried a real risk of `ThemeableWidget.__init__` running twice per instance and silently corrupting this widget's own resolved theme data. That risk is now fully closed: `ThemeableWidget` has a run-once guard preventing the double-init, and `sCTkFrame` itself filters its inbound kwargs down to only what native `CTkFrame` actually accepts before its own constructor call. Neither fix required any change to this widget.
 

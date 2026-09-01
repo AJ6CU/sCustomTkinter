@@ -14,8 +14,8 @@
 
 `sCTkButtonPrimary` is a themeable subclass of `customtkinter.CTkButton` — the most prominent of the library's three button tiers (see also `sCTkButtonSecondary`, `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a four-state visual model (not just enabled/disabled, but also pressed and alarm), and Pygubu Designer property introspection.
 
-Dark Mode:  ![sCTkButtonPrimary_Dark.png](images/sCTkButtonPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode:  ![sCTkButtonPrimary_Light.png](images/sCTkButtonPrimary_Light.png)
+  ![sCTkButtonPrimary_Dark.png](images/sCTkButtonPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkButtonPrimary_Light.png](images/sCTkButtonPrimary_Light.png)
 
 ---
 
