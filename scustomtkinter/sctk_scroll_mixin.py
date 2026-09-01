@@ -88,7 +88,7 @@ class ScrollBindingMixin:
     # than dropping it, the result is clamped: small deltas scale normally,
     # large ones saturate at a sane notch-sized step. Tune this if a wheel
     # notch feels too short or too long; it is the only knob involved.
-    MAC_SCROLL_MAX_STEP = 5
+    MAC_SCROLL_MAX_STEP = 3
 
     # Trackpad events arrive far more frequently and with far finer deltas
     # than wheel notches. Scrolling on each one is unusably fast, so deltas
