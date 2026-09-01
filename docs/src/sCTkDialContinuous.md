@@ -64,20 +64,38 @@ def on_vfo_dial_rotated(clicks_delta: int):
 ```
 
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
 ```json
 {
     "sCTkDialContinuous": {
-        "fg_color": "transparent",
-        "dial_color": ["#1E293B", "#181E2B"],
+        "fg_color": ["#F1F5F9", "#0A0A0A"],
+        "text_color": ["#1A4375", "#FF9100"],
         "shadow_color": ["#CBD5E1", "#02040A"],
+        "dial_color": ["#9E9E9E", "#2A2F3D"],
+        "dial_highlight_color": ["#E4E8EC", "#42454B"],
+        "dial_shadow_color": ["#5C6165", "#050507"],
+        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+        "dial_rim_shadow_color": ["#3E4245", "#000000"],
         "pointer_glow_color": ["#CBD5E1", "#3A455C"],
-        "border_width": 0,
-        "corner_radius": 0
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "dial_color": ["#E2E8F0", "#1A1D24"],
+            "pointer_glow_color": ["#CBD5E1", "#334155"]
+        }
     }
 }
 ```
 
+Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+
+`pointer_glow_color` is **specific to this variant**: it colours the ring around the finger dimple, and only this dial draws one. It is required in both the top level and `disabled_map`. Selector and Range require `pointer_color` instead.
+
+The dark-mode values above give a black anodised knob. For a brushed-aluminium look, raise `dial_shadow_color` and `dial_highlight_color` toward the light end and brighten the rim.
+
 ### Other notes
+* **Knob rendering:** the body is a shaded dome and the indicator is a recessed finger dimple, sized at 36% of the knob radius with 6% rim clearance — a VFO operator puts a finger in it to spin the dial quickly. Both scale with the knob. See [the base class page](sCTkDial.md#knob-rendering).
+* **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
+* **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
 * **Latching Override Independence:** Infinite flywheel dimples loop continuously around the chassis ring, ignoring arc boundary restrictions.
 * **Custom Accelerated Steps:** Attaching optional click callbacks allows click events to jump values by wider intervals (e.g., jumping 2 full indices per tap via `set_position_index(2)`) rather than dropping onto the baseline single-step tracking paths.
 * **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.

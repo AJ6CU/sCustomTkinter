@@ -457,14 +457,30 @@
         "fg_color": ["#F4F7FA", "#0A0A0A"],
         "text_color": ["#1A4375", "#FF9100"],
         "alarm_color": ["#990000", "#FF2200"],
-        "needle_color": ["#112A4B", "#FF9100"]
+        "needle_color": ["#112A4B", "#FF9100"],
+        "font": ["Arial", 10, "bold"],
+        "scale_font": ["Arial", 10, "bold"],
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "alarm_color": ["#CBD5E1", "#4B5563"],
+            "needle_color": ["#94A3B8", "#4B5563"]
+        }
     },
     "sCTkSMeterBar": {
-        "fg_color": ["#FFFFFF", "#0A0A0A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "alarm_color": ["#DC2626", "#FF2200"],
-        "led_on_color": ["#2471A3", "#FF9100"],
-        "led_off_color": ["#E2E8F0", "#1A1D20"]
+      "fg_color": ["#FFFFFF", "#0A0A0A"],
+      "text_color": ["#1A4375", "#FF9100"],
+      "alarm_color": ["#DC2626", "#FF2200"],
+      "led_on_color": ["#2471A3", "#FF9100"],
+      "led_off_color": ["#E2E8F0", "#1A1D20"],
+      "inactive_color": ["#94A3B8", "#334155"],
+      "font": ["Arial", 10, "bold"],
+      "scale_font": ["Arial", 9, "bold"],
+      "disabled_map": {
+          "text_color": ["#94A3B8", "#4B5563"],
+          "alarm_color": ["#CBD5E1", "#4B5563"],
+          "led_on_color": ["#CBD5E1", "#374151"],
+          "led_off_color": ["#F1F5F9", "#1A1D20"]
+      }
     },
     "sCTkDialSelector": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
