@@ -24,16 +24,22 @@ responsibility (see this project's own test harness for this widget, which
 maintains its own separate enabled/disabled flag and loops over
 get_children() to disable them individually).
 
-IMPORTANT -- SCROLL BINDINGS ARE NOT AUTOMATIC. _toggle_scroll_bindings()/
-_finalize_split_bindings() are never called from __init__. You must call
-self._finalize_split_bindings() (or self._toggle_scroll_bindings(bind=True))
-yourself, after the widget has been placed with pack()/grid()/place() --
-exactly as demonstrated in this project's own test harness for this widget.
-This is confirmed, deliberate, existing behavior, not an oversight to "fix"
-by auto-binding in __init__: the scroll-binding logic below inspects the
-widget's actual parent hierarchy (via winfo_parent()), which may not be
-fully realized yet at construction time, before the widget has been placed
-into a layout.
+SCROLL BINDINGS ARE AUTOMATIC. __init__ binds <Map>, so scroll handling
+activates by itself the first time the widget becomes visible via
+pack()/grid()/place(), and again on any later remap. No separate activation
+call is needed.
+
+<Map> is used rather than binding directly in __init__ because the binding
+logic inspects the widget's actual parent hierarchy (via winfo_parent()),
+which isn't fully realized at construction time, before the widget has been
+placed into a layout. <Map> is the earliest point at which it is.
+
+To ship a frame that doesn't respond to scroll input, pass
+scroll_enabled=False to the constructor, or call disable_scroll() -- either
+one suppresses the automatic activation rather than being silently
+overridden by it. See disable_scroll()'s docstring for the bulk-update
+workflow this supports, and note that it governs scroll INPUT only; the
+scrollbar itself stays visible and draggable.
 
 THE SCROLL-HANDLING METHODS BELOW (_toggle_scroll_bindings,
 _process_mac_touchpad_scroll, _process_scroll_wheel,
@@ -50,7 +56,6 @@ three platforms.
 """
 import sys
 import platform
-import time
 from typing import Any, Optional
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
@@ -102,8 +107,11 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         exact class names, added directly as a child, would be incorrectly
         filtered out too.
       - Cross-platform scroll wheel and macOS trackpad handling -- see module
-        docstring. NOT wired up automatically; you must call
-        self._finalize_split_bindings() yourself after placing the widget.
+        docstring. Wired up automatically on <Map>; no activation call needed.
+      - A `scroll_enabled` property (default True), settable at construction
+        or at runtime via configure(scroll_enabled=...), enable_scroll(), and
+        disable_scroll(), and readable via cget("scroll_enabled"). Governs
+        scroll INPUT handling only -- it does not hide the scrollbar.
 
     Colors are passed through to configure() as raw (light, dark) tuples rather
     than pre-resolved to a single value, so CustomTkinter's own appearance-mode
@@ -161,7 +169,10 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
             master: Parent container.
             **kwargs: Any native CTkScrollableFrame argument (e.g. `label_text`),
                 or a theme-key override (see the "sCTkScrollableFrame" block
-                in sCTkThemes.json).
+                in sCTkThemes.json). Additionally accepts `scroll_enabled`
+                (bool, default True) -- pass False to construct a frame that
+                doesn't respond to scroll input until enable_scroll() is
+                called.
         """
         # 1. Fire our shared theme logic first. This resolves final_kw
         # (construction-time properties). See ThemeableWidget.__init__ for
@@ -193,13 +204,95 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         self._touchpad_accumulated_delta = 0.0
         self._touchpad_last_direction = 0
 
-        # 5. Register lifecycle handshake hook, notifying Pygubu-style consumers
-        # that construction is complete.
+        # 5. Scroll activation. Bindings now come up automatically the first
+        # (and every) time this widget actually becomes visible via
+        # pack()/grid()/place() -- see _on_map_auto_bind_scroll()'s docstring.
+        # An earlier version required the caller to remember a separate,
+        # manual _finalize_split_bindings() call after placement; a scrollable
+        # frame that doesn't scroll by default is a confusing thing to ship,
+        # given what the widget's own name promises.
         #
-        # NOTE: scroll bindings are NOT set up here -- see module docstring.
-        # Call self._finalize_split_bindings() yourself once this widget has
-        # been placed via pack()/grid()/place().
+        # self._scroll_enabled is the single source of truth for "should this
+        # widget respond to scroll input", read here from final_kw so
+        # scroll_enabled=False can be passed straight to the constructor and
+        # take effect before <Map> ever fires. Not a native CTk keyword; the
+        # _NATIVE_CTKSCROLLABLEFRAME_KWARGS filter above already kept it out
+        # of super().__init__().
+        self._scroll_enabled = bool(self._local_defaults.get("scroll_enabled", True))
+        self.bind("<Map>", self._on_map_auto_bind_scroll, add="+")
+
+        # 6. Register lifecycle handshake hook, notifying Pygubu-style consumers
+        # that construction is complete.
         self._finalize_themeable_lifecycle()
+
+    def _on_map_auto_bind_scroll(self, event: Any = None) -> None:
+        """
+        Bound to <Map> in __init__ -- fires automatically the first time, and
+        every subsequent time, this widget actually becomes visible via
+        pack()/grid()/place(). This is what makes scroll bindings automatic,
+        without the caller needing to remember a separate call.
+
+        Deliberately re-fires on every remap, not just the first: if this
+        widget is later pack_forget()'d/grid_forget()'d and then re-placed
+        (e.g. after new content was added while it was hidden), this re-runs
+        the full binding pass and picks up anything new.
+        _toggle_scroll_bindings()'s unbind-then-rebind pattern makes repeated
+        calls safe, with no risk of duplicate bindings piling up.
+
+        Respects an explicit scroll_enabled=False rather than silently
+        overriding it -- see disable_scroll() for that workflow.
+
+        Args:
+            event: The Tkinter <Map> event. Accepted and ignored; present only
+                because Tkinter passes it to every bound callback.
+        """
+        if not self._scroll_enabled:
+            return
+        self._toggle_scroll_bindings(bind=True)
+
+    def enable_scroll(self) -> None:
+        """
+        Turns scroll handling back on, rebinding every layer immediately.
+
+        Public convenience wrapper over configure(scroll_enabled=True); both
+        are equivalent and go through the same code path. Safe to call
+        repeatedly -- bindings are always torn down before being rebuilt, so
+        nothing accumulates.
+        """
+        self.configure(scroll_enabled=True)
+
+    def disable_scroll(self) -> None:
+        """
+        Turns scroll handling off, removing every scroll binding this widget
+        knows about. The widget stops responding to wheel and trackpad input
+        until enable_scroll() is called.
+
+        Public convenience wrapper over configure(scroll_enabled=False); both
+        are equivalent and go through the same code path.
+
+        This also suppresses the automatic <Map>-triggered binding: calling
+        this before the widget is first placed means scroll stays off through
+        pack()/grid()/place() rather than being silently re-enabled. That
+        makes the following a supported pattern for bulk content updates,
+        where rebinding on every widget added would be wasted work:
+
+            frame = sCTkScrollableFrame(master)
+            frame.disable_scroll()
+            frame.pack(fill="both", expand=True)
+            for item in many_items:
+                SomeWidget(frame, text=item).pack()
+            frame.enable_scroll()
+
+        Passing scroll_enabled=False to the constructor achieves the same
+        starting state without the separate call.
+
+        NOTE: this affects scroll INPUT handling only. The scrollbar remains
+        visible and draggable -- CustomTkinter's scrollbar has no disabled
+        state to lock (confirmed by direct investigation earlier in this
+        project's audit). Hiding it is a separate concern, handled elsewhere
+        by color-matching and zero width.
+        """
+        self.configure(scroll_enabled=False)
 
     def _set_appearance_mode(self, mode_string: str) -> None:
         """
@@ -258,8 +351,37 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                 pname = args[0]
                 if pname in ["fg_color", "label_fg_color", "scrollbar_button_color", "border_color"]:
                     return (pname, pname, pname, str(self._local_defaults.get(pname)), str(self._local_defaults.get(pname)))
+                if pname == "scroll_enabled":
+                    # Unlike the color properties above, this one reports live
+                    # state in the `current` position: `default` is the value
+                    # the widget was constructed with, `current` is whatever
+                    # enable_scroll()/disable_scroll() last set.
+                    return (pname, pname, pname,
+                            str(self._local_defaults.get("scroll_enabled", True)),
+                            str(self._scroll_enabled))
                 return super().configure(pname)
 
+        # scroll_enabled is this library's own property, not a native CTk one.
+        # It MUST be popped before the super() call below: CTkScrollableFrame
+        # .configure() raises on any keyword it doesn't recognize, exactly as
+        # its __init__ does (see the WHITELIST GUARD note in this class's
+        # docstring).
+        #
+        # Deliberately does NOT write back into self._local_defaults --  that
+        # dict holds construction-time defaults, and overwriting it here would
+        # make the single-argument query above report the current value in its
+        # `default` slot, collapsing the distinction between the two.
+        if "scroll_enabled" in kwargs:
+            new_state = bool(kwargs.pop("scroll_enabled"))
+            self._scroll_enabled = new_state
+            # Apply immediately rather than waiting for the next <Map>:
+            # enable_scroll() on an already-visible widget has to take effect
+            # now, and disable_scroll() has to tear bindings down now.
+            # _toggle_scroll_bindings() is idempotent either way.
+            self._toggle_scroll_bindings(bind=new_state)
+
+        # Re-checked after the pop: configure(scroll_enabled=...) on its own
+        # leaves kwargs empty, and there's no reason to repaint for it.
         if kwargs:
             super().configure(**kwargs)
             self._update_current_visual_state()
@@ -273,6 +395,25 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     # sCTkSegmentedButton earlier in this project's audit; the same fix
     # applies here.
     config = configure
+
+    def cget(self, attribute_name: str) -> Any:
+        """
+        Standard property accessor, extended to know about `scroll_enabled`.
+
+        Native CTkScrollableFrame.cget() raises on any attribute it doesn't
+        recognize, so this library's own property has to be intercepted here
+        before delegating; everything else passes straight through unchanged.
+
+        Args:
+            attribute_name: The property to read.
+
+        Returns:
+            For "scroll_enabled", the live bool -- not the construction-time
+            default. For anything else, whatever the native widget returns.
+        """
+        if attribute_name == "scroll_enabled":
+            return self._scroll_enabled
+        return super().cget(attribute_name)
 
     def _update_current_visual_state(self) -> None:
         """
@@ -316,14 +457,26 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     def _toggle_scroll_bindings(self, bind=True):
         """The parent canvas intercept engine routing mouse wheels and touchpad events [1.1].
 
+        INTERNAL. Callers outside this class should use enable_scroll() /
+        disable_scroll() or configure(scroll_enabled=...) instead. This method
+        only manipulates bindings; it does NOT update self._scroll_enabled, so
+        calling it directly with bind=False leaves that flag stale and the
+        next <Map> will happily rebind. The public entry points set the flag
+        and call this, in that order, which is why they're the supported path.
+
+        Args:
+            bind: True (re)establishes every scroll binding -- safe to call
+                repeatedly, since existing bindings are always removed first
+                before any new ones are added, so nothing accumulates or
+                duplicates. False removes every binding and adds nothing back.
+
         EXPERIMENTAL: gated on _USE_CUSTOM_SCROLL_BINDING -- see class
         docstring. FIX: an earlier version of this gate lived only in
-        _finalize_split_bindings(), but the documented test-harness pattern
-        for this widget calls _toggle_scroll_bindings(bind=True) directly,
-        bypassing that gate entirely -- meaning setting the toggle to False
-        had no effect at all when this method was called this way. Moved
-        here, into this method itself, so the toggle is enforced regardless
-        of which entry point is used.
+        _finalize_split_bindings(), which callers could bypass entirely by
+        calling this method directly -- meaning setting the toggle to False
+        had no effect at all when it was reached that way. Moved here, into
+        this method itself, so the toggle is enforced regardless of which
+        entry point is used.
 
         FIX: an earlier version only bound self.get_children() -- DIRECT
         children, one level deep. A composite widget like sCTkEntryPrimary
@@ -366,6 +519,18 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
             pass
 
         def _collect_descendants(widget, collected):
+            # FIX: stop the recursion at a nested CTkScrollableFrame boundary
+            # (covers sCTkScrollableFrame and anything built on it, such as
+            # sCTkSelector/sCTkTableview). Without this, an inner scrollable
+            # frame placed inside an outer one would have its canvas,
+            # scrollbar, and entire content tree bound to the OUTER frame's
+            # handler as well as its own -- and since every bind below uses
+            # add="+", both handlers fire on the same event, scrolling both
+            # frames at once. Native CTk guards the same boundary in
+            # _check_if_valid_scroll (comparing _parent_canvas identity); this
+            # is the equivalent for the custom binding system.
+            if widget is not self and isinstance(widget, ctk.CTkScrollableFrame):
+                return
             if widget not in collected:
                 collected.append(widget)
             try:
@@ -441,20 +606,10 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                     # implementation's own threshold value; adjust this one
                     # constant while testing to find what feels right.
                     TOUCHPAD_ACCUMULATION_THRESHOLD = 12.0
-                    scaled_scroll = 0
                     if abs(self._touchpad_accumulated_delta) >= TOUCHPAD_ACCUMULATION_THRESHOLD:
                         scaled_scroll = -1 if self._touchpad_accumulated_delta > 0 else 1
                         parent_widget.yview_scroll(scaled_scroll, "units")
                         self._touchpad_accumulated_delta = 0.0
-
-                    # TEMPORARY DIAGNOSTIC -- keep while tuning
-                    # TOUCHPAD_ACCUMULATION_THRESHOLD above; remove once
-                    # satisfied. scaled_scroll of 0 means this event only
-                    # contributed to the accumulator without crossing the
-                    # threshold yet -- no scroll happened on this event.
-                    print(f"[TouchpadScroll] t={time.time():.4f}  event.widget={event.widget}  raw_delta={event.delta}  "
-                          f"decoded_delta_y={delta_y}  accumulated={self._touchpad_accumulated_delta:.2f}  "
-                          f"scaled_scroll={scaled_scroll}")
         except Exception:
             pass
 
@@ -469,10 +624,6 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                     MAC_SCROLL_SENSITIVITY = 3
                     scaled_scroll = int(-MAC_SCROLL_SENSITIVITY * delta) if abs(delta) >= 1 else (
                         -MAC_SCROLL_SENSITIVITY if delta > 0 else MAC_SCROLL_SENSITIVITY)
-                    # TEMPORARY DIAGNOSTIC -- see _process_mac_touchpad_scroll's
-                    # identical note.
-                    print(f"[MouseWheel/Darwin] t={time.time():.4f}  raw_delta={delta}  "
-                          f"scaled_scroll={scaled_scroll}")
                     parent_widget.yview_scroll(scaled_scroll, "units")
                 elif sys_platform == "Linux":
                     if event.num == 4: parent_widget.yview_scroll(-1, "units")
@@ -493,8 +644,15 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
 
     def _finalize_split_bindings(self):
         """
-        Standard layout binding connection pass [1.1]. Call this yourself
-        after placing the widget.
+        Standard layout binding connection pass [1.1].
+
+        RETAINED FOR COMPATIBILITY. Calling this after placing the widget was
+        once mandatory; it no longer is, since __init__ binds <Map> and
+        activates scrolling automatically. Existing callers that still invoke
+        it are harmless -- the underlying toggle is idempotent -- but new code
+        shouldn't need it. Composite widgets in this project that rebuild
+        their content dynamically (sCTkFileExplorer, sCTkTableview) do still
+        call it deliberately, to bind rows created after the initial <Map>.
 
         EXPERIMENTAL: the authoritative _USE_CUSTOM_SCROLL_BINDING gate now
         lives inside _toggle_scroll_bindings() itself (see that method's
