@@ -417,7 +417,11 @@
         "bg_color": "transparent",
         "corner_radius": 6,
         "font": ["Arial", 11, "bold"],
-        "text_color": ["#1A1A1A", "#FFFFFF"]
+        "text_color": ["#1A1A1A", "#FFFFFF"],
+        "disabled_map": {
+            "fg_color": ["#CBD5E1", "#475569"],
+            "text_color": ["#94A3B8", "#64748B"]
+        }
     },
     "sCTkMessagebox": {
         "font": ["Arial", 14],

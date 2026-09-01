@@ -5,9 +5,11 @@
 ### Table of Contents
 * [System Architecture Overview](#system-architecture-overview)
 * [API Property Reference](#api-property-reference)
+* [State](#state)
 * [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
 * [Layout Manager Integration](#layout-manager-integration)
 * [Pygubu Designer Properties Guide](#pygubu-designer-properties-guide)
+* [Event Binding](#event-binding)
 * [Implementation Example & Test Harness](#implementation-example--test-harness)
 
 ---
@@ -46,6 +48,21 @@ The visual update matrix implements two important enhancements:
 
 ---
 
+<a name="state"></a>
+### State
+
+| Method | Description |
+| :--- | :--- |
+| `state(mode=None)` | Getter with no argument; setter with `"normal"` or `"disabled"`. |
+| `get_state()` | Equivalent to `state()` with no argument. |
+| `configure(state=...)` | Same effect. Both routes are supported. |
+| `cget("state")` | Reads the current state. |
+| `configure("state")` | Pygubu-style single-argument query. |
+
+A separator has nothing to interact with, so disabling only repaints it from `disabled_map` — the line and any header text dim together. It exists so a panel can disable every widget it contains uniformly.
+
+---
+
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
 
 The component queries your centralized theme sheet profile matrix using standard `self._resolve_color()` lookup calls, ensuring that indicator dots and canvas borders translate colors smoothly across appearance updates.
@@ -62,11 +79,22 @@ To satisfy the framework configuration guidelines, ensure your theme matrix incl
         "text_color": ["#1A1A1A", "#FFFFFF"],
         "disabled_map": {
             "fg_color": ["#CBD5E1", "#475569"],
-            "text_color": ["#94A3B8", "gray50"]
+            "text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
+
+**Every key above is required,** including `disabled_map`. Construction raises `KeyError` naming the missing key and whether it belongs at the top level or in `disabled_map`.
+
+This matters because the disabled colours were previously unreachable. `_draw()` read them with hardcoded fallbacks — `.get("fg_color", ["#CBD5E1", "#475569"])` and `.get("text_color", ["#94A3B8", "gray50"])` — and since the theme block had no `disabled_map` at all, those fallbacks were **always** taken. A disabled separator never used the configured theme. The values shown above are those same fallbacks promoted into the theme file, so the appearance is unchanged; the one exception is dark-mode disabled text, where the Tk colour name `gray50` is replaced by `#64748B`, matching the disabled text colour used across the rest of the library.
+
+`font` and `corner_radius` lost their fallbacks for the same reason. `text_color` additionally used to fall back to `ctk.ThemeManager.theme["CTkLabel"]["text_color"]` — borrowing another widget class's colour, which would now only mask a theme gap.
+
+**Structural parameters are not required in the theme.** `orientation`, `length`, `width`, `text` and `dash` are read from the resolved keywords, so the theme *can* supply them, but they are constructor arguments with sensible defaults and requiring them would push layout decisions into the stylesheet.
+
+---
+
 ### Layout Manager Integration
 
 Mixing layout manager tracking loops within the same immediate frame layer is completely blocked. When handling automated expansion parameters across scaling monitor resolutions, enforce the following geometry behaviors:
@@ -98,6 +126,20 @@ When configuring layouts visually within the Pygubu Designer editing workspace p
    * Type `5,5` for standard clean dash blocks.
    * Type `2,6` for clean dotted layout maps.
    * Leave blank or type `None` to restore solid rounded vector shapes.
+
+---
+
+<a name="event-binding"></a>
+### Event Binding
+
+`bind()` and `unbind()` are overridden to route to the internal canvas, which is what actually receives events — `CTkBaseClass` filters direct binds on the widget itself.
+
+Both previously discarded an argument, and both were fixed:
+
+- **`bind()` accepted `add` and ignored it,** hardcoding `add=True` in the forwarded call. A caller passing `add=False` to *replace* an existing binding would silently accumulate one instead.
+- **`unbind()` accepted `funcid` and discarded it,** so it removed *every* binding for that sequence rather than the one identified. This is the same destructive behaviour that made `unbind()` unusable for blocking scrollbar drags in `sCTkScrollableFrame`: Tk's `unbind()` with no `funcid` wipes bindings this widget never installed, with no way to restore them.
+
+If existing code depended on the old behaviour it will change — though neither method did what its signature promised.
 
 ---
 
