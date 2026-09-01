@@ -73,7 +73,6 @@ Colors are stored and passed through as raw `(light, dark)` tuples rather than b
     "sCTkSegmentedButton": {
         "fg_color": ["#4F75A2", "#2B4C7E"],
         "selected_color": ["#1A4375", "#3A6FA2"],
-        "selected_hover_color": ["#112A4B", "#2B5885"],
         "unselected_hover_color": ["#3A5C85", "#3A5F8C"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
         "disabled_map": {
@@ -92,7 +91,13 @@ A couple of design decisions worth knowing if you're editing this block:
 - **Hover is fully suppressed while disabled**, at the native widget level — confirmed by direct testing. There's no `disabled_map` entry for hover colors because a disabled segment never fires a hover event in the first place; any color set there would never be visible.
 - **The selected segment keeps a distinct, more prominent text color while disabled** (`disabled_map.selected_text_color`), so you can still tell which option was chosen even though the whole control is grayed out. Every other segment's disabled text color comes from the plain `disabled_map.text_color`.
 
-Every color in this widget now comes from `sCTkThemes.json` — there are no hardcoded hex values left in the widget's own source.
+**Every key above is required,** at the top level or in `disabled_map` as shown. Construction raises `KeyError` naming the missing one.
+
+The colour lookups previously carried hardcoded fallbacks. Those were unreachable given the theme block as shipped — every key they guarded was present — but that was a property of the *theme file*, not the code. Deleting a key would have silently activated a fallback, producing a plausible-looking wrong colour instead of the loud failure every other widget now gives. They're gone.
+
+`selected_hover_color` has also been removed from the block. It was present in the theme but read by no code path at all — dead data, the same situation `pointer_color` was in for the dial family. A selected segment's hover behaviour comes from CustomTkinter's own default, since this widget never set it.
+
+Every color in this widget comes from `sCTkThemes.json` — there are no hardcoded hex values left in the widget's own source.
 
 ---
 

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkScrollbar - Piece 1 of 2
+sCTkScrollbar
 
 An advanced, theme-compliant custom scrollbar component and native container.
 Inherits cleanly from ctk.CTkScrollbar to preserve native macOS high-precision
@@ -14,13 +14,28 @@ from .sctk_scroll_mixin import ScrollBindingMixin
 
 
 class sCTkScrollbar(ctk.CTkScrollbar, ThemeableWidget):
+    # Required at the TOP LEVEL of the theme block. There is no disabled_map:
+    # CustomTkinter's scrollbar has no disabled state to lock, and containers
+    # that need an inert bar block dragging at the binding level instead --
+    # see ScrollBindingMixin._set_scroll_drag_blocked().
+    _REQUIRED_THEME_KEYS = ("button_color", "button_hover_color")
+
     def __init__(self, master=None, **kwargs):
         # 1. Run shared mixin logic first to parse master themes.json safely
         ThemeableWidget.__init__(self, kwargs)
         self._local_defaults = dict(self.final_kw)
+        self._validate_theme_keys()
 
-        # 2. Track orientation layout constraints cleanly
-        orientation = kwargs.get("orientation", "vertical").lower()
+        # 2. Track orientation layout constraints cleanly.
+        #
+        # FIX: this previously read kwargs.get("orientation", ...) -- the RAW
+        # constructor dict, after ThemeableWidget.__init__ had already
+        # processed it. Reading the resolved final_kw instead means the value
+        # is picked up whether it came from the constructor or the theme
+        # block, and it cannot be affected by anything the mixin does to the
+        # incoming dict. str() guards against a non-string value reaching
+        # .lower().
+        orientation = str(self.final_kw.get("orientation", "vertical")).lower()
         self._is_horizontal = orientation == "horizontal"
 
         # 3. Securely set default sizes based on orientation layout rules
@@ -34,10 +49,30 @@ class sCTkScrollbar(ctk.CTkScrollbar, ThemeableWidget):
         self._apply_custom_theme_colors()
         self._finalize_themeable_lifecycle()
 
+    def _validate_theme_keys(self) -> None:
+        """
+        Hard-fails at construction on an incomplete theme block, naming the
+        missing key. Replaces the hardcoded fallbacks previously used in
+        _apply_custom_theme_colors(), which silently substituted a plausible
+        colour and made an incomplete block look merely slightly-off rather
+        than broken.
+
+        Raises:
+            KeyError: naming the first missing key found.
+        """
+        name = self.__class__.__name__
+        for key in self._REQUIRED_THEME_KEYS:
+            if self._local_defaults.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' at the top level "
+                    f"of sCTkThemes.json."
+                )
+
     def _apply_custom_theme_colors(self):
         """Cascades color profiles directly out of your centralized stylesheet json maps."""
-        normal_color = self._local_defaults.get("button_color", ["#64748B", "#4B5563"])
-        normal_hover = self._local_defaults.get("button_hover_color", ["#1A4375", "#2471A3"])
+        # No fallbacks: validated at construction, so both lookups resolve.
+        normal_color = self._local_defaults.get("button_color")
+        normal_hover = self._local_defaults.get("button_hover_color")
 
         super().configure(
             button_color=tuple(normal_color) if isinstance(normal_color, list) else normal_color,

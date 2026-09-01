@@ -73,6 +73,7 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         ThemeableWidget.__init__(self, kw)
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
+        self._validate_theme_keys()
 
         # 3. Remove keys the native CTkSegmentedButton constructor either doesn't
         # accept, or that would break its internal layout if set at construction
@@ -238,6 +239,42 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         super()._clicked(*args, **kwargs)
         self._apply_custom_theme_colors()
 
+    # Required at the TOP LEVEL of the theme block.
+    #
+    # selected_hover_color is deliberately NOT listed: it exists in the theme
+    # file but is read by no code path at all -- dead data, the same situation
+    # pointer_color was in for the dial family. Requiring it would demand a key
+    # that does nothing. Either wire it up or remove it from the theme.
+    _REQUIRED_THEME_KEYS = ("fg_color", "selected_color", "text_color",
+                            "unselected_hover_color")
+
+    # Required inside disabled_map. selected_text_color lives ONLY here -- there
+    # is no top-level equivalent, since a selected segment's normal text colour
+    # comes from text_color.
+    _REQUIRED_DISABLED_KEYS = ("fg_color", "selected_color", "text_color",
+                               "selected_text_color")
+
+    def _validate_theme_keys(self) -> None:
+        """
+        Hard-fails at construction on an incomplete theme block, naming the
+        missing key and where it belongs.
+
+        Raises:
+            KeyError: naming the first missing key found.
+        """
+        name = self.__class__.__name__
+        for key in self._REQUIRED_THEME_KEYS:
+            if self._local_defaults.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' at the top level "
+                    f"of sCTkThemes.json."
+                )
+        for key in self._REQUIRED_DISABLED_KEYS:
+            if self._custom_disabled_map.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' in disabled_map."
+                )
+
     def _apply_custom_theme_colors(self) -> None:
         """
         Recomputes and applies this widget's colors from the theme file, based
@@ -252,8 +289,8 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         handle appearance-mode repaints without help from _set_appearance_mode.
         Every value here traces back to sCTkThemes.json -- there are no
         hardcoded colors in this method; the tuples on each `.get(key, ...)`
-        call are fallback defaults only, used if a key is ever missing from the
-        theme file entirely.
+        Every colour comes from the theme block, which is validated at
+        construction -- there are no fallbacks to fall through to.
         """
         # Guards against being called before CTkSegmentedButton has built its
         # internal per-segment buttons (see the __init__ comment on the 15ms delay).
@@ -263,15 +300,26 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         is_disabled = str(getattr(self, "_custom_current_state", "normal")).lower() == "disabled"
         target_map = self._custom_disabled_map if is_disabled else self._local_defaults
 
-        fg_tuple = tuple(target_map.get("fg_color", ("#4F75A2", "#2B4C7E")))
+        # No `.get(key, fallback)` anywhere below. Those fallbacks were
+        # unreachable given the current theme file -- every key they guarded
+        # is present -- but that was a property of the THEME, not the code.
+        # Delete a key from the block and the fallback would silently
+        # activate, producing a plausible-looking wrong colour instead of the
+        # KeyError every other widget now raises. _validate_theme_keys()
+        # makes that failure loud.
+        fg_tuple = tuple(target_map.get("fg_color"))
         # The theme JSON's disabled_map key is "selected_color", not
         # "disabled_selected_color" -- an earlier version of this line used the
         # wrong key name, so it silently always fell back to a hardcoded default
         # that was subtly wrong in dark mode. Confirm the key name matches
         # sCTkThemes.json's disabled_map block before changing this.
-        d_selected = tuple(self._custom_disabled_map.get("selected_color", ("#70777B", "#45494D")))
-        n_selected = tuple(self._local_defaults.get("selected_color", ("#1A4375", "#1F6AA5")))
-        unselected_hover = tuple(self._local_defaults.get("unselected_hover_color", ("#CBD5E1", "#334155")))
+        d_selected = tuple(self._custom_disabled_map.get("selected_color"))
+        n_selected = tuple(self._local_defaults.get("selected_color"))
+        # NOTE: unselected_hover_color is popped out of final_kw in __init__
+        # (it is not a native CTkSegmentedButton constructor argument), but
+        # _local_defaults is copied BEFORE that pop, so it survives here.
+        # Don't move the copy.
+        unselected_hover = tuple(self._local_defaults.get("unselected_hover_color"))
 
         # unselected_color is deliberately NOT read from the theme file --
         # unselected segments always mirror fg_color, by design, so they blend
@@ -286,12 +334,12 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         }
         super().configure(**fg_payload)
 
-        base_txt_tuple = tuple(target_map.get("text_color") or ("#FFFFFF", "#FFFFFF"))
+        base_txt_tuple = tuple(target_map.get("text_color"))
         # Reads disabled_map.selected_text_color / disabled_map.text_color.
         # An earlier version of this hardcoded both colors directly, ignoring
         # the theme file entirely -- don't reintroduce literal hex values here.
-        selected_disabled_txt = tuple(self._custom_disabled_map.get("selected_text_color", ("#1F2937", "#FFFFFF")))
-        unselected_disabled_txt = tuple(self._custom_disabled_map.get("text_color", ("#475569", "#94A3B8")))
+        selected_disabled_txt = tuple(self._custom_disabled_map.get("selected_text_color"))
+        unselected_disabled_txt = tuple(self._custom_disabled_map.get("text_color"))
 
         for val_name, button in self._buttons_dict.items():
             # Clear layout padding bounds flush to the container track edge.

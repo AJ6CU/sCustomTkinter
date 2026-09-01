@@ -238,6 +238,22 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         if kwargs: return super().configure(**kwargs)
         return None
 
+    # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
+    # attribute -- it does not automatically track whichever configure() a
+    # subclass defines. Without this line, calling .config(...) silently skips
+    # this entire override and lands on sCTkFrame's configure() instead,
+    # bypassing the items/searchBox/multiple_choices/state handling above.
+    # Confirmed as a critical bug on sCTkSegmentedButton earlier in this
+    # project's audit; this was the last widget in the library still missing
+    # the alias.
+    #
+    # Note this class uses the older Tkinter `(self, cnf=None, **kwargs)`
+    # signature rather than `*args`. That's correct here and not the source of
+    # the tuple-comparison bugs found elsewhere: cnf is a real parameter
+    # holding the value itself, so `isinstance(cnf, dict)` and `pname = cnf`
+    # both behave as intended.
+    config = configure
+
     def _set_appearance_mode(self, mode_string: str):
         if hasattr(super(), "_set_appearance_mode"):
             try:

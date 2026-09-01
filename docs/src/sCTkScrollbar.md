@@ -66,6 +66,10 @@ The single-argument query was also previously broken. The implementation tested 
 
 `button_color` is the bar itself; `button_hover_color` is the bar under the cursor. `fg_color` is the track behind it.
 
+**`button_color` and `button_hover_color` are required.** Construction raises `KeyError` naming the missing one. These previously carried hardcoded fallbacks, so a theme block missing either would silently substitute a plausible guess rather than failing loudly.
+
+`orientation` may also be supplied from the theme block. It's read from the resolved keywords rather than the raw constructor dict, so it's picked up whichever way it arrives — an earlier version read the raw dict *after* `ThemeableWidget` had processed it, which risked a horizontal scrollbar silently getting a default `width` instead of `height`.
+
 Colors are passed through as raw `(light, dark)` tuples rather than resolved ahead of time, so they follow appearance-mode changes automatically.
 
 **There is no `disabled_map`, and no disabled state.** CustomTkinter's scrollbar has none to lock. Containers that need an inert scrollbar block dragging at the binding level instead and dim the bar themselves — see [`ScrollBindingMixin`](ScrollBindingMixin.md#disabling-scroll).
@@ -115,8 +119,6 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - **No disabled state** — see [Theming](#theming).
-- **Hardcoded color fallbacks remain.** `_apply_custom_theme_colors()` still uses `.get(key, literal)` for both colors, so a theme block missing them silently substitutes a plausible guess rather than failing loudly. Converting this to construction-time validation, as done for `sCTkTabview` and `sCTkScrollableFrame`, is outstanding.
-- **`orientation` is read from the raw `kwargs`** after `ThemeableWidget.__init__()` has processed them, rather than from the resolved `final_kw`. If that call ever consumes keys, a horizontal scrollbar would silently get a default `width` instead of `height`. Unconfirmed, but worth knowing.
 - **Only `button_color` and `button_hover_color` are tracked** for the persist-on-`configure()` behavior. Other properties still repaint from the theme.
 
 [Return to Table of Contents](#contents)

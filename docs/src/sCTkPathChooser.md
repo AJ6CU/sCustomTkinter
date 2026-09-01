@@ -54,7 +54,8 @@ save_path.pack(fill="x", padx=20, pady=10)
 | `get()` | `str` | Current path text. |
 | `set(path)` | `None` | Sets the displayed path, normalizing and expanding it. |
 | `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming both the entry and the browse button. |
-| `configure(**kwargs)` | varies | Standard configuration. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, accepting `state`, `type`, `title`, `justify`, `btn_text`, `entry_height`, `btn_width` and `btn_height` as first-class properties. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the eight properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and failed — all eight queries fell through to the native widget and Pygubu could read none of them. The dict form of `configure()` was dead for the same reason (`isinstance(args, dict)` on a tuple is never true). |
 
 Clicking "Browse..." opens an `sCTkFileExplorer` in a modal popup; selecting a path there calls `self.set(...)` on this widget automatically.
 

@@ -208,7 +208,12 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
     def configure(self, *args, **kwargs):
         """Extended configure to handle Pygubu queries and dynamic look modifications."""
         if args and len(args) == 1:
-            pname = args
+            # FIX: was `pname = args`, leaving pname as a TUPLE -- every
+            # comparison below tested a tuple against a string and failed, so
+            # all eight single-argument queries were dead and fell through to
+            # super(). Pygubu could not read any of them. Same one-character
+            # bug found in sCTkFileExplorer and sCTkSMeterBar.
+            pname = args[0]
             if pname == "state": return ("state", "state", "state", "normal", getattr(self, "_state", "normal"))
             if pname == "type": return ("type", "type", "type", "directory", self.type)
             if pname == "justify": return ("justify", "justify", "justify", "left", self.justify)
@@ -219,7 +224,10 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
             if pname == "btn_height": return ("btn_height", "btn_height", "btn_height", "32", self.btn_height)
             return super().configure(*args, **kwargs)
 
-        if args and isinstance(args, dict): kwargs = args | kwargs
+        # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
+        # tuple, so this never fired and the dict form of configure() was
+        # dead code. Same tautology fixed across the batch-one widgets.
+        if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
 
         if "btn_text" in kwargs: self.btn_text = str(kwargs.pop("btn_text")) if kwargs["btn_text"] is not None else None
         if "type" in kwargs: self.type = str(kwargs.pop("type")).lower()
