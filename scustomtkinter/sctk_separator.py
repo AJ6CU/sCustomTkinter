@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkSeparator - Piece 1 of 2
+sCTkSeparator
 
 An advanced Separator widget supporting custom section header text,
 dashed line patterns, corner roundness, and responsive orientation modes.
@@ -16,6 +16,16 @@ from .themeable_widget import ThemeableWidget
 class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
     """Advanced Separator supporting headers, dashed lines, and themes.json matrices."""
 
+    # Required at the TOP LEVEL of the theme block. Structural parameters
+    # (orientation, length, width, text, dash) are deliberately absent: they
+    # are constructor arguments with sensible defaults, and although the theme
+    # CAN supply them, requiring them would force layout decisions into the
+    # stylesheet.
+    _REQUIRED_THEME_KEYS = ("fg_color", "text_color", "font", "corner_radius")
+
+    # Required inside disabled_map.
+    _REQUIRED_DISABLED_KEYS = ("fg_color", "text_color")
+
     def __init__(self, master=None, **kwargs):
         # 1. Fire our shared theme logic first. It automatically finds "sCTkSeparator" in themes.json
         ThemeableWidget.__init__(self, kwargs)
@@ -23,6 +33,7 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
         # 2. 🛠️ THE MUTATION SAFEGUARD DEEP COPY SHIELD:
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
+        self._validate_theme_keys()
 
         # Extract structural parameters safely out of the resolved theme dictionary
         self._orientation = str(self.final_kw.pop("orientation", "vertical")).lower()
@@ -31,7 +42,8 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
 
         self._text = str(self.final_kw.pop("text", ""))
         self._dash = self.final_kw.pop("dash", None)
-        self._font = self.final_kw.pop("font", ("Arial", 11, "bold"))
+        # No fallback: validated above.
+        self._font = self.final_kw.pop("font")
 
         # 🔑 VERTICAL HOUSING REMAP: Programmatically upscale horizontal bounds to fit text
         if self._text and width <= 4:
@@ -56,12 +68,13 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
         )
 
         self._custom_current_state = "normal"
-        self._corner_radius = self.final_kw.get("corner_radius", 6)
+        self._corner_radius = self.final_kw.get("corner_radius")
         self._fg_color = self._check_color_type(self.final_kw.get("fg_color"))
 
         # Map text color vectors safely out of the extracted dictionary layout layers
-        fallback_text = self.final_kw.get("text_color") or ctk.ThemeManager.theme["CTkLabel"]["text_color"]
-        self._text_color = self._check_color_type(fallback_text)
+        # No CTkLabel fallback: text_color is validated above, so borrowing another
+        # widget class's colour would only mask a theme gap.
+        self._text_color = self._check_color_type(self.final_kw.get("text_color"))
 
         # 4. Canvas and render configurations
         self._canvas = ctk.CTkCanvas(self, highlightthickness=0)
@@ -76,6 +89,27 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
 
         # 🔑 7. REGISTER LIFECYCLE HANDSHAKE HOOK: Pushes notifications up to Pygubu systems cleanly.
         self._finalize_themeable_lifecycle()
+
+    def _validate_theme_keys(self) -> None:
+        """
+        Hard-fails at construction on an incomplete theme block, naming the
+        missing key and where it belongs.
+
+        Raises:
+            KeyError: naming the first missing key found.
+        """
+        name = self.__class__.__name__
+        for key in self._REQUIRED_THEME_KEYS:
+            if self._local_defaults.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' at the top level "
+                    f"of sCTkThemes.json."
+                )
+        for key in self._REQUIRED_DISABLED_KEYS:
+            if self._custom_disabled_map.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' in disabled_map."
+                )
 
     def _set_appearance_mode(self, mode_string: str):
         """Native look catcher ensuring active or disabled tracks repaint fluidly on theme shifts."""
@@ -102,8 +136,14 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
             detected_bg = ctk.ThemeManager.theme["CTk"]["fg_color"]
 
         is_disabled = getattr(self, "_custom_current_state", "normal") == "disabled"
-        target_fg = self._custom_disabled_map.get("fg_color", ["#CBD5E1", "#475569"]) if is_disabled else self._fg_color
-        target_txt = self._custom_disabled_map.get("text_color", ["#94A3B8", "gray50"]) if is_disabled else self._text_color
+        # FIX: these previously carried hardcoded fallbacks, and since this
+        # widget's theme block had no disabled_map at all, the fallbacks were
+        # ALWAYS taken -- a disabled separator never used the configured
+        # theme. disabled_map is now required, so no fallback is needed. (The
+        # old text fallback also used the Tk colour name "gray50" rather than
+        # a hex pair, the only such value in the library.)
+        target_fg = self._custom_disabled_map.get("fg_color") if is_disabled else self._fg_color
+        target_txt = self._custom_disabled_map.get("text_color") if is_disabled else self._text_color
 
         fg_rendered = self._apply_appearance_mode(self._check_color_type(target_fg))
         txt_rendered = self._apply_appearance_mode(self._check_color_type(target_txt))
@@ -162,7 +202,10 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
                 return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
             return super().configure(pname)
 
-        if args and isinstance(args, dict): kwargs = args | kwargs
+        # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
+        # tuple, so this never fired and the dict form of configure() was
+        # dead code. Same tautology fixed across the batch-one widgets.
+        if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
         if "state" in kwargs: self.state(kwargs.pop("state"))
         if "text" in kwargs: self._text = str(kwargs.pop("text"))
         if "dash" in kwargs: self._dash = kwargs.pop("dash")
@@ -186,6 +229,27 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
         mapping = {"corner_radius": self._corner_radius, "fg_color": self._fg_color, "orientation": self._orientation, "text": self._text, "dash": self._dash}
         return mapping.get(attribute_name, super().cget(attribute_name))
 
-    def bind(self, sequence=None, command=None, add=True): self._canvas.bind(sequence, command, add=True)
-    def unbind(self, sequence=None, funcid=None): self._canvas.unbind(sequence, None)
+    def bind(self, sequence=None, command=None, add=True):
+        """
+        Routes bindings to the internal canvas, which is what actually
+        receives events -- CTkBaseClass filters direct binds on the widget.
 
+        FIX: the `add` argument was previously accepted and then ignored,
+        with add=True hardcoded in the forwarded call. A caller passing
+        add=False expecting to REPLACE existing bindings would silently
+        accumulate them instead.
+        """
+        self._canvas.bind(sequence, command, add=add)
+
+    def unbind(self, sequence=None, funcid=None):
+        """
+        Removes a binding from the internal canvas.
+
+        FIX: funcid was previously accepted and then discarded, so this always
+        removed EVERY binding for the sequence rather than the single one the
+        caller identified. That is the same destructive behaviour that made
+        unbind() unusable for blocking scrollbar drags in
+        sCTkScrollableFrame -- Tk's unbind() with no funcid wipes bindings
+        this widget never installed, with no way to restore them.
+        """
+        self._canvas.unbind(sequence, funcid)
