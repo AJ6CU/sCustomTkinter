@@ -46,10 +46,61 @@ class sCTkScrollbar(ctk.CTkScrollbar, ThemeableWidget):
             button_hover_color=tuple(normal_hover) if isinstance(normal_hover, list) else normal_hover
         )
 
+    # Theme keys that _apply_custom_theme_colors() re-pushes on every repaint.
+    # configure() records these into _local_defaults so a runtime override
+    # survives the repaint instead of being reverted by it.
+    _THEME_TRACKED_KEYS = frozenset({"button_color", "button_hover_color"})
+
     def configure(self, *args, **kwargs):
-        """Processes standard configuration queries and manages visual refreshes safely."""
-        if args and isinstance(args, dict):
-            kwargs = args | kwargs
+        """
+        Processes standard configuration queries and manages visual refreshes.
+
+        Args:
+            *args: At most one positional argument is meaningful:
+                - a dict: merged into kwargs and processed normally.
+                - a tracked theme key name: returns a Tkinter-style
+                  (name, name, name, default, current) query tuple.
+                - anything else: forwarded to the native widget.
+            **kwargs: Any native CTkScrollbar option.
+
+        Returns:
+            The query tuple described above for the single-argument case,
+            otherwise None.
+        """
+        # FIX: an earlier version tested `if args and isinstance(args, dict)`.
+        # args is ALWAYS a tuple, so that was never true -- the dict-merge
+        # branch was dead code, and there was no query branch at all, so
+        # configure("button_color") silently returned None instead of a
+        # property tuple. Same tautology fixed across the batch-one widgets.
+        if len(args) == 1:
+            if isinstance(args[0], dict):
+                kwargs = {**args[0], **kwargs}
+            else:
+                pname = args[0]
+                if pname in self._THEME_TRACKED_KEYS:
+                    val = self._local_defaults.get(pname)
+                    return (pname, pname, pname, str(val), str(val))
+                return super().configure(pname)
+
+        # FIX: record theme overrides BEFORE the repaint below.
+        #
+        # _apply_custom_theme_colors() re-pushes button_color and
+        # button_hover_color from self._local_defaults on every call. Since
+        # configure() never wrote to that dict, the sequence was:
+        # super().configure(button_color="red") applied red, then the repaint
+        # on the very next line overwrote it with the theme value -- so
+        # runtime color overrides silently did nothing.
+        #
+        # The repaint isn't wrong to exist (the _set_appearance_mode hook
+        # needs it); it was wrong to treat _local_defaults as authoritative
+        # when configure() had just introduced a newer value it never
+        # recorded. Writing the override in first makes the repaint reproduce
+        # it rather than revert it, and makes it survive later appearance-mode
+        # changes -- matching CustomTkinter's own semantics, where
+        # configure(button_color=...) sticks.
+        for key in self._THEME_TRACKED_KEYS:
+            if key in kwargs:
+                self._local_defaults[key] = kwargs[key]
 
         if kwargs:
             super().configure(**kwargs)

@@ -33,8 +33,63 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
         self._custom_disabled_map = dict(self._widget_disabled_map)
         self._custom_current_state = "normal"
 
-        # 3. Intercept the non-standard font key locally before initialization pass
-        target_font = self.final_kw.pop("font", self._local_defaults.get("font", ("Arial", 13, "normal")))
+        # 2a. Hard-fail on theme gaps rather than substituting a guessed value.
+        #
+        # FIX: an earlier version used .get(key, hardcoded_literal) for every
+        # color below and for the font above, silently substituting a plausible
+        # guess whenever the real theme was incomplete rather than surfacing the
+        # gap. Because those guesses looked reasonable, a broken or partial
+        # theme block was invisible. Matches the hard-fail principle established
+        # for sCTkSwitch, sCTkTableview, sCTkScrollableFrame, and the label
+        # family elsewhere in this project.
+        #
+        # SCOPED TO DIRECT CONSTRUCTION. A subclass reaches here with final_kw
+        # built from ITS OWN theme block -- ThemeableWidget's run-once guard
+        # means this constructor never rebuilds it -- so validating this
+        # widget's keys against a subclass's block would raise on every
+        # construction. Same guard, same reason, as sCTkScrollableFrame.
+        if type(self) is sCTkTabview:
+            # Colors that visually change when disabled: required in BOTH the
+            # top-level block and disabled_map.
+            for required_key in ("text_color",
+                                 "segmented_button_fg_color",
+                                 "segmented_button_selected_color",
+                                 "segmented_button_unselected_color"):
+                if self._local_defaults.get(required_key) is None:
+                    raise KeyError(
+                        f"'{self.__class__.__name__}' theme block is missing "
+                        f"'{required_key}' at the top level of sCTkThemes.json."
+                    )
+                if self._custom_disabled_map.get(required_key) is None:
+                    raise KeyError(
+                        f"'{self.__class__.__name__}' theme block is missing "
+                        f"'{required_key}' in disabled_map."
+                    )
+
+            # Hover colors are top-level only. They deliberately have NO
+            # disabled_map entry: a disabled tab bar must not light up under
+            # the cursor, so _apply_custom_theme_colors() collapses hover to
+            # the corresponding non-hover disabled color instead of reading a
+            # separate one. Same reasoning as sCTkScrollableFrame's inert
+            # scrollbar, resolved differently here because there's no
+            # meaningful "dimmed hover" distinct from "dimmed".
+            #
+            # font is likewise top-level only -- no widget in this project has
+            # a disabled-state font variant.
+            for required_key in ("segmented_button_selected_hover_color",
+                                 "segmented_button_unselected_hover_color",
+                                 "font"):
+                if self._local_defaults.get(required_key) is None:
+                    raise KeyError(
+                        f"'{self.__class__.__name__}' theme block is missing "
+                        f"'{required_key}' at the top level of sCTkThemes.json."
+                    )
+
+        # 3. Intercept the non-standard font key locally before initialization
+        # pass. Popped from final_kw because native CTkTabview doesn't accept
+        # a `font` keyword -- it goes to the segmented button instead, in
+        # step 5 below. No fallback: validated above.
+        target_font = self.final_kw.pop("font", self._local_defaults.get("font"))
 
         # Registry of sCTkFrame page wrappers, keyed by tab name -- see
         # _ensure_sctk_page(). Established BEFORE super().__init__() so it
@@ -63,25 +118,33 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
         is_disabled = (self._custom_current_state == "disabled")
         m = self._custom_disabled_map if is_disabled else self._local_defaults
 
-        # Resolve light/dark text colors cleanly from the parsed theme dictionaries
-        resolved_txt = self._resolve_color(m.get("text_color", ("#1F2937", "#F9FAFB")))
+        # No .get() fallbacks anywhere below: __init__ hard-fails on any
+        # missing key, so every lookup here is guaranteed to resolve. A
+        # fallback would only reintroduce the silent-substitution behavior
+        # that made a broken theme block invisible.
+        resolved_txt = self._resolve_color(m.get("text_color"))
 
         if is_disabled:
-            # Re-compile clean keyword payloads to flatten background tracks safely when locked
+            # Hover deliberately collapses to the corresponding non-hover
+            # disabled color: a disabled tab bar must not light up under the
+            # cursor. This is why disabled_map has no hover keys of its own --
+            # see the validation note in __init__.
+            disabled_selected = self._resolve_color(m.get("segmented_button_selected_color"))
+            disabled_unselected = self._resolve_color(m.get("segmented_button_unselected_color"))
             updates = {
-                "fg_color": self._resolve_color(m.get("segmented_button_fg_color", ("#E5E7EB", "#334155"))),
-                "selected_color": self._resolve_color(m.get("segmented_button_selected_color", ("#CBD5E1", "#475569"))),
-                "selected_hover_color": self._resolve_color(m.get("segmented_button_selected_color", ("#CBD5E1", "#475569"))),
-                "unselected_color": self._resolve_color(m.get("segmented_button_unselected_color", ("#F1F5F9", "#1F2937"))),
-                "unselected_hover_color": self._resolve_color(m.get("segmented_button_unselected_color", ("#F1F5F9", "#1F2937")))
+                "fg_color": self._resolve_color(m.get("segmented_button_fg_color")),
+                "selected_color": disabled_selected,
+                "selected_hover_color": disabled_selected,
+                "unselected_color": disabled_unselected,
+                "unselected_hover_color": disabled_unselected,
             }
         else:
             updates = {
-                "fg_color": self._resolve_color(m.get("segmented_button_fg_color", ("#E2E8F0", "#1E293B"))),
-                "selected_color": self._resolve_color(m.get("segmented_button_selected_color", ("#1A4375", "#1F6AA5"))),
-                "selected_hover_color": self._resolve_color(m.get("segmented_button_selected_hover_color", ("#15375B", "#1A5885"))),
-                "unselected_color": self._resolve_color(m.get("segmented_button_unselected_color", ("#F8FAFC", "#334155"))),
-                "unselected_hover_color": self._resolve_color(m.get("segmented_button_unselected_hover_color", ("#E2E8F0", "#475569")))
+                "fg_color": self._resolve_color(m.get("segmented_button_fg_color")),
+                "selected_color": self._resolve_color(m.get("segmented_button_selected_color")),
+                "selected_hover_color": self._resolve_color(m.get("segmented_button_selected_hover_color")),
+                "unselected_color": self._resolve_color(m.get("segmented_button_unselected_color")),
+                "unselected_hover_color": self._resolve_color(m.get("segmented_button_unselected_hover_color")),
             }
 
         try:

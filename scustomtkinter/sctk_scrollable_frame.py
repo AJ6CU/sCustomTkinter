@@ -172,6 +172,18 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
     #   when the custom system isn't also running alongside native's own.
     _USE_CUSTOM_SCROLL_BINDING = True
 
+    # Theme keys that _update_current_visual_state() re-pushes on every
+    # repaint. configure() records these into _local_defaults so a runtime
+    # override survives the repaint instead of being reverted by it -- see
+    # configure()'s docstring.
+    _THEME_TRACKED_KEYS = frozenset({
+        "fg_color",
+        "border_color",
+        "label_fg_color",
+        "scrollbar_button_color",
+        "scrollbar_button_hover_color",
+    })
+
     def __init__(self, master: Optional[Any] = None, **kwargs: Any) -> None:
         """
         Args:
@@ -513,8 +525,36 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
             self._toggle_scroll_bindings(bind=self._scroll_effective())
             self._update_current_visual_state()
 
-        # Re-checked after the pop: configure(scroll_enabled=...) on its own
-        # leaves kwargs empty, and there's no reason to repaint for it.
+        # FIX: record theme overrides BEFORE the repaint below.
+        #
+        # _update_current_visual_state() re-pushes every tracked color from
+        # self._local_defaults. Since configure() never wrote to that dict,
+        # the sequence was: super().configure(fg_color="red") turns the widget
+        # red, then the repaint immediately overwrites it with the theme value
+        # -- so runtime color overrides silently did nothing.
+        #
+        # The repaint isn't wrong to exist (appearance-mode switches and state
+        # changes both need it); it was wrong to treat _local_defaults as
+        # authoritative when configure() had just introduced a newer value it
+        # never recorded. Writing the override in first makes the repaint
+        # reproduce it rather than revert it, and makes the override survive
+        # later appearance-mode and state changes -- matching CustomTkinter's
+        # own semantics, where configure(fg_color=...) sticks.
+        #
+        # Note this stores exactly what the caller passed: a single color
+        # replaces the theme's (light, dark) tuple for that key, so appearance
+        # tracking for it is intentionally given up. That's what asking for
+        # one specific color means.
+        #
+        # disabled_map still wins while disabled -- an override here sets the
+        # NORMAL-state color. See _update_current_visual_state()'s themed().
+        for key in self._THEME_TRACKED_KEYS:
+            if key in kwargs:
+                self._local_defaults[key] = kwargs[key]
+
+        # Re-checked after the pops above: configure(scroll_enabled=...) or
+        # configure(state=...) on its own leaves kwargs empty, and there's no
+        # reason to call through to the native widget for it.
         if kwargs:
             super().configure(**kwargs)
             self._update_current_visual_state()
