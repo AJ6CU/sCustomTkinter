@@ -198,7 +198,10 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # there yields an empty dict and every disabled lookup silently falls
         # back -- the confirmed bug pattern fixed in sCTkSwitch, sCTkSpinbox,
         # and sCTkTableview elsewhere in this project.
-        self._custom_disabled_map = dict(self._widget_disabled_map)
+        # hasattr-guarded for the same reason as _state below: sCTkTableview
+        # builds this from the same source before calling super().__init__().
+        if not hasattr(self, "_custom_disabled_map"):
+            self._custom_disabled_map = dict(self._widget_disabled_map)
 
         # 2b. Hard-fail on theme gaps rather than substituting a guessed
         # color, matching the principle established across this project.
@@ -206,22 +209,29 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # disabled_map; fg_color deliberately is NOT among them (the content
         # background stays put when disabled -- only the border and the now-
         # inert scrollbar dim).
-        for required_key in ("border_color", "scrollbar_button_color"):
-            if self._local_defaults.get(required_key) is None:
-                raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing "
-                    f"'{required_key}' at the top level of sCTkThemes.json."
-                )
-            if self._custom_disabled_map.get(required_key) is None:
-                raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing "
-                    f"'{required_key}' in disabled_map."
-                )
-        if self._local_defaults.get("scrollbar_button_hover_color") is None:
-            raise KeyError(
-                f"'{self.__class__.__name__}' theme block is missing "
-                f"'scrollbar_button_hover_color' at the top level of sCTkThemes.json."
-            )
+        #
+        # SCOPED TO DIRECT CONSTRUCTION ONLY. A subclass that inherits this
+        # class (e.g. sCTkTableview) reaches here with self.final_kw built
+        # from ITS OWN theme block, not this one -- ThemeableWidget's
+        # run-once guard means the parent's __init__ never rebuilds it. So
+        # validating this widget's theme keys against a subclass's theme
+        # block would demand scrollbar colors from, say, the sCTkTableview
+        # block, and raise KeyError on every construction. Subclasses own
+        # their own theme contract and validate it themselves (sCTkTableview
+        # does exactly this); this check is for the concrete class only.
+        if type(self) is sCTkScrollableFrame:
+            for required_key in ("border_color", "scrollbar_button_color",
+                                 "scrollbar_button_hover_color"):
+                if self._local_defaults.get(required_key) is None:
+                    raise KeyError(
+                        f"'{self.__class__.__name__}' theme block is missing "
+                        f"'{required_key}' at the top level of sCTkThemes.json."
+                    )
+                if self._custom_disabled_map.get(required_key) is None:
+                    raise KeyError(
+                        f"'{self.__class__.__name__}' theme block is missing "
+                        f"'{required_key}' in disabled_map."
+                    )
 
         # 2c. State and scroll intent. Both must exist before step 4's
         # _update_current_visual_state() call, which reads them.
@@ -234,8 +244,14 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # to _scroll_enabled, a frame that was constructed or configured
         # non-scrolling stays non-scrolling after a disable/enable round
         # trip, instead of being silently switched on by the state change.
-        self._state = str(self._local_defaults.get("state", "normal"))
-        self._scroll_enabled = bool(self._local_defaults.get("scroll_enabled", True))
+        # A subclass may legitimately establish either of these before calling
+        # super().__init__() -- sCTkTableview sets self._state from its own
+        # constructor argument, and would otherwise have it silently reset to
+        # the default here. hasattr-guarded so the subclass's value wins.
+        if not hasattr(self, "_state"):
+            self._state = str(self._local_defaults.get("state", "normal"))
+        if not hasattr(self, "_scroll_enabled"):
+            self._scroll_enabled = bool(self._local_defaults.get("scroll_enabled", True))
 
         # 3. Initialize CustomTkinter natively with the clean final kwargs array.
         # 3. Initialize CustomTkinter natively. Only forwards the subset of
@@ -570,11 +586,11 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
             try:
                 normal_bar = themed("scrollbar_button_color")
                 # When disabled the scrollbar is inert (drag is blocked), so
-                # it must not light up on hover either -- collapse hover to
-                # the same dimmed color rather than leaving the bright normal
-                # hover in place, which would falsely advertise it as live.
-                normal_hover = (normal_bar if is_disabled
-                                else self._local_defaults.get("scrollbar_button_hover_color"))
+                # it must not light up on hover either -- a bright hover would
+                # falsely advertise it as draggable. Read from disabled_map
+                # like any other dimmed color; themed() falls back to the
+                # normal hover color automatically when not disabled.
+                normal_hover = themed("scrollbar_button_hover_color")
                 self._scrollbar.configure(button_color=normal_bar, button_hover_color=normal_hover)
 
                 if hasattr(self._scrollbar, "_draw"):

@@ -1,47 +1,36 @@
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for ScrollableFrame
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkButtonPrimary, sCTkEntryPrimary, sCTk, sCTkScrollableFrame
+#!/usr/bin/python3f
+from scustomtkinter import sCTk, sCTkButtonPrimary, sCTkEntryPrimary, sCTkScrollableFrame
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.title("ScrollableFrame Pure Baseline Verification")
+    root.title("ScrollableFrame Example")
     root.geometry("450x420")
 
-    test_frame = sCTkScrollableFrame(root, width=380, height=250, label_text="Telemetry Viewport Container")
-    test_frame.pack(padx=20, pady=20, fill="both", expand=True)
+    log_viewport = sCTkScrollableFrame(root, width=380, height=250, label_text="Telemetry Log")
+    log_viewport.pack(padx=20, pady=20, fill="both", expand=True)
 
     for i in range(12):
-        mock_entry = sCTkEntryPrimary(test_frame, placeholder_text=f"Active Transceiver Channel {i + 1}")
-        mock_entry.pack(padx=10, pady=5, fill="x")
+        entry = sCTkEntryPrimary(log_viewport, placeholder_text=f"Channel {i + 1}")
+        entry.pack(padx=10, pady=5, fill="x")
 
-    _is_locked = False
-    def toggle_cascade_lockout():
-        global _is_locked
-        _is_locked = not _is_locked
-        target = "disabled" if _is_locked else "normal"
+    # No activation call needed -- scrolling is live as soon as the widget
+    # is placed.
 
-        toggle_btn.configure(text="Enforce State: NORMAL" if _is_locked else "Enforce State: DISABLED")
+    def toggle_lock():
+        target = "disabled" if log_viewport.get_state() == "normal" else "normal"
+        log_viewport.configure(state=target)
+        toggle_btn.configure(text="Enable All" if target == "disabled" else "Disable All")
 
-        # 🔑 CLEAN APPLICATION-LEVEL LOOKOUT LOOP CASCADE:
-        # The external control logic explicitly dictates when and how to update nested elements!
-        for entry_widget in test_frame.get_children():
-            if hasattr(entry_widget, "configure"):
+        # Disabling the frame dims it and stops its scrolling, but does NOT
+        # cascade to children -- do that explicitly.
+        for child in log_viewport.get_children():
+            if hasattr(child, "configure"):
                 try:
-                    entry_widget.configure(state=target)
+                    child.configure(state=target)
                 except Exception:
                     pass
 
-    toggle_btn = sCTkButtonPrimary(root, text="Enforce State: DISABLED", command=toggle_cascade_lockout)
+    toggle_btn = sCTkButtonPrimary(root, text="Disable All", command=toggle_lock)
     toggle_btn.pack(side="bottom", pady=15)
 
-    btn_theme = sCTkButtonPrimary(root, text="Toggle Theme Skin", command=lambda: ctk.set_appearance_mode(
-        "Dark" if ctk.get_appearance_mode() == "Light" else "Light"))
-    btn_theme.pack(side="bottom", pady=5)
-
-    test_frame._toggle_scroll_bindings(bind=True)
     root.mainloop()

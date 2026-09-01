@@ -259,11 +259,25 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         entry.destroy()
         if self._validation_callback and not self._validation_callback(c_idx, val): val = self._data_matrix[r_idx][
             c_idx]
+
+        # FIX: an earlier version compared self._data_matrix[r_idx][c_idx]
+        # against val AFTER the assignment below had already written val into
+        # that exact cell -- a tautology that was always true, so the edit
+        # callback fired on every save regardless of whether anything had
+        # actually changed. The intended behavior is change detection, so the
+        # previous value has to be captured BEFORE the write.
+        #
+        # This also gives correct behavior on a rejected edit for free: the
+        # validation check above reverts val to the cell's existing content
+        # when the callback rejects it, so old_val == val and the edit
+        # callback correctly stays silent.
+        old_val = self._data_matrix[r_idx][c_idx]
+
         self._data_matrix[r_idx][c_idx] = val
         txt_anchor = self._column_anchors[c_idx]
         display_val = "    " + str(val) if txt_anchor == "w" else (str(val) + "    " if txt_anchor == "e" else str(val))
         self._cell_widgets[r_idx][c_idx].configure(text=display_val)
-        if self._edit_callback and self._data_matrix[r_idx][c_idx] == val: self._edit_callback(r_idx, c_idx, val)
+        if self._edit_callback and old_val != val: self._edit_callback(r_idx, c_idx, val)
 
     def configure(self, require_redraw=False, **kwargs):
         if require_redraw is not None and not kwargs and isinstance(require_redraw, str):

@@ -262,7 +262,8 @@
         "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
         "disabled_map": {
             "border_color": ["#CBD5E1", "#374151"],
-            "scrollbar_button_color": ["#CBD5E1", "#1F2937"]
+            "scrollbar_button_color": ["#CBD5E1", "#1F2937"],
+            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"]
         }
     },
       "sCTkScrollbar": {
