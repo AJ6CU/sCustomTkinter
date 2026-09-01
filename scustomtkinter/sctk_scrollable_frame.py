@@ -39,7 +39,8 @@ scroll_enabled=False to the constructor, or call disable_scroll() -- either
 one suppresses the automatic activation rather than being silently
 overridden by it. See disable_scroll()'s docstring for the bulk-update
 workflow this supports, and note that it governs scroll INPUT only; the
-scrollbar itself stays visible and draggable.
+scrollbar itself stays visible, but is made inert -- it can't be dragged
+while scrolling is disabled.
 
 THE SCROLL-HANDLING METHODS BELOW (_toggle_scroll_bindings,
 _process_mac_touchpad_scroll, _process_scroll_wheel,
@@ -291,15 +292,17 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         Passing scroll_enabled=False to the constructor achieves the same
         starting state without the separate call.
 
-        NOTE: this affects scroll INPUT handling only. The scrollbar remains
-        visible and draggable -- CustomTkinter's scrollbar has no disabled
-        state to lock (confirmed by direct investigation earlier in this
-        project's audit). Hiding it is a separate concern, handled elsewhere
-        by color-matching and zero width.
-
         Blocks native CTk's own global mouse-wheel handling as well as this
-        file's custom bindings -- see _toggle_scroll_bindings(bind=False) for
-        the mechanism, and why merely unbinding was not enough.
+        file's custom bindings, and blocks click-and-drag on the internal
+        scrollbar -- see _toggle_scroll_bindings(bind=False) and
+        _set_scrollbar_drag_blocked() for the two mechanisms involved.
+
+        NOTE: the scrollbar remains VISIBLE, just inert -- it can't be
+        dragged, but it isn't hidden. CustomTkinter's scrollbar has no
+        disabled state to lock (confirmed by direct investigation earlier in
+        this project's audit), so there's no greyed-out appearance to switch
+        to either. Hiding it entirely is a separate concern, handled
+        elsewhere in this project by color-matching and zero width.
         """
         self.configure(scroll_enabled=False)
 
@@ -596,6 +599,12 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                     except Exception:
                         pass
 
+        # Scrollbar dragging is a separate input channel from wheel/trackpad
+        # events and needs its own mechanism -- see
+        # _set_scrollbar_drag_blocked() for why unbind() and add="+" both
+        # fail here.
+        self._set_scrollbar_drag_blocked(not bind)
+
     def _block_scroll_event(self, event: Any = None) -> str:
         """
         Swallows a scroll event so it never reaches native CTk's global
@@ -611,6 +620,72 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
             bindtag in the chain, including "all", will fire for it.
         """
         return "break"
+
+    # Drag-blocking bindtag, unique per instance so two scrollable frames in
+    # the same application can be disabled independently.
+    @property
+    def _drag_block_tag(self) -> str:
+        return f"sCTkScrollDragBlock{id(self)}"
+
+    def _set_scrollbar_drag_blocked(self, blocked: bool) -> None:
+        """
+        Blocks or restores click-and-drag on this widget's internal scrollbar.
+
+        Deliberately does NOT use unbind(). Tk's unbind() removes EVERY
+        binding for an event on a widget, not just ours -- calling it on the
+        scrollbar's <Button-1> would destroy CTkScrollbar's own drag handler
+        permanently, with no way for enable_scroll() to restore it. Binding a
+        blocker with add="+" doesn't work either: handlers on one widget fire
+        in the order they were added, and CTk's was added during its own
+        construction, so ours would run after the drag had already been
+        handled -- returning "break" at that point is too late.
+
+        Uses bindtags instead, which is the mechanism Tk provides for exactly
+        this. Every widget has an ordered list of tags (by default: the widget
+        itself, its class, its toplevel, then "all"), and bindings fire in
+        that order. Inserting a private tag at the FRONT means the blocker
+        below runs before any of CTk's own bindings, so "break" stops them
+        before they execute. Restoring is just removing the tag again --
+        CTk's bindings are never touched at any point.
+
+        The tag name embeds id(self), so disabling one frame has no effect on
+        any other scrollable frame in the same application.
+
+        Args:
+            blocked: True installs the block, False removes it.
+        """
+        if not hasattr(self, "_scrollbar") or self._scrollbar is None:
+            return
+
+        tag = self._drag_block_tag
+        DRAG_EVENTS = ("<Button-1>", "<B1-Motion>", "<ButtonRelease-1>")
+
+        # Class-level bindings for the private tag. Safe to (re)establish:
+        # bind_class on a tag nothing else uses can't collide with anything.
+        for event_str in DRAG_EVENTS:
+            try:
+                self.bind_class(tag, event_str, self._block_scroll_event)
+            except Exception:
+                pass
+
+        # The scrollbar is a CTk composite -- the actual click lands on its
+        # internal canvas, not the outer frame -- so the tag has to go on the
+        # scrollbar and everything inside it.
+        targets = [self._scrollbar]
+        try:
+            targets.extend(self._scrollbar.winfo_children())
+        except Exception:
+            pass
+
+        for widget in targets:
+            try:
+                tags = list(widget.bindtags())
+                if blocked and tag not in tags:
+                    widget.bindtags(tuple([tag] + tags))
+                elif not blocked and tag in tags:
+                    widget.bindtags(tuple(t for t in tags if t != tag))
+            except Exception:
+                pass
 
     def _process_mac_touchpad_scroll(self, event):
         """
