@@ -240,15 +240,20 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         calls safe, with no risk of duplicate bindings piling up.
 
         Respects an explicit scroll_enabled=False rather than silently
-        overriding it -- see disable_scroll() for that workflow.
+        overriding it -- but does NOT simply return early in that case. When
+        scrolling is disabled this still runs a full pass, installing the
+        blocking handlers described in _toggle_scroll_bindings(bind=False).
+        That matters for the construct-then-disable-then-pack ordering: at
+        the time disable_scroll() is called before placement, the widget's
+        parent hierarchy isn't realized and get_children() is typically
+        empty, so that earlier pass has almost nothing to install onto. This
+        is the first moment the real layer list exists.
 
         Args:
             event: The Tkinter <Map> event. Accepted and ignored; present only
                 because Tkinter passes it to every bound callback.
         """
-        if not self._scroll_enabled:
-            return
-        self._toggle_scroll_bindings(bind=True)
+        self._toggle_scroll_bindings(bind=self._scroll_enabled)
 
     def enable_scroll(self) -> None:
         """
@@ -291,6 +296,10 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         state to lock (confirmed by direct investigation earlier in this
         project's audit). Hiding it is a separate concern, handled elsewhere
         by color-matching and zero width.
+
+        Blocks native CTk's own global mouse-wheel handling as well as this
+        file's custom bindings -- see _toggle_scroll_bindings(bind=False) for
+        the mechanism, and why merely unbinding was not enough.
         """
         self.configure(scroll_enabled=False)
 
@@ -556,6 +565,52 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                             target_layer.bind("<TouchpadScroll>", self._process_mac_touchpad_scroll, add="+")
                     else:
                         target_layer.bind(event_str, self._process_scroll_wheel, add="+")
+                else:
+                    # FIX: unbinding alone does NOT stop this frame scrolling.
+                    # Native CTkScrollableFrame.__init__ installs its own
+                    # bind_all("<MouseWheel>") handler, which is entirely
+                    # independent of this file's custom system and survives
+                    # any unbind() here -- confirmed empirically earlier in
+                    # this project's audit, where disabling the custom system
+                    # left mouse-wheel scrolling fully working via native's
+                    # path while killing the trackpad channel completely.
+                    #
+                    # unbind_all() is not an option: bind_all is APPLICATION-
+                    # global, so it would disable scrolling for every other
+                    # scrollable frame in the app too.
+                    #
+                    # Instead, install a handler that returns "break". Tk
+                    # dispatches bindings by bindtag in order -- widget,
+                    # class, toplevel, then "all" -- and bind_all lands on
+                    # that final "all" tag. A widget-level handler returning
+                    # "break" halts the chain before it gets there, so
+                    # native's global handler never sees events originating
+                    # inside this frame, while remaining untouched for every
+                    # other widget in the application.
+                    try:
+                        if "Touchpad" in event_str:
+                            if sys.platform == "darwin":
+                                target_layer.bind("<TouchpadScroll>", self._block_scroll_event, add="+")
+                        else:
+                            target_layer.bind(event_str, self._block_scroll_event, add="+")
+                    except Exception:
+                        pass
+
+    def _block_scroll_event(self, event: Any = None) -> str:
+        """
+        Swallows a scroll event so it never reaches native CTk's global
+        bind_all handler. Installed on every layer by
+        _toggle_scroll_bindings(bind=False); see that method for why merely
+        unbinding is insufficient.
+
+        Args:
+            event: The Tkinter scroll event. Accepted and ignored.
+
+        Returns:
+            "break", which tells Tk to stop processing this event -- no later
+            bindtag in the chain, including "all", will fire for it.
+        """
+        return "break"
 
     def _process_mac_touchpad_scroll(self, event):
         """
