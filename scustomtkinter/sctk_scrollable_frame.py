@@ -313,6 +313,31 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # and attaches to this widget, which is what <Map> has to observe.
         tk.Misc.bind(self, "<Map>", self._on_map_auto_bind_scroll, add="+")
 
+        # SECOND, INDEPENDENT ACTIVATION PATH.
+        #
+        # <Map> alone proved unreliable here. CTkScrollableFrame is not the
+        # widget that actually gets packed: it builds an internal
+        # _parent_frame plus a canvas, places ITSELF inside that canvas via
+        # create_window(), and overrides pack()/grid()/place() to operate on
+        # _parent_frame. So `self` is a canvas-window child, and may never
+        # receive <Map> the way an ordinarily-managed widget does.
+        #
+        # after_idle() fires once Tk goes idle -- after all module-level setup
+        # code has run and pack() has been called, but before the window is
+        # displayed. That's a reliable moment to bind, and it doesn't depend
+        # on any mapping semantics. Both paths are kept because
+        # _toggle_scroll_bindings() is idempotent, and <Map> still usefully
+        # re-binds on a later remap after pack_forget()/grid_forget().
+        #
+        # _parent_frame is the widget the geometry manager actually sees, so
+        # it gets a <Map> binding too.
+        try:
+            if hasattr(self, "_parent_frame") and self._parent_frame is not None:
+                tk.Misc.bind(self._parent_frame, "<Map>", self._on_map_auto_bind_scroll, add="+")
+        except Exception:
+            pass
+        self.after_idle(self._on_map_auto_bind_scroll)
+
         # 6. Register lifecycle handshake hook, notifying Pygubu-style consumers
         # that construction is complete.
         self._finalize_themeable_lifecycle()
@@ -346,6 +371,19 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
                 because Tkinter passes it to every bound callback.
         """
         self._toggle_scroll_bindings(bind=self._scroll_effective())
+
+        # TEMPORARY DIAGNOSTIC -- remove once activation is confirmed working.
+        # Reports which path activated and how many layers were bound. A low
+        # layer count means only the frame/canvas machinery was found and no
+        # content widgets were bound, which is what "scrolls beside the rows
+        # but not over them" looks like.
+        try:
+            src = type(event.widget).__name__ if event is not None else "after_idle"
+            print(f"[ScrollActivate] {type(self).__name__} id={id(self)} via={src} "
+                  f"layers={getattr(self, '_scroll_layer_count', '?')} "
+                  f"effective={self._scroll_effective()}")
+        except Exception as exc:
+            print(f"[ScrollActivate] diagnostic failed: {exc}")
 
     def _scroll_effective(self) -> bool:
         """
@@ -795,6 +833,10 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         # events and needs its own mechanism -- see
         # _set_scrollbar_drag_blocked() for why unbind() and add="+" both
         # fail here.
+        # Recorded for the temporary activation diagnostic in
+        # _on_map_auto_bind_scroll(); remove alongside it.
+        self._scroll_layer_count = len(layers_to_bind)
+
         self._set_scrollbar_drag_blocked(not bind)
 
     def _block_scroll_event(self, event: Any = None) -> str:
