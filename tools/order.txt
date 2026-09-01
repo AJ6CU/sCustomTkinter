@@ -37,6 +37,7 @@
 ../docs/src/sCTkMessagebox.md
 ../docs/src/sCTkPathChooser.md
 ../docs/src/sCTkScrollArea.md
+../docs/src/ScrollBindingMixin.md
 ../docs/src/sCTkSelector.md
 ../docs/src/sCTkSeparator.md
 ../docs/src/sCTkSMeter.md
