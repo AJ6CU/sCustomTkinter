@@ -367,6 +367,34 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
 
         return layers
 
+    def _scroll_permitted(self) -> bool:
+        """
+        Whether this explorer should currently respond to scroll input.
+
+        Tied to the widget's state, so a disabled explorer is genuinely
+        inert -- wheel, trackpad, and scrollbar dragging all stop -- rather
+        than merely looking dimmed while still scrolling. Consistent with
+        sCTkScrollableFrame, where disabling does the same.
+
+        The mixin consults this before every bind, so state changes take
+        effect through the existing configure(state=...) path with no extra
+        wiring. See ScrollBindingMixin._toggle_scroll_bindings() for how
+        blocking is implemented.
+
+        Returns:
+            True only while state is "normal".
+        """
+        return str(getattr(self, "_state", "normal")).lower() == "normal"
+
+    def _scroll_drag_targets(self):
+        """
+        The internal scrollbar, whose click-and-drag is blocked while this
+        widget is disabled -- otherwise a disabled explorer could still be
+        scrolled by grabbing the bar, contradicting its own reported state.
+        """
+        bar = getattr(self, "y_scrollbar", None)
+        return [bar] if bar is not None else []
+
     def _finalize_split_bindings(self):
         if hasattr(self, "back_button"): self.back_button.configure(command=self._move_back)
         if hasattr(self, "path_entry"): self.path_entry.bind("<Return>", lambda e: self._on_entry_return())
@@ -399,6 +427,10 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         if "state" in kwargs:
             self._state = str(kwargs.pop("state")).lower()
             if self._state not in ("normal", "disabled"): self._state = "normal"
+            # Scroll handling is tied to state via _scroll_permitted(), so
+            # rebuild the bindings. state() does the same; both entry points
+            # have to, since neither delegates to the other.
+            self._activate_scroll_bindings()
         if "type" in kwargs:
             self.response_type = str(kwargs.pop("type")).lower()
             if self.response_type not in ("file", "directory"): self.response_type = "directory"
@@ -457,6 +489,10 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         if mode in ("normal", "enabled", "active"): self._state = "normal"
         elif mode == "disabled": self._state = "disabled"
         self._process_live_theme_repaint()
+        # Scroll handling is tied to state via _scroll_permitted(), so the
+        # bindings have to be rebuilt here -- without this the change wouldn't
+        # take effect until the next content rebind happened to fire.
+        self._activate_scroll_bindings()
         return self._state
 
     def set_mode(self, type_str: Literal["file", "directory"]):
@@ -604,3 +640,4 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             if (now - self._last_double_click_time) < 0.3: return
             self._last_double_click_time = now
             if self.double_click_command and callable(self.double_click_command): self.double_click_command(self, target_path)
+

@@ -12,12 +12,16 @@
 
 ### Overview
 
-`sCTkFileExplorer` is a theme-compliant, scrollable file/folder browser — a back button, an editable current-path entry, and a scrollable list of clickable file/folder rows. It inherits `ctk.CTkFrame` directly and builds its own scrolling machinery internally (a raw `tkinter.Canvas` plus a `CTkScrollbar`), rather than composing `sCTkScrollableFrame`.
+`sCTkFileExplorer` is a theme-compliant, scrollable file/folder browser — a back button, an editable current-path entry, and a scrollable list of clickable file/folder rows. It inherits `ctk.CTkFrame`, `ScrollBindingMixin`, and `ThemeableWidget`, and builds its own scrolling machinery internally (a raw `tkinter.Canvas` plus a `CTkScrollbar`) rather than composing `sCTkScrollableFrame`.
 
 Dark Mode:  ![sCTkFileExplorer in dark mode](images/sCTkFileExplorer_Dark.png)&emsp; &emsp; &emsp; &emsp;
 Light Mode: ![sCTkFileExplorer in light mode](images/sCTkFileExplorer_Light.png)
 
-**Scroll handling is cross-platform and properly scoped.** An earlier version used a global `bind_all("<MouseWheel>", ...)` — affecting mouse wheel scrolling for the *entire application*, not just this widget, and only handling macOS and a generic Windows-style delta, with no Linux support at all. It's since been replaced with the same proven, scoped, three-platform scroll-handling logic used by `sCTkScrollableFrame`, adapted to target this widget's own internal canvas directly. Scroll bindings are re-applied automatically every time you navigate to a new folder, since navigating replaces every row widget.
+**Scroll handling comes from `ScrollBindingMixin`,** the library's single shared implementation, also used by `sCTkScrollableFrame`. This widget supplies two hooks — `_scroll_target()` returns its own internal canvas (no `winfo_parent()` lookup needed, unlike `sCTkScrollableFrame`), and `_scroll_layers()` assembles the widget, canvas, scrollbar, and full row tree.
+
+Three earlier problems are fixed as a result. A global `bind_all("<MouseWheel>", ...)` once affected the entire application rather than this widget, and handled only macOS plus a generic Windows-style delta with no Linux support. A scoped copy of `sCTkScrollableFrame`'s logic then replaced it — but that copy drifted: it walked only *one level* into the row frame, so a row's label or icon was never bound and the wheel did nothing over them, and it had no trackpad accumulator, scrolling on every raw event instead of gating on an accumulated threshold. Consolidating on the mixin fixes both, and trackpad scrolling now matches the rest of the library rather than being noticeably faster and coarser.
+
+**Bindings maintain themselves.** Activation happens via `after_idle()` and `<Map>`, and a debounced `<Configure>` on the row frame rebinds whenever content changes — so navigating to a new folder, which replaces every row widget, is picked up automatically with no explicit call.
 
 ---
 
@@ -51,9 +55,10 @@ explorer.pack(fill="both", expand=True)
 
 | Method | Returns | Description |
 |---|---|---|
-| `_finalize_split_bindings()` | `None` | Sets up scroll bindings and wires the back button/path entry. Auto-scheduled via `self.after(10, ...)` inside `__init__` — unlike `sCTkScrollableFrame`, you don't need to call this yourself. |
-| `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming the back button, path entry, scrollbar, and all rows. |
-| `configure(**kwargs)` | varies | Standard configuration. |
+| `_finalize_split_bindings()` | `None` | Wires the back button, path entry, and canvas resize handling, then loads the initial directory. Auto-scheduled via `self.after(10, ...)` inside `__init__` — you don't need to call it yourself. It no longer governs scroll activation; `ScrollBindingMixin` handles that independently via `after_idle()`, which fires when Tk is actually idle rather than after a guessed delay. |
+| `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming the back button, path entry, scrollbar, and all rows. Disabling also stops scrolling entirely — wheel, trackpad, and scrollbar dragging — matching `sCTkScrollableFrame`. |
+| `configure(**kwargs)` | `None` | Standard configuration, accepting `state`, `type`, `initialdir`, `initialfile`, `filetypes`, and `double_click_command` alongside native options. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the six properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and all six queries fell through to the native widget. Pygubu could not read any of them. |
 
 There's currently no public method for programmatic navigation from outside the widget — `path_to_show` (a `StringVar`) has no automatic refresh trace of its own (unlike `selected_path`), so navigating externally means setting it *and* explicitly calling the private `_fill_explorer()` afterward, matching the pattern used internally by the back button. This is a real API gap, not a documented feature.
 
@@ -90,7 +95,7 @@ There's currently no public method for programmatic navigation from outside the 
 }
 ```
 
-**`button_color` is not currently in your theme file at all — top-level or `disabled_map`.** This is a confirmed, more urgent gap than `row_dimmed_text`: `_process_live_theme_repaint()` is bound to `<Visibility>`, so it fires essentially every time a FileExplorer widget is actually displayed, not only when explicitly disabled. Against your real, current theme file, that means displaying this widget at all would currently raise `KeyError` immediately. The values shown above (`["#64748B", "#4B5563"]` normal, `["#CBD5E1", "#334155"]` disabled) are a proposal, not something already confirmed to exist — add both before testing this widget.
+**`button_color` is required at the top level and in `disabled_map`.** This is a harder requirement than it looks: `_process_live_theme_repaint()` is bound to `<Visibility>`, so it fires essentially every time the widget is displayed, not only when explicitly disabled. A theme block missing `button_color` therefore raises `KeyError` on first display, not merely on disable. The values shown above (`["#64748B", "#4B5563"]` normal, `["#CBD5E1", "#334155"]` disabled) are the suggested pair.
 
 `button_color` controls the internal scrollbar's color, distinct from `btn_fg` (the back button).
 
@@ -133,5 +138,10 @@ if __name__ == "__main__":
 
 - No public method for programmatic navigation — see [Methods](#methods) above.
 - Missing a required theme key raises `KeyError` at first use, naming exactly which key and whether it's needed at the top level or in `disabled_map`.
+- **The debounced rebind also runs on genuine resizes.** `<Configure>` on the row frame doesn't distinguish "rows were added" from "the window was dragged", so resizing rebinds too. One coalesced pass rather than one per event, but on a very large directory it isn't free.
+- **The internal `Canvas` is a raw `tkinter.Canvas`,** not a themed widget, so its background is derived rather than themed — see the note at the end of [Theming](#theming-sctkthemesjson).
+- **The scrollbar stays visible when disabled, just inert.** It can't be dragged, but it isn't hidden — CustomTkinter's scrollbar has no native disabled state to lock. Same limitation as `sCTkScrollableFrame`.
+
+**Fixed:** dragging the scrollbar when the files didn't fill the frame used to push the rows down to the bottom, leaving empty space above them. The scroll region was set straight from `bbox("all")`, which is *shorter* than the visible canvas when content is short, and Tk will still scroll within an undersized region. The region is now grown to at least the canvas height in that case, so `yview` has nowhere to go and scrolling correctly does nothing.
 
 [Return to Table of Contents](#contents)
