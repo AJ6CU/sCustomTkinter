@@ -2,8 +2,6 @@
 
 `sCTkScrollArea` is a scrollable viewport container built on a raw `tkinter.Canvas`, offered as an alternative to `ctk.CTkScrollableFrame` for cases where you want to supply your own external scrollbar and control child event binding explicitly. It inherits `ctk.CTkFrame` and `ScrollBindingMixin`.
 
-![sCTkScrollArea_Dark.png](images/sCTkScrollArea_Dark.png)
-![sCTkScrollArea_Light.png](images/sCTkScrollArea_Light.png)
 
 Its companion is [`sCTkScrollbar`](sCTkScrollbar.md). Scroll handling comes from [`ScrollBindingMixin`](ScrollBindingMixin.md), which is the reference for how scrolling works across this library.
 

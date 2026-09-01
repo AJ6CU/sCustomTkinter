@@ -14,9 +14,6 @@
 
 `sCTkToplevel` is a themeable subclass of `customtkinter.CTkToplevel`, for secondary windows, modal dialogs, and popups. It adds automatic light/dark theme resolution from `sCTkThemes.json`. This is the simplest widget in the library — no disabled state, no `state()`/`get_state()` at all, and no per-state color-swapping logic, since a top-level window has no interactive "enabled/disabled" concept the way a control does.
 
-Dark Mode:  ![sCTkToplevel in dark mode](images/sCTkToplevel_Dark.png)&emsp; &emsp; &emsp; &emsp;
-Light Mode: ![sCTkToplevel in light mode](images/sCTkToplevel_Light.png)
-
 ---
 
 ### Constructor

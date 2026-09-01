@@ -11,7 +11,7 @@ Scrolling in this library is handled in one place. Whichever widget you use, the
 ---
 
 <a name="which-widget-to-use"></a>
-## Which widget to use
+### Which widget to use
 
 | Widget | Use when |
 |---|---|
@@ -40,7 +40,7 @@ Content added to `scroll_content` is bound for scrolling automatically, includin
 ---
 
 <a name="how-scroll-input-is-handled"></a>
-## How scroll input is handled
+### How scroll input is handled
 
 Three platforms behave differently, and all three are handled:
 
@@ -59,7 +59,7 @@ Full detail, including why this takes four separate mechanisms, is on the [`Scro
 ---
 
 <a name="tuning-scroll-speed"></a>
-## Tuning scroll speed
+### Tuning scroll speed
 
 Three constants control the feel. They live on `ScrollBindingMixin` as class attributes, so they can be changed globally, per widget class, or per instance.
 
@@ -92,7 +92,7 @@ log_view.MAC_SCROLL_MAX_STEP = 8
 ---
 
 <a name="disabling-scrolling"></a>
-## Disabling scrolling
+### Disabling scrolling
 
 `sCTkScrollableFrame` and `sCTkFileExplorer` both stop scrolling entirely when disabled — wheel, trackpad, and scrollbar dragging. The bar stays visible but inert; CustomTkinter's scrollbar has no greyed-out appearance to switch to.
 
@@ -124,7 +124,7 @@ frame.enable_scroll()
 ---
 
 <a name="nested-scrolling-regions"></a>
-## Nested scrolling regions
+### Nested scrolling regions
 
 Putting one scrolling widget inside another works: the inner one keeps its own bindings and the outer one stops at its boundary, so the wheel scrolls whichever region the pointer is actually over rather than both at once.
 

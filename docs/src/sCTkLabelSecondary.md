@@ -14,8 +14,8 @@
 
 `sCTkLabelSecondary` is a themeable subclass of `customtkinter.CTkLabel` — the mid-emphasis tier of the library's three label styles, between `sCTkLabelPrimary` and `sCTkLabelTertiary`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim.
 
-![sCTkLabelSecondary in dark mode](images/sCTkLabelSecondary_Dark.png)
-![sCTkLabelSecondary in light mode](images/sCTkLabelSecondary_Light.png)
+Dark Mode:	![sCTkLabelSecondary in dark mode](images/sCTkLabelSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode:	![sCTkLabelSecondary in light mode](images/sCTkLabelSecondary_Light.png)
 
 ---
 

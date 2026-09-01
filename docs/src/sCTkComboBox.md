@@ -14,8 +14,8 @@
 
 `sCTkComboBox` is a themeable subclass of `customtkinter.CTkComboBox`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state (separate from, but synchronized with, the widget's native interactive lock), and Pygubu Designer property introspection support.
 
-![sCTkComboBox in dark mode](images/sCTkComboBox_Dark.png)
-![sCTkComboBox in light mode](images/sCTkComboBox_Light.png)
+Dark Mode:  ![sCTkComboBox in dark mode](images/sCTkComboBox_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode:  ![sCTkComboBox in light mode](images/sCTkComboBox_Light.png)
 
 ---
 

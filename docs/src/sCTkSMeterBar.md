@@ -3,8 +3,8 @@
 The `sCTkSMeterBar` is a standalone, low-profile horizontal discrete 30-segment LED bar instrumentation widget displaying independent telemetry tracks for incoming receiver S-Units, transmitter SWR ratio levels, and forward RF Power output percentage. Like all sCTk widgets, it is fully theme-adaptive.
 
 
-![sCTkSMeterBar_Dark.png](images/sCTkSMeterBar_Dark.png)
-![sCTkSMeterBar_Light.png](images/sCTkSMeterBar_Light.png)
+Dark Mode:  ![sCTkSMeterBar_Dark.png](images/sCTkSMeterBar_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode:  ![sCTkSMeterBar_Light.png](images/sCTkSMeterBar_Light.png)
 
 
 ---

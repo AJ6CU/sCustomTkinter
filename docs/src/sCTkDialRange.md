@@ -13,8 +13,8 @@
 A concrete rotary encoder range variant designed for hard-bounded linear controls (e.g., AF/RF volume gain level sliders, squelch limits, or power thresholds). It enforces absolute mechanical dead stops at outer thresholds, preventing directional wraparound loops.
 
 
-![sCTkDialRange_Dark.png](images/sCTkDialRange_Dark.png)
-![sCTkDialRange_Light.png](images/sCTkDialRange_Light.png)
+Dark Mode:  ![sCTkDialRange_Dark.png](images/sCTkDialRange_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode:  ![sCTkDialRange_Light.png](images/sCTkDialRange_Light.png)
 
 
 ### API Property Reference

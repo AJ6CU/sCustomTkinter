@@ -2,8 +2,8 @@
 
 `sCTkScrollbar` is a themeable scrollbar — a subclass of `ctk.CTkScrollbar` with color resolution from `sCTkThemes.json` and orientation-aware default sizing. It's designed to pair with [`sCTkScrollArea`](sCTkScrollArea.md), which needs an external scrollbar, but works anywhere a `CTkScrollbar` would.
 
-![sCTkScrollbar_Dark.png](images/sCTkScrollbar_Dark.png)
-![sCTkScrollbar_Light.png](images/sCTkScrollbar_Light.png)
+Dark Mode: ![sCTkScrollbar_Dark.png](images/sCTkScrollbar_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode: ![sCTkScrollbar_Light.png](images/sCTkScrollbar_Light.png)
 
 **This widget contains no scroll-handling logic.** It's a scrollbar: it renders a draggable bar and reports its position. Wheel and trackpad handling belongs to the scrolling container — see [`ScrollBindingMixin`](ScrollBindingMixin.md). An earlier version of this page credited the scrollbar with an "inertial micro-delta aggregator"; that logic lives in `sCTkScrollArea`, not here.
 

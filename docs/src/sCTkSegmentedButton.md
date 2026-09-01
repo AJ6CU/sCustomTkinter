@@ -14,8 +14,8 @@
 
 `sCTkSegmentedButton` is a themeable subclass of `customtkinter.CTkSegmentedButton` — a horizontal strip of connected text buttons where selecting one automatically unselects the others, similar to a row of radio buttons. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state, and per-segment text-color handling for the currently selected segment.
 
-![sCTkSegmentedButton_Dark.png](images/sCTkSegmentedButton_Dark.png)
-![sCTkSegmentedButton_Light.png](images/sCTkSegmentedButton_Light.png)
+Dark Mode: ![sCTkSegmentedButton_Dark.png](images/sCTkSegmentedButton_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode: ![sCTkSegmentedButton_Light.png](images/sCTkSegmentedButton_Light.png)
 ---
 
 ### Constructor

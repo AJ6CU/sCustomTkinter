@@ -3,8 +3,8 @@
 The `sCTkSMeter` is a standalone, theme-adaptive analog S-Meter/Power Output gauge instrument designed specifically for ham radio transceiver desktop interfaces. Natively inheriting container footprints from `customtkinter.CTkFrame`, it delivers smooth telemetry tracking sweeps without the overhead of extraneous nesting modules.
 
 
-![sCTkSMeter_Dark.png](images/sCTkSMeter_Dark.png)
-![sCTkSMeter_Light.png](images/sCTkSMeter_Light.png)
+Dark Mode:  ![sCTkSMeter_Dark.png](images/sCTkSMeter_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode:  ![sCTkSMeter_Light.png](images/sCTkSMeter_Light.png)
 
 
 ---

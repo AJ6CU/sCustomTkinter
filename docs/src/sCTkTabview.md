@@ -2,8 +2,8 @@
 
 `sCTkTabview` is a themeable multi-page tab container — a subclass of `customtkinter.CTkTabview` with automatic light/dark theme resolution from `sCTkThemes.json`, a disabled state, and Pygubu Designer support.
 
-![sCTkTabview_Dark.png](images/sCTkTabview_Dark.png)
-![sCTkTabview_Light.png](images/sCTkTabview_Light.png)
+Dark Mode:  ![sCTkTabview_Dark.png](images/sCTkTabview_Dark.png)&emsp; &emsp; &emsp; &emsp;
+Light Mode:  ![sCTkTabview_Light.png](images/sCTkTabview_Light.png)
 
 Its one structural difference from the native widget: `add()` and `tab()` return an **`sCTkFrame`**, not a `ctk.CTkFrame`. See [Tab Pages](#tab-pages).
 
