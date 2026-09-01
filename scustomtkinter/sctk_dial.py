@@ -18,6 +18,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         ThemeableWidget.__init__(self, kw)
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
+        self._validate_theme_keys()
 
         target_diameter = self._local_defaults.get("diameter")
         if target_diameter is not None:
@@ -51,6 +52,53 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         self.canvas.bind("<Shift-B1-Motion>", self._on_button_motion)
         self.canvas.bind("<Configure>", lambda e: self._draw_dial_base())
         self.after(50, self._inject_private_layer_bindings)
+
+    # Keys every dial reads, required at the TOP LEVEL of its theme block.
+    _REQUIRED_THEME_KEYS = (
+        "fg_color", "text_color", "shadow_color", "dial_color",
+        "dial_highlight_color", "dial_shadow_color",
+        "dial_rim_light_color", "dial_rim_shadow_color",
+    )
+
+    # Keys required inside disabled_map. Deliberately excludes fg_color: the
+    # background does NOT dim when disabled, the knob face and text carry the
+    # signal. Matches the choice made for sCTkScrollableFrame.
+    _REQUIRED_DISABLED_KEYS = ("text_color", "dial_color")
+
+    def _validate_theme_keys(self) -> None:
+        """
+        Hard-fails at construction on an incomplete theme block, naming the
+        missing key and where it belongs.
+
+        Replaces the previous pattern of `.get(key) or ("#hex", "#hex")`
+        throughout the draw routine, which silently substituted a plausible
+        guess whenever the theme was incomplete -- so a broken block looked
+        merely slightly-off rather than broken. Same fail-loud principle used
+        for sCTkTabview and sCTkScrollableFrame.
+
+        Subclasses extend the requirements via _EXTRA_THEME_KEYS and
+        _EXTRA_DISABLED_KEYS rather than overriding this, since each dial
+        variant reads a slightly different set: only Continuous draws a
+        dimple, and only Selector/Range draw a pointer line.
+
+        Raises:
+            KeyError: naming the first missing key found.
+        """
+        name = self.__class__.__name__
+        required = self._REQUIRED_THEME_KEYS + getattr(self, "_EXTRA_THEME_KEYS", ())
+        required_disabled = self._REQUIRED_DISABLED_KEYS + getattr(self, "_EXTRA_DISABLED_KEYS", ())
+
+        for key in required:
+            if self._local_defaults.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' at the top level "
+                    f"of sCTkThemes.json."
+                )
+        for key in required_disabled:
+            if self._custom_disabled_map.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' in disabled_map."
+                )
 
     def _inject_private_layer_bindings(self):
         layers_to_bind = [self.canvas, self]
@@ -127,8 +175,11 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             except Exception:
                 return (pname, pname, pname, "", "")
 
-        if args and isinstance(args, dict):
-            kwargs = args | kwargs
+        # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
+        # tuple, so this never fired and the dict form of configure() was
+        # dead code. Same tautology fixed across the batch-one widgets.
+        if len(args) == 1 and isinstance(args[0], dict):
+            kwargs = {**args[0], **kwargs}
 
         if "width" in kwargs:
             w = kwargs["width"]
@@ -146,6 +197,16 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             if kwargs: return super().configure(**kwargs)
         return None
 
+
+    # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
+    # attribute -- it does NOT track whichever configure() a subclass defines.
+    # Without this, .config(...) skips every override in this class and lands
+    # on the native widget, bypassing divisions/command/diameter handling and
+    # the theme repaint entirely. Confirmed as a critical bug on
+    # sCTkSegmentedButton earlier in this project's audit. Each subclass needs
+    # its own line -- inheriting the alias would point at the PARENT's
+    # configure(), not the subclass's.
+    config = configure
     def get_state(self) -> str:
         return str(self._state).lower()
 
@@ -193,26 +254,167 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         if attribute_name == "divisions": return getattr(self, "_divisions", 24)
         return super().cget(attribute_name)
 
-    def _draw_dial_base(self):
+    # ------------------------------------------------------------------
+    # Knob shading
+    # ------------------------------------------------------------------
+    # Number of concentric ovals used to fake a radial gradient. Tk's canvas
+    # has no gradient primitive and no alpha channel, so the only way to get a
+    # domed surface is to stack solid-filled ovals, each slightly smaller and
+    # shifted toward the light source. Below ~12 the steps read as visible
+    # contour bands; above ~24 the extra items cost more than they show.
+    KNOB_SHADE_STEPS = 18
+
+    # How far the ring stack shrinks from edge to centre, and how far each
+    # step drifts toward the light. Both as fractions of the knob radius.
+    KNOB_SHADE_SHRINK = 0.55
+    KNOB_LIGHT_OFFSET = 0.55
+
+    # Finger dimple, as fractions of knob radius -- NOT absolute pixels. The
+    # previous code used a fixed 14px inset with a fixed 14.5px radius, so the
+    # dimple was lost on a large dial and swallowed a small one.
+    DIMPLE_RADIUS_FRAC = 0.36
+    DIMPLE_RIM_CLEARANCE_FRAC = 0.06
+
+    # Pointer line for Selector/Range: width in px, and how far short of the
+    # rim it stops.
+    POINTER_WIDTH = 3.0
+    POINTER_RIM_INSET = 3
+
+    @staticmethod
+    def _lerp_color(color_a: str, color_b: str, t: float) -> str:
+        """
+        Blends two resolved "#RRGGBB" strings.
+
+        Both inputs must already be resolved to a single colour by
+        _resolve_color() -- this cannot accept (light, dark) tuples.
+
+        Args:
+            color_a: Start colour at t=0.
+            color_b: End colour at t=1.
+            t: Position between them, 0.0 to 1.0.
+
+        Returns:
+            The blended colour as "#RRGGBB".
+        """
+        a = tuple(int(color_a[i:i + 2], 16) for i in (1, 3, 5))
+        b = tuple(int(color_b[i:i + 2], 16) for i in (1, 3, 5))
+        return "#%02X%02X%02X" % tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
+
+    def _draw_shaded_disc(self, cx, cy, radius, edge_color, centre_color, tag,
+                          rim_light=None, rim_shadow=None, recessed=False):
+        """
+        Draws a domed (or recessed) disc as a stack of concentric ovals.
+
+        The light source is the upper left. For a DOME each successive ring
+        shrinks and drifts toward that light, so the bright end of the ramp
+        lands off-centre where a highlight would fall. For a RECESS the drift
+        is inverted -- a hole lit from the upper left is shadowed on its
+        upper-left interior wall and lit on the lower right. Getting that
+        backwards is what makes a dimple pop outward as a bump instead of
+        sinking in.
+
+        Args:
+            cx, cy: Centre of the disc.
+            radius: Outer radius.
+            edge_color: Resolved colour at the outer edge.
+            centre_color: Resolved colour at the lit end of the ramp.
+            tag: Canvas tag applied to every item, so the whole disc can be
+                deleted as a unit.
+            rim_light: Optional resolved colour for the lit rim arc.
+            rim_shadow: Optional resolved colour for the shaded rim arc.
+            recessed: True to invert the light direction (see above).
+        """
+        direction = -1.0 if recessed else 1.0
+        for i in range(self.KNOB_SHADE_STEPS):
+            t = i / (self.KNOB_SHADE_STEPS - 1)
+            r = radius * (1.0 - self.KNOB_SHADE_SHRINK * t)
+            drift = (radius - r) * self.KNOB_LIGHT_OFFSET * direction
+            x, y = cx - drift, cy - drift
+            self.canvas.create_oval(x - r, y - r, x + r, y + r,
+                                    fill=self._lerp_color(edge_color, centre_color, t),
+                                    outline="", tags=tag)
+
+        # Rim lighting. On a dark knob this does most of the work: the body
+        # ramp is clamped at the bottom (you can't go darker than black), so
+        # the bright upper-left arc is what reads as a curved edge rather than
+        # a flat cut-out.
+        if rim_light:
+            lit_start, shade_start = (225, 45) if not recessed else (45, 225)
+            self.canvas.create_arc(cx - radius, cy - radius, cx + radius, cy + radius,
+                                   start=lit_start, extent=180, style="arc",
+                                   outline=rim_light, width=2.5, tags=tag)
+            if rim_shadow:
+                self.canvas.create_arc(cx - radius, cy - radius, cx + radius, cy + radius,
+                                       start=shade_start, extent=180, style="arc",
+                                       outline=rim_shadow, width=2.5, tags=tag)
+
+    def _redraw_indicator(self):
+        """
+        Redraws only the moving indicator -- the dimple or the pointer line --
+        leaving the knob body, ticks and labels alone.
+
+        Call this on a VALUE change. Call _draw_dial_base() only when the
+        geometry, theme or state changes.
+
+        The body is now a stack of ~20 shaded ovals plus ticks and labels, and
+        none of it changes as the dial turns. Rebuilding all of it per detent
+        made the shading cost real; this makes it free while tuning. Same
+        pattern as sCTkSMeter._execute_needle_draw(), which redraws its needle
+        against a static face.
+        """
         if not hasattr(self, "canvas") or not self.canvas.winfo_exists(): return
-        self.canvas.delete("all")
+        if not self.canvas.find_withtag("knob_body"):
+            # Body was never drawn (first paint, or a resize wiped it), so a
+            # partial update would leave the dial blank. Do the full pass.
+            self._draw_dial_base()
+            return
+        self._draw_dial_base(indicator_only=True)
+
+    def _draw_dial_base(self, indicator_only: bool = False):
+        if not hasattr(self, "canvas") or not self.canvas.winfo_exists(): return
+        if not indicator_only:
+            self.canvas.delete("all")
         width, height = self.canvas.winfo_width(), self.canvas.winfo_height()
         if width < 10 or height < 10: width = height = int(self.cget("width") if hasattr(self, "cget") else 120)
 
         child_classname = self.__class__.__name__
-        bg_color = self._resolve_color(self._local_defaults.get("fg_color") or ("#F1F5F9", "#0A0A0A"))
-        shadow_paint = self._resolve_color(self._local_defaults.get("shadow_color") or ("#CBD5E1", "#02040A"))
-        text_color = self._resolve_color(self._local_defaults.get("text_color") or ("#3B8ED0", "#FF9100"))
-        dial_color = self._resolve_color(self._local_defaults.get("dial_color") or ("#1E293B", "#181E2B"))
+        # No `or ("#hex", "#hex")` fallbacks: _validate_theme_keys() hard-failed
+        # at construction if any of these were missing, so every lookup here is
+        # guaranteed to resolve. A fallback would only reintroduce the silent
+        # substitution that made an incomplete theme block invisible.
+        bg_color = self._resolve_color(self._local_defaults.get("fg_color"))
+        shadow_paint = self._resolve_color(self._local_defaults.get("shadow_color"))
+        text_color = self._resolve_color(self._local_defaults.get("text_color"))
+        dial_color = self._resolve_color(self._local_defaults.get("dial_color"))
         is_dark_mode = (ctk.get_appearance_mode() == "Dark")
 
+        # Knob shading colours. Explicit rather than derived from dial_color:
+        # a fixed lighten/darken percentage produces a nearly invisible rim on
+        # a black knob and a blown-out one on aluminium, because the available
+        # range differs enormously between them.
+        knob_highlight = self._resolve_color(self._local_defaults.get("dial_highlight_color"))
+        knob_shadow = self._resolve_color(self._local_defaults.get("dial_shadow_color"))
+        rim_light = self._resolve_color(self._local_defaults.get("dial_rim_light_color"))
+        rim_shadow = self._resolve_color(self._local_defaults.get("dial_rim_shadow_color"))
+
         if self._state == "disabled":
-            text_color = self._resolve_color(self._custom_disabled_map.get("text_color") or ("#94A3B8", "#4B5563"))
-            dial_color = self._resolve_color(self._custom_disabled_map.get("fg_color") or ("#E2E8F0", "#1A1D24"))
-            bg_color = self._resolve_color(self._custom_disabled_map.get("fg_color") or ("#F1F5F9", "#0A0D14"))
-            pointer_glow = self._resolve_color(self._custom_disabled_map.get("disabled_dimple_glow") or ("#CBD5E1", "#334155"))
-        else:
-            pointer_glow = self._resolve_color(self._local_defaults.get("pointer_glow_color") or ("#CBD5E1", "#3A455C"))
+            text_color = self._resolve_color(self._custom_disabled_map.get("text_color"))
+            # FIX: this previously read "fg_color" for BOTH the dial face and
+            # the background, so once disabled_map actually contained fg_color
+            # the knob would render the same colour as the surface behind it
+            # and vanish. The two only looked different before because the map
+            # was empty and their hardcoded fallbacks happened to differ.
+            dial_color = self._resolve_color(self._custom_disabled_map.get("dial_color"))
+            knob_highlight = self._resolve_color(
+                self._custom_disabled_map.get("dial_highlight_color") or self._custom_disabled_map.get("dial_color"))
+            knob_shadow = self._resolve_color(
+                self._custom_disabled_map.get("dial_shadow_color") or self._custom_disabled_map.get("dial_color"))
+            rim_light = self._resolve_color(
+                self._custom_disabled_map.get("dial_rim_light_color") or self._custom_disabled_map.get("dial_color"))
+            rim_shadow = self._resolve_color(
+                self._custom_disabled_map.get("dial_rim_shadow_color") or self._custom_disabled_map.get("dial_color"))
+            # Background deliberately NOT dimmed -- the knob face and border
+            # carry the disabled signal, matching sCTkScrollableFrame.
 
         self.canvas.configure(bg=bg_color)
         center_x, center_y = width / 2, height / 2
@@ -231,50 +433,95 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         else:
             total_ticks = int(self._divisions) if (hasattr(self, "_divisions") and self._divisions) else 24
 
-        for i in range(total_ticks):
-            fraction = (i / (total_ticks - 1)) if (total_ticks > 1 and has_arc_constraints) else (i / total_ticks)
-            angle_deg = start_deg + (fraction * arc_sweep)
-            angle_rad = math.radians(-angle_deg)
-            x1, y1 = center_x + knob_radius * math.cos(angle_rad), center_y - knob_radius * math.sin(angle_rad)
-            x2, y2 = center_x + (knob_radius + 6) * math.cos(angle_rad), center_y - (knob_radius + 6) * math.sin(angle_rad)
-            self.canvas.create_line(x1, y1, x2, y2, fill=text_color, width=2.0)
+        if not indicator_only:
+            for i in range(total_ticks):
+                fraction = (i / (total_ticks - 1)) if (total_ticks > 1 and has_arc_constraints) else (i / total_ticks)
+                angle_deg = start_deg + (fraction * arc_sweep)
+                angle_rad = math.radians(-angle_deg)
+                x1, y1 = center_x + knob_radius * math.cos(angle_rad), center_y - knob_radius * math.sin(angle_rad)
+                x2, y2 = center_x + (knob_radius + 6) * math.cos(angle_rad), center_y - (knob_radius + 6) * math.sin(angle_rad)
+                self.canvas.create_line(x1, y1, x2, y2, fill=text_color, width=2.0)
 
-            if child_classname == "sCTkDialSelector" and i < len(self._labels):
-                self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(self._labels[i]), fill=text_color, font=("Arial", 9, "bold"))
-            elif child_classname == "sCTkDialRange":
-                from_val, to_val = getattr(self, "_from", 0), getattr(self, "_to", 100)
-                range_val = int(from_val + (to_val - from_val) * fraction)
-                self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(range_val), fill=text_color, font=("Arial", 9, "bold"))
+                if child_classname == "sCTkDialSelector" and i < len(self._labels):
+                    self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(self._labels[i]), fill=text_color, font=("Arial", 9, "bold"))
+                elif child_classname == "sCTkDialRange":
+                    from_val, to_val = getattr(self, "_from", 0), getattr(self, "_to", 100)
+                    range_val = int(from_val + (to_val - from_val) * fraction)
+                    self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(range_val), fill=text_color, font=("Arial", 9, "bold"))
 
-        self.canvas.create_oval(center_x - knob_radius + 1, center_y - knob_radius + 4, center_x + knob_radius + 4, center_y + knob_radius + 4, fill=shadow_paint, outline="")
+            self.canvas.create_oval(center_x - knob_radius + 1, center_y - knob_radius + 4, center_x + knob_radius + 4, center_y + knob_radius + 4, fill=shadow_paint, outline="")
 
-        if child_classname == "sCTkDialContinuous":
-            num_side_teeth = 72
-            teeth_shadow = "#000000" if is_dark_mode else "#334155"
-            for k in range(num_side_teeth):
-                k_angle = math.radians(-(k * (360.0 / num_side_teeth)))
-                self.canvas.create_line(center_x + knob_radius * math.cos(k_angle), center_y - knob_radius * math.sin(k_angle), center_x + (knob_radius - 3) * math.cos(k_angle), center_y - (knob_radius - 3) * math.sin(k_angle), fill=teeth_shadow, width=1.5)
+            if child_classname == "sCTkDialContinuous":
+                num_side_teeth = 72
+                teeth_shadow = "#000000" if is_dark_mode else "#334155"
+                for k in range(num_side_teeth):
+                    k_angle = math.radians(-(k * (360.0 / num_side_teeth)))
+                    self.canvas.create_line(center_x + knob_radius * math.cos(k_angle), center_y - knob_radius * math.sin(k_angle), center_x + (knob_radius - 3) * math.cos(k_angle), center_y - (knob_radius - 3) * math.sin(k_angle), fill=teeth_shadow, width=1.5)
 
-        self.canvas.create_oval(center_x - knob_radius + 2, center_y - knob_radius + 2, center_x + knob_radius - 2, center_y + knob_radius - 2, fill=dial_color, outline="#111625" if is_dark_mode else "#475569", width=1)
-        self.canvas.create_oval(center_x - knob_radius + 3, center_y - knob_radius + 3, center_x + knob_radius - 3, center_y + knob_radius - 3, fill="", outline="#4A5568" if is_dark_mode else "#E2E8F0", width=1)
+            # The knob body: a stack of concentric ovals stepping from
+            # dial_shadow_color at the rim to dial_highlight_color off-centre,
+            # replacing what used to be a single flat fill with two hardcoded
+            # outline rings. See _draw_shaded_disc().
+            self._draw_shaded_disc(center_x, center_y, knob_radius - 2,
+                                   knob_shadow, knob_highlight, "knob_body",
+                                   rim_light=rim_light, rim_shadow=rim_shadow)
 
         val_pct = self._get_value_fraction() if hasattr(self, "_get_value_fraction") else 0.0
         pointer_rad = math.radians(-(start_deg + (val_pct * arc_sweep)))
 
+        # Indicator. Tagged separately from the body so a value change can
+        # redraw ONLY this -- see _redraw_indicator(). The body is expensive
+        # now and doesn't change while the dial is turned.
+        self.canvas.delete("indicator")
+
         if child_classname in ["sCTkDialSelector", "sCTkDialRange"]:
-            px, py = center_x + (knob_radius - 2) * math.cos(pointer_rad), center_y - (knob_radius - 2) * math.sin(pointer_rad)
-            raw_pointer_theme = self._custom_disabled_map.get("text_color") if self._state == "disabled" else self._local_defaults.get("text_color") or ("#3B8ED0", "#FF9100")
-            self.canvas.create_line(center_x, center_y, px, py, fill=self._resolve_color(raw_pointer_theme), width=3.0, arrow="last", arrowshape=(8, 10, 3))
-            self.canvas.create_oval(center_x - 6, center_y - 6, center_x + 6, center_y + 6, fill=dial_color, outline="#4A5568" if is_dark_mode else "#E2E8F0", width=1)
+            # A plain straight line from dead centre out to just short of the
+            # rim, which is how these knobs are actually marked. The previous
+            # version drew an arrowhead and a centre cap; both are gone, along
+            # with the cap's two hardcoded outline colours.
+            px = center_x + (knob_radius - self.POINTER_RIM_INSET) * math.cos(pointer_rad)
+            py = center_y - (knob_radius - self.POINTER_RIM_INSET) * math.sin(pointer_rad)
+            pointer_key = "pointer_color"
+            raw_pointer = (self._custom_disabled_map.get(pointer_key) or self._custom_disabled_map.get("text_color")
+                           if self._state == "disabled"
+                           else self._local_defaults.get(pointer_key) or self._local_defaults.get("text_color"))
+            self.canvas.create_line(center_x, center_y, px, py,
+                                    fill=self._resolve_color(raw_pointer),
+                                    width=self.POINTER_WIDTH, capstyle="round",
+                                    tags="indicator")
         else:
-            dimple_center_radius = knob_radius - 14
-            dx, dy = center_x + dimple_center_radius * math.cos(pointer_rad), center_y - dimple_center_radius * math.sin(pointer_rad)
-            ind_radius = 14.5
-            self.canvas.create_oval(dx - ind_radius, dy - ind_radius, dx + ind_radius, dy + ind_radius, fill="#181E2B" if is_dark_mode else "#475569", outline="")
-            self.canvas.create_oval(dx - ind_radius - 1.5, dy - ind_radius - 1.5, dx + ind_radius - 1, dy + ind_radius - 1, fill="#0A0F1D" if is_dark_mode else "#334155", outline="")
-            self.canvas.create_oval(dx - ind_radius - 2.5, dy - ind_radius - 2.5, dx + ind_radius - 2, dy + ind_radius - 2, fill="#010205" if is_dark_mode else "#0F172A", outline="")
-            self.canvas.create_oval(dx - ind_radius + 1.5, dy - ind_radius + 1.5, dx + ind_radius + 1.5, dy + ind_radius + 1.5, fill="", outline=pointer_glow, width=1.5)
+            # Continuous only: the finger dimple a VFO operator spins the dial
+            # by. Sized as a FRACTION of knob_radius so it holds its
+            # proportions at any dial size.
+            # Resolved HERE rather than above, because only this branch draws
+            # a dimple. The previous code resolved it for every dial, so
+            # Selector and Range looked up a key they never used -- which is
+            # why pointer_glow_color appeared "missing" from their theme
+            # blocks. It belongs to Continuous alone.
+            pointer_glow = self._resolve_color(
+                self._custom_disabled_map.get("pointer_glow_color") if self._state == "disabled"
+                else self._local_defaults.get("pointer_glow_color"))
+
+            ind_radius = knob_radius * self.DIMPLE_RADIUS_FRAC
+            clearance = knob_radius * self.DIMPLE_RIM_CLEARANCE_FRAC
+            dimple_center_radius = knob_radius - ind_radius - clearance
+            dx = center_x + dimple_center_radius * math.cos(pointer_rad)
+            dy = center_y - dimple_center_radius * math.sin(pointer_rad)
+
+            # recessed=True inverts the light direction: a hole lit from the
+            # upper left is shadowed on its upper-left interior wall. Drawn
+            # with the body's direction it would read as a raised bump.
+            self._draw_shaded_disc(dx, dy, ind_radius, knob_highlight, knob_shadow,
+                                   "indicator", rim_light=rim_shadow,
+                                   rim_shadow=rim_light, recessed=True)
+            self.canvas.create_oval(dx - ind_radius, dy - ind_radius, dx + ind_radius, dy + ind_radius,
+                                    fill="", outline=pointer_glow, width=1.5, tags="indicator")
 class sCTkDialContinuous(sCTKDialBase):
+    # Only this variant draws the finger dimple, so only it requires the glow
+    # ring colour -- see _draw_dial_base()'s indicator branch.
+    _EXTRA_THEME_KEYS = ("pointer_glow_color",)
+    _EXTRA_DISABLED_KEYS = ("pointer_glow_color",)
+
     def __init__(self, master=None, divisions=24, command=None, left_click_callback=None, right_click_callback=None, diameter=120, **kw):
         super().__init__(master, divisions=divisions, diameter=diameter, **kw)
         self._command = command
@@ -297,6 +544,16 @@ class sCTkDialContinuous(sCTKDialBase):
         if hasattr(self, "canvas") and self.canvas.winfo_exists(): self._draw_dial_base()
         return result
 
+
+    # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
+    # attribute -- it does NOT track whichever configure() a subclass defines.
+    # Without this, .config(...) skips every override in this class and lands
+    # on the native widget, bypassing divisions/command/diameter handling and
+    # the theme repaint entirely. Confirmed as a critical bug on
+    # sCTkSegmentedButton earlier in this project's audit. Each subclass needs
+    # its own line -- inheriting the alias would point at the PARENT's
+    # configure(), not the subclass's.
+    config = configure
     def cget(self, attribute_name: str) -> any:
         if attribute_name == "command": return self._command
         if attribute_name == "left_click_callback": return self._left_click_callback
@@ -305,7 +562,7 @@ class sCTkDialContinuous(sCTKDialBase):
 
     def set_position_index(self, step_delta):
         self._current_value = (self._current_value + int(step_delta)) % self._divisions
-        if self.canvas.winfo_exists(): self._draw_dial_base()
+        if self.canvas.winfo_exists(): self._redraw_indicator()
         if self._command is not None and self._state == "normal": self._command(int(step_delta))
 
     def _on_left_click_step(self, event):
@@ -343,6 +600,11 @@ class sCTkDialContinuous(sCTKDialBase):
         else: return
         self.set_position_index(d)
 class sCTkDialSelector(sCTKDialBase):
+    # This variant draws a plain line pointer rather than a dimple, so it
+    # requires pointer_color instead of pointer_glow_color. pointer_color was
+    # present in the theme file but never read by any code path until now.
+    _EXTRA_THEME_KEYS = ("pointer_color",)
+
     """
     Rotary switch selector module. Constrained to custom arc angles (default 270).
     Loops infinitely past outer limits and reports the active integer item index position.
@@ -387,6 +649,16 @@ class sCTkDialSelector(sCTKDialBase):
         if hasattr(self, "canvas") and self.canvas.winfo_exists(): self._draw_dial_base()
         return result
 
+
+    # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
+    # attribute -- it does NOT track whichever configure() a subclass defines.
+    # Without this, .config(...) skips every override in this class and lands
+    # on the native widget, bypassing divisions/command/diameter handling and
+    # the theme repaint entirely. Confirmed as a critical bug on
+    # sCTkSegmentedButton earlier in this project's audit. Each subclass needs
+    # its own line -- inheriting the alias would point at the PARENT's
+    # configure(), not the subclass's.
+    config = configure
     def cget(self, attribute_name: str) -> any:
         if attribute_name == "labels": return self._labels
         if attribute_name == "arc_angle": return self._arc_angle
@@ -400,7 +672,7 @@ class sCTkDialSelector(sCTKDialBase):
         if target >= t: target = 0
         elif target < 0: target = t - 1
         self._current_value = target
-        if self.canvas.winfo_exists(): self._draw_dial_base()
+        if self.canvas.winfo_exists(): self._redraw_indicator()
         if self._command is not None and self._state == "normal": self._command(self._current_value)
 
     def get(self): return self._current_value
@@ -439,6 +711,11 @@ class sCTkDialSelector(sCTKDialBase):
         else: return
         self.set(self._current_value + d)
 class sCTkDialRange(sCTKDialBase):
+    # This variant draws a plain line pointer rather than a dimple, so it
+    # requires pointer_color instead of pointer_glow_color. pointer_color was
+    # present in the theme file but never read by any code path until now.
+    _EXTRA_THEME_KEYS = ("pointer_color",)
+
     """
     Ranged potentiometer module tracking discrete integer boundaries.
     Enforces absolute dead stops (does not loop at thresholds) and reports absolute integer states.
@@ -475,6 +752,16 @@ class sCTkDialRange(sCTKDialBase):
         if hasattr(self, "canvas") and self.canvas.winfo_exists(): self._draw_dial_base()
         return result
 
+
+    # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
+    # attribute -- it does NOT track whichever configure() a subclass defines.
+    # Without this, .config(...) skips every override in this class and lands
+    # on the native widget, bypassing divisions/command/diameter handling and
+    # the theme repaint entirely. Confirmed as a critical bug on
+    # sCTkSegmentedButton earlier in this project's audit. Each subclass needs
+    # its own line -- inheriting the alias would point at the PARENT's
+    # configure(), not the subclass's.
+    config = configure
     def cget(self, attribute_name: str) -> any:
         if attribute_name in ["from_", "min_value"]: return self._from
         if attribute_name in ["to", "max_value"]: return self._to
@@ -487,7 +774,7 @@ class sCTkDialRange(sCTKDialBase):
         target = max(self._from, min(self._to, int(value)))
         if target != self._current_value:
             self._current_value = target
-            if self.canvas.winfo_exists(): self._draw_dial_base()
+            if self.canvas.winfo_exists(): self._redraw_indicator()
             if self._command is not None and self._state == "normal": self._command(self._current_value)
 
     def get(self): return self._current_value
