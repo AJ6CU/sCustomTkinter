@@ -76,6 +76,20 @@ class ScrollBindingMixin:
     # so they're amplified to give comparable travel per notch.
     MAC_SCROLL_SENSITIVITY = 3
 
+    # Ceiling on units travelled per macOS wheel event.
+    #
+    # macOS reports WILDLY different delta magnitudes depending on hardware.
+    # An Apple Magic Mouse sends fine-grained values near 1; a conventional
+    # wheel mouse sends a large value per detent -- around 38 in live testing.
+    # Multiplying that by MAC_SCROLL_SENSITIVITY gave 114 units of travel from
+    # a single wheel click, which jumped a ~100-row list end to end.
+    #
+    # The amplification is still right for fine-grained hardware, so rather
+    # than dropping it, the result is clamped: small deltas scale normally,
+    # large ones saturate at a sane notch-sized step. Tune this if a wheel
+    # notch feels too short or too long; it is the only knob involved.
+    MAC_SCROLL_MAX_STEP = 5
+
     # Trackpad events arrive far more frequently and with far finer deltas
     # than wheel notches. Scrolling on each one is unusably fast, so deltas
     # accumulate and only move the view once this threshold is crossed.
@@ -498,6 +512,12 @@ class ScrollBindingMixin:
                                  if abs(delta) >= 1
                                  else (-self.MAC_SCROLL_SENSITIVITY if delta > 0
                                        else self.MAC_SCROLL_SENSITIVITY))
+                # Saturate rather than trust the magnitude -- see
+                # MAC_SCROLL_MAX_STEP. A conventional wheel's per-detent delta
+                # is large enough that the amplification above would otherwise
+                # throw the view across the entire content in one click.
+                cap = self.MAC_SCROLL_MAX_STEP
+                scaled_scroll = max(-cap, min(cap, scaled_scroll))
                 target.yview_scroll(scaled_scroll, "units")
             elif sys_platform == "Linux":
                 # Linux has no continuous delta -- discrete button events only.
