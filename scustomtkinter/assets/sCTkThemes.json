@@ -314,11 +314,12 @@
         "segmented_button_selected_hover_color": ["#112A4B", "#1F618D"],
         "segmented_button_unselected_color": ["#9E9E9E", "#1F2937"],
         "segmented_button_unselected_hover_color": ["#7D7D7D", "#374151"],
+        "segmented_button_height": 36,
         "disabled_map": {
             "segmented_button_fg_color": ["#FFFFFF", "#111827"],
-            "segmented_button_selected_color": ["#CBD5E1", "#374151"],
-            "segmented_button_unselected_color": ["#CBD5E1", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"]
+            "segmented_button_selected_color": ["#94A3B8", "#374151"],
+            "segmented_button_unselected_color": ["#94A3B8", "#374151"],
+            "text_color": ["#1E293B", "#64748B"]
         }
     },
     "sCTkTextboxPrimary": {

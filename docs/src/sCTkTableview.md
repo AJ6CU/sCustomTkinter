@@ -103,7 +103,7 @@ from scustomtkinter import sCTk, sCTkFrame, sCTkTableview, sCTkButtonPrimary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.geometry("500x400")
+    root.geometry("400x300")
     root.title("Tableview Example")
 
     base = sCTkFrame(root)

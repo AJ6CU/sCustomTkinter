@@ -74,11 +74,13 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
             # scrollbar, resolved differently here because there's no
             # meaningful "dimmed hover" distinct from "dimmed".
             #
-            # font is likewise top-level only -- no widget in this project has
-            # a disabled-state font variant.
+            # font and segmented_button_height are likewise top-level only --
+            # no widget in this project has a disabled-state font, and the
+            # tab bar's height doesn't change when disabled.
             for required_key in ("segmented_button_selected_hover_color",
                                  "segmented_button_unselected_hover_color",
-                                 "font"):
+                                 "font",
+                                 "segmented_button_height"):
                 if self._local_defaults.get(required_key) is None:
                     raise KeyError(
                         f"'{self.__class__.__name__}' theme block is missing "
@@ -91,6 +93,14 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
         # step 5 below. No fallback: validated above.
         target_font = self.final_kw.pop("font", self._local_defaults.get("font"))
 
+        # Same treatment for the tab bar height. Native CTkTabview names every
+        # parameter explicitly with no **kwargs catch-all, so ANY key it
+        # doesn't recognize raises ValueError from super().__init__() below --
+        # this must be popped, not merely ignored. Forwarded to the segmented
+        # button in step 5, which is the widget that actually has a height.
+        target_button_height = self.final_kw.pop(
+            "segmented_button_height", self._local_defaults.get("segmented_button_height"))
+
         # Registry of sCTkFrame page wrappers, keyed by tab name -- see
         # _ensure_sctk_page(). Established BEFORE super().__init__() so it
         # exists no matter when the first tab gets created.
@@ -99,10 +109,13 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
         # 4. Initialize parent class natively with clean frame-compliant attributes safely
         super().__init__(master, **self.final_kw)
 
-        # 5. Forward the extracted font parameter down to the native layout bar safely
+        # 5. Forward the extracted font and height parameters down to the
+        # native layout bar safely. Applied once here rather than in
+        # _apply_custom_theme_colors(), since neither changes with state --
+        # re-pushing them on every repaint would be wasted work.
         if hasattr(self, "_segmented_button") and self._segmented_button:
             try:
-                self._segmented_button.configure(font=target_font)
+                self._segmented_button.configure(font=target_font, height=target_button_height)
             except Exception:
                 pass
 

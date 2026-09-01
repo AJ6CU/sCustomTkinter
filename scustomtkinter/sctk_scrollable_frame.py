@@ -63,6 +63,7 @@ three platforms.
 """
 import sys
 import platform
+import tkinter as tk
 from typing import Any, Optional
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
@@ -296,7 +297,21 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ThemeableWidget):
         #
         # _state and _scroll_enabled were both established in step 2c, since
         # step 4 above needs them.
-        self.bind("<Map>", self._on_map_auto_bind_scroll, add="+")
+        #
+        # CRITICAL -- tk.Misc.bind, NOT self.bind. CustomTkinter overrides
+        # CTkScrollableFrame.bind() to forward every binding to
+        # self._parent_canvas instead of attaching it to this widget. An
+        # earlier version of this line used self.bind(), so the <Map> binding
+        # never landed on the frame and the handler below never ran: scroll
+        # bindings were silently never installed, and the widget only appeared
+        # to scroll where native CTk's own global bind_all handler happened to
+        # cover for it. Confirmed by live testing -- a manual
+        # _toggle_scroll_bindings(bind=True) after startup made scrolling work
+        # immediately, proving the bindings had simply never been established.
+        #
+        # Calling tk.Misc.bind unbound reaches the real Tkinter implementation
+        # and attaches to this widget, which is what <Map> has to observe.
+        tk.Misc.bind(self, "<Map>", self._on_map_auto_bind_scroll, add="+")
 
         # 6. Register lifecycle handshake hook, notifying Pygubu-style consumers
         # that construction is complete.
