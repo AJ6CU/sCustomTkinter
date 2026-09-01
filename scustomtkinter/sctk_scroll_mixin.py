@@ -122,7 +122,7 @@ class ScrollBindingMixin:
         self._touchpad_last_direction = 0
         self._scroll_rebind_pending = False
 
-    def _install_scroll_activation(self, extra_map_widget=None) -> None:
+    def _install_scroll_activation(self, extra_map_widget=None, content_widget=None) -> None:
         """
         Establishes automatic scroll activation and content-change rebinding.
 
@@ -170,6 +170,13 @@ class ScrollBindingMixin:
             extra_map_widget: An additional widget to watch for <Map>,
                 typically the host's internal _parent_frame -- the widget the
                 geometry manager actually sees. Optional.
+            content_widget: The widget whose <Configure> signals a content
+                change. Defaults to self, which is correct when content is
+                added directly to the host. Hosts that put content in a
+                separate inner frame MUST pass that frame instead: adding
+                rows to an inner frame doesn't resize the outer widget, so
+                <Configure> on self would never fire and the content rebind
+                would silently never happen.
         """
         tk.Misc.bind(self, "<Map>", self._activate_scroll_bindings, add="+")
 
@@ -184,7 +191,11 @@ class ScrollBindingMixin:
         except Exception:
             pass
 
-        tk.Misc.bind(self, "<Configure>", self._schedule_scroll_rebind, add="+")
+        target = content_widget if content_widget is not None else self
+        try:
+            tk.Misc.bind(target, "<Configure>", self._schedule_scroll_rebind, add="+")
+        except Exception:
+            pass
 
     def _activate_scroll_bindings(self, event=None) -> None:
         """

@@ -6,8 +6,6 @@ A theme-compliant, highly configurable custom file explorer wrapper component.
 Inherits cleanly and directly from ctk.CTkFrame to preserve native features.
 """
 import os
-import sys
-import platform
 import time
 import ast
 import tkinter as tk
@@ -15,6 +13,7 @@ import tkinter.ttk as ttk
 
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
+from .sctk_scroll_mixin import ScrollBindingMixin
 
 from typing import Literal, Optional, Union, Tuple
 
@@ -23,7 +22,7 @@ from .sctk_button_secondary import sCTkButtonSecondary
 from .sctk_label_secondary import sCTkLabelSecondary
 from .sctk_entry_primary import sCTkEntryPrimary
 
-class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
+class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
     # NOTE: an earlier version declared a _MANAGED_PROPERTIES frozenset here,
     # never referenced anywhere else in this file -- dead code, removed. Same
     # vestigial pattern found and removed elsewhere in this project.
@@ -147,6 +146,18 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
 
         self.canvas.create_window((0, 0), window=self.explorer_frame, anchor="nw", tags="inner_window")
 
+        # Scroll state and activation, owned by ScrollBindingMixin.
+        # _init_scroll_state() must run before any binding happens.
+        #
+        # FIX: this was previously deferred with self.after(10, ...) -- an
+        # arbitrary delay chosen to let the widget hierarchy settle. The mixin
+        # activates via after_idle() instead, which fires when Tk is actually
+        # idle rather than after a guessed interval, plus <Map> on this widget
+        # and a debounced <Configure> rebind. The delay is retained below only
+        # for the NON-scroll wiring _finalize_split_bindings() also does.
+        self._init_scroll_state()
+        self._install_scroll_activation(content_widget=self.explorer_frame)
+
         self.after(10, self._finalize_split_bindings)
         self._process_live_theme_repaint()
 
@@ -259,104 +270,6 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         for widget in self.explorer_frame.winfo_children(): widget.destroy()
         self.item_labels.clear()
 
-    def _toggle_scroll_bindings(self, bind=True):
-        """
-        Cross-platform mouse wheel / trackpad scroll binding, ported from
-        sCTkScrollableFrame's proven, maintainer-verified implementation --
-        see that widget's docstring for the full reasoning behind the
-        platform-specific delta handling and the macOS touchpad bit-decoding.
-
-        FIX: an earlier version used self.canvas.bind_all("<MouseWheel>", ...)
-        -- a GLOBAL Tkinter binding affecting the entire application, not just
-        this widget. With more than one scrollable widget in the same app
-        (another sCTkFileExplorer, an sCTkScrollableFrame, etc.), whichever
-        one bound last would hijack mouse wheel scrolling everywhere, even
-        for widgets nowhere near the cursor. It also only handled Darwin vs.
-        a generic /120-scaled case -- Linux's discrete <Button-4>/<Button-5>
-        events were never bound at all, so wheel scrolling likely never
-        worked there. This binds only to this widget's own relevant layers,
-        using regular, scoped .bind() calls, and covers all three platforms.
-
-        Adapted from sCTkScrollableFrame's version in one structural way:
-        that widget looks up its governing canvas via winfo_parent(), since
-        it's wrapped by a native CTkScrollableFrame that owns the actual
-        scrolling canvas. This widget builds its own canvas explicitly
-        (self.canvas) rather than being wrapped by one, so there's no lookup
-        needed -- scrolling targets self.canvas directly.
-
-        Called once from _finalize_split_bindings() after initial placement,
-        and again at the end of every _fill_explorer() call, since navigating
-        to a new folder completely replaces the row widgets inside
-        explorer_frame -- without re-binding, newly-created rows would have
-        no scroll handling of their own until the next navigation.
-        """
-        SCROLL_EVENTS = ["<MouseWheel>", "<TouchpadScroll>", "<Button-4>", "<Button-5>"]
-        layers_to_bind = [self]
-        if hasattr(self, "canvas") and self.canvas.winfo_exists():
-            layers_to_bind.append(self.canvas)
-        if hasattr(self, "explorer_frame") and self.explorer_frame.winfo_exists():
-            layers_to_bind.append(self.explorer_frame)
-            for child in self.explorer_frame.winfo_children():
-                if child not in layers_to_bind:
-                    layers_to_bind.append(child)
-
-        for target_layer in layers_to_bind:
-            for event_str in SCROLL_EVENTS:
-                try: target_layer.unbind(event_str)
-                except Exception: pass
-
-                if bind:
-                    if "Touchpad" in event_str:
-                        if sys.platform == "darwin":
-                            target_layer.bind("<TouchpadScroll>", self._process_mac_touchpad_scroll, add="+")
-                    else:
-                        target_layer.bind(event_str, self._process_scroll_wheel, add="+")
-
-    def _process_mac_touchpad_scroll(self, event):
-        """Processes Apple high-precision touchpad gestures. Identical logic
-        to sCTkScrollableFrame's version, targeting self.canvas directly."""
-        if not hasattr(self, "canvas") or not self.canvas.winfo_exists(): return
-        try:
-            delta_x, delta_y = self._decode_mac_touchpad_delta(event.delta)
-            if delta_y != 0:
-                MAC_SCROLL_SENSITIVITY = 3
-                scaled_scroll = -MAC_SCROLL_SENSITIVITY if delta_y > 0 else MAC_SCROLL_SENSITIVITY
-                self.canvas.yview_scroll(scaled_scroll, "units")
-        except Exception:
-            pass
-
-    def _process_scroll_wheel(self, event):
-        """Processes standard mouse wheels across all three platforms.
-        Identical logic to sCTkScrollableFrame's version, targeting
-        self.canvas directly."""
-        if not hasattr(self, "canvas") or not self.canvas.winfo_exists(): return
-        try:
-            sys_platform = platform.system()
-            if sys_platform == "Darwin":
-                delta = event.delta
-                MAC_SCROLL_SENSITIVITY = 3
-                scaled_scroll = int(-MAC_SCROLL_SENSITIVITY * delta) if abs(delta) >= 1 else (
-                    -MAC_SCROLL_SENSITIVITY if delta > 0 else MAC_SCROLL_SENSITIVITY)
-                self.canvas.yview_scroll(scaled_scroll, "units")
-            elif sys_platform == "Linux":
-                if event.num == 4: self.canvas.yview_scroll(-1, "units")
-                elif event.num == 5: self.canvas.yview_scroll(1, "units")
-            else:
-                self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-        except Exception:
-            pass
-
-    def _decode_mac_touchpad_delta(self, raw_delta):
-        """Decodes macOS's packed 32-bit touchpad delta into signed 16-bit
-        X/Y components. Identical to sCTkScrollableFrame's version -- see
-        that widget's docstring for the full bit-manipulation reasoning."""
-        raw = raw_delta & 0xFFFFFFFF
-        delta_x = (raw >> 16) & 0xFFFF
-        if delta_x >= 0x8000: delta_x -= 0x10000
-        delta_y = raw & 0xFFFF
-        if delta_y >= 0x8000: delta_y -= 0x10000
-        return delta_x, delta_y
-
     def _move_back(self):
         p = os.path.dirname(self.path_to_show.get())
         if p != self.path_to_show.get():
@@ -366,6 +279,66 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             self.change_path = True
             self._fill_explorer()
 
+    # ------------------------------------------------------------------
+    # ScrollBindingMixin contract
+    # ------------------------------------------------------------------
+    def _scroll_target(self):
+        """
+        The widget to scroll. Unlike sCTkScrollableFrame -- which is wrapped
+        by a native CTkScrollableFrame owning the canvas, and so has to look
+        it up via winfo_parent() -- this widget builds its own canvas
+        explicitly, so no lookup is needed.
+
+        Returns:
+            self.canvas, or None if it doesn't exist yet.
+        """
+        canvas = getattr(self, "canvas", None)
+        try:
+            if canvas is not None and canvas.winfo_exists():
+                return canvas
+        except Exception:
+            pass
+        return None
+
+    def _scroll_layers(self):
+        """
+        Every widget that should respond to a scroll event over this explorer:
+        the widget itself, its canvas, the scrollbar, and the full row tree.
+
+        FIX: an earlier version walked only ONE level into explorer_frame
+        (`for child in self.explorer_frame.winfo_children()`), so anything
+        nested inside a row -- its label, its icon -- was never bound, and
+        the wheel did nothing while the pointer was over those. The mixin's
+        collector recurses to full depth, stopping only at nested
+        CTkScrollableFrame boundaries.
+
+        Returns:
+            An ordered, deduplicated list of widgets.
+        """
+        layers = [self]
+
+        canvas = self._scroll_target()
+        if canvas is not None:
+            layers.append(canvas)
+
+        # The scrollbar is a sibling of the canvas inside main_container, not
+        # a descendant of explorer_frame, so the content walk below would
+        # never reach it -- without this the wheel does nothing while the
+        # pointer is over the scrollbar itself.
+        bar = getattr(self, "y_scrollbar", None)
+        if bar is not None:
+            self._collect_scroll_descendants(bar, layers)
+
+        frame = getattr(self, "explorer_frame", None)
+        if frame is not None:
+            try:
+                if frame.winfo_exists():
+                    self._collect_scroll_descendants(frame, layers)
+            except Exception:
+                pass
+
+        return layers
+
     def _finalize_split_bindings(self):
         if hasattr(self, "back_button"): self.back_button.configure(command=self._move_back)
         if hasattr(self, "path_entry"): self.path_entry.bind("<Return>", lambda e: self._on_entry_return())
@@ -373,12 +346,16 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         if hasattr(self, "explorer_frame"): self.explorer_frame.bind("<Configure>", self._configure_frame)
         if hasattr(self, "canvas"):
             self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfig("inner_window", width=e.width))
-            self._toggle_scroll_bindings(bind=True)
+            self._activate_scroll_bindings()
             self.bind("<Visibility>", lambda e: self._process_live_theme_repaint())
         self._fill_explorer()
     def configure(self, *args, **kwargs):
         if args and len(args) == 1:
-            pname = args
+            # FIX: was `pname = args`, leaving pname as a TUPLE -- every
+            # comparison below failed, so all six single-argument queries
+            # were dead and fell through to super(). Pygubu could not read
+            # any of them.
+            pname = args[0]
             if pname == "state": return ("state", "state", "state", "normal", getattr(self, "_state", "normal"))
             if pname == "type": return ("type", "type", "type", "directory", self.response_type)
             if pname == "initialdir": return ("initialdir", "initialdir", "initialdir", "", self.path_to_show.get())
@@ -387,7 +364,10 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             if pname == "double_click_command": return ("double_click_command", "double_click_command", "double_click_command", "", str(self.double_click_command))
             return super().configure(*args, **kwargs)
 
-        if args and isinstance(args, dict): kwargs = args | kwargs
+        # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
+        # tuple, so this never fired and the dict-merge form of configure()
+        # was dead. Same tautology fixed across the batch-one widgets.
+        if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
         if "state" in kwargs:
             self._state = str(kwargs.pop("state")).lower()
             if self._state not in ("normal", "disabled"): self._state = "normal"
@@ -498,12 +478,12 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
 
         if self.filetypes and self.response_type != "file":
             sCTkLabelSecondary(self.explorer_frame, text="⚠️ UI Mismatch: Cannot filter extension when mode is 'directory'.", text_color="red").grid(row=0, column=0, padx=10, pady=10, sticky="w")
-            self._toggle_scroll_bindings(bind=True)
+            self._activate_scroll_bindings()
             return
         try: items = sorted(os.listdir(current_dir))
         except Exception:
             sCTkLabelSecondary(self.explorer_frame, text="⚠️ Directory unreadable or permission denied", text_color="red").grid(row=0, column=0, padx=10, pady=10, sticky="w")
-            self._toggle_scroll_bindings(bind=True)
+            self._activate_scroll_bindings()
             return
 
         row_idx = 0
@@ -557,7 +537,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         # explorer_frame -- re-bind scroll events so the newly-created rows
         # get their own handlers too, not just whatever existed at the last
         # binding pass. See _toggle_scroll_bindings()'s docstring.
-        self._toggle_scroll_bindings(bind=True)
+        self._activate_scroll_bindings()
 
     def _on_item_clicked(self, target_path):
         now = time.time()
