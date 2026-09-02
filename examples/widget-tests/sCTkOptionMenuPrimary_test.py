@@ -9,6 +9,7 @@ from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTkLabelSecondary, sCTk
 if __name__ == "__main__":
 
     root = sCTk()
+
     root.geometry("450x320")
     root.title("sCTkOptionMenuPrimary Real-Time Validation Bench")
 

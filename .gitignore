@@ -1,3 +1,6 @@
 .DS_Store
 *.pyc
 __pycache__/
+*.pyc
+*.pyc
+/scustomtkinter/__pycache__

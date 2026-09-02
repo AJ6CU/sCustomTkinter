@@ -7,7 +7,6 @@ import scustomtkinter_pygubu.designer.properties
 
 from pygubu.component.plugin_engine import IDesignerPlugin
 from pygubu.stockimage import StockImageCache, StockImage
-from pygubu.utils.widget import crop_widget
 from pygubu.plugins.pygubu.designer.basehelpers import (
     ToplevelPreviewBaseBO,
     ToplevelPreviewFactory,
@@ -41,18 +40,11 @@ from scustomtkinter_pygubu.sCTkSpinboxbo import (sCTkSpinboxBO, builder_id as sC
 from scustomtkinter.sctk_tableview import sCTkTableview
 from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id as sCTkTableview_builder_id)
 
-# TOP-LEVEL WIDGETS.
-#
-# NOTE the module name for sCTk: it lives in sctk_core, NOT sctk_sctk. The
-# rest of this library follows sctk_<widgetname>, but that convention produces
-# an absurd name for the root window class, so this one file breaks it
-# deliberately. Import sCTk from sctk_core everywhere.
-from scustomtkinter.sctk_core import sCTk
+# TOP-LEVEL WIDGETS -- adjust these two import lines to match your actual
+# module names. The builder ids are needed by get_toplevel_preview_for().
 from scustomtkinter.sctk_toplevel import sCTkToplevel
-
-# Adjust these two to match your actual builder-object module names.
-from scustomtkinter_pygubu.sCTkbo import builder_id as sCTk_builder_id
 from scustomtkinter_pygubu.sCTkToplevelbo import builder_id as sCTkToplevel_builder_id
+from scustomtkinter_pygubu.sCTkCorebo import builder_id as sCTk_builder_id
 
 
 # =====================================================================
@@ -283,62 +275,6 @@ class sCTkPreviewBO(sCTkToplevelPreviewBO):
             return super()._set_property(target_widget, pname, value)
 
 
-# Every builder id registered by this package is "scustomtkinter.<ClassName>",
-# so this prefix identifies our widgets and nothing else. Note it does NOT
-# collide with CustomTkinter's own "customtkinter." prefix -- their designer
-# plugin correctly ignores ours, and vice versa.
-namespace_prefix = "scustomtkinter."
-
-
-def _no_op(event=None):
-    """Swallow an event during preview."""
-    pass
-
-
-def _neutralize(widget, sequences):
-    """
-    Replace a widget's handlers for the given event sequences with no-ops.
-
-    Each bind is attempted independently: <TouchpadScroll> exists only on
-    macOS and raises elsewhere, and a widget may legitimately not support a
-    sequence. One failure must not skip the rest.
-    """
-    if widget is None:
-        return
-    for seq in sequences:
-        try:
-            widget.bind(seq, _no_op)
-        except Exception:
-            pass
-
-
-def _preview_canvas(widget):
-    """
-    Return the drawing canvas for a widget, or None.
-
-    Widgets inherited from CustomTkinter expose it as `_canvas`; the ones this
-    library builds from scratch -- the dials, both S-meters, sCTkFileExplorer --
-    create their own as `canvas`. CustomTkinter's plugin only checks `_canvas`,
-    which would silently return None for half of this library.
-    """
-    for attr in ("_canvas", "canvas"):
-        found = getattr(widget, attr, None)
-        if found is not None:
-            return found
-    return None
-
-
-# Sequences that make a widget grab the pointer in the designer canvas.
-_HOVER_CLICK = ("<Enter>", "<Leave>", "<Button-1>")
-_FOCUS = ("<FocusIn>", "<FocusOut>")
-# Wheel and trackpad. Neutralizing these matters more here than upstream:
-# scrolling over an un-neutralized widget scrolls IT instead of the canvas.
-_SCROLL = ("<MouseWheel>", "<TouchpadScroll>", "<Button-4>", "<Button-5>")
-# The dials additionally step on middle/right click and drag with a modifier.
-_DIAL_EXTRA = ("<Button-2>", "<Button-3>",
-               "<Shift-ButtonPress-1>", "<Shift-B1-Motion>")
-
-
 #
 # A Designer plugin for sCTk custom widgets
 #
@@ -406,107 +342,3 @@ class sCTkDesignerPlugin(IDesignerPlugin):
 
         builder.on_first_object = on_root_created
         return builder.get_object(widget_id)
-
-    def configure_for_preview(self, builder_uid: str, widget):
-        """Make a widget display with minimal functionality in the designer.
-
-        Two jobs: crop it to its allotted space, and stop it reacting to the
-        pointer. A widget that responds to clicks and scrolling fights the
-        designer -- clicking selects nothing, and scrolling over it moves the
-        widget instead of the canvas.
-
-        NOTE ON A BUG UPSTREAM: CustomTkinter's own plugin tests
-        `builder_uid.endswith(".CTKEntry")` -- capital K in the middle. The
-        real uid is "customtkinter.CTkEntry", so that branch has never
-        matched and their entry focus bindings were never actually
-        neutralized. The equivalent branch below is spelled correctly.
-        """
-        if not builder_uid.startswith(namespace_prefix):
-            return
-
-        crop_widget(widget, recursive=True)
-
-        canvas = _preview_canvas(widget)
-
-        # --- Widgets built on sCTkScrollableFrame ------------------------
-        # Left alone deliberately, following CustomTkinter's own early return
-        # for CTkScrollableFrame. This library's scrollable frame activates
-        # bindings through four separate paths and rebinds on <Configure>, so
-        # a neutralizing pass would be undone by the next rebind anyway --
-        # and cropping fires <Configure>, which triggers exactly that.
-        scrollable_family = (
-            ".sCTkScrollableFrame",
-            ".sCTkFrameLabeledPrimary",
-            ".sCTkFrameLabeledSecondary",
-            ".sCTkTableview",
-            ".sCTkSelector",
-        )
-        if builder_uid.endswith(scrollable_family):
-            return
-
-        # --- Direct inheritors from CustomTkinter ------------------------
-        if builder_uid.endswith((".sCTkEntryPrimary", ".sCTkEntrySecondary")):
-            _neutralize(canvas, _FOCUS)
-
-        elif builder_uid.endswith(".sCTkSlider"):
-            _neutralize(canvas, _HOVER_CLICK + ("<B1-Motion>",))
-
-        elif builder_uid.endswith((".sCTkOptionMenuPrimary",
-                                   ".sCTkOptionMenuSecondary")):
-            _neutralize(canvas, _HOVER_CLICK)
-            _neutralize(getattr(widget, "_text_label", None), _HOVER_CLICK)
-
-        elif builder_uid.endswith(".sCTkComboBox"):
-            # ComboBox binds by canvas TAG rather than on the widget, so the
-            # dropdown arrow and its surrounding region need tag_bind.
-            if canvas is not None:
-                for tag in ("right_parts", "dropdown_arrow"):
-                    for seq in _HOVER_CLICK:
-                        try:
-                            canvas.tag_bind(tag, seq, _no_op)
-                        except Exception:
-                            pass
-
-        elif builder_uid.endswith((".sCTkSwitch", ".sCTkCheckBox")):
-            # Not handled by CustomTkinter's plugin, but both toggle on click,
-            # which in the designer reads as the widget refusing to be selected.
-            _neutralize(canvas, _HOVER_CLICK)
-            _neutralize(getattr(widget, "_text_label", None), _HOVER_CLICK)
-
-        # --- Widgets original to this library ----------------------------
-        elif builder_uid.endswith((".sCTkDialContinuous",
-                                   ".sCTkDialSelector",
-                                   ".sCTkDialRange")):
-            # The worst offender in the library: steps on left/middle/right
-            # click, drags with Shift, and turns on wheel or trackpad. Scroll
-            # bindings are installed on several layers, so both the widget and
-            # its canvas are neutralized.
-            #
-            # <Configure> is deliberately NOT neutralized -- the dial redraws
-            # itself from it, and a dial that never redraws shows an empty
-            # canvas in the designer.
-            sequences = _HOVER_CLICK + _DIAL_EXTRA + _SCROLL
-            _neutralize(canvas, sequences)
-            _neutralize(widget, _SCROLL)
-
-        elif builder_uid.endswith(".sCTkFileExplorer"):
-            # Rows are created dynamically and each binds click and
-            # double-click, so neutralizing the canvas alone is not enough --
-            # the row widgets are separate children.
-            _neutralize(canvas, _SCROLL)
-            _neutralize(widget, _SCROLL)
-            try:
-                for row in widget.explorer_frame.winfo_children():
-                    _neutralize(row, ("<Button-1>", "<Double-Button-1>"))
-            except Exception:
-                pass
-
-        elif builder_uid.endswith(".sCTkPathChooser"):
-            # Its browse button opens a MODAL file explorer -- clicking that
-            # inside the designer would trap the user in a dialog with no
-            # obvious way back. The attribute is `btn`; note that a wrong name
-            # here fails silently, since _neutralize() accepts None.
-            _neutralize(getattr(widget, "btn", None), ("<Button-1>",))
-
-        # sCTkSMeter, sCTkSMeterBar and sCTkSeparator bind only <Configure>,
-        # which they need in order to draw. Nothing to neutralize.

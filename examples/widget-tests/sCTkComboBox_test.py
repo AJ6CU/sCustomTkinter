@@ -9,6 +9,7 @@ from scustomtkinter import sCTkFrame, sCTk, sCTkButtonPrimary, sCTkComboBox
 if __name__ == "__main__":
 
     root = sCTk()
+    # ctk.set_appearance_mode('dark')
     root.geometry("450x300")
     root.title("ComboBox Interaction Telemetry Bench")
 
