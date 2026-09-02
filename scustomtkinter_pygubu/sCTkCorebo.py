@@ -27,6 +27,7 @@ section_name = "sCustomTkinter"
 
 class sCTkBO(CTkBO):
     class_ = sCTk
+    container = True
 
     def code_imports(self):
         # should return an iterable of (module, classname/function) to import
