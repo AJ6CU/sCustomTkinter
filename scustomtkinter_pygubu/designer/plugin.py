@@ -50,8 +50,9 @@ from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id a
 from scustomtkinter.sctk_core import sCTk
 from scustomtkinter.sctk_toplevel import sCTkToplevel
 
-# Adjust these two to match your actual builder-object module names.
-from scustomtkinter_pygubu.sCTkbo import builder_id as sCTk_builder_id
+# The builder-object module follows the same naming break: sCTkCorebo, not
+# sCTkbo, matching sctk_core on the widget side.
+from scustomtkinter_pygubu.sCTkCorebo import builder_id as sCTk_builder_id
 from scustomtkinter_pygubu.sCTkToplevelbo import builder_id as sCTkToplevel_builder_id
 
 
