@@ -10,23 +10,23 @@ from pygubu.api.v1 import (
 )
 
 from pygubu.plugins.customtkinter import nsctk
-from pygubu.plugins.customtkinter.windows import CTkBO
+from pygubu.plugins.customtkinter.windows import CTkToplevelBO
 from pygubu.api.v1 import copy_custom_property
 
-from scustomtkinter.sctk_core import sCTk
+from scustomtkinter.sctk_toplevel import sCTkToplevel
 
 
 #
 # Builder definition section
 #
-widget_namespace = "scustomtkinter.sctk_core"
-widget_classname = "sCTk"
+widget_namespace = "scustomtkinter.sctk_toplevel"
+widget_classname = "sCTkTopLevel"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 
-class sCTkBO(CTkBO):
-    class_ = sCTk
+class sCTkToplevelBO(CTkTopLevelBO):
+    class_ = sCTkToplevel
 
     def code_imports(self):
         # should return an iterable of (module, classname/function) to import
@@ -36,6 +36,6 @@ class sCTkBO(CTkBO):
 
 builder_id = f"{builder_namespace}.{widget_classname}"
 register_widget(
-    builder_id, sCTkBO, widget_classname, ("ttk", section_name)
+    builder_id, sCTkToplevelBO, widget_classname, ("ttk", section_name)
 )
 

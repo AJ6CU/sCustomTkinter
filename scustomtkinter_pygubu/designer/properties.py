@@ -24,6 +24,7 @@ from pygubu.plugins.customtkinter.tabview import CTkTabviewBO
 from pygubu.plugins.customtkinter.scrollableframe import CTkScrollableFrameBO
 
 from scustomtkinter_pygubu.sCTkCorebo import (sCTkBO, builder_id as sCTk_builder_id)
+from scustomtkinter_pygubu.sCTkToplevelbo import (sCTkToplevelBO, builder_id as sCTkToplevel_builder_id)
 from scustomtkinter_pygubu.sCTkButtonPrimarybo import (sCTkButtonPrimaryBO, builder_id as sCTkButtonPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkButtonSecondarybo import (sCTkButtonSecondaryBO, builder_id as sCTkButtonSecondary_builder_id)
 from scustomtkinter_pygubu.sCTkButtonTertiarybo import (sCTkButtonTertiaryBO, builder_id as sCTkButtonTertiary_builder_id)
@@ -149,3 +150,8 @@ for pname in CTkBO.properties:
     except RuntimeError:
         pass
 
+for pname in CTkTopelevelBO.properties:
+    try:
+        copy_custom_property(nsctk.CTkToplevel, pname, sCTkToplevel_builder_id)
+    except RuntimeError:
+        pass

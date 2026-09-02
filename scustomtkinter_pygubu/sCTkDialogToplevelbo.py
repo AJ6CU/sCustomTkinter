@@ -1,11 +1,6 @@
 #!/usr/bin/python3
-"""
-sCTkDialogToplevel
 
-the top level for a sCTkDialogToplevel
 
-UI source file: sCTkDialogToplevel.ui
-"""
 import tkinter as tk
 import tkinter.ttk as ttk
 from customtkinter import CTkToplevel
