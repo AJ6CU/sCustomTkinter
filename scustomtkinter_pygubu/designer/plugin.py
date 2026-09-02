@@ -6,6 +6,7 @@ from customtkinter.windows.widgets.core_widget_classes import CTkBaseClass
 import scustomtkinter_pygubu.designer.properties
 
 from pygubu.component.plugin_engine import IDesignerPlugin
+from pygubu.stockimage import StockImageCache, StockImage
 from pygubu.plugins.pygubu.designer.basehelpers import (
     ToplevelPreviewBaseBO,
     ToplevelPreviewFactory,
@@ -43,7 +44,7 @@ from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id a
 # module names. The builder ids are needed by get_toplevel_preview_for().
 from scustomtkinter.sctk_toplevel import sCTkToplevel
 from scustomtkinter_pygubu.sCTkToplevelbo import builder_id as sCTkToplevel_builder_id
-from scustomtkinter_pygubu.sCTkCorebo import builder_id as sCTk_builder_id
+from scustomtkinter_pygubu.sCTkbo import builder_id as sCTk_builder_id
 
 
 # =====================================================================
@@ -310,24 +311,34 @@ class sCTkDesignerPlugin(IDesignerPlugin):
 
     def get_toplevel_preview_for(self, builder_uid: str, widget_id: str,
                                  builder, top_master):
-        """Return a toplevel widget to be used as the preview container for
-        a top-level builder_uid, or None if this plugin doesn't handle it.
+        """Return the toplevel preview widget for a top-level builder_uid,
+        or None if this plugin doesn't handle it.
 
-        VERIFY THIS SIGNATURE against your installed pygubu before relying on
-        it -- it is taken from CustomTkinter's own designer plugin and the
-        interface has changed between pygubu releases. If the arguments differ,
-        the body below is still the right shape: pick the preview BO for the
-        uid, instantiate it against the builder, and realize it under
-        top_master.
+        Note this does NOT instantiate a BuilderObject itself. get_preview_builder()
+        above has already told pygubu which BO class to use for this uid, so
+        builder.get_object() constructs it correctly -- with a real WidgetMeta,
+        which is what BuilderObject.__init__ actually expects. An earlier version
+        here called preview_bo(builder, widget_id).realize(top_master), passing
+        the id STRING where the meta belongs; that failed with
+        "'str' object has no attribute 'properties'" as soon as
+        _get_init_args() looked at self.wmeta.properties.
+
+        top_master is accepted for interface compatibility and deliberately
+        unused: the builder places the preview itself.
+
+        The image-cache reset exists because building a toplevel creates a NEW
+        tk root, and a StockImageCache is bound to the root it was created
+        under. Without this, images resolved against the old root either fail
+        or render blank in the new one.
+
+        Mirrors CustomTkinter's own designer plugin.
         """
-        preview_bo = None
-        if builder_uid == sCTk_builder_id:
-            preview_bo = sCTkPreviewBO
-        elif builder_uid == sCTkToplevel_builder_id:
-            preview_bo = sCTkToplevelPreviewBO
-
-        if preview_bo is None:
+        toplevel_uids = (sCTk_builder_id, sCTkToplevel_builder_id)
+        if builder_uid not in toplevel_uids:
             return None
 
-        builder_object = preview_bo(builder, widget_id)
-        return builder_object.realize(top_master)
+        def on_root_created(root):
+            builder.image_cache = StockImageCache(root, StockImage.registry)
+
+        builder.on_first_object = on_root_created
+        return builder.get_object(widget_id)
