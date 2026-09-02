@@ -1,6 +1,4 @@
 #!/usr/bin/python3
-"""
-sCTkFrame
 
 import tkinter as tk
 import tkinter.ttk as ttk
