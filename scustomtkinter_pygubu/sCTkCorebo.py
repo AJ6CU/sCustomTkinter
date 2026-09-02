@@ -36,6 +36,6 @@ class sCTkBO(CTkBO):
 
 builder_id = f"{builder_namespace}.{widget_classname}"
 register_widget(
-    builder_id, sCTkFrameBO, widget_classname, ("ttk", section_name)
+    builder_id, sCTkBO, widget_classname, ("ttk", section_name)
 )
 
