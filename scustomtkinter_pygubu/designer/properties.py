@@ -150,7 +150,7 @@ for pname in CTkBO.properties:
     except RuntimeError:
         pass
 
-for pname in CTkTopelevelBO.properties:
+for pname in CTkToplevelBO.properties:
     try:
         copy_custom_property(nsctk.CTkToplevel, pname, sCTkToplevel_builder_id)
     except RuntimeError:
