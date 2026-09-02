@@ -25,7 +25,7 @@ builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
 
-class sCTkToplevelBO(CTkTopLevelBO):
+class sCTkToplevelBO(CTkToplevelBO):
     class_ = sCTkToplevel
 
     def code_imports(self):
