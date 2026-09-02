@@ -33,7 +33,6 @@ from scustomtkinter_pygubu.sCTkEntrySecondarybo import (sCTkEntrySecondaryBO, bu
 from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFrame_builder_id)
 from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
 # from scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo import (x, builder_id as y_builder_id)
-from scustomtkinter_pygubu.sCTkFrameOutlinedbo import (sCTkFrameOutlinedBO, builder_id as sCTkFrameOutlined_builder_id)
 from scustomtkinter_pygubu.sCTkLabelPrimarybo import (sCTkLabelPrimaryBO, builder_id as sCTkLabelPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkLabelSecondarybo import (sCTkLabelSecondaryBO, builder_id as sCTkLabelSecondary_builder_id)
 from scustomtkinter_pygubu.sCTkLabelTertiarybo import (sCTkLabelTertiaryBO, builder_id as sCTkLabelTertiary_builder_id)
@@ -87,8 +86,6 @@ for pname in CTkEntryBO.properties:
     except RuntimeError:
         pass
 
-for pname in CTkFrameBO.properties:
-    copy_custom_property(nsctk.CTkFrame, pname, sCTkFrameOutlined_builder_id)
 
 for pname in CTkScrollableFrameBO.properties:
     copy_custom_property(nsctk.CTkScrollableFrame, pname, sCTkFrameLabeledPrimary_builder_id)

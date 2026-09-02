@@ -9,8 +9,6 @@ from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
 from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
 import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
 
-from scustomtkinter.sctk_frame_outlined import sCTkFrameOutlined
-from scustomtkinter_pygubu.sCTkFrameOutlinedbo import (sCTkFrameOutlinedBO, builder_id as sCTkFrameOutlined_builder_id)
 from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
 
 # FIXME: missing sCTkOptionMenuSecondaryBO class
@@ -41,11 +39,6 @@ class sCTkFrameForPreview(sCTkFrame):
         #  clickable on preview we need a hack.
         return super(tk.Frame, self).winfo_children()
 
-class sCTkFrameOutlinedForPreview(sCTkFrameOutlined):
-    def winfo_children(self):
-        # CTkFrameOUtline has a hidden canvas inside. So, to make it
-        #  clickable on preview we need a hack.
-        return super(tk.Frame, self).winfo_children()
 
 class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
     def winfo_children(self):
@@ -111,29 +104,12 @@ class sCTkSpinboxForPreview(sCTkSpinbox):
                 clist.append(cwidget)
         return clist
 
-# class sCTkSegmentedButtonForPreview(sCTkSegmentedButton):
-#     def winfo_children(self):
-#         # # CTkFrameOUtline has a hidden canvas inside. So, to make it
-#         # #  clickable on preview we need a hack.
-#         # return super(tk.Frame, self).winfo_children()
-#
-#         # internal = [
-#         #     self.object
-#         # ]
-#         # clist = []
-#         # for widget in internal:
-#         #     for cwidget in widget.winfo_children():
-#         #         clist.append(cwidget)
-#         return self.winfo_children().master
 
 #
 # Builder for Preview
 #
 class sCTkFramePreviewBO(sCTkFrameBO):
     class_ = sCTkFrameForPreview
-
-class sCTkFrameOutlinedForPreviewBO(sCTkFrameOutlinedBO):
-    class_ = sCTkFrameOutlinedForPreview
 
 class sCTkFrameLabeledPrimaryForPreviewBO(sCTkFrameLabeledPrimaryBO):
     class_ = sCTkFrameLabeledPrimaryForPreview
@@ -170,8 +146,6 @@ class sCTkDesignerPlugin(IDesignerPlugin):
 
         if builder_uid == sCTkFrame_builder_id:
             return sCTkFramePreviewBO
-        elif builder_uid == sCTkFrameOutlined_builder_id:
-            return sCTkFrameOutlinedForPreviewBO
         elif builder_uid == sCTkFrameLabeledPrimary_builder_id:
             return sCTkFrameLabeledPrimaryForPreviewBO
         elif builder_uid == sCTkPathChooser_builder_id:
