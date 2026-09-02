@@ -43,7 +43,7 @@ from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id a
 # module names. The builder ids are needed by get_toplevel_preview_for().
 from scustomtkinter.sctk_toplevel import sCTkToplevel
 from scustomtkinter_pygubu.sCTkToplevelbo import builder_id as sCTkToplevel_builder_id
-from scustomtkinter_pygubu.sCTkbo import builder_id as sCTk_builder_id
+from scustomtkinter_pygubu.sCTkCorebo import builder_id as sCTk_builder_id
 
 
 # =====================================================================
