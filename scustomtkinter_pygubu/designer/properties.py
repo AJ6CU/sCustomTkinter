@@ -1,6 +1,10 @@
 from pygubu.api.v1 import copy_custom_property
 
 from pygubu.plugins.customtkinter import nsctk
+from pygubu.plugins.customtkinter.windows import (
+    CTkBO,
+    CTkToplevelBO
+)
 from pygubu.plugins.customtkinter.widgets import (
     CTkButtonBO,
     CTkCheckBoxBO,
@@ -19,6 +23,7 @@ from pygubu.plugins.customtkinter.widgets import (
 from pygubu.plugins.customtkinter.tabview import CTkTabviewBO
 from pygubu.plugins.customtkinter.scrollableframe import CTkScrollableFrameBO
 
+from scustomtkinter_pygubu.sCTkCorebo import (sCTkBO, builder_id as sCTk_builder_id)
 from scustomtkinter_pygubu.sCTkButtonPrimarybo import (sCTkButtonPrimaryBO, builder_id as sCTkButtonPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkButtonSecondarybo import (sCTkButtonSecondaryBO, builder_id as sCTkButtonSecondary_builder_id)
 from scustomtkinter_pygubu.sCTkButtonTertiarybo import (sCTkButtonTertiaryBO, builder_id as sCTkButtonTertiary_builder_id)
@@ -135,6 +140,12 @@ for pname in CTkTextboxBO.properties:
     try:
         copy_custom_property(nsctk.CTkTextbox, pname, sCTkTextboxPrimary_builder_id)
         copy_custom_property(nsctk.CTkTextbox, pname, sCTkTextboxSecondary_builder_id)
+    except RuntimeError:
+        pass
+
+for pname in CTkBO.properties:
+    try:
+        copy_custom_property(nsctk.CTk, pname, sCTk_builder_id)
     except RuntimeError:
         pass
 
