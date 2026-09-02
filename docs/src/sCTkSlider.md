@@ -1,83 +1,121 @@
 ## sCTkSlider
 
-Standardized live track calibration adjustment slider providing real-time data value interception, disabled layout mapping overrides, and multi-zone Pygubu designer compatibility.
-
-
-![sCTkSlider_Dark.png](images/sCTkSlider_Dark.png)
-![sCTkSlider_Light.png](images/sCTkSlider_Light.png)
-
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-### 🎨 Centralized Stylesheet Setup (`themes.json`)
+### Overview
 
-To drive linear progress track filling and custom knob coordinate handle styles accurately across both look preference sweeps, ensure your centralized theme profile file includes this exact element block:
+`sCTkSlider` is a themeable subclass of `customtkinter.CTkSlider`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Unlike every other widget in this library, its state isn't tracked in a separate instance attribute — it reads and writes CustomTkinter's own native `state` property directly, treating it as the single source of truth.
+
+  ![sCTkSlider in dark mode](images/sCTkSlider_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkSlider in light mode](images/sCTkSlider_Light.png)
+
+---
+
+### Constructor
+
+```python
+sCTkSlider(master=None, command=None, variable=None, **kw)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `command` | `callable` | `None` | Called with the current value as the slider is dragged. |
+| `variable` | `tkinter.Variable` | `None` | Optional variable bound to the current value. |
+| `**kw` | — | — | Any native `CTkSlider` argument (e.g. `from_`, `to`, `number_of_steps`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
+
+```python
+volume_slider = sCTkSlider(
+    master=control_panel,
+    command=on_volume_changed,
+)
+volume_slider.pack(fill="x", padx=40, pady=10)
+```
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Queries read directly from the native widget's own `state` property rather than a parallel attribute. Setting forwards to `configure(state=mode)`, which reaches the native widget's own state handling — confirmed by direct testing to correctly block interaction. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: `command`/`variable` are routed individually; `state` is **not** specially intercepted — it flows straight through to the native widget's own `configure()`, which is what makes this widget's disable mechanism correct. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `progress_color`, `button_color`, and `button_hover_color`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `width`, `height`, `button_length`, and `border_width`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()`/`configure(state=...)` change** — `fg_color`, `progress_color`, `button_color`, and `button_hover_color` are recomputed from the theme's normal values or its `disabled_map`.
 
 ```json
 {
     "sCTkSlider": {
-        "fg_color": ["#E2E8F0", "#4B5563"],
-        "progress_color": ["#2471A3", "#3B8ED0"],
-        "button_color": ["#1A4375", "#1F6AA5"],
-        "button_hover_color": ["#112A4B", "#194A7A"],
+        "width": 200,
+        "height": 24,
+        "button_length": 12,
+        "border_width": 9,
+        "fg_color": ["#E5E7EB", "#4B5563"],
+        "progress_color": ["#1A4375", "#2471A3"],
+        "button_color": ["#2471A3", "#2471A3"],
+        "button_hover_color": ["#112A4B", "#1F618D"],
         "disabled_map": {
             "fg_color": ["#CBD5E1", "#374151"],
-            "progress_color": ["#94A3B8", "#4B5563"],
+            "progress_color": ["#CBD5E1", "#4B5563"],
             "button_color": ["#94A3B8", "#4B5563"]
         }
     }
 }
 ```
 
----
+`button_color` is the same value for both light and dark mode here — a deliberate accent color that doesn't shift with appearance mode. `disabled_map` has no `button_hover_color` entry; while disabled, the widget explicitly forces `button_hover_color` to match `button_color` instead, since hover can't trigger once natively disabled anyway.
 
-### ⚙️ Public API Methods Reference
-
-| Method Name | Arguments | Return Type | Description |
-| :--- | :--- | :--- | :--- |
-| `state(mode)` | `mode: str (Optional)` | `str` | Dedicated operational state manager. If empty, returns the current active state (`'normal'` or `'disabled'`). If passed, shifts tracking map parameters and cleanly freezes/unfreezes input handle loops. |
-| `get_state()` | `None` | `str` | Explicit state tracking query synchronized with framework validation benchmarks. |
-| `set(value)` | `value: float` | `None` | Manually positions the tracking slider handle directly onto a specific floating-point decimal location coordinate. |
-| `cget(attribute)` | `attribute: str` | `Any` | Intercept shield layer that safely queries current active arguments from native CustomTkinter property arrays. |
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### 💻 Implementation Code Template
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Slider
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkLabelSecondary, sCTk, sCTkSlider
+from scustomtkinter import sCTk, sCTkFrame, sCTkSlider, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x220")
-    root.title("Slider Real-Time Telemetry Monitor")
+    root.geometry("400x250")
+    root.title("Slider Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    lbl_telemetry = sCTkLabelSecondary(base, text="Slider Coordinate: 0.450", font=("Courier New", 12, "bold"))
+    volume_slider = sCTkSlider(base, command=lambda v: print(f"Value: {v:.2f}"))
+    volume_slider.pack(fill="x", pady=10)
 
-    widget = sCTkSlider(base)
-    widget.configure(command=lambda val: lbl_telemetry.configure(text=f"Slider Coordinate: {val:.3f}"))
-    widget.pack(expand=False, fill="x", padx=40, pady=15)
-    widget.set(0.450)
-    lbl_telemetry.pack(pady=10)
+    def toggle_disabled():
+        target = "disabled" if volume_slider.get_state() == "normal" else "normal"
+        volume_slider.state(target)
+        disable_toggle.configure(text="Enable Slider" if target == "disabled" else "Disable Slider")
 
-    # Verify look states transition flawlessly on the console
-    widget.state("disabled")
-    print("--- DISABLED PASS ---")
-    print("state (Disabled Pass) =", widget.get_state())
-
-    widget.state("normal")
-    print("\n--- NORMAL PASS ---")
-    print("state (Normal Pass)   =", widget.get_state())
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Slider", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
+
+[Return to Table of Contents](#contents)

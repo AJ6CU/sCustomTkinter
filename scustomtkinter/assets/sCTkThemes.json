@@ -62,17 +62,19 @@
             "text_color": ["#112A4B", "#1F618D"]
         }
     },
-    "sCTkCheckBox": {
+      "sCTkCheckBox": {
         "font": ["Arial", 15, "normal"],
         "border_width": 3,
         "border_color": ["#64748B", "#94A3B8"],
         "fg_color": ["#1A4375", "#2471A3"],
         "hover_color": ["#112A4B", "#1F618D"],
         "text_color": ["#1F2937", "#D1D5DB"],
+        "checkmark_color": ["#FFFFFF", "#FFFFFF"],
         "disabled_map": {
             "text_color": ["#94A3B8", "#64748B"],
             "fg_color": ["#E5E7EB", "#374151"],
-            "border_color": ["#CBD5E1", "#475569"]
+            "border_color": ["#CBD5E1", "#475569"],
+            "checkmark_color": ["#94A3B8", "#64748B"]
         }
     },
     "sCTkComboBox": {
@@ -95,31 +97,46 @@
         }
     },
     "sCTkEntryPrimary": {
-        "font": ["Arial", 15, "normal"],
-        "border_width": 1.5,
-        "border_color": ["#1A4375", "#64748B"],
-        "fg_color": ["#FFFFFF", "#111827"],
-        "text_color": ["#1F2937", "#F9FAFB"],
-        "corner_radius": 6,
-        "disabled_map": {
-            "fg_color": ["#F3F4F6", "#1F2937"],
-            "border_color": ["#CBD5E1", "#475569"],
-            "text_color": ["#94A3B8", "#64748B"]
-        }
-    },
-    "sCTkEntrySecondary": {
-        "font": ["Arial", 13, "normal"],
-        "border_width": 1,
-        "border_color": ["#9CA3AF", "#4B5563"],
-        "fg_color": ["#F3F4F6", "#1F2937"],
-        "text_color": ["#4B5563", "#D1D5DB"],
-        "corner_radius": 6,
-        "disabled_map": {
-            "fg_color": ["#F3F4F6", "#0B0F19"],
-            "border_color": ["#CBD5E1", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"]
-        }
-    },
+      "font": ["Arial", 15, "normal"],
+      "border_width": 1.5,
+      "border_color": ["#1A4375", "#64748B"],
+      "fg_color": ["#FFFFFF", "#111827"],
+      "text_color": ["#1F2937", "#F9FAFB"],
+      "placeholder_text_color": ["#94A3B8", "#64748B"],
+      "corner_radius": 6,
+      "disabled_map": {
+          "fg_color": ["#F3F4F6", "#1F2937"],
+          "border_color": ["#CBD5E1", "#475569"],
+          "text_color": ["#94A3B8", "#64748B"]
+      },
+      "readonly_map": {
+          "fg_color": ["#F8FAFC", "#1F2937"],
+          "border_color": ["#64748B", "#556478"],
+          "text_color": ["#1F2937", "#F9FAFB"],
+          "placeholder_text_color": ["#94A3B8", "#64748B"]
+      }
+  },
+  "sCTkEntrySecondary": {
+      "font": ["Arial", 13, "normal"],
+      "border_width": 1,
+      "border_color": ["#9CA3AF", "#4B5563"],
+      "fg_color": ["#F3F4F6", "#1F2937"],
+      "text_color": ["#4B5563", "#D1D5DB"],
+      "placeholder_text_color": ["#94A3B8", "#64748B"],
+      "corner_radius": 6,
+      "disabled_map": {
+          "fg_color": ["#F3F4F6", "#0B0F19"],
+          "border_color": ["#CBD5E1", "#374151"],
+          "text_color": ["#94A3B8", "#64748B"]
+      },
+      "readonly_map": {
+          "fg_color": ["#F3F4F6", "#1F2937"],
+          "border_color": ["#64748B", "#405060"],
+          "text_color": ["#4B5563", "#D1D5DB"],
+          "placeholder_text_color": ["#94A3B8", "#64748B"]
+      }
+  },
+
     "sCTkFrame": {
         "border_width": 0,
         "corner_radius": 0,
@@ -150,21 +167,12 @@
             "label_text_color": ["#94A3B8", "#64748B"]
         }
     },
-    "sCTkFrameOutlined": {
-        "border_width": 1.5,
-        "border_color": ["#64748B", "#94A3B8"],
-        "corner_radius": 8,
-        "fg_color": ["#FFFFFF", "#111827"],
-        "disabled_map": {
-            "border_color": ["#CBD5E1", "#374151"]
-        }
-    },
     "sCTkLabelPrimary": {
         "font": ["Arial", 18, "bold"],
         "fg_color": "transparent",
         "text_color": ["#111827", "#F9FAFB"],
         "disabled_map": {
-            "text_color": ["#94A3B8", "#64748B"]
+            "text_color": ["#64748B", "#94A3B8"]
         }
     },
     "sCTkLabelSecondary": {
@@ -180,7 +188,7 @@
         "fg_color": "transparent",
         "text_color": ["#4B5563", "#9CA3AF"],
         "disabled_map": {
-            "text_color": ["#94A3B8", "#64748B"]
+            "text_color": ["#CBD5E1", "#475569"]
         }
     },
     "sCTkOptionMenuPrimary": {
@@ -254,7 +262,8 @@
         "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
         "disabled_map": {
             "border_color": ["#CBD5E1", "#374151"],
-            "scrollbar_button_color": ["#CBD5E1", "#1F2937"]
+            "scrollbar_button_color": ["#CBD5E1", "#1F2937"],
+            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"]
         }
     },
       "sCTkScrollbar": {
@@ -266,53 +275,34 @@
     "sCTkSegmentedButton": {
         "fg_color": ["#4F75A2", "#2B4C7E"],
         "selected_color": ["#1A4375", "#3A6FA2"],
-        "selected_hover_color": ["#112A4B", "#2B5885"],
-        "unselected_color": "transparent",
         "unselected_hover_color": ["#3A5C85", "#3A5F8C"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
-        "text_color_disabled": ["#94A3B8", "#64748B"],
         "disabled_map": {
             "fg_color": ["#B2B9BC", "#222527"],
             "selected_color": ["#70777B", "#45494D"],
-            "selected_hover_color": ["#70777B", "#45494D"],
-            "unselected_color": "transparent",
-            "unselected_hover_color": "transparent"
+            "text_color": ["#94A3B8", "#64748B"],
+            "selected_text_color": ["#1F2937", "#FFFFFF"]
         }
     },
     "sCTkToplevel": {
         "fg_color": ["#F8FAFC", "#0F172A"]
     },
 
-    "sCTkSlider": {
-        "width": 200,
-        "height": 24,
-        "button_length": 12,
-        "border_width": 9,
-        "fg_color": ["#E5E7EB", "#4B5563"],
-        "progress_color": ["#1A4375", "#2471A3"],
-        "button_color": ["#2471A3", "#2471A3"],
-        "button_hover_color": ["#112A4B", "#1F618D"],
-        "disabled_map": {
-            "fg_color": ["#CBD5E1", "#374151"],
-            "progress_color": ["#CBD5E1", "#4B5563"],
-            "button_color": ["#94A3B8", "#4B5563"]
-        }
-    },
     "sCTkSwitch": {
         "progress_color": ["#1A4375", "#1F6AA5"],
-        "button_color": ["#FFFFFF", "#CBD5E1"],
+        "button_color": ["#CBD5E1", "#CBD5E1"],
         "button_hover_color": ["#E5E7EB", "#94A3B8"],
         "text_color": ["#1F2937", "#F9FAFB"],
         "font": ["Arial", 14, "normal"],
         "fg_color": ["#1A4375", "#1F6AA5"],
 
-        "disabled_map": {
-            "text_color": ["#94A3B8", "#64748B"],
-            "fg_color": ["#E5E7EB", "#526071"],
-            "progress_color": ["#CBD5E1", "#526071"],
-            "button_color": ["#8A94A6", "#94A3B8"],
-            "button_hover_color": ["#8A94A6", "#94A3B8"]
-        }
+      "disabled_map": {
+        "text_color": ["#94A3B8", "#64748B"],
+        "fg_color": ["#94A3B8", "#526071"],
+        "progress_color": ["#64748B", "#526071"],
+        "button_color": ["#CBD5E1", "#94A3B8"],
+        "button_hover_color": ["#CBD5E1", "#94A3B8"]
+      }
     },
     "sCTkTabview": {
         "font": ["Arial", 15, "normal"],
@@ -323,11 +313,12 @@
         "segmented_button_selected_hover_color": ["#112A4B", "#1F618D"],
         "segmented_button_unselected_color": ["#9E9E9E", "#1F2937"],
         "segmented_button_unselected_hover_color": ["#7D7D7D", "#374151"],
+        "segmented_button_height": 36,
         "disabled_map": {
             "segmented_button_fg_color": ["#FFFFFF", "#111827"],
-            "segmented_button_selected_color": ["#CBD5E1", "#374151"],
-            "segmented_button_unselected_color": ["#CBD5E1", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"]
+            "segmented_button_selected_color": ["#94A3B8", "#374151"],
+            "segmented_button_unselected_color": ["#94A3B8", "#374151"],
+            "text_color": ["#1E293B", "#64748B"]
         }
     },
     "sCTkTextboxPrimary": {
@@ -393,6 +384,7 @@
         "entry_border_color": ["#CBD5E1", "#475569"],
         "row_active_text": ["#1F2937", "#F9FAFB"],
         "row_dimmed_text": ["#94A3B8", "#64748B"],
+        "button_color": ["#64748B", "#4B5563"],
         "disabled_map": {
             "btn_fg": ["#CBD5E1", "#334155"],
             "btn_border_color": ["#CBD5E1", "#334155"],
@@ -400,15 +392,23 @@
             "entry_fg": ["#F3F4F6", "#1F2937"],
             "entry_border_color": ["#CBD5E1", "#475569"],
             "entry_text_color": ["#94A3B8", "#64748B"],
-            "row_active_text": ["#94A3B8", "#64748B"]
+            "row_dimmed_text": ["#5A6672", "#3A4552"],
+            "button_color": ["#CBD5E1", "#334155"]
         }
     },
     "sCTkSelector": {
         "fg_color": "transparent",
         "corner_radius": 6,
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "checkbox_fg_color": ["#1A4375", "#1F6AA5"],
+        "checkbox_hover_color": ["#112A4B", "#1A5885"],
+        "border_color": ["#94A3B8", "#4B5563"],
+        "checkmark_color": ["#FFFFFF", "#FFFFFF"],
         "disabled_map": {
             "text_color": ["#808080", "#666666"],
-            "fg_color": "transparent"
+            "checkbox_fg_color": ["#CBD5E1", "#475569"],
+            "border_color": ["#CBD5E1", "#334155"],
+            "checkmark_color": ["#F1F5F9", "#94A3B8"]
         }
     },
     "sCTkSeparator": {
@@ -416,9 +416,14 @@
         "bg_color": "transparent",
         "corner_radius": 6,
         "font": ["Arial", 11, "bold"],
-        "text_color": ["#1A1A1A", "#FFFFFF"]
+        "text_color": ["#1A1A1A", "#FFFFFF"],
+        "disabled_map": {
+            "fg_color": ["#CBD5E1", "#475569"],
+            "text_color": ["#94A3B8", "#64748B"]
+        }
     },
     "sCTkMessagebox": {
+        "fg_color": ["#F1F5F9", "#1C1C1C"],
         "font": ["Arial", 14],
         "text_color": ["#1A1A1A", "#E5E5E5"]
     },
@@ -442,65 +447,98 @@
         "cell_alt_bg_color": ["#D1DCEE", "#222C3A"],
         "cell_text_color": ["#1E293B", "#E2E8F0"],
         "cell_font": ["Arial", 13, "normal"],
-        "grid_line_color": ["#CBD5E1", "#334155"]
+        "grid_line_color": ["#CBD5E1", "#334155"],
+        "disabled_map": {
+            "header_bg_color": ["#CBD5E1", "#1E293B"],
+            "header_text_color": ["#94A3B8", "#64748B"],
+            "cell_bg_color": ["#F1F5F9", "#1F2937"],
+            "cell_alt_bg_color": ["#E2E8F0", "#263241"],
+            "cell_text_color": ["#94A3B8", "#64748B"],
+            "grid_line_color": ["#E2E8F0", "#293548"]
+        }
     },
     "sCTkSMeter": {
         "fg_color": ["#F4F7FA", "#0A0A0A"],
         "text_color": ["#1A4375", "#FF9100"],
         "alarm_color": ["#990000", "#FF2200"],
-        "needle_color": ["#112A4B", "#FF9100"]
+        "needle_color": ["#112A4B", "#FF9100"],
+        "font": ["Arial", 10, "bold"],
+        "scale_font": ["Arial", 10, "bold"],
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "alarm_color": ["#CBD5E1", "#4B5563"],
+            "needle_color": ["#94A3B8", "#4B5563"]
+        }
     },
     "sCTkSMeterBar": {
-        "fg_color": ["#FFFFFF", "#0A0A0A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "alarm_color": ["#DC2626", "#FF2200"],
-        "led_on_color": ["#2471A3", "#FF9100"],
-        "led_off_color": ["#E2E8F0", "#1A1D20"]
-    },
-    "sCTkDial": {
-        "fg_color": ["#F1F5F9", "#0A0A0A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "dial_color": ["#9E9E9E", "#2A2F3D"],
-        "shadow_color": ["#CBD5E1", "#02040A"],
-        "disabled_text_color": ["#94A3B8", "#4B5563"],
-        "disabled_dial_color": ["#E2E8F0", "#1A1D24"],
-        "disabled_dimple_glow": ["#CBD5E1", "#334155"]
+      "fg_color": ["#FFFFFF", "#0A0A0A"],
+      "text_color": ["#1A4375", "#FF9100"],
+      "alarm_color": ["#DC2626", "#FF2200"],
+      "led_on_color": ["#2471A3", "#FF9100"],
+      "led_off_color": ["#E2E8F0", "#1A1D20"],
+      "inactive_color": ["#94A3B8", "#334155"],
+      "font": ["Arial", 10, "bold"],
+      "scale_font": ["Arial", 9, "bold"],
+      "disabled_map": {
+          "text_color": ["#94A3B8", "#4B5563"],
+          "alarm_color": ["#CBD5E1", "#4B5563"],
+          "led_on_color": ["#CBD5E1", "#374151"],
+          "led_off_color": ["#F1F5F9", "#1A1D20"]
+      }
     },
     "sCTkDialSelector": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
         "text_color": ["#1A4375", "#FF9100"],
-        "dial_color": ["#9E9E9E", "#2A2F3D"],
         "shadow_color": ["#CBD5E1", "#02040A"],
+        "dial_color": ["#9E9E9E", "#2A2F3D"],
+        "dial_highlight_color": ["#E4E8EC", "#42454B"],
+        "dial_shadow_color": ["#5C6165", "#050507"],
+        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+        "dial_rim_shadow_color": ["#3E4245", "#000000"],
         "pointer_color": ["#1A4375", "#FF9100"],
-        "disabled_text_color": ["#94A3B8", "#4B5563"],
-        "disabled_dial_color": ["#E2E8F0", "#1A1D24"]
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "dial_color": ["#E2E8F0", "#1A1D24"]
+        }
     },
     "sCTkDialRange": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
         "text_color": ["#1A4375", "#64748B"],
-        "dial_color": ["#9E9E9E", "#2A2F3D"],
         "shadow_color": ["#CBD5E1", "#02040A"],
+        "dial_color": ["#9E9E9E", "#2A2F3D"],
+        "dial_highlight_color": ["#E4E8EC", "#42454B"],
+        "dial_shadow_color": ["#5C6165", "#050507"],
+        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+        "dial_rim_shadow_color": ["#3E4245", "#000000"],
         "pointer_color": ["#1A4375", "#FF9100"],
-        "disabled_text_color": ["#94A3B8", "#4B5563"],
-        "disabled_dial_color": ["#E2E8F0", "#1A1D24"]
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "dial_color": ["#E2E8F0", "#1A1D24"]
+        }
     },
     "sCTkDialContinuous": {
-        "fg_color": ["#F1F5F9", "#0A0A0A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "dial_color": ["#1E293B", "#181E2B"],
-        "shadow_color": ["#CBD5E1", "#02040A"],
-        "pointer_glow_color": ["#CBD5E1", "#3A455C"],
-        "disabled_text_color": ["#94A3B8", "#4B5563"],
-        "disabled_dial_color": ["#E2E8F0", "#1A1D24"],
-        "disabled_dimple_glow": ["#CBD5E1", "#334155"]
+      "fg_color": ["#F1F5F9", "#0A0A0A"],
+      "text_color": ["#1A4375", "#FF9100"],
+      "shadow_color": ["#CBD5E1", "#02040A"],
+      "dial_color": ["#9E9E9E", "#2A2F3D"],
+      "dial_highlight_color": ["#E4E8EC", "#42454B"],
+      "dial_shadow_color": ["#5C6165", "#050507"],
+      "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+      "dial_rim_shadow_color": ["#3E4245", "#000000"],
+      "pointer_glow_color": ["#CBD5E1", "#3A455C"],
+      "disabled_map": {
+          "text_color": ["#94A3B8", "#4B5563"],
+          "dial_color": ["#E2E8F0", "#1A1D24"],
+          "pointer_glow_color": ["#CBD5E1", "#334155"]
+      }
     },
     "sCTkSpinbox": {
         "font": ["Arial", 15, "normal"],
         "arrow_font": ["Arial", 8, "normal"],
-        "arrow_up_char": "\u25b2",
-        "arrow_down_char": "\u25bc",
-        "arrow_right_char": "\u25b6",
-        "arrow_left_char": "\u25c0",
+        "arrow_up_char": "▲",
+        "arrow_down_char": "▼",
+        "arrow_right_char": "▶",
+        "arrow_left_char": "◀",
         "border_width": 1.5,
         "corner_radius": 6,
         "entry_color": ["#FFFFFF", "#111827"],

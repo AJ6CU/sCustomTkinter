@@ -1,152 +1,127 @@
 ## sCTkRadioButton
 
 ### Table of Contents
-* [System Architecture Overview](#system-architecture-overview)
-* [API Constructor Reference](#api-constructor-reference)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A theme-compliant custom mutual exclusion radio selection switch component wrapping `customtkinter.CTkRadioButton`. Specially engineered for cockpit tuning tasks—such as VFO selection banks, transmitter operation modes, and antenna relay switches—it decouples low-level parameter configurations to prevent layout validation crashes while keeping disabled states 100% theme-adaptive.
+### Overview
 
+`sCTkRadioButton` is a themeable subclass of `customtkinter.CTkRadioButton`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"` — confirmed by direct testing to correctly block clicks.
 
-![sCTkRadioButton_Dark.png](images/sCTkRadioButton_Dark.png)
-![sCTkRadioButton_Light.png](images/sCTkRadioButton_Light.png)
+  ![sCTkRadioButton in dark mode](images/sCTkRadioButton_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkRadioButton in light mode](images/sCTkRadioButton_Light.png)
 
 ---
 
-### API Constructor Reference
+### Constructor
 
 ```python
-sCTkRadioButton(master=None, variable=None, value=None, command=None, **kwargs)
+sCTkRadioButton(master=None, variable=None, value=None, command=None, **kw)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | *Required* | Reference pointer tracking your root window, parent layout layer, or container frame capsule. |
-| `variable` | `tk.Variable` | `None` | Shared Tkinter variable tracker (e.g. `tk.StringVar`) that logically interlocks multiple radio selections together. |
-| `value` | `any` | `None` | The specific absolute data value passed up to the shared variable anchor when this unique choice row is clicked. |
-| `command` | `callable` | `None` | Single-click selection callback executed automatically whenever a valid, active selection shift occurs. |
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `variable` | `tkinter.Variable` | `None` | Shared variable used for mutual exclusion within a group. |
+| `value` | any | `None` | This button's value — the button shows as selected when `variable` equals this. |
+| `command` | `callable` | `None` | Called when the button is selected. |
+| `**kw` | — | — | Any native `CTkRadioButton` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
+
+```python
+mode_var = tkinter.StringVar(value="AM")
+am_radio = sCTkRadioButton(control_panel, text="AM", variable=mode_var, value="AM")
+fm_radio = sCTkRadioButton(control_panel, text="FM", variable=mode_var, value="FM")
+am_radio.pack(anchor="w")
+fm_radio.pack(anchor="w")
+```
 
 ---
 
-### Convenience Functions
-```python
-# Evaluate current configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = switch_node.get_state()      # Returns 'normal' or 'disabled'
-switch_node.state("disabled")               # Freezes mouse selections and applies desaturated grays safely
+### Methods
 
-# Programmatically query state tracks out of application controllers
-active_choice = shared_radio_var.get()     # Extracts the active value string out of the central interlock lane
-```
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: `variable`/`value`/`command`/`state` are each routed individually. Rebinding `variable`/`value` to a new group after construction is confirmed correct by direct testing — it properly tears down the old variable's binding and establishes real mutual exclusion in the new group, with no leftover coupling to the original group. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`. |
 
-The component queries your centralized theme sheet profile matrix using standard `self._resolve_color()` lookup calls, ensuring that indicator dots and canvas borders translate colors smoothly across appearance updates.
+---
 
-To satisfy the framework configuration guidelines, ensure your theme matrix includes this structured asset block:
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `hover_color`, `text_color`, and `font` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
 
 ```json
 {
     "sCTkRadioButton": {
-        "fg_color": ["#1A4375", "#1F6AA5"],
-        "border_color": ["#94A3B8", "#4B5563"],
-        "text_color": ["#1F2937", "#FFFFFF"],
-        "hover_color": ["#112A4B", "#194A7A"],
-        "radiobutton_width": 22,
-        "radiobutton_height": 22,
-        "border_width": 3,
-        "font": ["Arial", 11, "bold"],
+        "font": ["Arial", 15, "normal"],
+        "text_color": ["#374151", "#D1D5DB"],
+        "border_width_unchecked": 4,
+        "border_width_checked": 6,
+        "border_color": ["#64748B", "#94A3B8"],
+        "fg_color": ["#1A4375", "#2471A3"],
+        "hover_color": ["#112A4B", "#1F618D"],
         "disabled_map": {
-            "fg_color": ["#CBD5E1", "#334155"],
-            "border_color": ["#E5E7EB", "#222222"],
-            "text_color": ["#94A3B8", "#4B5563"]
+            "text_color": ["#94A3B8", "#64748B"],
+            "fg_color": ["#CBD5E1", "#374151"],
+            "border_color": ["#CBD5E1", "#475569"]
         }
     }
 }
 ```
 
----
+`border_width_unchecked` and `border_width_checked` are real, top-level-only theme keys (not in `disabled_map`) that control the button's border thickness based on whether it's currently the selected button in its group — thicker when checked, to show the filled dot. They're applied once at construction and left alone afterward; the native widget switches between them internally based on the checked/unchecked state, so no repaint-time logic is needed here.
 
-### Other Notes
-* **Crash-Shield Parameter Interceptor:** Passing `value` or `variable` parameters directly into CustomTkinter's public `.configure()` pass after instantiation raises a fatal `ValueError`. The class overrides `.configure()` to catch these keys, assigning them safely through low-level hidden hooks to support dynamic updates without throwing errors.
-* **Chassis Alignment Rule:** Because radio string fields frequently contain disparate character lengths, packing them using standard parameters causes staggered checkbox positions. Always apply `anchor="w"` paired with `fill="x"` to cleanly lock indicator circles into a flat vertical left column.
-* **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu layouts out of the box.
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to layout a mutually exclusive radio stack inside a themeable frame capsule along with real-time feedback labels.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Radiobutton
-# =====================================================================
-
+import tkinter
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTkLabelSecondary, sCTk, sCTkRadioButton
+from scustomtkinter import sCTk, sCTkFrame, sCTkRadioButton, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x320")
-    root.title("sCTkRadioButton Mutual Exclusion Validation Bench")
+    root.geometry("400x300")
+    root.title("RadioButton Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # Centralized StringVar linking both buttons together
-    radio_var = ctk.StringVar(value="VFO_A")
+    mode_var = tkinter.StringVar(value="AM")
+    am_radio = sCTkRadioButton(base, text="AM", variable=mode_var, value="AM")
+    am_radio.pack(anchor="w", pady=5)
+    fm_radio = sCTkRadioButton(base, text="FM", variable=mode_var, value="FM")
+    fm_radio.pack(anchor="w", pady=5)
 
-    lbl_monitor = sCTkLabelSecondary(base, text="Active Telemetry Target: VFO_A")
-    lbl_monitor.pack(pady=10)
+    def toggle_disabled():
+        target = "disabled" if am_radio.get_state() == "normal" else "normal"
+        am_radio.state(target)
+        fm_radio.state(target)
+        disable_toggle.configure(text="Enable Group" if target == "disabled" else "Disable Group")
 
-
-    def print_result():
-        lbl_monitor.configure(text=f"Active Telemetry Target: {radio_var.get()}")
-
-
-    # 🔑 FIXED ALIGNMENT PACK ENGINE: Enforces left-anchoring with horizontal expansion
-    widget = sCTkRadioButton(base, text="Primary VFO A Link Target", variable=radio_var, value="VFO_A",
-                             command=print_result)
-    widget.pack(expand=False, fill="x", padx=60, pady=10, anchor="w")
-
-    widget2 = sCTkRadioButton(base, text="Secondary VFO B Link Target", variable=radio_var, value="VFO_B",
-                              command=print_result)
-    widget2.pack(expand=False, fill="x", padx=60, pady=10, anchor="w")
-
-
-    def toggle_radio_lock():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        widget.configure(state=target)
-        widget2.configure(state=target)
-        btn_lock.configure(text="Lock Radio Switch" if target == "normal" else "Unlock Radio Switch")
-
-
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Radio Switch", command=toggle_radio_lock)
-    btn_lock.pack(pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=10)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    widget.state("disabled")
-    print("state (Disabled Pass) =", widget.get_state())
-    widget.state("normal")
-    print("state (Normal Pass)   =", widget.get_state())
-    print("========================================\n")
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Group", command=toggle_disabled)
+    disable_toggle.pack(pady=15)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value matches neither branch, though colors are still harmlessly re-applied.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`border_color`/`text_color`/`hover_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

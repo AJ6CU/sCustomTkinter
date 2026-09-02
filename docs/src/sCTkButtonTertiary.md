@@ -1,115 +1,130 @@
+
+
 ## sCTkButtonTertiary
 
-An outline-driven custom toggle variant button widget component styled specifically for sub-presets, tuning markers, and option lock keys wrapping `customtkinter.CTkButton`. It utilizes an independent deep-copy keyword caching shield and a dynamic runtime accent fallback detector to align button typography with CustomTkinter system configurations automatically.
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
+
+---
+
+### Overview
+
+`sCTkButtonTertiary` is a themeable subclass of `customtkinter.CTkButton` — the lowest-emphasis of the library's three button tiers (see also `sCTkButtonPrimary`, `sCTkButtonSecondary`), styled as an outline button: border and text only, no filled background. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, pressed), and Pygubu Designer property introspection.
 
 
-![sCTkButtonTertiary_Dark.png](images/sCTkButtonTertiary_Dark.png)
-![sCTkButtonTertiary_Light.png](images/sCTkButtonTertiary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkButton(master)` | `sCTkButtonTertiary(master)` *(Outline Latching Button)* |
-| **File Mapping** | Everything runs under one core native framework layout layer. | Streamlined and compiled programmatically across `sCTkButtonTertiary.py` and `ThemeableWidget.py`. |
-| `state(mode)` | `self.configure(state=...)` | `Method (str)` handling layout tracking map transformations (`'normal'`, `'disabled'`) and canvas unbindings. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-| `set_pressed(bool)` | *Not Available Natively* | **Latching Hook:** Locks background contrast styles to match `pressed_map` guidelines. |
-
+  ![sCTkButtonTertiary_Dark.png](images/sCTkButtonTertiary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkButtonTertiary_Light.png](images/sCTkButtonTertiary_Light.png)
 ---
 
 ### Constructor
 
-Initialize a custom tertiary button instance. Custom parameters passed from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires. If no explicit `text_color` parameters are discovered inside `sCTkThemes.json`, the constructor queries CustomTkinter's baseline colors (`["#3B8ED0", "#1F6AA5"]`) automatically to preserve unified system highlights.
+```python
+sCTkButtonTertiary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkButton` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). No special extraction step — `command` and every other native argument flow straight through to construction. |
 
 ```python
-# Instantiate a tertiary outline latching button
-preset_select = sCTkButtonTertiary(
+learn_more_button = sCTkButtonTertiary(
     master=control_panel,
-    text="PRESET CHANNEL A",
-    command=on_preset_selected
+    text="Learn More",
+    command=on_learn_more_clicked,
 )
-
-# Render the widget inside your parent container geometry packer panel
-preset_select.pack(fill="x", padx=40, pady=10)
+learn_more_button.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value leaves the state unchanged. Uses CTk's native `state="disabled"`, confirmed by direct testing to correctly block clicks and hover color changes. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `set_pressed(pressed)` | `None` | Forces the visual "pressed" look on or off. No-op while disabled. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`. Queries for any other property name fall through to the native `CTkButton.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+Three visual states, with precedence **disabled > pressed > normal**.
+
 ```json
 {
     "sCTkButtonTertiary": {
+        "font": ["Arial", 15, "normal"],
         "fg_color": "transparent",
-        "border_color": ["#3B8ED0", "#1F6AA5"],
-        "text_color": null,
-        "border_width": 1,
-        "corner_radius": 4,
+        "text_color": ["#3B8ED0", "#1F6AA5"],
+        "corner_radius": 6,
+        "border_width": 1.25,
+        "border_color": ["#64748B", "#94A3B8"],
+        "hover_color": ["#E2E8F0", "#1E293B"],
         "disabled_map": {
-            "fg_color": "transparent",
-            "border_color": ["#CBD5E1", "#374151"],
+            "border_color": ["#E5E7EB", "#374151"],
             "text_color": ["#94A3B8", "#64748B"]
         },
         "pressed_map": {
-            "fg_color": ["#3B8ED0", "#1F6AA5"],
-            "border_color": ["#3B8ED0", "#1F6AA5"],
-            "text_color": ["#FFFFFF", "#FFFFFF"]
+            "fg_color": ["#E2E8F0", "#1E293B"],
+            "border_color": ["#112A4B", "#1F618D"],
+            "text_color": ["#112A4B", "#1F618D"]
         }
     }
 }
 ```
 
-### Other Notes
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, bypassing the intermediate template layout files entirely to avoid signature collisions.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
+A few design decisions specific to this outline style, worth knowing before editing this block:
+
+- **`fg_color` is the literal string `"transparent"`, not a color pair** — this is a border-and-text-only button by design.
+- **`disabled_map` has no `fg_color` or `hover_color` entries, deliberately.** Since only keys present in a map get swapped, omitting these means the button stays transparent when disabled instead of gaining an unwanted solid gray fill — a filled button (Primary/Secondary) wants that fill; this one doesn't.
+- **`pressed_map` has no `hover_color` entry either.** Rather than leaving hover color unset while pressed, the widget explicitly falls back to the normal-state `hover_color` in that case.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkButtonTertiary` alongside latching switches.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Tertiary Button
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTk, sCTkButtonPrimary, sCTkButtonTertiary
+from scustomtkinter import sCTk, sCTkFrame, sCTkButtonTertiary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.geometry("450x320")
-    root.title("Tertiary Button Real-Time Validation Bench")
+    root.geometry("400x300")
+    root.title("ButtonTertiary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkButtonTertiary(base, text="Tertiary Action Button")
-    widget.pack(padx=40, pady=10, fill="x")
+    learn_more_button = sCTkButtonTertiary(base, text="Learn More", command=lambda: print("Clicked"))
+    learn_more_button.pack(pady=10)
 
-    def toggle_disabled_lock():
-        target = "disabled" if widget.get_state() == "normal" else "normal"
-        widget.configure(state=target)
-        btn_lock.configure(text="Lock Button" if target == "normal" else "Unlock Button")
+    def toggle_disabled():
+        target = "disabled" if learn_more_button.get_state() == "normal" else "normal"
+        learn_more_button.state(target)
+        disable_toggle.configure(text="Enable" if target == "disabled" else "Disable")
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Button", command=toggle_disabled_lock)
-    btn_lock.pack(pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=10)
+    disable_toggle = sCTkButtonTertiary(base, text="Disable Learn More", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
-
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) silently leaves the state unchanged.
+- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

@@ -1,220 +1,133 @@
 ## sCTkTableview
 
-The `sCTkTableview` is a high-performance, theme-adaptive, and interactive data grid widget engineered specifically for the `sCustomTkinter` desktop amateur radio workspace architecture. It wraps a specialized scrollable container viewport to render structured, matrix-aligned logging rows, transceiver channels, or telemetry tracking data.
-
-
-![sCTkTableview_Dark.png](images/sCTkTableview_Dark.png)
-![sCTkTableview_Light.png](images/sCTkTableview_Light.png)
-
-
-<a name="contents"></a>
-### 📌 Localized Table of Contents
-* [API Constructor Reference](#constructor)
-* [Method Resolution Order (MRO) Taxonomy](#mro-taxonomy)
-* [Pygubu Workspace Property Envelopes](#pygubu-envelopes)
-* [Global Object Instance Methods](#methods)
-* [Centralized Stylesheet Integration](#stylesheet)
-* [Implementation Reference Template](#template)
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-<a name="constructor"></a>
-### 📋 API Constructor Reference
+### Overview
+
+`sCTkTableview` is a theme-compliant, scrollable grid of labeled cells — a simple spreadsheet-like table, with optional zebra-striped rows, click and edit callbacks, and in-place cell editing. It's built by inheriting `sCTkScrollableFrame` directly, using its scrolling and label feature, then laying out its own header row and cell grid on top.
+
+  ![sCTkTableview in dark mode](images/sCTkTableview_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkTableview in light mode](images/sCTkTableview_Light.png)
+
+This widget inherits `sCTkScrollableFrame` directly — the same composition pattern used by `sCTkSelector` — and previously needed a fragile workaround for it: temporarily overwriting its own `self.__class__.__name__` during construction, to trick `sCTkScrollableFrame`'s internal `ThemeableWidget.__init__` call into reading a harmless theme block instead of corrupting this widget's own. That workaround has been removed entirely. `ThemeableWidget`'s run-once guard now prevents the double-init outright, and `sCTkScrollableFrame` itself filters its inbound kwargs down to only what native `CTkScrollableFrame` actually accepts — confirmed directly against CustomTkinter's source to have no `**kwargs` catch-all at all, so this filtering matters more here than for almost any other widget in this project.
+
+---
+
+### Constructor
 
 ```python
-table = sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra", header_line_width=2, outline_width=1.0, outline_radius=4, state="normal", num_columns=3, num_rows=1, show_headers=True, cell_bg_color=None, cell_alt_bg_color=None, *args, **kwargs)
+sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra",
+              header_line_width=2, outline_width=1.0, outline_radius=4,
+              state="normal", num_columns=3, num_rows=1, show_headers=True,
+              cell_bg_color=None, cell_alt_bg_color=None, *args, **kwargs)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | *Required* | Reference pointer tracking your root window or parent layout container. |
-| `columns` | `list` / `str` | `None` | Structured list of header strings or a raw comma-separated tracking string token payload. |
-| `grid_mode` | `str` | `"zebra"` | Visual row background arrangement tracker: can accept `"grid"`, `"zebra"`, or `"none"`. |
-| `header_line_width`| `int` | `2` | Dimensional vertical scale of the separating accent bar gridded underneath the header elements. |
-| `outline_width` | `float` | `1.0` | Outer bounding box line size bounding the master border layout frame container. |
-| `outline_radius` | `int` | `4` | Corner corner-radius roundness assigned specifically onto the bounding frame layouts. |
-| `state` | `str` | `"normal"` | Initial execution state ring variable: can accept `"normal"` or `"disabled"`. |
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | — | Parent container. |
+| `columns` | `list[str]` or comma-separated `str` | `None` | Column header labels. |
+| `width` / `height` | `int` | `500` / `300` | Overall widget dimensions in pixels. |
+| `grid_mode` | `"zebra"` / `"grid"` / `"none"` | `"zebra"` | Row background styling. |
+| `header_line_width` | `int` | `2` | Header row's bottom border thickness. |
+| `outline_width` / `outline_radius` | `float` / `int` | `1.0` / `4` | Outer table border thickness and corner rounding. |
+| `state` | `"normal"` / `"disabled"` | `"normal"` | Initial state. |
+| `num_columns` / `num_rows` | `int` | `3` / `1` | Initial grid size when `columns` isn't given. |
+| `show_headers` | `bool` | `True` | Whether the header row is shown. |
+| `cell_bg_color` / `cell_alt_bg_color` | color | `None` | Overrides the theme's cell background colors for this instance specifically — see [Theming](#theming-sctkthemesjson) for how this interacts with the theme file. |
+| `**kwargs` | — | — | Any native `CTkScrollableFrame` argument, or an override for one of the other theme keys listed under [Theming](#theming-sctkthemesjson). |
 
-[Go to Piece 1B of 2](#mro-taxonomy) | [Return to Table of Contents](#contents)
-<a name="methods"></a>
-### ⚡ Global Object Instance Methods
-
-#### Unified State Gateway Handler
 ```python
-# GETTER: Returns the active operational state string ('normal' or 'disabled')
-current_mode = table.state()
-
-# SETTER: Freezes grid cell edits and dynamically applies themes.json desaturation tokens
-table.state("disabled")
-```
-
-#### Programmatically Apply Live Configuration Changes
-```python
-# Dynamically adjusts grid modes or row limits and triggers full table redraw sweeps
-table.configure(grid_mode="grid", num_rows=12)
-```
-
-#### Fetch Active Operational Tracking Dimensions
-```python
-row_count = table.get_num_rows()       # Returns absolute gridded row limits
-column_count = table.get_num_columns() # Returns true managed structural column counts
-```
-
-#### Manage Column Properties & Justification Anchors
-```python
-# Configures structural widths and justifies cell strings ('w', 'center', 'e') safely
-table.set_column_properties(column_index=0, width=140, anchor="w")
-```
-
-#### Register Callback Intercept Listeners
-```python
-# Selection Listener Pass
-table.bind_selection_callback(lambda r_idx, row_data: print(f"Row {r_idx} clicked: {row_data}"))
-
-# Inline Edit Pre-Save Validator (Must return True to accept changes, or False to reject)
-table.bind_validation_callback(lambda col_idx, raw_string: len(raw_input_string.strip()) > 0)
-
-# Post-Save Commit Event Callback
-table.bind_edit_callback(lambda r, c, committed_val: log.info(f"Committed cell update: {committed_val}"))
+readings_table = sCTkTableview(control_panel, columns=["Time", "Frequency", "Signal"], num_rows=8)
+readings_table.pack(expand=True, fill="both", padx=20, pady=20)
 ```
 
 ---
 
-<a name="stylesheet"></a>
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+### Methods
 
-To minimize repository file footprints, the component drives its cascading color passes from a single profile key block. The standard text desaturation variables, grid dividers, and zebra backgrounds align natively within a single block configuration.
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus `state=...` triggers a full color/font re-application across every header and cell. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key below, plus `cell_bg_color`/`cell_alt_bg_color` (which can also come from the constructor, see below).
+- **Re-applied on every `state()` change.**
 
 ```json
 {
     "sCTkTableview": {
-        "header_bg_color": ["#1A4375", "#1F6AA5"],
-        "header_text_color": ["#FFFFFF", "#FFFFFF"],
-        "header_font": ["Arial", 13, "bold"],
-        "cell_bg_color": ["#FFFFFF", "#1E293B"],
-        "cell_alt_bg_color": ["#F8FAFC", "#334155"],
-        "cell_text_color": ["#1A1A1A", "#FFFFFF"],
-        "cell_font": ["Arial", 12, "normal"],
-        "grid_line_color": ["#CBD5E1", "#475569"],
+        "header_bg_color": ["#E2E8F0", "#0F172A"],
+        "header_text_color": ["#0F172A", "#F8FAFC"],
+        "header_font": ["Arial", 14, "bold"],
+        "cell_bg_color": ["#FFFFFF", "#111827"],
+        "cell_alt_bg_color": ["#D1DCEE", "#222C3A"],
+        "cell_text_color": ["#1E293B", "#E2E8F0"],
+        "cell_font": ["Arial", 13, "normal"],
+        "grid_line_color": ["#CBD5E1", "#334155"],
         "disabled_map": {
-            "header_bg_color": ["#CBD5E1", "#334155"],
+            "header_bg_color": ["#CBD5E1", "#1E293B"],
             "header_text_color": ["#94A3B8", "#64748B"],
             "cell_bg_color": ["#F1F5F9", "#1F2937"],
-            "cell_alt_bg_color": ["#E2E8F0", "#111827"],
+            "cell_alt_bg_color": ["#E2E8F0", "#263241"],
             "cell_text_color": ["#94A3B8", "#64748B"],
-            "grid_line_color": ["#CBD5E1", "#475569"]
+            "grid_line_color": ["#E2E8F0", "#293548"]
         }
     }
 }
 ```
 
-[Go to Piece 2B of 3](#template) | [Return to Table of Contents](#contents)
-<a name="template"></a>
-### 💻 Implementation Reference Template
+All six colors are required both at the top level and in `disabled_map` — missing any raises immediately at construction, naming the exact key. `header_font`/`cell_font` are required only at the top level; no widget in this project uses a disabled-state font variant.
 
-This standalone verification program demonstrates how to correctly embed the `sCTkTableview` within a parent container panel, tracking cell data inputs and state locks cleanly.
+**`cell_bg_color`/`cell_alt_bg_color` are the two exceptions** — they can come from either the theme block *or* the constructor kwarg of the same name, so it's only a hard failure if *neither* provides a value. Whichever one this instance resolves to at construction is remembered and correctly restored on every return to `"normal"` — an earlier version always reverted to the theme's value on re-enable, silently discarding a constructor override after a disable/enable cycle.
+
+Colors are passed through as raw `(light, dark)` tuples, letting CustomTkinter's native appearance-mode tracking handle repaints — an earlier version resolved disabled-state colors to a single fixed string while leaving enabled-state colors as tuples, meaning a disabled table would stop following light/dark mode changes while an enabled one kept working correctly. Both branches are now consistent.
+
+---
+
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Tableview
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelPrimary, sCTk, sCTkTableview
+from scustomtkinter import sCTk, sCTkFrame, sCTkTableview, sCTkButtonPrimary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.title("sCTkTableview Full Validation & State Showcase")
-    root.geometry("640x540")
-    root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
+    root.geometry("400x300")
+    root.title("Tableview Example")
 
-    # 2. Mount custom master container using framework primitives
-    border_capsule = sCTkFrame(root, border_width=2)
-    border_capsule.pack(padx=20, pady=20, fill="both", expand=True)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    cols = ["Channel Label", "Frequency (MHz)", "Mode", "Station Name"]
+    table = sCTkTableview(base, columns=["Time", "Frequency", "Signal"], num_rows=6)
+    table.pack(expand=True, fill="both", pady=10)
 
-    # 3. Initialize data grid component wrapper cleanly
-    table = sCTkTableview(
-        border_capsule,
-        columns=cols,
-        grid_mode="zebra",
-        header_line_width=3,
-        outline_width=1.5,
-        outline_radius=6,
-        state="normal"
-    )
-    table.pack(padx=12, pady=12, fill="both", expand=True)
-
-    # Establish proportional column dimension parameters and text anchors
-    table.set_column_properties(0, width=110, anchor="w")
-    table.set_column_properties(1, width=120, anchor="center")
-    table.set_column_properties(2, width=70, anchor="center")
-    table.set_column_properties(3, width=250, anchor="w")
-
-    ham_stations = [
-        ["160M-VOX", "1.8400", "LSB", "160m - Voice / Calling"],
-        ["40M-LSB", "7.2000", "LSB", "40m - LSB Voice Calling"],
-        ["40M-FT8", "7.0740", "USB", "40m - FT8 Digital Mode"],
-        ["20M-FT8", "14.0740", "USB", "20m - FT8 Digital Mode"],
-        ["17M-USB", "18.1300", "USB", "17m - USB Voice Calling"],
-        ["15M-USB", "21.3000", "USB", "15m - USB Voice Calling"],
-        ["12M-USB", "24.9500", "USB", "12m - USB Voice Calling"],
-        ["10M-USB", "28.4000", "USB", "10m - Tech / General Voice"]
-    ]
-    table.load_dataset(ham_stations)
-
-    # 4. Define robust cell entry constraints to filter updates safely
-    def validate_table_cell_changes(column_index: int, raw_input_string: str) -> bool:
-        cleaned_input = str(raw_input_string).strip()
-        if column_index == 1:
-            try:
-                float(cleaned_input)
-                return True
-            except ValueError:
-                return False
-        if column_index == 2:
-            return cleaned_input.upper() in ["LSB", "USB", "AM", "FM", "CW"]
-        return len(cleaned_input) > 0
-
-    # 5. Bind callback listeners cleanly to public forwarding hooks
-    table.bind_validation_callback(validate_table_cell_changes)
-    table.bind_selection_callback(lambda r, vals: print(f"📡 Clicked Row: {r} -> {vals}"))
-    table.bind_edit_callback(lambda r, c, val: print(f"📝 Persistent Data Saved ({r}, {c}) -> '{val}'"))
-
-    # =====================================================================
-    # 🛠️ PANEL LAYOUT ACTION INTERCEPT CONTROLLERS
-    # =====================================================================
-    def toggle_grid_lock():
-        """Toggles active data row selections and blocks text entry editing."""
-        current_mode = table.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
+    def toggle_disabled():
+        target = "disabled" if table.get_state() == "normal" else "normal"
         table.configure(state=target)
-        btn_lock.configure(text="Unlock Tableview Grid" if target == "disabled" else "Lock Tableview Grid (Set 'disabled')")
-        print(f"Logged Verification Hook -> table.get_state() = {table.get_state()}")
+        toggle_btn.configure(text="Enable Table" if target == "disabled" else "Disable Table")
 
-    def toggle_skin_preference():
-        """Toggles between Light and Dark interface appearance preferences."""
-        ctk.set_appearance_mode("Light" if ctk.get_appearance_mode() == "Dark" else "Dark")
-
-    # Arrange test interaction buttons horizontally across the lower tray area
-    control_tray = sCTkFrame(root, fg_color="transparent")
-    control_tray.pack(side="bottom", fill="x", padx=20, pady=(0, 15))
-
-    btn_lock = sCTkButtonPrimary(control_tray, text="Lock Tableview Grid (Set 'disabled')", command=toggle_grid_lock)
-    btn_lock.pack(side="left", expand=True, padx=5)
-
-    btn_skin = sCTkButtonPrimary(control_tray, text="Toggle UI Light/Dark Appearance", command=toggle_skin_preference)
-    btn_skin.pack(side="right", expand=True, padx=5)
-
-    # table.bind_validation_callback(validate_table_cell_changes)
-    # table.bind_selection_callback(lambda r, vals: print(f"📡 Clicked Row: {r} -> {vals}"))
-    # table.bind_edit_callback(lambda r, c, val: print(f"📝 Persistent Data Saved ({r}, {c}) -> '{val}'"))
-    # table.configure(state="disabled")
+    toggle_btn = sCTkButtonPrimary(base, text="Disable Table", command=toggle_disabled)
+    toggle_btn.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- Missing a required theme key raises `KeyError` at construction, naming exactly which key and whether it's needed at the top level or in `disabled_map` — check the exact message if construction fails after a theme file change.
+- Calling `configure("propname")` for most single-argument property queries falls through to the native widget's `configure()`, which doesn't support arbitrary single-argument queries — the same known gap as elsewhere in this project's Pygubu-query investigation.
 
 [Return to Table of Contents](#contents)

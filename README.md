@@ -3,7 +3,7 @@
 
 A high-performance, theme-adaptive, and encapsulated widget framework engineered to support user interfaces with multiple designs for each widget. Not all Buttons (or for that matter Labels, Menus, etc.) should look the same in a well thought out UX. Important ones should catch your attention, while the less important fade into the background until needed. For example, `sCustomTkinter` starts you off with 3 different level of Buttons, that you can individually tailor to your design theme to help create consistency across your whole UX. 
 
-This project is a set of subclasses (hence the "s" prefix) of Tom Schimansky's [CustomTkinter](https://customtkinter.tomschimansky.com/) that he has generously made available This widget to the community under the MIT License. Without his work, this would not have been made possible.
+This project is a set of subclasses (hence the "s" prefix) of Tom Schimansky's [CustomTkinter](https://customtkinter.tomschimansky.com/) which he has generously made available to the community under the MIT License. Without his work, this would not have been made possible.
 
 The vast majority of the widgets provided by `sCustomTkinter` are based on the ones originally provided with `CustomTkinter`. However, there are several additions including knobs, analog meter displays, file choosers, table, selectors, and spinboxes that have been added primarily because I needed them for my own project and decided to share. In addition, the library has been designed from the start to integrated with Alejandro Autalan wonderful GUI Builder for python, [Pygubu-Designer](https://github.com/alejandroautalan/pygubu-designer). I have used his software extensively in other projects (visit other areas in my Github) and it has saved me a lot of time and effort.
 
@@ -13,10 +13,13 @@ Want to add a widget, create it, add ThemeableWidget as a second inheritance of 
 
 
 
-## 📌 Localized Table of Contents
+## 📌 Table of Contents
 * [Quick-Start](#quick-start)
+* [Theming](#theming)
+* [Scrolling](#scrolling)
 * [Comprehensive Component Catalog](#comprehensive-component-catalog)
 * [Repository Directory Structure](#repository-directory-structure)
+* [License](#license)
 
 ---
 
@@ -48,14 +51,14 @@ You can use the following simple program to test that the installation worked:
 ```python
 from scustomtkinter import sCTk, sCTkFrame, sCTkButtonPrimary
 
-root = sctk.sCTk()
+root = sCTk()
 root.geometry("600x450")
 root.title("Station Command Console")
 
 panel = sCTkFrame(root, border_width=2)
 panel.pack(padx=20, pady=20, fill="both", expand=True)
 
-btn = CTkButtonPrimary(panel, text="Transmit Call", command=lambda: print("TX ACTIVE"))
+btn = sCTkButtonPrimary(panel, text="Transmit Call", command=lambda: print("TX ACTIVE"))
 btn.pack(pady=10)
 
 root.mainloop()
@@ -70,6 +73,30 @@ root.mainloop()
     5. Return to Design mode. You should see a new set of widgets on the palette under 'sCustomTkinter'.
 
 
+
+## Theming
+
+Every colour and font in this library comes from one file, `sCTkThemes.json`. No widget hardcodes a colour. To change the palette, copy that file into your application's directory and edit it — the local copy is found before the bundled one.
+
+**Copy the whole file.** The local file replaces the bundled one entirely; there is no merging. A block you delete is not filled in from the library defaults — the widget will fail to construct instead. That's deliberate: widgets validate their required keys and raise a `KeyError` naming exactly what's missing, because the alternative (silently substituting a plausible colour) hid real bugs for a long time.
+
+The format extends CustomTkinter's own theme file with per-state colour maps and additional widget blocks. Colours are `[light_mode, dark_mode]` pairs and follow appearance-mode switches automatically.
+
+**See [Theming](docs/Theming.md)** for the full reference, including state maps, runtime overrides, and the several ways a hand-edited JSON file can break.
+
+---
+
+## Scrolling
+
+Wheel and trackpad handling is shared by every scrolling widget, so it behaves consistently and is tuned in one place. Windows, Linux, and macOS are each handled natively, including macOS's separate high-precision trackpad event stream.
+
+For most cases use `sCTkScrollableFrame`, which manages its own scrollbar. Use `sCTkScrollArea` with a separate `sCTkScrollbar` when you need the bar somewhere the built-in one can't go.
+
+Scroll speed is controlled by three constants that can be changed globally or per widget. If a wheel click moves too far or too little — particularly on macOS, where a wheel mouse and a Magic Mouse report wildly different values — that's what to adjust.
+
+**See [Scrolling](docs/Scrolling.md)** for the widget comparison, the tuning constants, and how disabling interacts with scroll state.
+
+---
 
 ## Comprehensive Component Catalog
 
@@ -114,7 +141,7 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 
 	- `sCTkLabelPrimary` A bold, larger font size element used for high-contrast foreground labels. This one is typically used for Headers/Titles/Sections.
     - `sCTkLabelSecondary`: A crisp typography item engineered for tabular listings, lane statuses, and technical readouts.
-	- `sCTkLabelTertiray`: Much smaller font. You would probably use this one for informational notices.
+	- `sCTkLabelTertiary`: Much smaller font. You would probably use this one for informational notices.
 
 
 * <u>`sCTkProgressBar`</u>: Often used in a popup window to communicate progress on a lengthly task.
@@ -132,7 +159,7 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 * <u>`sCTkSlider`</u>:: Used to adjust a value. Slide the handle one way or another. Both Horizontal and Vertical positioning are supported.
 
 
-* <u>`sCTkSwitch`</u>: Simple slide switch for values that are on or off. See `sCTkSwitchAlt` for additional capabilities.
+* <u>`sCTkSwitch`</u>: Simple slide switch for values that are on or off. Its disabled appearance has been retuned so the handle and track stay distinguishable in both light and dark modes.
 
 
 * <u>`sCTkTabview`</u>: A multi-page layout container. Select the page by click the tab. Useful to minimize footprint and organize common operations while isolating those that are either irrelevant or conflicting.
@@ -176,9 +203,6 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 	- `sCTkFrameLabeledSecondary` -  Smaller fonts and border. Useful to group similar settings that you want to identify by a name.
 
 
-* <u>`sCTkFrameOutlined`</u>: A Frame with an outline. No real difference than a normal Frame where you added a border.
-
-
 * <u>Messagebox</u>: Used to communicate immediate and perhaps actionable information to the user. There are three types, Info, Warning and Error. And each can be configured for a customized single or two button response.
 	- `sCTkMessagebox.showinfo`
     - `sCTkMessagebox.showwarning`
@@ -208,8 +232,6 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 * <u>`sCTkSpinbox`</u>: Classical widget where different values can be selected by clicking the up/down arrows. Both numbers and text are supports.
 
 
-* <u>`sCTkSwitchAlt`</u>: The standard switch provided by `CustomTKinter` didn't provide sufficient visual clues when disabled. Parts also tended to fade into the background in both light and dark modes. This switch attempts to address this with the downsize of loss of animation that the original switch provided.
-
 
 * <u>`sCTkTableview`</u>: Supports the display of data in a table like format. Includes in place editing as well as different styles of display ("grid, "zebra", "none")
 
@@ -228,7 +250,7 @@ sCustomTkinter/              (The GitHub Repository Root)
 │   ├── sCTk.py
 │   ├── etc.
 │   └── assets/
-│       └── themes.json      (Master stylesheet look definitions)
+│       └── sCTkThemes.json  (Master stylesheet look definitions)
 │
 ├── docs/                    (Pure Markdown Documentation Vault)
 │   ├── index.md
@@ -241,13 +263,19 @@ sCustomTkinter/              (The GitHub Repository Root)
 ├── examples/                (Standalone Executable Verification Benches)
 │   └── sCTkTableview_Validation_Bench.py
 │
-├── pygubu_integration/      (Visual Layout Studio Workspace Files)
-│   ├── sCTkWidgets.xml
-│   └── sCTkWidgets_plugin.py
+├── pygubu-designer-integration/   (Pygubu Designer plugin)
+│   └── sCTkWidgetSetForPygubuDesigner.py
 │
 └── tools/                   (Internal Repository Maintenance Scripts)
     └── build_docs.sh        (Documentation consolidation script)
 ```
 
+---
 
+## License
 
+`sCustomTkinter` is released under the MIT License. See [LICENSE](LICENSE) for the full text.
+
+This project builds on [CustomTkinter](https://customtkinter.tomschimansky.com/) by Tom Schimansky, also MIT licensed. Individual widgets derived from other MIT-licensed community work carry their attribution in the source file's module docstring.
+
+You may use, modify, and distribute this library, including in commercial and closed-source products. The only requirement is that the copyright notice and licence text travel with any substantial portion of the code you redistribute.

@@ -1,106 +1,121 @@
 ## sCTkTextboxPrimary
 
-A dominant theme-compliant messaging and logging terminal console wrapper that inherits natively from `customtkinter.CTkTextbox`. It implements a specialized sequential order of operations pass to enforce native, zero-leak read-only locks while completely preventing CustomTkinter's native disabled appearance mode freezes.
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
+---
 
-![sCTkTextboxPrimary_Dark.png](images/sCTkTextboxPrimary_Dark.png)
-![sCTkTextboxPrimary_Light.png](images/sCTkTextboxPrimary_Light.png)
+### Overview
 
+`sCTkTextboxPrimary` is a themeable subclass of `customtkinter.CTkTextbox` — a multi-line text area, the higher-emphasis of the library's two textbox tiers (see also `sCTkTextboxSecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"`.
 
-### Core Features
-*   **Native Read-Only Lockout**: Leverages CustomTkinter's native text buffer lockout states when disabled to provide a secure, native typing and text insertion freeze.
-*   **Standard Viewport Accessibility**: Leaves mouse wheel scrolling tracks and high-precision macOS trackpad touch gestures fully functional when locked down, matching standard native CustomTkinter behavioral layout guidelines.
-*   **Sequential Repaint Engine**: Forces structural scrollbar thumb vector updates *before* applying text engine state flags, ensuring internal canvas shapes never drop theme switches or freeze their color slots when locked.
-*   **ThemeableWidget Protocol Mixin**: Integrates natively with the central mixin repository layer to strip, isolate, and safely process custom Pygubu keywords (`translator`, `on_first_object_cb`, `image_loader`, `data_pool`) on startup, preventing constructor crashes.
-*   **Automated Asset Upgrades**: Automatically transforms raw incoming string icon file paths from Pygubu into modern vector-scaled `ctk.CTkImage` references behind the scenes.
+  ![sCTkTextboxPrimary in dark mode](images/sCTkTextboxPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkTextboxPrimary in light mode](images/sCTkTextboxPrimary_Light.png)
 
-### Public Methods
+If `fg_color` resolves to `"transparent"` at construction, the widget copies its parent's actual `fg_color` instead, since `CTkTextbox` doesn't render true transparency the way canvas-based widgets can.
 
-#### `state(state_string: str = None) -> str`
-Operational state management controller. Coordinates background desaturation colors and native input locks safely.
-*   **Arguments**: 
-    *   `state_string` (*str*, optional): The target state to enforce (`"normal"` or `"disabled"`). If omitted, returns the active virtual configuration tracker state.
-*   **Returns**: The active operational state tracking string.
+---
 
-#### `configure(*args, **kwargs)`
-Handles both programmatic keyword modifications and Pygubu designer inspector positional dictionary queries safely. Automatically populates internal lifecycle handshake hooks (`_finalize_themeable_lifecycle`).
+### Constructor
 
-### Theme Configuration Matrix (`themes.json`)
+```python
+sCTkTextboxPrimary(master=None, **kw)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kw` | — | — | `state` is pulled out and applied after construction. Everything else is any native `CTkTextbox` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
+
+```python
+log_area = sCTkTextboxPrimary(master=control_panel)
+log_area.pack(fill="both", expand=True, padx=40, pady=10)
+```
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(state_string=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Uses CTk's native `state="disabled"`, consistent with the other widgets in this library confirmed to correctly block interaction this way. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` updates the tracked state and triggers a repaint. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `text_color`, `border_color`, `scrollbar_button_color`, and `scrollbar_button_hover_color`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font`, `border_width`, and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `text_color`, `scrollbar_button_color`, and `scrollbar_button_hover_color` are recomputed from the theme's normal values or its `disabled_map`. This includes manually re-theming the widget's internal scrollbar, which isn't automatically covered by a single `configure()` call.
+
 ```json
 {
-  "sCTkTextboxPrimary": {
-    "fg_color": ["#FFFFFF", "#1E1E1E"],
-    "border_color": ["#CBD5E1", "#3F3F46"],
-    "text_color": ["#000000", "#FFFFFF"],
-    "scrollbar_button_color": ["#94A3B8", "#475569"],
-    "scrollbar_button_hover_color": ["#64748B", "#334155"],
-    "disabled_map": {
-      "fg_color": ["#F1F5F9", "#18181B"],
-      "border_color": ["#E2E8F0", "#27272A"],
-      "text_color": ["#64748B", "#71717A"],
-      "scrollbar_button_color": ["#D1D5DB", "#374151"]
+    "sCTkTextboxPrimary": {
+        "font": ["Arial", 13, "normal"],
+        "border_width": 1,
+        "corner_radius": 6,
+        "border_color": ["#b5beb6", "#3d5242"],
+        "fg_color": ["#cbcfcb", "#1a1a1a"],
+        "text_color": ["#1c1d1c", "#e3ece4"],
+        "scrollbar_button_color": ["#64748B", "#4B5563"],
+        "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
+        "disabled_map": {
+            "fg_color": ["#E5E7EB", "#111827"],
+            "border_color": ["#CBD5E1", "#1F2937"],
+            "text_color": ["#94A3B8", "#64748B"],
+            "scrollbar_button_color": ["#E5E7EB", "#1F2937"],
+            "scrollbar_button_hover_color": ["#E5E7EB", "#1F2937"]
+        }
     }
-  }
 }
 ```
 
-### Implementation Example & Test Harness
+`scrollbar_button_color` and `scrollbar_button_hover_color` are required to be present in whichever map is active — if either is missing, the widget raises immediately rather than substituting a hardcoded color.
 
-Below is a complete, self-contained interactive test execution script demonstrating how to use a `sCTkTextboxPrimary`.
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
+---
+
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Textbox Primary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkTextboxPrimary
-
+from scustomtkinter import sCTk, sCTkFrame, sCTkTextboxPrimary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("500x450")
-    root.title("sCTkTextboxPrimary Native Pure Bench")
+    root.geometry("450x350")
+    root.title("TextboxPrimary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkTextboxPrimary(base)
-    widget.pack(expand=True, fill="both", padx=10, pady=10)
+    log_area = sCTkTextboxPrimary(base)
+    log_area.pack(fill="both", expand=True, pady=10)
+    log_area.insert("1.0", "Log output appears here...")
 
-    for i in range(30):
-        widget.insert("end", f"[{i:02d}] RX FREQ DATA TUNING RADAR AT INTERCEPT SECTOR TRACK -> VALID\n")
+    def toggle_disabled():
+        target = "disabled" if log_area.get_state() == "normal" else "normal"
+        log_area.state(target)
+        disable_toggle.configure(text="Enable Log" if target == "disabled" else "Disable Log")
 
-
-    def toggle_logger_states():
-        current_state = widget.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
-        widget.configure(state=target)
-
-        if target == "disabled":
-            btn_toggle.configure(text="Activate Logger Feed")
-            print("state (Disabled Sequence) =", widget.get_state().upper())
-        else:
-            btn_toggle.configure(text="Lock Logger Feed")
-            print("state (Normal Sequence)   =", widget.get_state().upper())
-
-
-    def toggle_appearance_skin():
-        current_mode = ctk.get_appearance_mode()
-        target = "Light" if current_mode == "Dark" else "Dark"
-        ctk.set_appearance_mode(target)
-
-
-    btn_toggle = sCTkButtonPrimary(base, text="Lock Logger Feed", command=toggle_logger_states)
-    btn_toggle.pack(fill="x", padx=10, pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
-    btn_theme.pack(fill="x", padx=10, pady=5)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Log", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for six specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

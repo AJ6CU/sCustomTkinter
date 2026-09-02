@@ -1,215 +1,148 @@
 ## sCTkFileExplorer
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Execution Event Callbacks](#execution-event-callbacks-command--double_click_command)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A theme-compliant, highly configurable custom file and folder navigation panel embedded directly within user layout cards. Designed to list paths and filter extensions dynamically without forcing external platform dialog boxes, it unbinds hover highlights and locks canvas scroll mechanisms seamlessly when interaction states toggle.
+### Overview
 
----
+`sCTkFileExplorer` is a theme-compliant, scrollable file/folder browser — a back button, an editable current-path entry, and a scrollable list of clickable file/folder rows. It inherits `ctk.CTkFrame`, `ScrollBindingMixin`, and `ThemeableWidget`, and builds its own scrolling machinery internally (a raw `tkinter.Canvas` plus a `CTkScrollbar`) rather than composing `sCTkScrollableFrame`.
 
-![sCTkFileExplorer_Dark.png](images/sCTkFileExplorer_Dark.png)
-![sCTkFileExplorer_Light.png](images/sCTkFileExplorer_Light.png)
+  ![sCTkFileExplorer in dark mode](images/sCTkFileExplorer_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkFileExplorer in light mode](images/sCTkFileExplorer_Light.png)
 
+**Scroll handling comes from `ScrollBindingMixin`,** the library's single shared implementation, also used by `sCTkScrollableFrame`. This widget supplies two hooks — `_scroll_target()` returns its own internal canvas (no `winfo_parent()` lookup needed, unlike `sCTkScrollableFrame`), and `_scroll_layers()` assembles the widget, canvas, scrollbar, and full row tree.
 
-### API Property Reference
+Three earlier problems are fixed as a result. A global `bind_all("<MouseWheel>", ...)` once affected the entire application rather than this widget, and handled only macOS plus a generic Windows-style delta with no Linux support. A scoped copy of `sCTkScrollableFrame`'s logic then replaced it — but that copy drifted: it walked only *one level* into the row frame, so a row's label or icon was never bound and the wheel did nothing over them, and it had no trackpad accumulator, scrolling on every raw event instead of gating on an accumulated threshold. Consolidating on the mixin fixes both, and trackpad scrolling now matches the rest of the library rather than being noticeably faster and coarser.
 
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | *Not Available Natively* | `sCTkFileExplorer(master)` *(Embedded Local File Navigator)* |
-| **File Mapping** | No native component layout handles inline folder index matrices. | Streamlined and compiled programmatically across `sCTkFileExplorer.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `explorer.state("disabled")`<br>**OR**<br>`explorer.configure(state="disabled")`<br><br>**Dual-Routing State Pipeline:** Natively handles both syntaxes. Freezes canvas item scrolling, strips active button double-clicks, and dims rows using centralized `disabled_map` presets. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions. |
+**Bindings maintain themselves.** Activation happens via `after_idle()` and `<Map>`, and a debounced `<Configure>` on the row frame rebinds whenever content changes — so navigating to a new folder, which replaces every row widget, is picked up automatically with no explicit call.
 
 ---
 
 ### Constructor
 
-Initialize a custom embedded directory explorer window panel. Specific configuration metrics like `filetypes` can be parsed straight out of layout inspectors without generating order-of-operation runtime exceptions. High-level custom configuration parameters from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
-
 ```python
-sCTkFileExplorer(master, type="directory", filetypes=None, initialdir=None, initialfile=None, command=None, double_click_command=None, width=400, height=300, corner_radius=None, border_width=None, bg_color="transparent", fg_color=None, border_color=None, background_corner_colors=None, overwrite_preferred_drawing_method=None, **kwargs)
+sCTkFileExplorer(master=None, initialdir=None, type="file", filetypes=None, ...)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | *Required* | Reference pointer tracking your root window, parent layout layer, or container frame capsule. |
-| `type` | `str` | `"directory"` | Structural layout operation mode. Options: `"directory"` (renders folders only) or `"file"` (renders folders and compatible files). |
-| `filetypes` | `list` / `str` | `None` | Filter array masking permitted file extensions. Formatted as an explicit python list or bracketed string array (e.g., `['.py', '.txt']`). Defers to unfiltered mode when `None`. |
-| `initialdir` | `str` | `None` | Starting navigation folder pathway string. Supports tilde user expansion (`~`) and forces normalization to absolute paths at instantiation. Defaults to `os.getcwd()` if omitted. |
-| `initialfile` | `str` | `None` | Default starting highlight target file path string. Highlights and selects the specified file asset row automatically on boot. |
-| `command` | `callable` | `None` | Single-click method event callback triggered instantly whenever a valid, active list row is highlighted. Requires a strict **two-argument footprint**. |
-| `double_click_command` | `callable` | `None` | Double-click selection method callback executed when an active row file is confirmed or executed. Requires a strict **two-argument footprint**. |
-| `width` | `int` | `400` | Manual horizontal width constraint boundary dimension allocated to the explorer component measured in pixels. |
-| `height` | `int` | `300` | Manual vertical height constraint boundary dimension allocated to the explorer component measured in pixels. |
-### Convenience Functions
-```python
-# Programmatically manipulate selection items, change views, or filter parameters dynamically
-explorer.set_mode("directory")               # Options: "file" or "directory"
-explorer.set_initial_dir("/path/to/folder") # Forces the navigation frame to jump to a specific directory
-explorer.set_initial_file("/path/file.py")   # Forces the text buffer lane to highlight a specific default file path
-explorer.set_filetypes([".py", ".json"])     # Updates the active file type visibility extension arrays
+| Parameter | Type | Description |
+|---|---|---|
+| `master` | widget | Parent container. |
+| `initialdir` | `str` | Starting directory. |
+| `type` | `"file"` / `"directory"` | Whether individual files are selectable, or only directories. |
+| `filetypes` | `list[str]` | File extension filter (only meaningful when `type="file"`). |
+| `command` | `callable` | Called with the clicked path (a string) on a single click. |
+| `double_click_command` | `callable` | Called with `(self, path)` on a double click. |
+| `width` / `height` | `int` | Overall widget dimensions. |
+| `**kwargs` | — | Any native `CTkFrame` argument, or a theme-key override (see [Theming](#theming-sctkthemesjson)). |
 
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = explorer.get_state()          # Returns 'normal' or 'disabled'
-explorer.state("disabled")                   # Freezes directory lines and dims row font components
+```python
+explorer = sCTkFileExplorer(control_panel, initialdir="/Users/you/Documents", type="directory", width=350, height=380)
+explorer.pack(fill="both", expand=True)
 ```
+
+**`command` receives a path, not the widget.** An earlier version passed `self` (the widget instance) instead of the clicked path — confirmed and fixed, since the only real-world caller (`sCTkPathChooser`) expected a path string and would have received garbage.
 
 ---
 
-### ⚡ Execution Event Callbacks (`command` & `double_click_command`)
+### Methods
 
-Both callback functions execute dynamically when rows are manipulated by the user. To prevent application layer traceback drops, **any method mapped to these commands must accept exactly two mandatory arguments**:
+| Method | Returns | Description |
+|---|---|---|
+| `_finalize_split_bindings()` | `None` | Wires the back button, path entry, and canvas resize handling, then loads the initial directory. Auto-scheduled via `self.after(10, ...)` inside `__init__` — you don't need to call it yourself. It no longer governs scroll activation; `ScrollBindingMixin` handles that independently via `after_idle()`, which fires when Tk is actually idle rather than after a guessed delay. |
+| `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming the back button, path entry, scrollbar, and all rows. Disabling also stops scrolling entirely — wheel, trackpad, and scrollbar dragging — matching `sCTkScrollableFrame`. |
+| `configure(**kwargs)` | `None` | Standard configuration, accepting `state`, `type`, `initialdir`, `initialfile`, `filetypes`, and `double_click_command` alongside native options. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the six properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and all six queries fell through to the native widget. Pygubu could not read any of them. |
 
-```python
-def my_explorer_callback(widget_instance, selected_path):
-    """
-    Mandatory Callback Signature Requirement
-    
-    1. widget_instance: The sCTkFileExplorer object triggering the method loop.
-    2. selected_path:   The absolute string file path matching the row just clicked.
-    """
-    print(f"Action detected from {widget_instance}: Processing path -> {selected_path}")
-```
-
-* **`command`**: Triggers when a folder or file row is highlighted on a single click. Passes the explorer instance pointer and the updated absolute string path of the row item.
-* **`double_click_command`**: Triggers when an active item row is double-clicked. If the targeted row is a subdirectory, the explorer automatically expands and steps *into* that directory. If the item is a valid file asset, it hands structural control back to the callback method, passing the explorer instance pointer and the absolute file location path.
+There's currently no public method for programmatic navigation from outside the widget — `path_to_show` (a `StringVar`) has no automatic refresh trace of its own (unlike `selected_path`), so navigating externally means setting it *and* explicitly calling the private `_fill_explorer()` afterward, matching the pattern used internally by the back button. This is a real API gap, not a documented feature.
 
 ---
 
-### 🎨 Centralized Stylesheet Setup (`sCTkThemes.json`)
-
-The file explorer queries your repository styling map profile matrix using standard `self._resolve_color()` lookup routines. This decoupling ensures that layout shapes, font styles, and path row aesthetics repaint smoothly during real-time theme profile adjustments.
-
-To satisfy the framework configuration guidelines, ensure your theme matrix includes this structured asset block:
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
     "sCTkFileExplorer": {
-        "fg_color": "transparent",
-        "btn_fg": ["#1A4375", "#1F6AA5"],
-        "btn_border_color": ["#94A3B8", "#4B5563"],
-        "btn_text_color": ["#FFFFFF", "#FFFFFF"],
-        "btn_hover": ["#112A4B", "#194A7A"],
-        "entry_fg": ["#FFFFFF", "#1E1E1E"],
-        "entry_border_color": ["#CBD5E1", "#334155"],
-        "entry_text_color": ["#1F2937", "#FFFFFF"],
-        "row_active_text": ["#111827", "#F9FAFB"],
-        "row_dimmed_text": ["#94A3B8", "gray50"],
-        "button_color": ["#64748B", "#475569"],
+        "btn_font": ["Arial", 11, "bold"],
+        "entry_font": ["Arial", 12, "normal"],
+        "btn_fg": ["#3B82F6", "#1D4ED8"],
+        "btn_hover": ["#2563EB", "#1E40AF"],
+        "btn_text_color": ["#FFFFFF", "#F9FAFB"],
+        "btn_border_color": ["#1E3A8A", "#1E3A8A"],
+        "entry_fg": ["#FFFFFF", "#111827"],
+        "entry_text_color": ["#1F2937", "#F9FAFB"],
+        "entry_border_color": ["#CBD5E1", "#475569"],
+        "row_active_text": ["#1F2937", "#F9FAFB"],
+        "row_dimmed_text": ["#94A3B8", "#64748B"],
+        "button_color": ["#64748B", "#4B5563"],
         "disabled_map": {
-            "btn_fg": ["#F3F4F6", "#111111"],
-            "btn_border_color": ["#E5E7EB", "#222222"],
-            "btn_text_color": ["#94A3B8", "#4B5563"],
-            "entry_fg": ["#F9FAFB", "#1A1A1A"],
-            "entry_border_color": ["#E5E7EB", "#222222"],
-            "entry_text_color": ["#94A3B8", "#4B5563"],
+            "btn_fg": ["#CBD5E1", "#334155"],
+            "btn_border_color": ["#CBD5E1", "#334155"],
+            "btn_text_color": ["#94A3B8", "#64748B"],
+            "entry_fg": ["#F3F4F6", "#1F2937"],
+            "entry_border_color": ["#CBD5E1", "#475569"],
+            "entry_text_color": ["#94A3B8", "#64748B"],
+            "row_dimmed_text": ["#5A6672", "#3A4552"],
             "button_color": ["#CBD5E1", "#334155"]
         }
     }
 }
 ```
 
+**`button_color` is required at the top level and in `disabled_map`.** This is a harder requirement than it looks: `_process_live_theme_repaint()` is bound to `<Visibility>`, so it fires essentially every time the widget is displayed, not only when explicitly disabled. A theme block missing `button_color` therefore raises `KeyError` on first display, not merely on disable. The values shown above (`["#64748B", "#4B5563"]` normal, `["#CBD5E1", "#334155"]` disabled) are the suggested pair.
+
+`button_color` controls the internal scrollbar's color, distinct from `btn_fg` (the back button).
+
+`row_active_text`/`row_dimmed_text` control file/folder row text color — `row_active_text` for a normal, selectable row; `row_dimmed_text` for either a row excluded by the current filter, or every row when the whole widget is disabled. Both required at the top level; `row_dimmed_text` is also hard-required in `disabled_map` for the whole-widget-disabled case.
+
+**Only `button_color` and `row_dimmed_text` genuinely hard-fail if missing from `disabled_map`.** The other six disabled-state keys (`btn_fg`, `btn_border_color`, `btn_text_color`, `entry_fg`, `entry_border_color`, `entry_text_color`) gracefully fall back to their top-level/normal value if `disabled_map` doesn't override them — not a crash risk, just means that specific property simply won't visually change when disabled unless you give it a distinct value.
+
+The internal raw `Canvas`'s background color isn't part of this theme block at all — it's derived from this widget's own `fg_color`, falling back to a fixed neutral pair (`#1C1C1C` dark / `#F3F4F6` light) if `fg_color` is `"transparent"`, since a raw Canvas can't render CTk's transparent pseudo-value. This is a different kind of fallback than the ones above — not a theme gap, but a genuine "needs an actual renderable color" situation, the same accepted pattern used in `sCTkFrameLabeledPrimary`'s scrollbar hiding.
+
 ---
 
-### Other Notes
-* **Standalone Embed Mechanics:** Instead of blocking main loops via operational platform modal windows (`filedialog`), this component behaves as a standard frame block that can pack or grid comfortably anywhere inside your primary interface layouts.
-* **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native container initialization loops mutate and delete attributes directly out of raw dictionary data footprints during its boot pass, the constructor clones your configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This preserves your color mappings safely.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkFileExplorer` workspace card alongside pure, composite companion input tools and entry lanes to drive runtime changes dynamically.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for FIle Explorer
-# =====================================================================
-
-import os
-import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkEntryPrimary, sCTkButtonPrimary
-from scustomtkinter import sCTkOptionMenuPrimary, sCTk, sCTkLabelSecondary, sCTkFileExplorer
+from scustomtkinter import sCTk, sCTkFrame, sCTkFileExplorer, sCTkLabelPrimary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.title("Standalone Embedded sCTkFileExplorer Panel View")
-    root.geometry("600x720")
+    root.geometry("420x480")
+    root.title("FileExplorer Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    lbl_monitor = sCTkLabelSecondary(base, text="Active Highlight Track: [None Selection]")
-    lbl_monitor.pack(pady=10)
+    status = sCTkLabelPrimary(base, text="Selected: (none yet)")
+    status.pack(anchor="w", pady=(0, 8))
 
-    def track_selection(explorer_instance):
-        path = explorer_instance.selected_path.get()
-        lbl_monitor.configure(text=f"Active Highlight Track: {os.path.basename(path)}")
-        print(f"SINGLE-CLICK HIGHLIGHT: {path}")
+    explorer = sCTkFileExplorer(
+        base, type="directory",
+        command=lambda path: status.configure(text=f"Selected: {path}"),
+    )
+    explorer.pack(expand=True, fill="both")
 
-    def execute_file(explorer_instance, path):
-        print(f"DOUBLE-CLICK CONFIRMED! Launching: {path}")
-
-    user_home_dir = os.path.expanduser("~")
-    explorer = sCTkFileExplorer(base, type="file", initialdir=user_home_dir, filetypes=[".py", ".md", ".json"], command=track_selection, double_click_command=execute_file, width=540, height=350)
-    explorer.pack(fill="both", expand=True, padx=15, pady=10)
-
-    control_deck = sCTkFrame(base, border_width=1, corner_radius=6)
-    control_deck.pack(fill="x", padx=15, pady=10)
-
-    row1 = sCTkFrame(control_deck)
-    row1.pack(fill="x", padx=10, pady=5)
-    sCTkLabelSecondary(row1, text="Explorer Mode:", width=100, anchor="w").pack(side="left", padx=5)
-
-    def on_mode_menu_changed(choice):
-        mode_type = "file" if "File" in choice else "directory"
-        explorer.set_mode(mode_type)
-        entry_filter.configure(state="disabled" if mode_type == "directory" else "normal")
-
-    opt_mode = sCTkOptionMenuPrimary(row1, values=["File Mode (Show Items)", "Directory Mode (Folders Only)"], command=on_mode_menu_changed, width=250)
-    opt_mode.pack(side="left", padx=5)
-    opt_mode.set("File Mode (Show Items)")
-
-    row2 = sCTkFrame(control_deck)
-    row2.pack(fill="x", padx=10, pady=5)
-    sCTkLabelSecondary(row2, text="File Filter List:", width=100, anchor="w").pack(side="left", padx=5)
-
-    entry_filter = sCTkEntryPrimary(row2, placeholder_text="['.py', '.md', '.json', '.txt']")
-    entry_filter.pack(side="left", fill="x", expand=True, padx=5)
-    entry_filter.bind("<Return>", lambda e: explorer.set_filetypes(entry_filter.get().strip()))
-
-    row3 = sCTkFrame(control_deck)
-    row3.pack(fill="x", padx=10, pady=5)
-    sCTkLabelSecondary(row3, text="Jump to Path:", width=100, anchor="w").pack(side="left", padx=5)
-
-    entry_path = sCTkEntryPrimary(row3, placeholder_text="Enter absolute directory path...")
-    entry_path.insert(0, user_home_dir)
-    entry_path.pack(side="left", fill="x", expand=True, padx=5)
-    entry_path.bind("<Return>", lambda e: explorer.set_initial_dir(entry_path.get().strip()))
-
-    def toggle_explorer_lock():
-        target = "disabled" if explorer.get_state() == "normal" else "normal"
-        explorer.configure(state=target)
-        opt_mode.configure(state=target)
-        entry_filter.configure(state=target)
-        entry_path.configure(state=target)
-        btn_lock.configure(text="Lock Explorer Deck" if target == "normal" else "Unlock Explorer Deck")
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Explorer Deck", command=toggle_explorer_lock)
-    btn_lock.pack(side="bottom", pady=10)
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- No public method for programmatic navigation — see [Methods](#methods) above.
+- Missing a required theme key raises `KeyError` at first use, naming exactly which key and whether it's needed at the top level or in `disabled_map`.
+- **The debounced rebind also runs on genuine resizes.** `<Configure>` on the row frame doesn't distinguish "rows were added" from "the window was dragged", so resizing rebinds too. One coalesced pass rather than one per event, but on a very large directory it isn't free.
+- **The internal `Canvas` is a raw `tkinter.Canvas`,** not a themed widget, so its background is derived rather than themed — see the note at the end of [Theming](#theming-sctkthemesjson).
+- **The scrollbar stays visible when disabled, just inert.** It can't be dragged, but it isn't hidden — CustomTkinter's scrollbar has no native disabled state to lock. Same limitation as `sCTkScrollableFrame`.
+
+**Fixed:** dragging the scrollbar when the files didn't fill the frame used to push the rows down to the bottom, leaving empty space above them. The scroll region was set straight from `bbox("all")`, which is *shorter* than the visible canvas when content is short, and Tk will still scroll within an undersized region. The region is now grown to at least the canvas height in that case, so `yview` has nowhere to go and scrolling correctly does nothing.
 
 [Return to Table of Contents](#contents)

@@ -1,10 +1,13 @@
 #!/usr/bin/python3
 """
-sCTkSelector - Piece 1 of 2
+sCTkSelector
 
 An advanced theme-compliant, scrollable option tree selector widget.
 Pairs an optional high-contrast search field lane with a dynamic listing frame card
 to manage multi-state checkbox row configurations natively.
+
+Derived from Selector class by Fastattack, 2024.
+https://github.com/fastattackv/MoreCustomTkinterWidgets
 """
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
@@ -31,7 +34,40 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
 
+        # FIX: required-key validation moved here, to construction time,
+        # rather than living inside _update_current_visual_state() (called
+        # only later, and repeatedly on every state change). Moved so that
+        # border_color -- now also passed to both sub-widget constructors
+        # below, to keep their normal-state border visually consistent with
+        # this widget's own theme -- is guaranteed to exist before anything
+        # tries to use it, rather than risking a confusing native error at
+        # construction if a key were missing.
+        for required_key in ("text_color", "checkbox_fg_color", "checkbox_hover_color", "border_color", "checkmark_color"):
+            if self._local_defaults.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
+                )
+        for required_key in ("text_color", "checkbox_fg_color", "border_color", "checkmark_color"):
+            if self._custom_disabled_map.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                )
+
         fg_color = self._local_defaults.get("fg_color", "transparent")
+        # FIX: an earlier version never coordinated border_color between this
+        # widget and its two internal sub-widgets (search_bar,
+        # checkboxes_frame) -- each independently used its own standalone
+        # theme's border_color, which could visibly mismatch (confirmed by
+        # direct testing: sCTkEntryPrimary and sCTkScrollableFrame's own
+        # default border colors differ in dark mode). Passed here, once, at
+        # construction, rather than forced on every _update_current_visual_state()
+        # call -- that would fight with sCTkEntryPrimary's own correct
+        # readonly/disabled border-color changes, undoing the whole point of
+        # its three-state model. This only establishes the shared NORMAL-state
+        # border; each sub-widget's own state-driven color changes afterward
+        # are left completely alone.
+        selector_border_color = self._local_defaults.get("border_color")
 
         # 3. Call the parent sCTkFrame constructor safely
         super().__init__(master, **self.final_kw)
@@ -43,7 +79,7 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         self.search_bar = None
         self._search_box_visible = bool(searchBox)
 
-        self.checkboxes_frame = sCTkScrollableFrame(self, fg_color=fg_color)
+        self.checkboxes_frame = sCTkScrollableFrame(self, fg_color=fg_color, border_color=selector_border_color)
         self.checkboxes_frame.pack(expand=True, fill="both", side="bottom")
 
         if hasattr(self.checkboxes_frame, "_parent_frame") and self.checkboxes_frame._parent_frame is not None:
@@ -143,7 +179,11 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             elif isinstance(sb_val, str): sb_val = str(sb_val).lower() in ['true', '1', 'yes']
             self._search_box_visible = sb_val
             if self._search_box_visible:
-                if not hasattr(self, "search_bar") or self.search_bar is None: self.search_bar = sCTkEntryPrimary(self, textvariable=self.search_var)
+                # FIX: search_bar's border_color now aligned with this
+                # widget's own theme at creation time, matching the same
+                # fix applied to checkboxes_frame in __init__ -- see that
+                # constructor call's comment for the full reasoning.
+                if not hasattr(self, "search_bar") or self.search_bar is None: self.search_bar = sCTkEntryPrimary(self, textvariable=self.search_var, border_color=self._local_defaults.get("border_color"))
                 self.search_bar.pack(anchor="n", fill="x")
                 if hasattr(self, "checkboxes_frame") and self.checkboxes_frame is not None:
                     self.checkboxes_frame.pack_forget()
@@ -201,6 +241,22 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         if kwargs: return super().configure(**kwargs)
         return None
 
+    # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
+    # attribute -- it does not automatically track whichever configure() a
+    # subclass defines. Without this line, calling .config(...) silently skips
+    # this entire override and lands on sCTkFrame's configure() instead,
+    # bypassing the items/searchBox/multiple_choices/state handling above.
+    # Confirmed as a critical bug on sCTkSegmentedButton earlier in this
+    # project's audit; this was the last widget in the library still missing
+    # the alias.
+    #
+    # Note this class uses the older Tkinter `(self, cnf=None, **kwargs)`
+    # signature rather than `*args`. That's correct here and not the source of
+    # the tuple-comparison bugs found elsewhere: cnf is a real parameter
+    # holding the value itself, so `isinstance(cnf, dict)` and `pname = cnf`
+    # both behave as intended.
+    config = configure
+
     def _set_appearance_mode(self, mode_string: str):
         if hasattr(super(), "_set_appearance_mode"):
             try:
@@ -252,62 +308,96 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         return self._state
 
     def _update_current_visual_state(self):
-        """MASTER VISUAL ROUTER FIXED: Directly mutates private ctk variables to bypass validation errors."""
+        """
+        Applies checkbox and search-bar colors based on the current state.
+
+        Required-key validation for the theme keys this method (and
+        __init__'s sub-widget construction) depends on happens once, in
+        __init__ -- not repeated here on every call.
+
+        FIX: an earlier version's disabled branch used 100% hardcoded
+        literals -- self._custom_disabled_map was set up in __init__ but
+        never actually consulted here, meaning a correctly-populated
+        disabled_map in sCTkThemes.json had zero effect on what users
+        actually saw. Now reads from self._custom_disabled_map like every
+        other widget in this project, with hard-fail validation for
+        required keys.
+
+        FIX: an earlier version derived the checkbox's fill/hover color from
+        this widget's OWN fg_color/hover_color theme keys -- the same keys
+        that control the surrounding frame's own background -- falling back
+        to a hardcoded accent color pair whenever fg_color was "transparent"
+        (a common, legitimate choice for frame-type widgets, not a theme
+        gap). Reusing fg_color for two different purposes doesn't work when
+        the frame is meant to be transparent. Now uses dedicated
+        "checkbox_fg_color"/"checkbox_hover_color" theme keys instead, with
+        hard-fail validation, rather than overloading fg_color or silently
+        substituting a hardcoded guess.
+
+        FIX: an earlier version also wrote cb._inner_fg_color and cb._hover
+        directly onto each checkbox instance, in both branches -- confirmed
+        against sctk_checkbox.py's actual source that neither attribute is
+        ever read by CheckBox's own code anywhere. These were writes to
+        private attributes CheckBox never defined, with no effect. Removed
+        entirely, along with the now-unused color computation that only ever
+        fed into the dead cb._inner_fg_color write (which itself included a
+        cross-widget reach into the checkbox's own private _local_defaults
+        for a theme key, "inner_fg_color", that isn't part of CheckBox's
+        documented theme key set at all).
+
+        Passes raw (light, dark) tuples straight through to each checkbox's
+        configure() instead of resolving to a single color first, matching
+        the tuple-based approach validated elsewhere in this project. An
+        earlier version resolved everything to a single string first, which
+        still worked correctly here specifically because _set_appearance_mode
+        already manually re-triggers this whole method on every light/dark
+        switch -- but that's inconsistent with the more robust pattern used
+        elsewhere, which doesn't depend on a manual re-trigger at all.
+        """
         is_disabled = getattr(self, "_state", "normal") == "disabled"
+
         if hasattr(self, "search_bar") and self.search_bar is not None:
             self.search_bar._update_current_visual_state()
 
-        if hasattr(self, "checkboxes"):
-            current_skin = str(ctk.get_appearance_mode()).lower()
-            for cb in self.checkboxes:
-                if is_disabled:
-                    cb.configure(state="disabled")
+        if not hasattr(self, "checkboxes"):
+            return
 
-                    d_txt = self._resolve_color(["#94A3B8", "gray50"])
-                    d_box_fill = self._resolve_color(["#94A3B8", "#475569"])
-                    d_border = self._resolve_color(["#CBD5E1", "#334155"])
-                    d_checkmark = "#FFFFFF" if current_skin == "dark" else "#F8FAFC"
+        for cb in self.checkboxes:
+            if is_disabled:
+                cb.configure(state="disabled")
+                d_map = self._custom_disabled_map
+                # FIX: an earlier version never referenced self._custom_disabled_map
+                # here at all -- these four lines were 100% hardcoded literals
+                # with zero theme connection. hover_color intentionally reuses
+                # checkbox_fg_color, not a separate disabled hover key -- hover
+                # can't meaningfully trigger while disabled anyway, matching the
+                # same "no distinct disabled hover" convention used elsewhere
+                # in this project (e.g. sCTkSlider).
+                cb.configure(
+                    text_color=d_map.get("text_color"),
+                    fg_color=d_map.get("checkbox_fg_color"),
+                    border_color=d_map.get("border_color"),
+                    hover_color=d_map.get("checkbox_fg_color"),
+                    checkmark_color=d_map.get("checkmark_color"),
+                )
+            else:
+                cb.configure(state="normal")
+                m = self._local_defaults
+                # FIX: an earlier version read fg_color/hover_color here --
+                # the SAME keys that control the surrounding frame's own
+                # background -- with a hardcoded accent-color fallback for
+                # whenever fg_color was "transparent" (the frame's own
+                # default). Now uses dedicated checkbox_fg_color/
+                # checkbox_hover_color keys instead, so the checkbox's accent
+                # color no longer depends on what the frame's background
+                # happens to be set to.
+                cb.configure(
+                    text_color=m.get("text_color"),
+                    fg_color=m.get("checkbox_fg_color"),
+                    border_color=m.get("border_color"),
+                    hover_color=m.get("checkbox_hover_color"),
+                    checkmark_color=m.get("checkmark_color"),
+                )
 
-                    # 🔑 SECURE PROPERTY INJECTION: Assign custom attributes directly via hidden parameters
-                    cb.configure(text_color=d_txt, fg_color=d_box_fill, border_color=d_border,
-                                 hover_color=d_box_fill, checkmark_color=d_checkmark)
-                    cb._inner_fg_color = d_box_fill
-                    cb._hover = False
-                else:
-                    cb.configure(state="normal")
-                    n_txt = self._resolve_color(self._local_defaults.get("text_color", ["#1F2937", "#FFFFFF"]))
-
-                    raw_theme_fg = self._local_defaults.get("fg_color", "transparent")
-                    if raw_theme_fg == "transparent" or self._resolve_color(raw_theme_fg) == "transparent":
-                        n_fg = self._resolve_color(["#3B82F6", "#1F6AA5"])
-                        n_hover = self._resolve_color(["#2563EB", "#1A4A75"])
-                    else:
-                        n_fg = self._resolve_color(raw_theme_fg)
-                        n_hover = self._resolve_color(
-                            self._local_defaults.get("hover_color", ["#2563EB", "#1A4A75"]))
-
-                    n_border = self._resolve_color(self._local_defaults.get("border_color", ["#94A3B8", "#4B5563"]))
-                    n_checkmark = self._resolve_color(
-                        self._local_defaults.get("checkmark_color", ["#FFFFFF", "#FFFFFF"]))
-
-                    n_inner = self._resolve_color(
-                        cb._local_defaults.get("inner_fg_color", "transparent") if hasattr(cb,
-                                                                                           "_local_defaults") else "transparent")
-                    if n_inner == "transparent":
-                        n_inner = self._resolve_color(["#FFFFFF", "#1E1E1E"])
-
-                    cb.configure(text_color=n_txt, fg_color=n_fg, border_color=n_border, hover_color=n_hover,
-                                 checkmark_color=n_checkmark)
-                    cb._inner_fg_color = n_inner
-                    cb._hover = True
-
-                # Force an explicit redrawing pass on the inner elements safely
-                if hasattr(cb, "_draw"): cb._draw()
-
-
-
-
-
-
-
-
+            # Force an explicit redrawing pass on the inner elements safely
+            if hasattr(cb, "_draw"): cb._draw()

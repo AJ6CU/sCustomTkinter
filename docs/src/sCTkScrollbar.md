@@ -1,62 +1,57 @@
 ## sCTkScrollbar
 
-The `sCTkScrollbar` is a high-performance, theme-adaptive custom scrollbar element designed for the `sCustomTkinter` radio desktop interface, working in tandem with the unblocked `sCTkScrollArea` viewport container frame. It inherits from `ctk.CTkScrollbar` to preserve native light/dark appearance switches while introducing specialized hardware aggregators to handle inertial gestures smoothly.
+`sCTkScrollbar` is a themeable scrollbar — a subclass of `ctk.CTkScrollbar` with color resolution from `sCTkThemes.json` and orientation-aware default sizing. It's designed to pair with [`sCTkScrollArea`](sCTkScrollArea.md), which needs an external scrollbar, but works anywhere a `CTkScrollbar` would.
 
+ ![sCTkScrollbar_Dark.png](images/sCTkScrollbar_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkScrollbar_Light.png](images/sCTkScrollbar_Light.png)
 
-![sCTkScrollbar_Dark.png](images/sCTkScrollbar_Dark.png)
-![sCTkScrollbar_Light.png](images/sCTkScrollbar_Light.png)
+**This widget contains no scroll-handling logic.** It's a scrollbar: it renders a draggable bar and reports its position. Wheel and trackpad handling belongs to the scrolling container — see [`ScrollBindingMixin`](ScrollBindingMixin.md). An earlier version of this page credited the scrollbar with an "inertial micro-delta aggregator"; that logic lives in `sCTkScrollArea`, not here.
 
-
-### 📌 Localized Table of Contents
-* [API Constructor Reference](#-api-constructor-reference)
-* [Native Viewport Alignment Handshake](#%EF%B8%8F-native-viewport-alignment-handshake)
-* [Centralized Stylesheet Integration](#-centralized-stylesheet-integration-sctkthemesjson)
-* [Implementation Reference Template](#-implementation-reference-template)
+<a name="contents"></a>
+### Table of Contents
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming](#theming)
+* [Example](#example)
+* [Known Limitations](#limitations)
 
 ---
 
-### 📋 API Constructor Reference
+<a name="constructor"></a>
+### Constructor
 
-#### `sCTkScrollbar` Constructor
 ```python
 scrollbar = sCTkScrollbar(master=None, orientation="vertical", **kwargs)
 ```
 
-#### `sCTkScrollArea` Constructor
-```python
-scroll_area = sCTkScrollArea(master=None, **kwargs)
-```
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkScrollbar(master)` | `sCTkScrollbar(master)` *(Isolated External Scroll Handle)* |
-| **Viewport Companion**| `ctk.CTkScrollableFrame` | `sCTkScrollArea(master)` *(Unblocked Direct Canvas Frame)* |
-| **High-Precision Logic**| Coarse notched delta wheels only | **Inertial Micro-Delta Aggregator:** Smoothly captures, normalizes, and dampens Apple Magic Mouse and Trackpad sweeps natively. |
-| **Event Routing** | Hardcoded internal grab hooks | **Direct Binding Pattern:** Attaches platform-synchronized event listeners across viewport and item rows automatically. |
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `master` | widget | `None` | Parent container. |
+| `orientation` | `"vertical"` / `"horizontal"` | `"vertical"` | Layout direction. Sets a default `width` of 14 when vertical, or `height` of 14 when horizontal. |
+| `**kwargs` | — | — | Any native `CTkScrollbar` argument, or a theme-key override (see [Theming](#theming)). |
 
 ---
 
-### 🎛️ Native Viewport Alignment Handshake
-Connecting the themeable scrollbar to the unblocked container frame involves a single architectural lifecycle call. 
+<a name="methods"></a>
+### Methods
 
-When you pack the label items or tracking data lines inside the container frame, the underlying engine automatically routes vertical scroll gestures straight up into our fractional coordinate processor. This ensures that traditional mouse wheels and high-precision Apple touchpad momentum sweeps execute with perfect visual continuity.
+| Method | Returns | Description |
+| :--- | :--- | :--- |
+| `configure(**kwargs)` / `config(**kwargs)` | `None` | Standard configuration. Overrides of `button_color` and `button_hover_color` **persist** — see below. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for `button_color` and `button_hover_color`. Any other name passes through to the native widget. |
 
-```python
-# 1. Native alignment layout handshake
-scroll_view.hook_scrollbar(scrollbar)
+**Runtime color overrides persist.** `configure()` records the tracked theme keys into the widget's stored defaults *before* repainting, so an override survives the repaint and later appearance-mode switches. This matches CustomTkinter's own semantics, where `configure(button_color=...)` sticks.
 
-# 2. Populate data items directly into the scrolling content frame panel
-for i in range(25):
-    lbl_item = sCTkLabelSecondary(scroll_view.scroll_content, text="Telemetry Row")
-    lbl_item.pack()
-```
+This was previously broken. `_apply_custom_theme_colors()` runs on every `configure()` call and re-pushes both colors from the stored defaults — and since `configure()` never wrote to those defaults, `configure(button_color="red")` applied red and then had it overwritten on the very next line. Runtime color overrides silently did nothing.
 
-[Go to Piece 2 of 2](#%F0%9F%8E%A8-centralized-stylesheet-integration-sctkthemesjson) | [Return to Table of Contents](#%F0%9F%93%8C-localized-table-of-contents)
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+Two consequences worth knowing: passing a single color replaces the theme's `(light, dark)` tuple for that key, so **that property stops following light/dark** — which is what asking for one specific color means.
 
-`sCTkScrollbar` drives its color changes straight out of your central theme file. Redundant state mappings and broken disabled maps are completely omitted, maintaining a clean, production-grade JSON dictionary footprint.
+The single-argument query was also previously broken. The implementation tested `if args and isinstance(args, dict)`, but `args` is always a tuple, so that branch was dead and there was no query branch at all — `configure("button_color")` silently returned `None` instead of a property tuple.
+
+---
+
+<a name="theming"></a>
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
@@ -69,64 +64,61 @@ for i in range(25):
 }
 ```
 
+`button_color` is the bar itself; `button_hover_color` is the bar under the cursor. `fg_color` is the track behind it.
+
+**`button_color` and `button_hover_color` are required.** Construction raises `KeyError` naming the missing one. These previously carried hardcoded fallbacks, so a theme block missing either would silently substitute a plausible guess rather than failing loudly.
+
+`orientation` may also be supplied from the theme block. It's read from the resolved keywords rather than the raw constructor dict, so it's picked up whichever way it arrives — an earlier version read the raw dict *after* `ThemeableWidget` had processed it, which risked a horizontal scrollbar silently getting a default `width` instead of `height`.
+
+Colors are passed through as raw `(light, dark)` tuples rather than resolved ahead of time, so they follow appearance-mode changes automatically.
+
+**There is no `disabled_map`, and no disabled state.** CustomTkinter's scrollbar has none to lock. Containers that need an inert scrollbar block dragging at the binding level instead and dim the bar themselves — see [`ScrollBindingMixin`](ScrollBindingMixin.md#disabling-scroll).
+
 ---
 
-### 💻 Implementation Reference Template
+<a name="example"></a>
+### Example
 
 ```python
 #!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Scrollbar
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkScrollbar, sCTkScrollArea
+from scustomtkinter import (sCTk, sCTkFrame, sCTkLabelSecondary,
+                            sCTkScrollbar, sCTkScrollArea)
 
 if __name__ == "__main__":
     root = sCTk()
-    root.geometry("480x480")
-    root.title("sCTkScrollbar Unified Validation Deck")
-    root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
+    root.geometry("480x420")
+    root.title("sCTkScrollbar Validation Bench")
 
-    # 2. Arrange our isolated lower button layout panel tray
-    lower_tray = ctk.CTkFrame(root, fg_color="transparent")
-    lower_tray.pack(side="bottom", fill="x", padx=15, pady=(0, 15))
-
-    # 3. Mount master backplane panel frame capsule container
     main_layout = sCTkFrame(root, border_width=2)
     main_layout.pack(expand=True, fill="both", padx=15, pady=15)
 
-    status_monitor = sCTkLabelSecondary(main_layout, text="SYSTEM STATUS: [TELEMETRY FEED ACTIVE]")
-    status_monitor.pack(fill="x", padx=10, pady=(5, 10))
-
-    def toggle_appearance_skin():
-        ctk.set_appearance_mode("Light" if ctk.get_appearance_mode() == "Dark" else "Dark")
-
-    # Pack our skin preference toggler safely inside the isolated lower tray panel
-    btn_theme = sCTkButtonPrimary(lower_tray, text="Toggle UI Light/Dark Appearance", command=toggle_appearance_skin)
-    btn_theme.pack(fill="x", expand=True, padx=5)
-
-    # 4. Mount themeable custom scrollbar primitive
     scrollbar = sCTkScrollbar(main_layout, orientation="vertical")
     scrollbar.pack(side="right", fill="y", padx=(5, 10), pady=10)
 
-    # 5. Build nested viewport container layout tracks
     content_chassis = sCTkFrame(main_layout, border_width=0, fg_color="transparent")
     content_chassis.pack(side="left", fill="both", expand=True, padx=(10, 0), pady=10)
 
     scroll_view = sCTkScrollArea(content_chassis)
     scroll_view.pack(fill="both", expand=True)
 
-    # 6. Populate viewport with telemetry data and invoke the opt-in convenience propagator
     for i in range(25):
-        lbl_item = sCTkLabelSecondary(scroll_view.scroll_content, text=f"▶ Transceiver Core Channel Lane Code: {100 + i} [STATUS: OK]")
-        lbl_item.pack(anchor="w", padx=10, pady=4)
-        scroll_view.propagate_scroll_events(lbl_item)
+        sCTkLabelSecondary(
+            scroll_view.scroll_content,
+            text=f"Transceiver channel {100 + i} [OK]"
+        ).pack(anchor="w", padx=10, pady=4)
 
-    # 7. Wire hardware event pipelines natively together
     scroll_view.hook_scrollbar(scrollbar)
 
     root.mainloop()
 ```
 
-[Return to Table of Contents](#%F0%9F%93%8C-localized-table-of-contents)
+---
+
+<a name="limitations"></a>
+### Known Limitations
+
+- **No disabled state** — see [Theming](#theming).
+- **Only `button_color` and `button_hover_color` are tracked** for the persist-on-`configure()` behavior. Other properties still repaint from the theme.
+
+[Return to Table of Contents](#contents)

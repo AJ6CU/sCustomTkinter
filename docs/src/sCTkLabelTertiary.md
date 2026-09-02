@@ -1,136 +1,116 @@
 ## sCTkLabelTertiary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-The fine inline description, sub-legend, or auxiliary notice typography display label widget component wrapping `customtkinter.CTkLabel`. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
+### Overview
 
-*For prominent main dashboard header and mid-level sections, see the companion component pages:* [sCTkLabelPrimary](sCTkLabelPrimary.md) and [sCTkLabelSecondary](sCTkLabelSecondary.md).
+`sCTkLabelTertiary` is a themeable subclass of `customtkinter.CTkLabel` — the lowest-emphasis of the library's three label tiers (see also `sCTkLabelPrimary`, `sCTkLabelSecondary`), intended for inline descriptions, sub-legends, or auxiliary notices. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim.
 
-
-![sCTkLabelTertiary_Dark.png](images/sCTkLabelTertiary_Dark.png)
-![sCTkLabelTertiary_Light.png](images/sCTkLabelTertiary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkLabel(master)` | `sCTkLabelTertiary(master)` *(Inline Legend/Description Typography)* |
-| **File Mapping** | Direct module definitions run without structured configuration. | Streamlined and compiled programmatically across `sCTkLabelTertiary.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `tertiary_label.state("disabled")`<br>**OR**<br>`tertiary_label.configure(state="disabled")`<br><br>**Framework-Wide State Support:** Natively supported across all label components (`Primary`, `Secondary`, `Tertiary`). It intercepts state configuration calls and dynamically dims typography layouts based on centralized `disabled_map` metrics. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions. |
+	![sCTkLabelTertiary in dark mode](images/sCTkLabelTertiary_Dark.png)&emsp; &emsp; &emsp; &emsp;
+	![sCTkLabelTertiary in light mode](images/sCTkLabelTertiary_Light.png)
 
 ---
 
 ### Constructor
 
-Initialize a custom tertiary description label instance. Configuration metrics map cleanly out of central stylesheet parameters and are automatically sanitized by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkLabelTertiary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | `state` is pulled out and applied after construction rather than passed to the native widget. Everything else is any native `CTkLabel` argument (e.g. `text`, `font`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a tertiary description dashboard label element
 panel_legend = sCTkLabelTertiary(
     master=control_panel,
-    text="Inline notice: tuning resolution bounded to 100Hz."
+    text="Note: values update every 5 seconds.",
 )
-
-# Render the widget inside your layout panel using geometry managers
 panel_legend.pack(expand=True, pady=10)
 ```
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only the literal string `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value matches neither branch and leaves the state unchanged. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `cget("state")` | `str` | Returns the current state, same as `get_state()`. Intercepted specially because native `CTkLabel` has no real `"state"` option to query — without this override, `cget("state")` would raise. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, and `text_color`. Queries for any other property name fall through to the native `CTkLabel.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `text_color`, and `font` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkLabelTertiary": {
+        "font": ["Arial", 13, "normal"],
         "fg_color": "transparent",
-        "text_color": ["#64748B", "#94A3B8"],
-        "font": ["Arial", 10, "italic"],
+        "text_color": ["#4B5563", "#9CA3AF"],
         "disabled_map": {
-            "text_color": ["#CBD5E1", "#334155"]
+            "text_color": ["#CBD5E1", "#475569"]
         }
     }
 }
 ```
 
+`text_color` is required in whichever map is active — if it's missing, `_update_current_visual_state()` raises immediately rather than falling back to a default. This is deliberate: this project's design is for `ThemeableWidget`-based widgets to fail hard on incomplete theme data, not paper over it with a fallback color.
+
+Tertiary's disabled color is intentionally the most muted of the three label tiers — by design, a disabled `sCTkLabelTertiary` should read as the least prominent of the three even while disabled, echoing the hierarchy the three tiers already have when enabled.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
 ---
 
-### Other Notes
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native geometry constructor routines mutate and drop keys directly out of parsed configuration structures during early boot phases, the constructor clones your data configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This prevents layout repaints from failing.
-* **Dynamic Dark Mode Pass-Through:** When returning to an active state, the visual interceptor reads directly from your protected `_local_defaults` cache. If no hardcoded text color is explicitly discovered, it hands control back to CustomTkinter's master `ThemeManager` to natively paint high-contrast system fonts.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute bottom of the initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkLabelTertiary` inline legend element along with an interactive status switch toggle.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Label Tertiary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkLabelTertiary
+from scustomtkinter import sCTk, sCTkFrame, sCTkLabelTertiary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x280")
-    root.title("sCTkLabelTertiary Testing Deck")
+    root.geometry("400x250")
+    root.title("LabelTertiary Example")
 
-    container = sCTkFrame(root, fg_color="transparent")
-    container.pack(expand=True, fill="both", padx=30, pady=30)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    tertiary_label = sCTkLabelTertiary(container, text="Inline notice: tuning resolution bounded to 100Hz.")
-    tertiary_label.pack(expand=True, pady=10)
+    legend = sCTkLabelTertiary(base, text="Note: values update every 5 seconds.")
+    legend.pack(pady=10)
 
-    lbl_status = sCTkLabelSecondary(container, text="Current State Assertion: NORMAL", font=("Arial", 10, "italic"))
-    lbl_status.pack(side="bottom", pady=5)
+    def toggle_disabled():
+        target = "disabled" if legend.get_state() == "normal" else "normal"
+        legend.state(target)
+        disable_toggle.configure(text="Enable Legend" if target == "disabled" else "Disable Legend")
 
-    def toggle_label_states():
-        """Cycles the description label states between normal and disabled profiles."""
-        current_state = tertiary_label.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
-
-        tertiary_label.configure(state=target)
-
-        if target == "disabled":
-            btn_toggle.configure(text="Activate Description (Set 'normal')")
-            lbl_status.configure(text="Current State Assertion: DISABLED")
-        else:
-            btn_toggle.configure(text="Dim Description (Set 'disabled')")
-            lbl_status.configure(text="Current State Assertion: NORMAL")
-
-        print(f"Logged Verification Hook -> tertiary_label.get_state() = {tertiary_label.get_state()}")
-
-    btn_toggle = sCTkButtonPrimary(
-        container,
-        text="Dim Description (Set 'disabled')",
-        command=toggle_label_states,
-        fg_color=("#1A4375", "#3B8ED0"),
-        hover_color=("#112A4B", "#1F6AA5")
-    )
-    btn_toggle.pack(expand=True, pady=15)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    tertiary_label.state("disabled")
-    print(f"state (Disabled Pass) = {tertiary_label.get_state().upper()}")
-
-    tertiary_label.state("normal")
-    print(f"state (Normal Pass)   = {tertiary_label.get_state().upper()}")
-    print("========================================\n")
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Legend", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
+- Calling `configure("fg_color")` or `configure("text_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`text_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

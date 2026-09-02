@@ -13,8 +13,8 @@
 A concrete rotary encoder range variant designed for hard-bounded linear controls (e.g., AF/RF volume gain level sliders, squelch limits, or power thresholds). It enforces absolute mechanical dead stops at outer thresholds, preventing directional wraparound loops.
 
 
-![sCTkDialRange_Dark.png](images/sCTkDialRange_Dark.png)
-![sCTkDialRange_Light.png](images/sCTkDialRange_Light.png)
+  ![sCTkDialRange_Dark.png](images/sCTkDialRange_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkDialRange_Light.png](images/sCTkDialRange_Light.png)
 
 
 ### API Property Reference
@@ -68,22 +68,35 @@ def on_volume_level_changed(active_value: int):
 ```
 
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
 ```json
 {
     "sCTkDialRange": {
-        "fg_color": "transparent",
-        "dial_color": ["#1E293B", "#181E2B"],
-        "border_color": ["#CBD5E1", "#334155"],
-        "text_color": ["#3B8ED0", "#FF9100"],
-        "pointer_color": ["#3B8ED0", "#FF9100"],
+        "fg_color": ["#F1F5F9", "#0A0A0A"],
+        "text_color": ["#1A4375", "#64748B"],
         "shadow_color": ["#CBD5E1", "#02040A"],
-        "border_width": 0,
-        "corner_radius": 0
+        "dial_color": ["#9E9E9E", "#2A2F3D"],
+        "dial_highlight_color": ["#E4E8EC", "#42454B"],
+        "dial_shadow_color": ["#5C6165", "#050507"],
+        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+        "dial_rim_shadow_color": ["#3E4245", "#000000"],
+        "pointer_color": ["#1A4375", "#FF9100"],
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "dial_color": ["#E2E8F0", "#1A1D24"]
+        }
     }
 }
 ```
 
+Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+
+`pointer_color` is **specific to this variant and its Selector sibling**, and colours the pointer line. It was present in the theme file for a long time but read by no code path at all — the pointer drew in `text_color` instead. It is now live, so the pointer can differ from the tick labels. It has no `disabled_map` entry; a disabled pointer falls back to the disabled `text_color`.
+
 ### Other notes
+* **Knob rendering:** the body is a shaded dome, marked with a plain straight line from dead centre out to just short of the rim. An earlier version drew an arrowhead and a raised centre cap; both are gone, along with the cap's two hardcoded outline colours. See [the base class page](sCTkDial.md#knob-rendering).
+* **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
+* **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
 * **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, completely bypassing the intermediate template layout files entirely to avoid argument deadlocks.
 * **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
 * **Absolute Threshold Dead Stops:** Unlike continuous or selector models, scrolling past upper or lower boundaries clips inputs securely using `max(self._from, min(self._to, value))`, blocking accidental overflow.

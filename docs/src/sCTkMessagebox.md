@@ -1,4 +1,5 @@
 ## sCTkMessagebox
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
 * [API Constructor Reference](#api-constructor-reference)
@@ -6,6 +7,7 @@
 * [Simple Syntax Quick-Reference Guide](#simple-syntax-quick-reference-guide)
 * [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
 * [Layout & Text Wrapping Integration Rules](#layout--text-wrapping-integration-rules)
+* [Configuration](#configuration)
 * [Implementation Example & Test Harness](#implementation-example--test-harness)
 
 ---
@@ -15,8 +17,8 @@ The `sCTkMessagebox` is an advanced, themeable dialog window system designed to 
 ---
 
 
-![sCTkMessagebox_Dark.png](images/sCTkMessagebox_Dark.png)
-![sCTkMessagebox_Light.png](images/sCTkMessagebox_Light.png)
+	![sCTkMessagebox_Dark.png](images/sCTkMessagebox_Dark.png)&emsp; &emsp; &emsp; &emsp;
+	![sCTkMessagebox_Light.png](images/sCTkMessagebox_Light.png)
 
 
 ### API Constructor Reference
@@ -132,16 +134,23 @@ if sCTkMessagebox.askerroryesno("Cascade Failure", "Buffer buffer overflow hit. 
 
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
 
-The component relies heavily on your centralized style dictionary system. To prevent the mixin parser tracking structures from raising runtime validation faults, verify your shared stylesheet contains this asset entry:
-
 ```json
 {
     "sCTkMessagebox": {
+        "fg_color": ["#F1F5F9", "#1C1C1C"],
         "font": ["Arial", 14],
         "text_color": ["#1A1A1A", "#E5E5E5"]
     }
 }
 ```
+
+**Every key above is required.** Construction raises `KeyError` naming the missing one, rather than substituting a plausible default that would make an incomplete block look merely slightly-off.
+
+`font` and `text_color` style the message label. `fg_color` is the dialog window background, and is **new** — this widget previously forwarded its raw constructor keywords to native `CTkToplevel` rather than the resolved theme keywords, so the theme block never reached the window at all and the dialog rendered in CustomTkinter's own default background. `ThemeableWidget`'s resolution work was discarded for everything except the two label keys read back manually.
+
+**Keyword filtering.** Theme keywords are now filtered against a whitelist before the native constructor sees them, because `CTkToplevel` names only `fg_color` explicitly and passes everything else through to `tkinter.Toplevel`, which raises `TclError` on any option it doesn't recognise. This closes a latent crash as well: a caller passing `font=` to this widget would previously have had it forwarded straight through.
+
+**There is no `disabled_map` and no `state()`.** This is a modal dialog — it grabs input on construction and destroys itself on dismissal, so there is no interval in which a disabled appearance would mean anything.
 
 ---
 
@@ -153,6 +162,19 @@ Observe these implementation traits:
 * **Horizontal Capsule Brackets**: When `buttons="yes_no"` is active, Column 0 and Column 1 utilize an interlocking `uniform="dialog_buttons"` constraint map. This completely locks both buttons to an identical layout grid pixel width, regardless of text length mismatches.
 * **Vertical Safety Gutter**: Text layout nodes use `padx=(10, 35)` paired alongside a calculated character width subtraction map. This forces word bounds to drop downwards well before interacting with the physical window frame margin boundary.
 * **Autonomous Resizing**: The `_center_window` geometry calculations lock your custom manual `width` pixel profile constraint, but query the active required widget layout height parameters dynamically via `winfo_reqheight()`. This allows window frames to expand or shrink vertically based on your text content volume requirements automatically.
+
+---
+
+<a name="configuration"></a>
+### Configuration
+
+`configure()` and `config()` behave as they do elsewhere in the library: keyword arguments are applied normally, a single positional dict is merged into them, and any other single positional value is forwarded to the native widget.
+
+Three separate defects were fixed here, all silent:
+
+- **`super().configure(args)` passed the whole tuple** as one positional argument instead of unwrapping it, so every single-argument call forwarded a malformed value.
+- **`if args and isinstance(args, dict)`** — `args` is always a tuple, so that branch could never fire and the dict form of `configure()` was dead code.
+- **No `config = configure` alias existed,** so `.config(...)` bypassed the override entirely and landed on the native widget. Tkinter binds `.config` as a separate class attribute; it does not track a subclass's override.
 
 ---
 

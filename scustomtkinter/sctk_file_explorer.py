@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 """
-sCTkFileExplorer - Piece 1 of 3
+sCTkFileExplorer
 
 A theme-compliant, highly configurable custom file explorer wrapper component.
 Inherits cleanly and directly from ctk.CTkFrame to preserve native features.
+
+Derived from FileExplorer class by Fastattack, 2024.
+https://github.com/fastattackv/MoreCustomTkinterWidgets
 """
 import os
-import sys
-import platform
 import time
 import ast
 import tkinter as tk
@@ -15,6 +16,7 @@ import tkinter.ttk as ttk
 
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
+from .sctk_scroll_mixin import ScrollBindingMixin
 
 from typing import Literal, Optional, Union, Tuple
 
@@ -23,8 +25,10 @@ from .sctk_button_secondary import sCTkButtonSecondary
 from .sctk_label_secondary import sCTkLabelSecondary
 from .sctk_entry_primary import sCTkEntryPrimary
 
-class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
-    _MANAGED_PROPERTIES = frozenset({"initialdir", "initialfile", "type", "title", "filetypes", "defaultextension"})
+class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
+    # NOTE: an earlier version declared a _MANAGED_PROPERTIES frozenset here,
+    # never referenced anywhere else in this file -- dead code, removed. Same
+    # vestigial pattern found and removed elsewhere in this project.
 
     def __init__(self,
                  master: any,
@@ -145,30 +149,76 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
 
         self.canvas.create_window((0, 0), window=self.explorer_frame, anchor="nw", tags="inner_window")
 
+        # Scroll state and activation, owned by ScrollBindingMixin.
+        # _init_scroll_state() must run before any binding happens.
+        #
+        # FIX: this was previously deferred with self.after(10, ...) -- an
+        # arbitrary delay chosen to let the widget hierarchy settle. The mixin
+        # activates via after_idle() instead, which fires when Tk is actually
+        # idle rather than after a guessed interval, plus <Map> on this widget
+        # and a debounced <Configure> rebind. The delay is retained below only
+        # for the NON-scroll wiring _finalize_split_bindings() also does.
+        self._init_scroll_state()
+        self._install_scroll_activation(content_widget=self.explorer_frame)
+
         self.after(10, self._finalize_split_bindings)
         self._process_live_theme_repaint()
 
         # 🔑 REGISTER LIFECYCLE HANDSHAKE HOOK: Maps registration signals back up to Pygubu windows cleanly
         self._finalize_themeable_lifecycle()
 
+    def _resolve_canvas_bg_color(self):
+        """
+        Determines what color to give the internal raw Canvas's background,
+        since a raw Tkinter Canvas cannot render CTk's "transparent"
+        pseudo-value at all.
+
+        FIX: an earlier version reached into ctk.ThemeManager.theme["CTkFrame"]
+        -- CustomTkinter's own native theme registry -- as an intermediate
+        fallback before reaching the hardcoded literal below. Every other
+        widget in this project exclusively uses sCTkThemes.json or a
+        documented literal; this was the only place reaching into native
+        CTk's own theme as an additional fallback layer. Removed -- goes
+        directly to the documented hardcoded pair instead, matching the same
+        precedent already established in sCTkFrameLabeledPrimary's
+        _hide_internal_scrollbars(): this isn't a "theme is incomplete"
+        situation (this widget's own fg_color being "transparent" is a
+        legitimate, common choice), it's "a raw canvas needs an actual
+        renderable color, and transparent isn't one" -- a different problem
+        with a different, accepted solution.
+        """
+        canvas_bg_raw = self.cget("fg_color")
+        if canvas_bg_raw == "transparent" or canvas_bg_raw is None:
+            return "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
+        resolved_hex = self._resolve_color(canvas_bg_raw)
+        if resolved_hex == "transparent":
+            return "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
+        return resolved_hex
+
     def _set_appearance_mode(self, mode_string):
-        """🔑 TRANSPARENCY CRASH PROTECTED CORE FIXED: Intercepts look sweeps and forces valid hex strings."""
+        """Intercepts appearance-mode changes and forces a valid hex string
+        onto the internal raw Canvas, which cannot render CTk's "transparent"."""
         super()._set_appearance_mode(mode_string)
         if hasattr(self, "canvas") and self.canvas.winfo_exists():
-            canvas_bg_raw = self.cget("fg_color")
-            if canvas_bg_raw == "transparent" or canvas_bg_raw is None:
-                canvas_bg_raw = ctk.ThemeManager.theme["CTkFrame"]["fg_color"]
-
-            resolved_hex = self._resolve_color(canvas_bg_raw)
-            if resolved_hex == "transparent":
-                resolved_hex = "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
-
-            self.canvas.configure(bg=resolved_hex)
+            self.canvas.configure(bg=self._resolve_canvas_bg_color())
             if hasattr(self, "path_to_show"): self._fill_explorer()
 
     def _process_live_theme_repaint(self):
         theme, d_map = self._local_defaults, self._custom_disabled_map
         current_state = getattr(self, "_state", "normal")
+
+        # FIX: an earlier version used hardcoded fallback literals for
+        # button_color (the scrollbar's color) -- and, in the enabled branch,
+        # reached into ctk.ThemeManager.theme["CTkScrollbar"] (native CTk's
+        # own theme registry) as an additional fallback layer, the only place
+        # in this project besides the canvas-background case above doing
+        # that. Both replaced with hard-fail validation, matching the
+        # principle established for sCTkSwitch, the label family, and
+        # sCTkTableview elsewhere in this project.
+        if theme.get("button_color") is None:
+            raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'button_color' at the top level.")
+        if d_map.get("button_color") is None:
+            raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'button_color' in disabled_map.")
 
         if current_state == "disabled":
             btn_fg = d_map.get("btn_fg", theme.get("btn_fg"))
@@ -177,23 +227,16 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             btn_hover, entry_fg = btn_fg, d_map.get("entry_fg", theme.get("entry_fg"))
             entry_border = d_map.get("entry_border_color", theme.get("entry_border_color"))
             entry_text = d_map.get("entry_text_color", theme.get("entry_text_color"))
-            sb_btn_color, sb_command = d_map.get("button_color", ("#CBD5E1", "#334155")), None
+            sb_btn_color, sb_command = d_map.get("button_color"), None
         else:
             btn_fg, btn_border = theme.get("btn_fg"), theme.get("btn_border_color")
             btn_text, btn_hover = theme.get("btn_text_color"), theme.get("btn_hover")
             entry_fg, entry_border = theme.get("entry_fg"), theme.get("entry_border_color")
             entry_text = theme.get("entry_text_color")
-            sb_btn_color = theme.get("button_color", ctk.ThemeManager.theme["CTkScrollbar"]["button_color"])
+            sb_btn_color = theme.get("button_color")
             sb_command = self.canvas.yview
 
-        canvas_bg_raw = self.cget("fg_color")
-        if canvas_bg_raw == "transparent" or canvas_bg_raw is None:
-            canvas_bg_raw = ctk.ThemeManager.theme["CTkFrame"]["fg_color"]
-
-        resolved_hex = self._resolve_color(canvas_bg_raw)
-        if resolved_hex == "transparent":
-            resolved_hex = "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
-        self.canvas.configure(bg=resolved_hex)
+        self.canvas.configure(bg=self._resolve_canvas_bg_color())
 
         if hasattr(self, "back_button") and self.back_button.winfo_exists():
             self.back_button.configure(state=current_state, font=theme.get("btn_font"),
@@ -211,7 +254,35 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         if hasattr(self, "path_to_show"): self._fill_explorer()
 
     def _configure_frame(self, event=None):
-        self.after(10, lambda: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        self.after(10, self._update_scrollregion)
+
+    def _update_scrollregion(self):
+        """
+        Sets the canvas scroll region to the content bounds, expanded to at
+        least the visible canvas height.
+
+        FIX: this previously set scrollregion straight from bbox("all"). When
+        the files don't fill the frame that region is SHORTER than the visible
+        canvas, and Tk will still scroll within it -- so dragging the
+        scrollbar pushed the rows down to the bottom of the frame with empty
+        space above them, instead of doing nothing. Growing the region to the
+        canvas height when content is shorter leaves yview with nowhere to go,
+        which is the intended "content fits, so scrolling does nothing"
+        behavior.
+        """
+        try:
+            if not self.canvas.winfo_exists():
+                return
+            bounds = self.canvas.bbox("all")
+            if not bounds:
+                return
+            x0, y0, x1, y1 = bounds
+            visible_height = self.canvas.winfo_height()
+            if (y1 - y0) < visible_height:
+                y1 = y0 + visible_height
+            self.canvas.configure(scrollregion=(x0, y0, x1, y1))
+        except Exception:
+            pass
 
     def _user_path_changed(self, *args):
         if not self.change_path: return
@@ -230,10 +301,6 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         for widget in self.explorer_frame.winfo_children(): widget.destroy()
         self.item_labels.clear()
 
-    def _mousewheel(self, event):
-        d = int(-1 * event.delta) if platform.system() == "Darwin" else int(-1 * (event.delta / 120))
-        self.canvas.yview_scroll(d, "units")
-
     def _move_back(self):
         p = os.path.dirname(self.path_to_show.get())
         if p != self.path_to_show.get():
@@ -243,6 +310,94 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             self.change_path = True
             self._fill_explorer()
 
+    # ------------------------------------------------------------------
+    # ScrollBindingMixin contract
+    # ------------------------------------------------------------------
+    def _scroll_target(self):
+        """
+        The widget to scroll. Unlike sCTkScrollableFrame -- which is wrapped
+        by a native CTkScrollableFrame owning the canvas, and so has to look
+        it up via winfo_parent() -- this widget builds its own canvas
+        explicitly, so no lookup is needed.
+
+        Returns:
+            self.canvas, or None if it doesn't exist yet.
+        """
+        canvas = getattr(self, "canvas", None)
+        try:
+            if canvas is not None and canvas.winfo_exists():
+                return canvas
+        except Exception:
+            pass
+        return None
+
+    def _scroll_layers(self):
+        """
+        Every widget that should respond to a scroll event over this explorer:
+        the widget itself, its canvas, the scrollbar, and the full row tree.
+
+        FIX: an earlier version walked only ONE level into explorer_frame
+        (`for child in self.explorer_frame.winfo_children()`), so anything
+        nested inside a row -- its label, its icon -- was never bound, and
+        the wheel did nothing while the pointer was over those. The mixin's
+        collector recurses to full depth, stopping only at nested
+        CTkScrollableFrame boundaries.
+
+        Returns:
+            An ordered, deduplicated list of widgets.
+        """
+        layers = [self]
+
+        canvas = self._scroll_target()
+        if canvas is not None:
+            layers.append(canvas)
+
+        # The scrollbar is a sibling of the canvas inside main_container, not
+        # a descendant of explorer_frame, so the content walk below would
+        # never reach it -- without this the wheel does nothing while the
+        # pointer is over the scrollbar itself.
+        bar = getattr(self, "y_scrollbar", None)
+        if bar is not None:
+            self._collect_scroll_descendants(bar, layers)
+
+        frame = getattr(self, "explorer_frame", None)
+        if frame is not None:
+            try:
+                if frame.winfo_exists():
+                    self._collect_scroll_descendants(frame, layers)
+            except Exception:
+                pass
+
+        return layers
+
+    def _scroll_permitted(self) -> bool:
+        """
+        Whether this explorer should currently respond to scroll input.
+
+        Tied to the widget's state, so a disabled explorer is genuinely
+        inert -- wheel, trackpad, and scrollbar dragging all stop -- rather
+        than merely looking dimmed while still scrolling. Consistent with
+        sCTkScrollableFrame, where disabling does the same.
+
+        The mixin consults this before every bind, so state changes take
+        effect through the existing configure(state=...) path with no extra
+        wiring. See ScrollBindingMixin._toggle_scroll_bindings() for how
+        blocking is implemented.
+
+        Returns:
+            True only while state is "normal".
+        """
+        return str(getattr(self, "_state", "normal")).lower() == "normal"
+
+    def _scroll_drag_targets(self):
+        """
+        The internal scrollbar, whose click-and-drag is blocked while this
+        widget is disabled -- otherwise a disabled explorer could still be
+        scrolled by grabbing the bar, contradicting its own reported state.
+        """
+        bar = getattr(self, "y_scrollbar", None)
+        return [bar] if bar is not None else []
+
     def _finalize_split_bindings(self):
         if hasattr(self, "back_button"): self.back_button.configure(command=self._move_back)
         if hasattr(self, "path_entry"): self.path_entry.bind("<Return>", lambda e: self._on_entry_return())
@@ -250,12 +405,16 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         if hasattr(self, "explorer_frame"): self.explorer_frame.bind("<Configure>", self._configure_frame)
         if hasattr(self, "canvas"):
             self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfig("inner_window", width=e.width))
-            self.canvas.bind_all("<MouseWheel>", self._mousewheel)
+            self._activate_scroll_bindings()
             self.bind("<Visibility>", lambda e: self._process_live_theme_repaint())
         self._fill_explorer()
     def configure(self, *args, **kwargs):
         if args and len(args) == 1:
-            pname = args
+            # FIX: was `pname = args`, leaving pname as a TUPLE -- every
+            # comparison below failed, so all six single-argument queries
+            # were dead and fell through to super(). Pygubu could not read
+            # any of them.
+            pname = args[0]
             if pname == "state": return ("state", "state", "state", "normal", getattr(self, "_state", "normal"))
             if pname == "type": return ("type", "type", "type", "directory", self.response_type)
             if pname == "initialdir": return ("initialdir", "initialdir", "initialdir", "", self.path_to_show.get())
@@ -264,10 +423,17 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             if pname == "double_click_command": return ("double_click_command", "double_click_command", "double_click_command", "", str(self.double_click_command))
             return super().configure(*args, **kwargs)
 
-        if args and isinstance(args, dict): kwargs = args | kwargs
+        # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
+        # tuple, so this never fired and the dict-merge form of configure()
+        # was dead. Same tautology fixed across the batch-one widgets.
+        if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
         if "state" in kwargs:
             self._state = str(kwargs.pop("state")).lower()
             if self._state not in ("normal", "disabled"): self._state = "normal"
+            # Scroll handling is tied to state via _scroll_permitted(), so
+            # rebuild the bindings. state() does the same; both entry points
+            # have to, since neither delegates to the other.
+            self._activate_scroll_bindings()
         if "type" in kwargs:
             self.response_type = str(kwargs.pop("type")).lower()
             if self.response_type not in ("file", "directory"): self.response_type = "directory"
@@ -326,6 +492,10 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         if mode in ("normal", "enabled", "active"): self._state = "normal"
         elif mode == "disabled": self._state = "disabled"
         self._process_live_theme_repaint()
+        # Scroll handling is tied to state via _scroll_permitted(), so the
+        # bindings have to be rebuilt here -- without this the change wouldn't
+        # take effect until the next content rebind happened to fire.
+        self._activate_scroll_bindings()
         return self._state
 
     def set_mode(self, type_str: Literal["file", "directory"]):
@@ -375,10 +545,12 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
 
         if self.filetypes and self.response_type != "file":
             sCTkLabelSecondary(self.explorer_frame, text="⚠️ UI Mismatch: Cannot filter extension when mode is 'directory'.", text_color="red").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+            self._activate_scroll_bindings()
             return
         try: items = sorted(os.listdir(current_dir))
         except Exception:
             sCTkLabelSecondary(self.explorer_frame, text="⚠️ Directory unreadable or permission denied", text_color="red").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+            self._activate_scroll_bindings()
             return
 
         row_idx = 0
@@ -399,13 +571,26 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
             icon = self.folder_icon if is_dir else self.file_icon
             is_currently_highlighted = (full_path == current_selected)
 
+            # FIX: an earlier version used the hardcoded literal "gray50" for
+            # row_dimmed_text (in both branches below), and reached into
+            # ctk.ThemeManager.theme["CTkLabel"] (native CTk's own theme
+            # registry) as a fallback for row_active_text. Both replaced with
+            # hard-fail validation on first use, matching the principle
+            # established for sCTkSwitch, the label family, and
+            # sCTkTableview elsewhere in this project.
             if current_state == "disabled":
-                txt_color, row_widget_state, btn_bg = self._resolve_color(d_map.get("row_dimmed_text", "gray50")), "disabled", "transparent"
+                if d_map.get("row_dimmed_text") is None:
+                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_dimmed_text' in disabled_map.")
+                txt_color, row_widget_state, btn_bg = self._resolve_color(d_map.get("row_dimmed_text")), "disabled", "transparent"
             elif is_valid_row:
-                txt_color, row_widget_state = self._resolve_color(theme.get("row_active_text", ctk.ThemeManager.theme["CTkLabel"]["text_color"])), "normal"
+                if theme.get("row_active_text") is None:
+                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_active_text' at the top level.")
+                txt_color, row_widget_state = self._resolve_color(theme.get("row_active_text")), "normal"
                 btn_bg = self._resolve_color(theme.get("btn_fg")) if is_currently_highlighted else "transparent"
             else:
-                txt_color, row_widget_state, btn_bg = self._resolve_color(theme.get("row_dimmed_text", "gray50")), "disabled", "transparent"
+                if theme.get("row_dimmed_text") is None:
+                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_dimmed_text' at the top level.")
+                txt_color, row_widget_state, btn_bg = self._resolve_color(theme.get("row_dimmed_text")), "disabled", "transparent"
 
             item_btn = sCTkButtonSecondary(self.explorer_frame, text=f"{icon}{item}", anchor="w", fg_color=btn_bg, text_color=txt_color, state=row_widget_state, hover_color=self._resolve_color(theme.get("btn_hover")), command=lambda p=full_path: self._on_item_clicked(p))
             item_btn.grid(row=row_idx, column=0, sticky="ew", padx=2, pady=1)
@@ -415,6 +600,11 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
                 self.item_labels[full_path] = item_btn
             row_idx += 1
         self.canvas.yview_moveto(0)
+        # FIX: navigating to a new folder replaces every row widget in
+        # explorer_frame -- re-bind scroll events so the newly-created rows
+        # get their own handlers too, not just whatever existed at the last
+        # binding pass. See _toggle_scroll_bindings()'s docstring.
+        self._activate_scroll_bindings()
 
     def _on_item_clicked(self, target_path):
         now = time.time()
@@ -429,7 +619,15 @@ class sCTkFileExplorer(ctk.CTkFrame, ThemeableWidget):
         for path, btn in self.item_labels.items():
             if path == target_path: btn.configure(fg_color=self._resolve_color(self._local_defaults.get("btn_fg")))
             else: btn.configure(fg_color="transparent")
-        if self.command and callable(self.command): self.command(self)
+        # FIX: an earlier version called self.command(self) here, passing this
+        # FileExplorer widget instance instead of the clicked path. sCTkPathChooser's
+        # command=lambda p: self.set(p) expects p to be a path string -- with the
+        # old code, a single click would call self.set(<widget instance>), which
+        # would then try to treat str(widget) as a filesystem path. Confirmed by
+        # the maintainer: command should receive the path, matching what every
+        # caller of this widget actually expects. double_click_command is
+        # unaffected -- it already correctly passes (self, target_path).
+        if self.command and callable(self.command): self.command(target_path)
 
     def _on_item_double_clicked(self, target_path):
         target_path = os.path.normpath(target_path)

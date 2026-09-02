@@ -1,6 +1,7 @@
 # Introduction
 
-This reference manual is split into the following sections:
+The next two sections provide information on Theming and Scrolling. Both important concepts to understand to best use this library.
+The rest of the manual is reference in nature and split into the following sections:
 * Containers
 * Controls and Display
 * Menus
@@ -12,6 +13,8 @@ Check out the Notes section near the end, it might save you a lot of time by avo
 
 # Contents
 
+* [Theming](#theming)
+* [Scrolling](#scrolling)
 * [Containers](#containers)
   * [sCTk](#sctk)
   * [sCTkToplevel](#sctktoplevel)
@@ -20,6 +23,7 @@ Check out the Notes section near the end, it might save you a lot of time by avo
 * [Controls and Display](#controls-and-display)
   * [sCTkButtonPrimary](#sctkbuttonprimary)
   * [sCTkButtonSecondary](#sctkbuttonsecondary)
+  * [Known Limitations](#known-limitations)
   * [sCTkButtonTertiary](#sctkbuttontertiary)
   * [sCTkCheckBox](#sctkcheckbox)
   * [sCTkEntryPrimary](#sctkentryprimary)
@@ -47,20 +51,354 @@ Check out the Notes section near the end, it might save you a lot of time by avo
   * [sCTkDialSelector](#sctkdialselector)
   * [sCTkFileExplorer](#sctkfileexplorer)
   * [sCTkFrameLabeledPrimary](#sctkframelabeledprimary)
-  * [sCTkLabelSecondary](#sctklabelsecondary)
-  * [sCTkFrameOutlined](#sctkframeoutlined)
+  * [sCTkFrameLabeledSecondary](#sctkframelabeledsecondary)
   * [sCTkMessagebox](#sctkmessagebox)
   * [sCTkPathChooser](#sctkpathchooser)
   * [sCTkScrollArea](#sctkscrollarea)
+  * [ScrollBindingMixin](#scrollbindingmixin)
   * [sCTkSelector](#sctkselector)
   * [sCTkSeparator](#sctkseparator)
   * [sCTkSMeter](#sctksmeter)
   * [sCTkSMeterBar](#sctksmeterbar)
   * [sCTkSpinbox](#sctkspinbox)
-  * [sCTkSwitchAlt](#sctkswitchalt)
   * [sCTkTableview](#sctktableview)
 
 ---
+
+# Theming
+
+Every colour, font, and several structural values in this library come from a single file: `sCTkThemes.json`. No widget hardcodes a colour. If you don't like the palette — and you may not, the author is somewhat red/brown colour blind — you change one file and the whole application follows.
+
+* [Where the file lives](#where-the-file-lives)
+* [Block structure](#block-structure)
+* [State maps](#state-maps)
+* [Light and dark](#light-and-dark)
+* [Changing values at runtime](#changing-values-at-runtime)
+* [Things that will break your theme](#things-that-will-break-your-theme)
+* [Adding a theme block for your own widget](#adding-a-theme-block-for-your-own-widget)
+
+---
+
+<a name="where-the-file-lives"></a>
+### Where the file lives
+
+Two locations are checked, in this order:
+
+1. **`sCTkThemes.json` in your application's working directory** — your override.
+2. **`scustomtkinter/assets/sCTkThemes.json`** — the one shipped with the library.
+
+The first one found wins, completely. There is **no merging**: if a local file exists, the bundled one is not consulted at all, for any widget.
+
+That matters more than it sounds. Copy the bundled file, delete the blocks you don't care about, and every widget whose block you removed will fail to construct — not fall back to the library defaults. **Copy the whole file and edit in place.**
+
+```bash
+cp .../scustomtkinter/assets/sCTkThemes.json ./sCTkThemes.json
+```
+
+The file is read once, at import time. Changes require a restart.
+
+---
+
+<a name="block-structure"></a>
+### Block structure
+
+One block per widget class, keyed by the exact class name:
+
+```json
+{
+    "sCTkButtonPrimary": {
+        "fg_color": ["#1A4375", "#1F6AA5"],
+        "text_color": ["#FFFFFF", "#FFFFFF"],
+        "font": ["Arial", 13, "bold"],
+        "disabled_map": {
+            "fg_color": ["#CBD5E1", "#334155"],
+            "text_color": ["#94A3B8", "#64748B"]
+        }
+    }
+}
+```
+
+The class name is the lookup key and it is **case-sensitive and exact**. A block named `sCTkButton` does nothing for a widget class named `sCTkButtonPrimary`. There is no inheritance between blocks — `sCTkDialSelector` does not inherit from a `sCTkDial` block, and each of the three dial variants carries its own full set of keys even where the values are identical.
+
+Two kinds of key appear in a block:
+
+- **Native CustomTkinter options** — `fg_color`, `corner_radius`, `border_width` and so on. These are passed through to the underlying widget.
+- **Keys specific to this library** — `dial_color`, `led_on_color`, `scale_font`, `btn_hover`. These are read by the widget's own drawing code and never reach CustomTkinter.
+
+You mostly don't need to know which is which. It matters in one place: see [adding a block for your own widget](#adding-a-theme-block-for-your-own-widget).
+
+---
+
+<a name="state-maps"></a>
+### State maps
+
+Nested inside a block, a state map overrides specific keys when the widget is in that state. Anything not listed keeps its normal value.
+
+| Map | Applies when |
+|---|---|
+| `disabled_map` | The widget is disabled via `state("disabled")` or `configure(state="disabled")`. |
+| `pressed_map` | A button is being held down. |
+| `alarm_map` | A widget is in an alert condition. |
+| `readonly_map` | An entry or spinbox is readonly — arrows still work, typing is blocked. |
+
+Most widgets use only `disabled_map`. The button family uses `pressed_map` and `alarm_map`; `sCTkEntryPrimary`/`Secondary` and `sCTkSpinbox` use `readonly_map` to support a genuine three-state model rather than collapsing everything non-disabled into "normal".
+
+**A state map is not a full block.** Only list the keys that actually change. Widgets deliberately leave `fg_color` out of `disabled_map` in most cases — the background stays put and the border, text, or face carries the signal.
+
+Some keys exist *only* inside a state map, because they have no normal-state equivalent. `sCTkSegmentedButton`'s `selected_text_color` is one: a selected segment's normal text colour comes from `text_color`, and the separate key exists so the selection is still identifiable when the control is greyed out.
+
+---
+
+<a name="light-and-dark"></a>
+### Light and dark
+
+Colours are written as a two-element list: **`[light_mode, dark_mode]`**.
+
+```json
+"text_color": ["#1A4375", "#FF9100"]
+```
+
+Widgets pass these through as pairs rather than resolving them up front, so CustomTkinter's own appearance-mode tracking repaints them when the user switches. You don't need to do anything.
+
+A single string is also accepted, and means the same colour in both modes. The literal `"transparent"` is a CustomTkinter pseudo-value meaning "show whatever is behind me". Note that `"transparent"` **cannot** be used for anything drawn on a raw `tkinter.Canvas` — that includes the dials, the S-meters, and `sCTkScrollArea`'s background, which need a real renderable colour.
+
+Fonts are `[family, size]` or `[family, size, weight]`.
+
+---
+
+<a name="changing-values-at-runtime"></a>
+### Changing values at runtime
+
+`configure()` accepts theme keys directly, and the override **sticks**:
+
+```python
+frame.configure(fg_color="red")
+```
+
+Two consequences worth understanding:
+
+**A single colour replaces the light/dark pair.** Passing one value for a key means that property stops following appearance mode — which is what asking for one specific colour means. Pass a two-element tuple if you want it to keep tracking:
+
+```python
+frame.configure(fg_color=("#FFFFFF", "#111827"))
+```
+
+**State maps still win in their state.** Overriding `border_color` sets the *normal*-state colour. If the widget is disabled, or later becomes disabled, `disabled_map` supplies the border colour as usual. To change what a disabled widget looks like, change the theme file.
+
+---
+
+<a name="things-that-will-break-your-theme"></a>
+### Things that will break your theme
+
+This section is the important one. JSON is unforgiving and the failure modes are not always obvious.
+
+#### Syntax errors take out the entire file
+
+A missing comma, a stray trailing comma before a `}`, an unclosed brace, or a smart quote pasted in from a document — any one of these makes the whole file unparseable. The library catches the error, prints a warning, and **continues with an empty theme registry**. Every widget then fails to construct.
+
+The warning looks like this:
+
+```
+sCustomTkinter System Warning -> Could not parse theme layout tracking: ...
+```
+
+If you see that line, the problem is a syntax error in your file, not in any widget. Validate before running:
+
+```bash
+python -m json.tool sCTkThemes.json > /dev/null
+```
+
+Silence means it parsed. Any editor with JSON support will also flag these as you type — worth using one.
+
+#### Deleting a key is not the same as leaving it at default
+
+There is no "default" to fall back to. Widgets validate their required keys at construction and raise immediately:
+
+```
+KeyError: "'sCTkTabview' theme block is missing 'text_color' at the top level of sCTkThemes.json."
+```
+
+That message names the exact key and whether it belongs at the top level or in a state map. This is deliberate. An earlier design substituted a plausible hardcoded colour when a key was missing, and the result was worse than a crash: five separate widgets shipped for a long time rendering in hardcoded colours while their configured theme values were silently ignored, and nobody noticed because the substituted colours *looked* fine. A loud failure that names the key is far better than a widget that quietly ignores you.
+
+If you genuinely don't want a widget's block, don't delete it — you'll break that widget. Change its values instead.
+
+#### Misspelling a key is worse than deleting it
+
+A misspelled key is not an error. It's an unrecognised key that gets ignored, while the *correct* key is now missing:
+
+```json
+"text_colour": ["#1A4375", "#FF9100"]
+```
+
+That produces a `KeyError` about `text_color` being missing — which is confusing until you spot that your line is right there, spelled British. Check the spelling in this library's own documentation for the widget; it uses American spellings throughout, following CustomTkinter.
+
+A misspelling inside a state map is quieter still: state maps aren't validated as strictly, so a typo there usually means "that property just doesn't change when disabled," with no error at all.
+
+#### Renaming a block orphans it
+
+Rename `sCTkSlider` to `sCTkSliders` and the block becomes dead data while every slider fails to construct. Block names must match class names exactly.
+
+The reverse also happens: a block for a widget that no longer exists, or was renamed, sits in the file doing nothing. Harmless, but it accumulates.
+
+#### Adding a key that isn't read does nothing
+
+Adding `"hover_glow_color"` to a block will not make anything glow. Widgets read a fixed set of keys; extra ones are ignored silently. If you want a new visual property, the widget's drawing code has to read it.
+
+---
+
+<a name="adding-a-theme-block-for-your-own-widget"></a>
+### Adding a theme block for your own widget
+
+If you subclass `ThemeableWidget`, your block is found automatically by class name. Three things to know:
+
+**Custom keys must not reach the native constructor.** CustomTkinter widgets reject keyword arguments they don't recognise — `CTkToplevel` in particular raises on *any* unknown key. Filter your resolved keywords down to what the native class actually accepts before calling `super().__init__()`. Every widget in this library that adds custom keys does this; copy the pattern from one close to yours.
+
+**Some custom keys are stripped for you.** `ThemeableWidget` maintains an internal list of names it removes from the resolved keywords for canvas-drawing widgets — `dial_color`, `text_color`, `pointer_color` and others. If your widget uses one of those names, it will not be in `final_kw`, and you must read it from the raw theme registry instead. This is not obvious and has caused real bugs: an entire widget family rendered in fallback colours for its whole existence because it looked for those keys in the wrong place. If a colour you configured isn't appearing, this is the first thing to check.
+
+**Validate your required keys at construction.** Follow the pattern used throughout:
+
+```python
+_REQUIRED_THEME_KEYS = ("fg_color", "text_color")
+_REQUIRED_DISABLED_KEYS = ("text_color",)
+```
+
+and raise `KeyError` naming the missing key. It costs a dozen lines and turns a class of silent visual bug into an immediate, self-explaining failure.
+
+
+
+# Scrolling
+
+Scrolling in this library is handled in one place. Whichever widget you use, the wheel and trackpad behaviour comes from a single shared implementation — `ScrollBindingMixin` — so it feels the same everywhere and a fix applies everywhere.
+
+* [Which widget to use](#which-widget-to-use)
+* [How scroll input is handled](#how-scroll-input-is-handled)
+* [Tuning scroll speed](#tuning-scroll-speed)
+* [Disabling scrolling](#disabling-scrolling)
+* [Nested scrolling regions](#nested-scrolling-regions)
+
+---
+
+<a name="which-widget-to-use"></a>
+### Which widget to use
+
+| Widget | Use when |
+|---|---|
+| [`sCTkScrollableFrame`](sCTkScrollableFrame.md) | You want a scrolling container and don't care where the scrollbar lives. This is the default choice. |
+| [`sCTkScrollArea`](sCTkScrollArea.md) + [`sCTkScrollbar`](sCTkScrollbar.md) | You need the scrollbar somewhere the built-in one can't go, or you want to control child event binding explicitly. |
+| [`sCTkFileExplorer`](sCTkFileExplorer.md), [`sCTkTableview`](sCTkTableview.md), [`sCTkSelector`](sCTkSelector.md) | These scroll internally. You don't wire anything up. |
+
+`sCTkScrollableFrame` builds and manages its own scrollbar. `sCTkScrollArea` deliberately doesn't — you create an `sCTkScrollbar` separately and connect the two with `hook_scrollbar()`. That's the whole reason the pair exists: it lets the bar sit outside the scrolling region, share space with other widgets, or be styled independently.
+
+```python
+scroll_view = sCTkScrollArea(container)
+scroll_view.pack(side="left", fill="both", expand=True)
+
+scrollbar = sCTkScrollbar(container, orientation="vertical")
+scrollbar.pack(side="right", fill="y")
+
+scroll_view.hook_scrollbar(scrollbar)
+
+# Content goes into scroll_content, not into the area itself.
+for row in data:
+    sCTkLabelSecondary(scroll_view.scroll_content, text=row).pack(anchor="w")
+```
+
+Content added to `scroll_content` is bound for scrolling automatically, including anything added later. You do not need to call `propagate_scroll_events()` on each item — that method now exists only for widgets placed *outside* the content tree.
+
+---
+
+<a name="how-scroll-input-is-handled"></a>
+### How scroll input is handled
+
+Three platforms behave differently, and all three are handled:
+
+| Platform | Mechanism |
+|---|---|
+| Windows | `<MouseWheel>` with a delta scaled in units of 120 |
+| Linux | Discrete `<Button-4>` / `<Button-5>` events — there is no continuous delta |
+| macOS | Its own `<MouseWheel>` scaling, **plus** a separate higher-precision `<TouchpadScroll>` event |
+
+macOS trackpads deliver far more events, with far finer values, than a wheel does. Acting on each one is unusably fast, so trackpad deltas accumulate and move the view only once a threshold is crossed. The accumulator resets when you reverse direction, so a change of direction responds immediately rather than having to cancel out what built up going the other way.
+
+Bindings activate on their own and maintain themselves. You never call an activation method, and content added after a widget is placed — the normal case, since you construct, place, then populate — is picked up automatically.
+
+Full detail, including why this takes four separate mechanisms, is on the [`ScrollBindingMixin`](ScrollBindingMixin.md) page.
+
+---
+
+<a name="tuning-scroll-speed"></a>
+### Tuning scroll speed
+
+Three constants control the feel. They live on `ScrollBindingMixin` as class attributes, so they can be changed globally, per widget class, or per instance.
+
+| Constant | Default | Effect |
+|---|---|---|
+| `MAC_SCROLL_SENSITIVITY` | `3` | Amplification for macOS wheel deltas, which are much smaller than Windows' steps. |
+| `MAC_SCROLL_MAX_STEP` | `5` | Ceiling on rows travelled per macOS wheel event. |
+| `TOUCHPAD_ACCUMULATION_THRESHOLD` | `12.0` | Accumulated trackpad movement required before the view moves. |
+
+**`MAC_SCROLL_MAX_STEP` is the one you're most likely to want to change.** macOS reports wildly different delta magnitudes depending on hardware: an Apple Magic Mouse sends fine values near 1, while a conventional wheel mouse sends a large value per detent — around 38 in testing. Without a ceiling, the amplification turns one wheel click into 114 rows of travel, which throws a hundred-row list end to end. The clamp lets small deltas scale normally and saturates large ones.
+
+Set it to `3` for the conventional three-rows-per-notch that matches macOS defaults and most applications. Values below `3` also slow the Magic Mouse, since its fine deltas already scale to 3 before the clamp applies.
+
+To change it everywhere, set it once at startup:
+
+```python
+from scustomtkinter.sctk_scroll_mixin import ScrollBindingMixin
+ScrollBindingMixin.MAC_SCROLL_MAX_STEP = 3
+```
+
+Or per instance, if one widget wants a different feel:
+
+```python
+log_view = sCTkScrollableFrame(root)
+log_view.MAC_SCROLL_MAX_STEP = 8
+```
+
+**These values are tuned on macOS.** If you're shipping to Windows or Linux and the feel is wrong, these are the knobs.
+
+---
+
+<a name="disabling-scrolling"></a>
+### Disabling scrolling
+
+`sCTkScrollableFrame` and `sCTkFileExplorer` both stop scrolling entirely when disabled — wheel, trackpad, and scrollbar dragging. The bar stays visible but inert; CustomTkinter's scrollbar has no greyed-out appearance to switch to.
+
+`sCTkScrollableFrame` additionally separates two ideas that are easy to confuse:
+
+- **`state`** is the user-facing enabled/disabled presentation.
+- **`scroll_enabled`** is your own intent about whether this frame should scroll at all.
+
+Scrolling happens only when both allow it, and neither overwrites the other. A frame you deliberately set non-scrolling stays non-scrolling after a disable/enable round trip:
+
+```python
+frame = sCTkScrollableFrame(master, scroll_enabled=False)
+frame.configure(state="disabled")
+frame.configure(state="normal")
+frame.is_scrolling()          # still False -- your intent survived
+```
+
+`disable_scroll()` and `enable_scroll()` are the runtime equivalents, useful when adding a lot of content at once:
+
+```python
+frame.disable_scroll()
+for item in many_items:
+    sCTkLabelSecondary(frame, text=item).pack()
+frame.enable_scroll()
+```
+
+`sCTkScrollArea` has no disabled state.
+
+---
+
+<a name="nested-scrolling-regions"></a>
+### Nested scrolling regions
+
+Putting one scrolling widget inside another works: the inner one keeps its own bindings and the outer one stops at its boundary, so the wheel scrolls whichever region the pointer is actually over rather than both at once.
+
+The guard recognises `CTkScrollableFrame` and anything built on it — `sCTkScrollableFrame`, `sCTkTableview`, `sCTkSelector`. A scrolling region you build yourself directly on a plain `tkinter.Canvas` is **not** recognised, and would get bound to the outer widget as well as your own handler. If you need that, put it in an `sCTkScrollArea` instead.
+
+
 
 # Containers
 
@@ -110,47 +448,94 @@ app.mainloop()
 
 ## sCTkToplevel
 
-The `sCTkToplevel` is the secondary window container class wrapper for the `sCustomTkinter` workstation library ecosystem. It acts as a clean, direct pass-through equivalent to its foundational parent window layout class, `customtkinter.CTkToplevel`.
-
-### 📌 Localized Table of Contents
-* [Core Architectural Purpose](#core-architectural-purpose)
-* [Constructor Reference](#constructor-reference)
-
----
-
-### Core Architectural Purpose
-
-The secondary window container serves as an independent, modal, or auxiliary pop-up anchor for your interface tree:
-1. **Decoupled User Space:** It eliminates the architectural requirement to maintain raw `import customtkinter` bindings inside your sub-window or dialog code.
-2. **Framework Alignment:** It standardizes auxiliary window initialization sequences to match the repository's native object naming conventions (`sCTkFrame`, `sCTkButtonPrimary`, etc.).
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-### Constructor Reference
+### Overview
 
-It maps perfectly onto all native top-level window properties, modal behaviors, grab events, lifecycle handlers, and geometry configurations out-of-the-box.
+`sCTkToplevel` is a themeable subclass of `customtkinter.CTkToplevel`, for secondary windows, modal dialogs, and popups. It adds automatic light/dark theme resolution from `sCTkThemes.json`. This is the simplest widget in the library — no disabled state, no `state()`/`get_state()` at all, and no per-state color-swapping logic, since a top-level window has no interactive "enabled/disabled" concept the way a control does.
+
+---
+
+### Constructor
 
 ```python
-from sCTk import sCTk
-from sCTkToplevel import sCTkToplevel
-from sCTkThemes import apply_sCTkThemes
-
-# 1. Initialize centralized framework look records natively on system boot
-apply_sCTkThemes()
-
-# 2. Instantiate your primary root application backplane directly
-app = sCTk()
-app.geometry("800x600")
-app.title("Main Control Rig Backplane")
-
-# 3. Spawn a secondary, decoupled window surface overhead
-dialog = sCTkToplevel(master=app)
-dialog.geometry("400x300")
-dialog.title("Auxiliary Operational Panel")
-
-app.mainloop()
+sCTkToplevel(master=None, **kwargs)
 ```
 
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent window. |
+| `**kwargs` | — | — | Any native `CTkToplevel` argument, or an `fg_color` override — the theme block for this widget currently defines only `fg_color`. |
+
+```python
+settings_window = sCTkToplevel(root)
+settings_window.title("Settings")
+settings_window.geometry("300x200")
+```
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, with positional-dict support (e.g. `configure({"fg_color": "red"})`). There's no single-argument property-query support here — unlike every other widget in this library, a bare positional string (e.g. `configure("fg_color")`) currently has no effect at all, since the only positional-argument handling implemented is the dict-merge case. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+Everything is applied once, at construction — there's no `disabled_map` and no runtime color-swapping logic at all.
+
+```json
+{
+    "sCTkToplevel": {
+        "fg_color": ["#F8FAFC", "#0F172A"]
+    }
+}
+```
+
+**Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkToplevel` directly, construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkToplevel` actually accepts. This matters more here than for most widgets — confirmed directly against CustomTkinter's own source, `CTkToplevel.__init__` explicitly validates that no unrecognized keyword survives after its own known-valid keys are popped, and raises immediately if one does. This only matters for the base-class composition pattern — constructing a plain `sCTkToplevel` directly is unaffected either way.
+
+---
+
+### Example
+
+```python
+import customtkinter as ctk
+from scustomtkinter import sCTk, sCTkToplevel, sCTkLabelPrimary, sCTkButtonPrimary
+
+if __name__ == "__main__":
+    root = sCTk()
+    root.geometry("400x250")
+    root.title("Toplevel Example")
+
+    def open_settings():
+        settings_window = sCTkToplevel(root)
+        settings_window.title("Settings")
+        settings_window.geometry("300x200")
+        sCTkLabelPrimary(settings_window, text="Settings go here").pack(expand=True)
+
+    open_button = sCTkButtonPrimary(root, text="Open Settings", command=open_settings)
+    open_button.pack(pady=20)
+
+    root.mainloop()
+```
+
+---
+
+### Known Limitations
+
+- No single-argument property-query support (e.g. `configure("fg_color")` does nothing) — consistent with this widget's overall minimalism, but different from every other widget in this library.
+- No `state()`/`get_state()`/disabled concept at all — this widget has no visual state to toggle.
 
 [Return to Table of Contents](#contents)
 
@@ -159,79 +544,79 @@ app.mainloop()
 ## sCTkFrame
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A clean, theme-compliant standard backplane container layout chassis widget. It functions as the geometric foundation card for stacking controls, isolating interface subsections, and grouping multi-frequency layout grids.
+### Overview
 
-![sCTkFrame_Dark.png](src/images/sCTkFrame_Dark.png)
-![sCTkFrame_Light.png](src/images/sCTkFrame_Light.png)
+`sCTkFrame` is a themeable subclass of `customtkinter.CTkFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`. Unlike every other widget in this library, it has no disabled state and no per-state color swapping — frames are containers, not interactive controls, so there's nothing to dim or lock.
 
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkFrame(master)` | `sCTkFrame(master)` *(Backplane Container Chassis)* |
-| **File Mapping** | Everything runs under one core native framework layout tracker. | Streamlined and compiled programmatically across `sCTkFrame.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `base_container.state("disabled")`<br>**OR**<br>`base_container.configure(state="disabled")`<br><br>**Dual-Routing State Bypasser:** Absorbs state parameters smoothly without crashing. This prevents interface layout exceptions when cascading operational locks down across complex structural grids. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions, always returning `"normal"`. |
+<img src="src/images/sCTkFrame_Dark.png" alt="sCTkFrame in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkFrame_Light.png" alt="sCTkFrame in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom backplane container frame card instance. High-level custom configuration parameters passed by Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires. Geometry shapes, border offsets, and corner styles map cleanly out of central stylesheet parameters.
+```python
+sCTkFrame(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkFrame` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a master panel frame container card layout
-dashboard_card = sCTkFrame(
-    master=root_window,
-    border_width=2
-)
-
-# Render the container frame widget inside your view using geometry packers
-dashboard_card.pack(expand=True, fill="both", padx=25, pady=25)
+panel = sCTkFrame(control_root)
+panel.pack(expand=True, fill="both", padx=20, pady=20)
 ```
 
 ---
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | No-op. Always returns `"normal"` regardless of what's passed in — deliberate, not a bug, so generic code written against every widget's `state()`/`get_state()`/`configure(state=...)` API doesn't need a special case for frames. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. Always `"normal"`. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` is silently absorbed (a no-op) rather than forwarded to the native widget, which has no real state concept; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, and `border_color` — since neither varies by state here, `default` and `current` are always identical. Queries for any other property name fall through to the native `CTkFrame.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+Everything is applied once, at construction — there's no `disabled_map` for this widget, and no runtime color-swapping logic at all.
+
 ```json
 {
     "sCTkFrame": {
-        "fg_color": ["#F8FAFC", "#1E293B"],
-        "border_color": ["#E2E8F0", "#334155"],
-        "border_width": 1,
-        "corner_radius": 8
+        "border_width": 0,
+        "corner_radius": 0,
+        "border_color": ["gray", "gray"],
+        "fg_color": "transparent"
     }
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from `ctk.CTkFrame` and `ThemeableWidget`, bypassing the intermediate template layout files entirely. It connects the component straight to CustomTkinter's appearance modes while using the multiple inheritance protocol layer to sanitize keyword arrays.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization routine, the constructor fires `self._finalize_themeable_lifecycle()` to safely dispatch first-object registration notifications back up to Pygubu's master parent script controllers, unlocking full composition support.
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native container initialization loops mutate and delete attributes directly out of raw dictionary data footprints during its boot pass, the constructor clones your configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This preserves your color mappings safely.
-* **Passive Operation Parity:** Background chassis containers do not implement a variable `disabled_map`. They remain perpetually active (`"normal"`) to allow child inputs sitting on top of their canvas face to handle their own active drawing states independently.
+With `border_width` at `0`, `border_color` never actually renders visibly regardless of its value — the two are set to the neutral Tkinter color name `"gray"` for both light and dark mode here, but that's moot while the border has no width.
+
+Colors are passed through as raw `(light, dark)` tuples at construction and never touched again, so CustomTkinter's own native appearance-mode tracking handles light/dark repaints on its own — there's no `_set_appearance_mode()` override here, since there's nothing for one to re-trigger. This is the same underlying mechanism validated more deliberately on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family.
+
+**Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkFrame` directly (rather than placing it as a child), construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkFrame` actually accepts (confirmed directly against CustomTkinter's source) to its own native constructor call, so any of your composite's own theme keys that `CTkFrame` wouldn't recognize are filtered out rather than causing a `TypeError`. This only matters for that composition pattern — constructing a plain `sCTkFrame` directly is unaffected either way.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkFrame` asset container along with a cascading lock simulation pass.
+### Example
 
 ```python
 #!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame
-# =====================================================================
 
 from scustomtkinter import sCTkButtonPrimary, sCTkLabelPrimary, sCTk, sCTkFrame
 
@@ -251,33 +636,16 @@ if __name__ == "__main__":
                                   "Border Visible for Testing Purposes only")
     lbl_marker.pack(expand=True)
 
-#
-#     # Standard dashboard interaction toggle simulation pass
-    def toggle_panel_lock():
-        current_mode = base_container.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-#
-#         # Explicitly testing the dual-routing capability via configure()
-        base_container.configure(state=target)
-        print(f"Logged Verification Hook -> base_container.get_state() = {base_container.get_state()}")
-
-#
-    btn_lock = sCTkButtonPrimary(root, text="Simulate Cascading Interface Lock", command=toggle_panel_lock)
-    btn_lock.pack(side="bottom", pady=15)
-#
-#     # Run the interactive boot tracking logs
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    base_container.state("disabled")
-    print("state (Disabled Pass) =", base_container.get_state())  # Output: normal (Frames bypass disabled masks)
-
-    base_container.state("normal")
-    print("state (Normal Pass)   =", base_container.get_state())  # Output: normal
-    print("========================================\n")
-
     root.mainloop()
-
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()`/`get_state()`/`configure(state=...)` are all no-ops by design — there's no way to visually disable a frame through this API, since the widget has no disabled state at all.
+- Calling `configure("fg_color")` or `configure("border_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`border_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -286,158 +654,202 @@ if __name__ == "__main__":
 ## sCTkScrollableFrame
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Advanced Layout Inspection API](#advanced-layout-inspection-api)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Scrolling and State](#scrolling-and-state)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-An advanced scrollable window viewport capsule inheriting natively and directly from CustomTkinter's `ctk.CTkScrollableFrame` layouts. It streamlines geometry tracking parameters and isolates background mouse-wheel layers cleanly while leaving the application developer completely in control of child layout configuration sweeps across theme switches.
+### Overview
 
+`sCTkScrollableFrame` is a themeable subclass of `customtkinter.CTkScrollableFrame`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, plus carefully-tuned cross-platform mouse wheel and macOS trackpad scroll handling that native CustomTkinter doesn't reliably provide on its own.
 
-![sCTkScrollableFrame_Dark.png](src/images/sCTkScrollableFrame_Dark.png)
-![sCTkScrollableFrame_Light.png](src/images/sCTkScrollableFrame_Light.png)
+<img src="src/images/sCTkScrollableFrame_Dark.png" alt="sCTkScrollableFrame in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkScrollableFrame_Light.png" alt="sCTkScrollableFrame in light mode" style="border: 2px solid #555555;">
 
+Unlike `sCTkFrame`, this widget **does** have a disabled state. That's justified here where it isn't for a plain frame: this widget owns real behavior to disable, not just colors. Disabling dims the border and scrollbar and stops all scrolling — wheel, trackpad, and scrollbar drag alike.
 
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkScrollableFrame(master)` | `sCTkScrollableFrame(master)` *(Themed Viewport Container)* |
-| **File Mapping** | Config metrics look up loose un-managed palette snapshot lists. | Streamlined and compiled programmatically across `sCTkScrollableFrame.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | Passive Container Operation Parity.<br><br>**Baseline Design Workflow:** Containers remain perpetually active (`"normal"`) to allow child inputs sitting on top of their canvas face to handle their own active drawing states and color switches independently. |
-| `winfo_children()` | Returns raw internal Tkinter tree widgets, including private scrollbars. | Overridden signature supporting filtered application widget lookups. |
-| `get_children()` | *Not Supported Natively* | Convenience method returning clean application-level custom components. |
-| `get_all_children()` | *Not Supported Natively* | Convenience method returning direct, unfiltered access to the entire core tree. |
+Disabling does **not** cascade to child widgets. That remains the caller's responsibility, exactly as with the labeled frame variants — loop over `get_children()` and call `.configure(state=...)` on each one.
 
 ---
 
 ### Constructor
 
-Initialize a custom themed scrollable frame viewport layout chassis. High-level custom configuration parameters passed by Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkScrollableFrame(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `state` | `str` | `"normal"` | `"normal"` or `"disabled"`. See [Scrolling and State](#scrolling-and-state). |
+| `scroll_enabled` | `bool` | `True` | Whether this frame should respond to scroll input at all. |
+| `**kwargs` | — | — | Any native `CTkScrollableFrame` argument (e.g. `label_text`, `orientation`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a telemetry logging scrollable list frame card
-log_viewport = sCTkScrollableFrame(
-    master=dashboard,
-    width=380,
-    height=250,
-    label_text="Telemetry Viewport Container"
-)
-
-# Render the widget inside your container panel
+log_viewport = sCTkScrollableFrame(dashboard, width=380, height=250, label_text="Telemetry Log")
 log_viewport.pack(padx=20, pady=20, fill="both", expand=True)
+# Scrolling works immediately -- no activation call needed.
 ```
 
 ---
 
-### Convenience Functions
+### Scrolling and State
+
+Scroll bindings are **automatic** and self-maintaining. No activation call is needed, and content added after the widget is placed is picked up on its own.
+
+Scroll handling comes from [`ScrollBindingMixin`](ScrollBindingMixin.md), the library's single shared implementation — that page covers the four activation mechanisms, the debounced content rebind, the platform models, the nested-frame guard, and the tuning constants (`MAC_SCROLL_SENSITIVITY`, `MAC_SCROLL_MAX_STEP`, `TOUCHPAD_ACCUMULATION_THRESHOLD`). This widget supplies four hooks: `_scroll_target()` resolves the parent canvas via `winfo_parent()`, since it's wrapped by a native `CTkScrollableFrame` that owns the canvas; `_scroll_layers()` assembles the frame, canvas, that canvas's parent, the scrollbar, and the content tree; `_scroll_permitted()` returns `is_scrolling()`; and `_scroll_drag_targets()` returns the internal scrollbar.
+
+It also passes `_parent_frame` as the mixin's `extra_map_widget`, because this widget is a canvas-window child and may never receive `<Map>` itself.
+
+**`state` and `scroll_enabled` are two independent axes**, deliberately not collapsed into one. `state` is the user-facing enabled/disabled presentation; `scroll_enabled` is the developer's own intent about whether this frame should scroll at all. Effective scrolling is the AND of the two:
+
+| `scroll_enabled` | `state` | Scrolls? |
+|---|---|---|
+| `True` | `"normal"` | yes |
+| `True` | `"disabled"` | no |
+| `False` | `"normal"` | no |
+| `False` | `"disabled"` | no |
+
+Because state changes never write to `scroll_enabled`, intent survives a round trip. A frame explicitly set non-scrolling stays non-scrolling after `state="disabled"` → `state="normal"`, rather than being silently switched on by the state change.
+
+This is also why `cget("scroll_enabled")` reports stored **intent** while `is_scrolling()` reports the live **effective** result. A frame with `scroll_enabled=True` that has been disabled returns `True` from the former and `False` from the latter.
+
+**Temporarily suspending scroll** is a supported pattern, useful during bulk content updates where rebinding on every widget added would be wasted work:
+
 ```python
-# Evaluate current container configuration attributes smoothly out of local registries
-current_mode = log_viewport.get_state()      # Always returns 'normal'
+frame = sCTkScrollableFrame(master)
+frame.disable_scroll()
+frame.pack(fill="both", expand=True)
+for item in many_items:
+    sCTkLabelSecondary(frame, text=item).pack()
+frame.enable_scroll()
 ```
 
-### Advanced Layout Inspection API
+Calling `disable_scroll()` before placement correctly suppresses automatic activation rather than being overridden by it — every activation path routes through the same effective-state check. Passing `scroll_enabled=False` to the constructor achieves the same starting state without the separate call.
 
-To insulate your structural look configurations from breaking when cascading loops pass through composite layouts, the system overrides native Tkinter window query behaviors.
+---
 
-#### `winfo_children(include_private: bool = False) -> list`
+### Methods
 
-* **`include_private=False` (Default):** Drops private internal wrapper artifacts from appearing in clean application loops. The method dynamically strips out underlying `CTkScrollbar`, `CTkCanvas`, and raw `Canvas` components so layout managers and state controllers only target your functional custom entries and forms.
-* **`include_private=True`:** Drops the filter shield instantly, returning the raw, unmanipulated C-level native Tkinter core window lineage tree for deep forensic tracking or platform diagnostics.
+| Method | Returns | Description |
+|---|---|---|
+| `configure(**kwargs)` / `config(**kwargs)` | `None` | Standard configuration. Accepts `state` and `scroll_enabled` alongside any native option. Both are this library's own properties and are removed before reaching native `CTkScrollableFrame.configure()`, which rejects unrecognized keywords. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for `fg_color`, `label_fg_color`, `scrollbar_button_color`, `border_color`, `state`, and `scroll_enabled`. For the color keys the `default` and `current` positions are identical; for `state` and `scroll_enabled` they can differ, since those carry live runtime values. |
+| `cget(name)` | `Any` | Extended to know about `state` and `scroll_enabled`; everything else passes through to the native widget. |
+| `enable_scroll()` | `None` | Turns scroll handling back on. Equivalent to `configure(scroll_enabled=True)`. Safe to call repeatedly. |
+| `disable_scroll()` | `None` | Turns scroll handling off — wheel, trackpad, and scrollbar drag. Equivalent to `configure(scroll_enabled=False)`. |
+| `is_scrolling()` | `bool` | The live effective scroll state — the AND of `scroll_enabled` and `state`. Distinct from `cget("scroll_enabled")`; see above. |
+| `get_state()` | `str` | Current state, `"normal"` or `"disabled"`. Mirrors the same accessor on `sCTkFrameLabeledPrimary`/`Secondary`. |
+| `winfo_children(include_private=False)` | `list` | By default, filters out children whose exact class name is `"CTkScrollbar"`, `"CTkCanvas"`, or `"Canvas"` — internal furniture this widget creates for its own scrolling machinery. **Confirmed correct by direct, live testing** — printing `get_children()` alongside the widget's internal `_parent_frame.winfo_children()` confirmed the real content widgets are found correctly by this method, and are *not* reachable via `_parent_frame` at all (they're nested deeper, inside the internal scrolling canvas). Pass `include_private=True` for the raw, unfiltered list. |
+| `get_children()` | `list` | Equivalent to `winfo_children(include_private=False)`. |
+| `get_all_children()` | `list` | Equivalent to `winfo_children(include_private=True)`. |
+| `_finalize_split_bindings()` | `None` | **Retained for compatibility; no longer required.** Calling this after placement was once mandatory, and calling it after rebuilding content was the way to bind newly-created rows. The debounced `<Configure>` rebind now handles both automatically. Existing callers are harmless — the underlying toggle is idempotent — but new code shouldn't need it. It respects the current effective state rather than forcing scrolling on. |
 
-```python
-# Pure application-layer cascade: Targets only form entries, skipping scrollbars natively
-for widget in test_frame.winfo_children():
-    widget.configure(state="disabled")
+**Platform handling, the nested-frame guard, and how disabling actually blocks scrolling** are all documented on the [`ScrollBindingMixin`](ScrollBindingMixin.md) page. Read it before changing anything about scroll behavior here — several of the mechanisms look like needless complications and are not.
 
-# Forensic debugging pass: Uncovers the hidden internal CustomTkinter layers
-print(test_frame.winfo_children(include_private=True))
-```
+---
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
+
 ```json
 {
     "sCTkScrollableFrame": {
-        "fg_color": ["#FAFAFA", "#11141A"],
-        "border_color": ["#CBD5E1", "#222933"],
-        "label_fg_color": ["#E2E8F0", "#1A222D"],
-        "scrollbar_button_color": ["#94A3B8", "#475569"],
-        "scrollbar_button_hover_color": ["#64748B", "#334155"]
+        "border_width": 1.5,
+        "border_color": ["#64748B", "#94A3B8"],
+        "corner_radius": 8,
+        "fg_color": ["#FFFFFF", "#111827"],
+        "label_fg_color": "transparent",
+        "scrollbar_fg_color": ["#FFFFFF", "#111827"],
+        "scrollbar_button_color": ["#64748B", "#4B5563"],
+        "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
+        "disabled_map": {
+            "border_color": ["#CBD5E1", "#374151"],
+            "scrollbar_button_color": ["#CBD5E1", "#1F2937"],
+            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"]
+        }
     }
 }
 ```
 
-### Other Notes
-* **Bypassing the BaseUI Skeletons:** This component avoids all autogenerated Pygubu `baseui` template classes, mapping directly to native CustomTkinter classes to keep the recursive theme broadplane completely unblocked.
-* **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks up to Pygubu's master parent script controllers.
+`label_fg_color` is deliberately `"transparent"`, so the internal title-row label blends with the frame's own `fg_color` via CustomTkinter's native parent-to-child color propagation, rather than showing its own distinct background.
 
-### ⚠️ Critical Apple Touch & Multi-Platform Scrolling Constraint
+**`disabled_map` is required, not optional.** Construction raises `KeyError` immediately if `border_color`, `scrollbar_button_color`, or `scrollbar_button_hover_color` is missing from either the top-level block or `disabled_map`. This is the same fail-loud principle used across this project — a theme gap surfaces at construction with a message naming exactly what's missing, rather than being papered over with a guessed color.
 
-When packing layout controls interior to an `sCTkScrollableFrame` view pane, **you must strictly avoid mixing native CustomTkinter widgets (e.g., `ctk.CTkEntry`, `ctk.CTkButton`) alongside your themed `sCustomTkinter` equivalents.**
+The hover color needs a disabled entry because a disabled scrollbar is inert (dragging is blocked), and one that still lit up on hover would falsely advertise itself as draggable. Setting it to the same value as the disabled `scrollbar_button_color`, as above, means it simply doesn't react.
 
-* **The Event Swallowing Trap:** Native `ctk` elements do not participate in our repository's unified recursive event-braid mesh. Because they aggressively capture touch focus inputs on macOS, any native element will act like a layout "black hole"—completely freezing trackpads and Apple Magic Mouse swipes the moment a user hovers their mouse cursor directly over that row.
-* **The Resolution Rule:** Always pack your framework's custom theme-aligned classes (e.g., **`sCTkEntryPrimary`**, **`sCTkButtonPrimary`**, **`sCTkCheckBox`**). Because they inherit from our synchronized base mixins, they naturally allow high-precision touch parameters and traditional hardware scrollwheel click ticks to bubble straight up to the master viewport coordinate canvas flawlessly across macOS, Windows, and Linux.
+Only the keys that genuinely change when disabled are required in `disabled_map`. `fg_color` is deliberately **not** among them: the content background stays put when disabled, and the border and the now-inert scrollbar carry the visual signal on their own.
+
+**Validation is scoped to direct construction.** A subclass inheriting this class (such as `sCTkTableview`) reaches this constructor with `final_kw` built from *its own* theme block — `ThemeableWidget`'s run-once guard means the parent never rebuilds it. Validating this widget's keys against a subclass's block would demand scrollbar colors from, say, the `sCTkTableview` block and raise on every construction. Subclasses own their own theme contract and validate it themselves, so this check runs only for the concrete class.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family.
+
+**Runtime color overrides persist.** `configure()` records any of the tracked theme keys — `fg_color`, `border_color`, `label_fg_color`, `scrollbar_button_color`, `scrollbar_button_hover_color` — into the widget's stored defaults *before* repainting, so an override survives the repaint, later state changes, and appearance-mode switches. This matches CustomTkinter's own semantics, where `configure(fg_color=...)` sticks.
+
+Two consequences worth knowing. Passing a single color replaces the theme's `(light, dark)` tuple for that key, so **that property stops following light/dark** — which is what asking for one specific color means. And `disabled_map` still wins while disabled: an override sets the *normal*-state color.
+
+`scroll_enabled` is deliberately excluded from this write-back, so the Pygubu query can report construction-time default and live value separately.
+
+**Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkScrollableFrame` directly, construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkScrollableFrame` actually accepts (confirmed directly against CustomTkinter's source, which has no fallback `**kwargs` at all — every parameter is explicitly named, so this matters more here than for most widgets).
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkScrollableFrame` container layout along with an external cascade state toggle switch button.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for ScrollableFrame
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkButtonPrimary, sCTkEntryPrimary, sCTk, sCTkScrollableFrame
+from scustomtkinter import sCTk, sCTkButtonPrimary, sCTkEntryPrimary, sCTkScrollableFrame
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.title("ScrollableFrame Pure Baseline Verification")
+    root.title("ScrollableFrame Example")
     root.geometry("450x420")
 
-    test_frame = sCTkScrollableFrame(root, width=380, height=250, label_text="Telemetry Viewport Container")
-    test_frame.pack(padx=20, pady=20, fill="both", expand=True)
+    log_viewport = sCTkScrollableFrame(root, width=380, height=250, label_text="Telemetry Log")
+    log_viewport.pack(padx=20, pady=20, fill="both", expand=True)
 
     for i in range(12):
-        mock_entry = sCTkEntryPrimary(test_frame, placeholder_text=f"Active Transceiver Channel {i + 1}")
-        mock_entry.pack(padx=10, pady=5, fill="x")
+        entry = sCTkEntryPrimary(log_viewport, placeholder_text=f"Channel {i + 1}")
+        entry.pack(padx=10, pady=5, fill="x")
 
-    _is_locked = False
-    def toggle_cascade_lockout():
-        global _is_locked
-        _is_locked = not _is_locked
-        target = "disabled" if _is_locked else "normal"
+    # No activation call needed -- scrolling is live as soon as the widget
+    # is placed.
 
-        toggle_btn.configure(text="Enforce State: NORMAL" if _is_locked else "Enforce State: DISABLED")
+    def toggle_lock():
+        target = "disabled" if log_viewport.get_state() == "normal" else "normal"
+        log_viewport.configure(state=target)
+        toggle_btn.configure(text="Enable All" if target == "disabled" else "Disable All")
 
-        # 🔑 CLEAN APPLICATION-LEVEL LOOKOUT LOOP CASCADE:
-        # The external control logic explicitly dictates when and how to update nested elements!
-        for entry_widget in test_frame.get_children():
-            if hasattr(entry_widget, "configure"):
+        # Disabling the frame dims it and stops its scrolling, but does NOT
+        # cascade to children -- do that explicitly.
+        for child in log_viewport.get_children():
+            if hasattr(child, "configure"):
                 try:
-                    entry_widget.configure(state=target)
+                    child.configure(state=target)
                 except Exception:
                     pass
 
-    toggle_btn = sCTkButtonPrimary(root, text="Enforce State: DISABLED", command=toggle_cascade_lockout)
+    toggle_btn = sCTkButtonPrimary(root, text="Disable All", command=toggle_lock)
     toggle_btn.pack(side="bottom", pady=15)
 
-    btn_theme = sCTkButtonPrimary(root, text="Toggle Theme Skin", command=lambda: ctk.set_appearance_mode(
-        "Dark" if ctk.get_appearance_mode() == "Light" else "Light"))
-    btn_theme.pack(side="bottom", pady=5)
-
-    test_frame._toggle_scroll_bindings(bind=True)
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- **Disabling does not cascade to children.** The frame dims and stops scrolling, but child widgets are unaffected — disabling their content is the caller's responsibility, as shown in the example above.
+- **The scrollbar is made inert, not hidden.** When disabled it can't be dragged and doesn't respond to hover, but it stays visible. CustomTkinter's scrollbar has no native disabled state to lock, so there's no greyed-out appearance to switch to either. Hiding it entirely is a separate technique, used elsewhere in this project (`sCTkFrameLabeledPrimary`/`Secondary`) via color-matching and zero width.
+- **`winfo_children()`'s default filtering is a class-name check, not an identity check** — a plain, un-themed `customtkinter.CTkCanvas`/`CTkScrollbar`/`Canvas` added directly as a real child (not internal furniture) would be incorrectly filtered out too, since its class name matches. Themed `sCTk`-prefixed widgets are unaffected.
+- **`_parent_frame`'s `width`/`height` don't reflect the real configured size** — confirmed by direct testing: reading `width`/`height` through the outer widget correctly returns the real value, but the same properties read through the internal `_parent_frame` attribute always report `0`, regardless of the widget's actual size. `fg_color`, `border_color`, and `border_width` are reliable through either path; `width`/`height` are not. There's no current code path in this widget that relies on `_parent_frame` for sizing, so this is a trap for future changes, not an active bug.
+- **The debounced rebind also runs on genuine resizes.** `<Configure>` doesn't distinguish "a child was added" from "the window was dragged", so resizing rebinds too. It's one coalesced pass rather than one per event, but on a very large content tree it is not free.
+- **The nested-frame boundary guard is reasoned, not yet live-tested.** The logic mirrors native CustomTkinter's own guard and is straightforward, but an actual nested scrollable frame (or an `sCTkSelector`/`sCTkTableview` placed inside another scrollable frame) hasn't been exercised against it yet.
+- **A separate `Canvas` + scrollbar placed inside this frame is not guarded.** The nested-frame boundary check keys on `CTkScrollableFrame` specifically. An independent scrolling region built directly on a plain `Canvas` would still be walked into and bound to this frame's handler, stacking an unwanted scroll behavior on top of its own. Guarding this would need an explicit opt-out convention, since a plain `Canvas` has no generic way to declare itself an independent scroll region.
+- **Single-argument color queries return `str(value)`**, where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. A known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
 
 [Return to Table of Contents](#contents)
 
@@ -450,135 +862,144 @@ These are the basic everyday widgets that you will use frequently.  There are so
 
 ## sCTkButtonPrimary
 
-The dominant primary command execution button widget component wrapping `customtkinter.CTkButton`. It incorporates high-priority telemetry layout overrides (**Alarm Warning Blocks** and **Latching Pressed Anchors**) layered over an independent deep-copy keyword caching shield to isolate colors from native dictionary mutation failures while leveraging `ThemeableWidget` mixins to natively handle Pygubu data streams.
-![sCTkButtonPrimary_Dark.png](src/images/sCTkButtonPrimary_Dark.png)
-![sCTkButtonPrimary_Light.png](src/images/sCTkButtonPrimary_Light.png)
-### API Property Reference
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkButton(master)` | `sCTkButtonPrimary(master)` *(Dominant Action Button)* |
-| **File Mapping** | Everything runs under one core native layout pipeline. | Streamlined and compiled programmatically across `sCTkButtonPrimary.py` and `ThemeableWidget.py`. |
-| `state(mode)` | `self.configure(state=...)` | `Method (str)` handling layout tracking maps and toggling active canvas event binds natively. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-| `set_pressed(bool)` | *Not Available Natively* | **Latching Hook:** Locks background contrast styles to match `pressed_map` guidelines. |
-| `set_alarm_state(bool)` | *Not Available Natively* | **Priority Warning Hook:** Overrides interaction states to show a red warning panel. |
+---
+
+### Overview
+
+`sCTkButtonPrimary` is a themeable subclass of `customtkinter.CTkButton` — the most prominent of the library's three button tiers (see also `sCTkButtonSecondary`, `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a four-state visual model (not just enabled/disabled, but also pressed and alarm), and Pygubu Designer property introspection.
+
+<img src="src/images/sCTkButtonPrimary_Dark.png" alt="sCTkButtonPrimary_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkButtonPrimary_Light.png" alt="sCTkButtonPrimary_Light.png" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom primary button instance. High-level configuration variables passed from Pygubu (like `translator` and `on_first_object_cb`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkButtonPrimary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkButton` argument (e.g. `text`, `command`, `width`, `height`, `font`, `corner_radius`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). Anything not supplied falls back to the `sCTkButtonPrimary` block of `sCTkThemes.json`. Unlike `sCTkComboBox`/`sCTkSegmentedButton`, there's no special extraction step here — `command` and every other native argument flow straight through to construction. |
 
 ```python
-# Instantiate a primary command action execution button
-tx_trigger = sCTkButtonPrimary(
+save_button = sCTkButtonPrimary(
     master=control_panel,
-    text="TRANSMIT EXECUTE",
-    command=on_transmit_triggered
+    text="Save Changes",
+    command=on_save_clicked,
 )
-
-# Render the widget inside your parent container geometry packer panel
-tx_trigger.pack(fill="x", padx=40, pady=10)
+save_button.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Force an immediate priority warning red flash profile highlight
-tx_trigger.set_alarm_state(True)  # Forces alarm_map layout configurations forward
+### Methods
 
-# Toggle latching states or apply absolute interaction locks smoothly
-tx_trigger.set_pressed(True)      # Locks background contrast styles to pressed_map rules
-tx_trigger.state("disabled")      # Unbinds mouse canvas routines and applies muted gray fills
-```
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only the literal string `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value matches neither branch and leaves the state unchanged (no error raised). Disabling correctly blocks both clicks and hover color changes — confirmed by direct, repeated testing. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `set_pressed(pressed)` | `None` | Forces the visual "pressed" look on or off. No-op while disabled or while in alarm state. |
+| `set_alarm_state(active)` | `None` | Forces a high-visibility warning/alarm look on or off. No-op while disabled. Turning alarm **on** clears any active "pressed" state, since alarm takes visual precedence — see [Theming](#theming-sctkthemesjson) for the full precedence order. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color` — with `current` reflecting whichever state (disabled/alarm/pressed/normal) is presently active. Queries for any other single property name fall through to the native `CTkButton.configure`. |
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+---
+
+### Theming (`sCTkThemes.json`)
+
+Four visual states, not two, with a fixed precedence when more than one could apply: **disabled > alarm > pressed > normal**. Only the highest-precedence active state's colors are ever shown — e.g. a button that's both "pressed" and in "alarm" shows alarm colors, and setting alarm while pressed automatically clears the pressed flag.
+
+- **Applied once, at construction** — every key in the widget's theme block, including `width`, `height`, `font`, and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every state change** — `fg_color`, `hover_color`, `text_color`, and `border_color` are recomputed from whichever map matches the current precedence every time you call `state()`, `set_pressed()`, or `set_alarm_state()`. `border_width`, `corner_radius`, and `font` are **not** re-applied on state changes — they don't vary between states, so they're set once at construction and left alone.
+
 ```json
 {
     "sCTkButtonPrimary": {
-        "fg_color": ["#1A4375", "#1F6AA5"],
-        "hover_color": ["#112A4B", "#194A7A"],
+        "width": 140,
+        "height": 34,
+        "font": ["Arial", 15, "normal"],
+        "fg_color": ["#1A4375", "#2471A3"],
+        "hover_color": ["#112A4B", "#1F618D"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
-        "border_width": 0,
         "corner_radius": 6,
         "disabled_map": {
-            "fg_color": ["#F3F4F6", "#1F2937"],
-            "border_color": ["#E5E7EB", "#374151"],
+            "fg_color": ["#E5E7EB", "#374151"],
+            "hover_color": ["#E5E7EB", "#374151"],
             "text_color": ["#94A3B8", "#64748B"]
         },
         "pressed_map": {
-            "fg_color": ["#0F2542", "#134267"],
-            "border_color": ["#0F2542", "#134267"],
-            "text_color": ["#94A3B8", "#CBD5E1"]
+            "fg_color": ["#3B5984", "#2E4A75"],
+            "hover_color": ["#3B5984", "#2E4A75"],
+            "text_color": ["#FFFFFF", "#FFFFFF"]
         },
         "alarm_map": {
-            "fg_color": ["#DC2626", "#EF4444"],
-            "hover_color": ["#991B1B", "#7F1D1D"],
+            "fg_color": ["#990000", "#E74C3C"],
+            "hover_color": ["#990000", "#E74C3C"],
             "text_color": ["#FFFFFF", "#FFFFFF"]
         }
     }
 }
 ```
 
-### Other Notes
-* **Bypassing the BaseUI Skeletons:** Completely avoids transitional helper UI files, connecting straight to `ctk.CTkButton` and `ThemeableWidget` multiple inheritance pathways to avoid signature collisions.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute bottom of the initialization sequence to pass object creation lifecycle hooks straight back up to Pygubu application factories.
+Note there's no `border_color` anywhere in this block — this button style has no themed border by design (it's a solid-fill button). The widget checks for `border_color` in every state's color swap for consistency with the other themed widgets, but that lookup always resolves to nothing here and is simply skipped.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, the same approach already confirmed working on `sCTkComboBox` and `sCTkSegmentedButton` — so they should correctly follow system/app appearance-mode changes automatically. That specific behavior hasn't been separately re-confirmed for this widget's light/dark toggle, only for its disable/enable cycle.
+
+Disabling this button uses CustomTkinter's native `state="disabled"`, not a manual workaround — that distinction matters here specifically because an earlier version of this widget instead manually unbound mouse events while leaving the native state at `"normal"`, and that approach was directly tested and found to **not** actually block clicks. Native `state="disabled"` is what's required.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkButtonPrimary` alongside an interactive theme state track and system warning switch.
+### Example
 
 ```python
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Primary Button
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTk
-
+from scustomtkinter import sCTk, sCTkFrame, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x340")
-    root.title("Primary Command Button Real-Time Validation Bench")
+    root.geometry("400x300")
+    root.title("ButtonPrimary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    command_btn = sCTkButtonPrimary(base, text="Primary Action Control")
-    command_btn.pack(expand=False, fill="x", padx=40, pady=10)
+    save_button = sCTkButtonPrimary(base, text="Save", command=lambda: print("Saved!"))
+    save_button.pack(pady=10)
 
-    def toggle_system_alarm():
-        new_alarm_mode = not command_btn.is_alarm
-        command_btn.set_alarm_state(new_alarm_mode)
-        btn_alarm_switch.configure(text="System Alarm (ACTIVE - Click to Clear)" if new_alarm_mode else "System Alarm")
+    def toggle_alarm():
+        save_button.set_alarm_state(not save_button.is_alarm)
 
-    def toggle_disabled_lock():
-        target = "disabled" if command_btn.get_state() == "normal" else "normal"
-        command_btn.configure(state=target)
-        btn_lock.configure(text="Lock Button (Set 'disabled')" if target == "normal" else "Unlock Button (Set 'normal')")
+    alarm_toggle = sCTkButtonPrimary(base, text="Toggle Alarm Look", command=toggle_alarm)
+    alarm_toggle.pack(pady=10)
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
+    def toggle_disabled():
+        target = "disabled" if save_button.get_state() == "normal" else "normal"
+        save_button.state(target)
+        disable_toggle.configure(text="Enable Save" if target == "disabled" else "Disable Save")
 
-    btn_alarm_switch = sCTkButtonPrimary(base, text="System Alarm", command=toggle_system_alarm)
-    btn_alarm_switch.pack(pady=5)
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Button (Set 'disabled')", command=toggle_disabled_lock)
-    btn_lock.pack(pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=10)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Save", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged. No exception is raised.
+- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color — e.g. `"('#1A4375', '#2471A3')"` instead of a plain hex string. This is a known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project, not specific to this widget.
+- Passing a positional dict to `configure()` is supported and merges into the update; a positional property-name string returns the Tkinter-style query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -586,377 +1007,395 @@ if __name__ == "__main__":
 
 ## sCTkButtonSecondary
 
-A specialized, theme-compliant secondary button component widget variant wrapping `customtkinter.CTkButton` designed to act as a latching status toggle selector. It implements a deep-copy keyword caching shield to preserve custom visual style parameters from native mutation traps and prevent `NoneType` canvas validation exceptions.
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
+---
 
-![sCTkButtonSecondary_Dark.png](src/images/sCTkButtonSecondary_Dark.png)
-![sCTkButtonSecondary_Light.png](src/images/sCTkButtonSecondary_Light.png)
+### Overview
 
+`sCTkButtonSecondary` is a themeable subclass of `customtkinter.CTkButton` — a lower-emphasis sibling of `sCTkButtonPrimary` (see also `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, and pressed — no "alarm" state, unlike Primary), and Pygubu Designer property introspection.
 
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkButton(master)` | `sCTkButtonSecondary(master)` *(Latching Toggle Selector)* |
-| **File Mapping** | Component definitions bundle under single active tracks. | Streamlined and compiled programmatically across `sCTkButtonSecondary.py` and `ThemeableWidget.py`. |
-| `state(mode)` | `self.configure(state=...)` | `Method (str)` managing layout tracking maps and toggling active canvas event binds natively. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-| `set_pressed(bool)` | *Not Available Natively* | **Latching Hook:** Dynamically updates visual button states to look locked down. |
+<img src="src/images/sCTkButtonSecondary_Dark.png" alt="sCTkButtonSecondary_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkButtonSecondary_Light.png" alt="sCTkButtonSecondary_Light.png" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom secondary latching toggle button instance. Custom parameters passed from Pygubu builder allocations (like string `translator` tracks or `data_pool` environments) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkButtonSecondary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkButton` argument (e.g. `text`, `command`, `width`, `height`, `font`, `corner_radius`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). As with `sCTkButtonPrimary`, there's no special extraction step — `command` and every other native argument flow straight through to construction. |
 
 ```python
-# Instantiate a secondary latching toggle button element
-vfo_lock_toggle = sCTkButtonSecondary(
+cancel_button = sCTkButtonSecondary(
     master=control_panel,
-    text="LOCK ACTIVE VFO MODE",
-    command=on_vfo_lock_toggled
+    text="Cancel",
+    command=on_cancel_clicked,
 )
-
-# Render the widget inside your parent container geometry tracker layout
-vfo_lock_toggle.pack(fill="x", padx=40, pady=10)
+cancel_button.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Force an active button press visual accent highlight on the fly
-vfo_lock_toggle.set_pressed(True)   # Shifts colors to match your pressed_map rules
+### Methods
 
-# Evaluate active visual modes or apply absolute user interaction locks
-current_mode = vfo_lock_toggle.get_state() # Returns 'normal' or 'disabled'
-vfo_lock_toggle.state("disabled")          # Unbinds mouse canvas routines and applies muted gray fills
-```
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only the literal string `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value matches neither branch and leaves the state unchanged. Disabling uses CTk's native `state="disabled"`, confirmed by direct testing to correctly block both clicks and hover color changes. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `set_pressed(pressed)` | `None` | Forces the visual "pressed" look on or off. No-op while disabled. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`, with `current` reflecting whichever state (disabled/pressed/normal) is presently active. Queries for any other property name fall through to the native `CTkButton.configure`. |
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+---
+
+### Theming (`sCTkThemes.json`)
+
+Three visual states, with precedence **disabled > pressed > normal** when both could apply.
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every state change** — `fg_color`, `hover_color`, `border_color`, and `text_color` are recomputed from whichever map matches the current state every time you call `state()` or `set_pressed()`. `border_width`, `corner_radius`, and `font` are **not** re-applied on state changes — they don't vary between states.
+
 ```json
 {
     "sCTkButtonSecondary": {
-        "fg_color": "transparent",
-        "border_color": ["#CBD5E1", "#44403C"],
-        "text_color": ["#334155", "#E7E5E4"],
-        "border_width": 1,
+        "font": ["Arial", 15, "normal"],
+        "fg_color": ["#E5E7EB", "#374151"],
+        "hover_color": ["#D1D5DB", "#4B5563"],
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "border_width": 2,
+        "border_color": ["#9CA3AF", "#4B5563"],
         "corner_radius": 6,
         "disabled_map": {
-            "fg_color": ["#F1F5F9", "#171412"],
-            "border_color": ["#E2E8F0", "#292524"],
-            "text_color": ["#94A3B8", "#57534E"]
+            "fg_color": ["#F3F4F6", "#1F2937"],
+            "hover_color": ["#F3F4F6", "#1F2937"],
+            "border_color": ["#E5E7EB", "#374151"],
+            "text_color": ["#94A3B8", "#64748B"]
         },
         "pressed_map": {
-            "fg_color": ["#E2E8F0", "#44403C"],
-            "border_color": ["#94A3B8", "#6B7280"],
-            "text_color": ["#000000", "#FFFFFF"]
+            "fg_color": ["#CBD5E1", "#1F2937"],
+            "hover_color": ["#CBD5E1", "#1F2937"],
+            "border_color": ["#475569", "#94A3B8"],
+            "text_color": ["#0F172A", "#FFFFFF"]
         }
     }
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Skeletons:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, completely bypassing the intermediate template layout files entirely to preserve high-DPI image scaling.
-* **Canvas Interaction Toggles:** When shifted into a `disabled` state configuration, the widget explicitly unbinds mouse events (`<Enter>`, `<Leave>`, `<Button-1>`) at the canvas level to lock interactions and prevent memory leaks. Shifting back to `normal` restores the listeners seamlessly.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
+Unlike `sCTkButtonPrimary` (which has no themed border at all, being a solid-fill button), this style does define `border_color` at every tier — normal, pressed, and disabled all have their own distinct border color.
 
-### Implementation Example & Test Harness
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`.
 
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkButtonSecondary` alongside an interactive latch controller.
+---
+
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Secondary Button
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTk, sCTkButtonSecondary
+from scustomtkinter import sCTk, sCTkFrame, sCTkButtonSecondary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.geometry("450x320")
-    root.title("Secondary Button Real-Time Validation Bench")
+    root.geometry("400x300")
+    root.title("ButtonSecondary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkButtonSecondary(base, text="System Action Button")
-    widget.pack(padx=40, pady=10, fill="x")
+    cancel_button = sCTkButtonSecondary(base, text="Cancel", command=lambda: print("Cancelled"))
+    cancel_button.pack(pady=10)
 
-    def toggle_disabled_lock():
-        target = "disabled" if widget.get_state() == "normal" else "normal"
-        widget.configure(state=target)
-        btn_lock.configure(text="Lock Button" if target == "normal" else "Unlock Button")
+    def toggle_disabled():
+        target = "disabled" if cancel_button.get_state() == "normal" else "normal"
+        cancel_button.state(target)
+        disable_toggle.configure(text="Enable Cancel" if target == "disabled" else "Disable Cancel")
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-    btn_lock = ctk.CTkButton(base, text="Lock Button", command=toggle_disabled_lock)
-    btn_lock.pack(pady=5)
-
-    btn_theme = ctk.CTkButton(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=10)
+    disable_toggle = sCTkButtonSecondary(base, text="Disable Cancel", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
 ```
 
+---
+
+## Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
+- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
+
+
+
 [Return to Table of Contents](#contents)
+
 
 
 
 ## sCTkButtonTertiary
 
-An outline-driven custom toggle variant button widget component styled specifically for sub-presets, tuning markers, and option lock keys wrapping `customtkinter.CTkButton`. It utilizes an independent deep-copy keyword caching shield and a dynamic runtime accent fallback detector to align button typography with CustomTkinter system configurations automatically.
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
+
+---
+
+### Overview
+
+`sCTkButtonTertiary` is a themeable subclass of `customtkinter.CTkButton` — the lowest-emphasis of the library's three button tiers (see also `sCTkButtonPrimary`, `sCTkButtonSecondary`), styled as an outline button: border and text only, no filled background. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, pressed), and Pygubu Designer property introspection.
 
 
-![sCTkButtonTertiary_Dark.png](src/images/sCTkButtonTertiary_Dark.png)
-![sCTkButtonTertiary_Light.png](src/images/sCTkButtonTertiary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkButton(master)` | `sCTkButtonTertiary(master)` *(Outline Latching Button)* |
-| **File Mapping** | Everything runs under one core native framework layout layer. | Streamlined and compiled programmatically across `sCTkButtonTertiary.py` and `ThemeableWidget.py`. |
-| `state(mode)` | `self.configure(state=...)` | `Method (str)` handling layout tracking map transformations (`'normal'`, `'disabled'`) and canvas unbindings. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-| `set_pressed(bool)` | *Not Available Natively* | **Latching Hook:** Locks background contrast styles to match `pressed_map` guidelines. |
-
+<img src="src/images/sCTkButtonTertiary_Dark.png" alt="sCTkButtonTertiary_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkButtonTertiary_Light.png" alt="sCTkButtonTertiary_Light.png" style="border: 2px solid #555555;">
 ---
 
 ### Constructor
 
-Initialize a custom tertiary button instance. Custom parameters passed from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires. If no explicit `text_color` parameters are discovered inside `sCTkThemes.json`, the constructor queries CustomTkinter's baseline colors (`["#3B8ED0", "#1F6AA5"]`) automatically to preserve unified system highlights.
+```python
+sCTkButtonTertiary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkButton` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). No special extraction step — `command` and every other native argument flow straight through to construction. |
 
 ```python
-# Instantiate a tertiary outline latching button
-preset_select = sCTkButtonTertiary(
+learn_more_button = sCTkButtonTertiary(
     master=control_panel,
-    text="PRESET CHANNEL A",
-    command=on_preset_selected
+    text="Learn More",
+    command=on_learn_more_clicked,
 )
-
-# Render the widget inside your parent container geometry packer panel
-preset_select.pack(fill="x", padx=40, pady=10)
+learn_more_button.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value leaves the state unchanged. Uses CTk's native `state="disabled"`, confirmed by direct testing to correctly block clicks and hover color changes. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `set_pressed(pressed)` | `None` | Forces the visual "pressed" look on or off. No-op while disabled. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`. Queries for any other property name fall through to the native `CTkButton.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+Three visual states, with precedence **disabled > pressed > normal**.
+
 ```json
 {
     "sCTkButtonTertiary": {
+        "font": ["Arial", 15, "normal"],
         "fg_color": "transparent",
-        "border_color": ["#3B8ED0", "#1F6AA5"],
-        "text_color": null,
-        "border_width": 1,
-        "corner_radius": 4,
+        "text_color": ["#3B8ED0", "#1F6AA5"],
+        "corner_radius": 6,
+        "border_width": 1.25,
+        "border_color": ["#64748B", "#94A3B8"],
+        "hover_color": ["#E2E8F0", "#1E293B"],
         "disabled_map": {
-            "fg_color": "transparent",
-            "border_color": ["#CBD5E1", "#374151"],
+            "border_color": ["#E5E7EB", "#374151"],
             "text_color": ["#94A3B8", "#64748B"]
         },
         "pressed_map": {
-            "fg_color": ["#3B8ED0", "#1F6AA5"],
-            "border_color": ["#3B8ED0", "#1F6AA5"],
-            "text_color": ["#FFFFFF", "#FFFFFF"]
+            "fg_color": ["#E2E8F0", "#1E293B"],
+            "border_color": ["#112A4B", "#1F618D"],
+            "text_color": ["#112A4B", "#1F618D"]
         }
     }
 }
 ```
 
-### Other Notes
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, bypassing the intermediate template layout files entirely to avoid signature collisions.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
+A few design decisions specific to this outline style, worth knowing before editing this block:
+
+- **`fg_color` is the literal string `"transparent"`, not a color pair** — this is a border-and-text-only button by design.
+- **`disabled_map` has no `fg_color` or `hover_color` entries, deliberately.** Since only keys present in a map get swapped, omitting these means the button stays transparent when disabled instead of gaining an unwanted solid gray fill — a filled button (Primary/Secondary) wants that fill; this one doesn't.
+- **`pressed_map` has no `hover_color` entry either.** Rather than leaving hover color unset while pressed, the widget explicitly falls back to the normal-state `hover_color` in that case.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkButtonTertiary` alongside latching switches.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Tertiary Button
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTk, sCTkButtonPrimary, sCTkButtonTertiary
+from scustomtkinter import sCTk, sCTkFrame, sCTkButtonTertiary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.geometry("450x320")
-    root.title("Tertiary Button Real-Time Validation Bench")
+    root.geometry("400x300")
+    root.title("ButtonTertiary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkButtonTertiary(base, text="Tertiary Action Button")
-    widget.pack(padx=40, pady=10, fill="x")
+    learn_more_button = sCTkButtonTertiary(base, text="Learn More", command=lambda: print("Clicked"))
+    learn_more_button.pack(pady=10)
 
-    def toggle_disabled_lock():
-        target = "disabled" if widget.get_state() == "normal" else "normal"
-        widget.configure(state=target)
-        btn_lock.configure(text="Lock Button" if target == "normal" else "Unlock Button")
+    def toggle_disabled():
+        target = "disabled" if learn_more_button.get_state() == "normal" else "normal"
+        learn_more_button.state(target)
+        disable_toggle.configure(text="Enable" if target == "disabled" else "Disable")
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Button", command=toggle_disabled_lock)
-    btn_lock.pack(pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=10)
+    disable_toggle = sCTkButtonTertiary(base, text="Disable Learn More", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
-
-
 ```
 
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) silently leaves the state unchanged.
+- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
+
 [Return to Table of Contents](#contents)
+
 
 
 
 ## sCTkCheckBox
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A specialized, theme-compliant checkbox element component variant designed for binary option selections, telemetry locks, and parameter configurations. It integrates an independent deep-copy keyword caching shield and clean programmatic inheritance to preserve checkbox configurations without intermediate file middlemen.
+### Overview
 
-![sCTkCheckBox_Dark.png](src/images/sCTkCheckBox_Dark.png)
-![sCTkCheckBox_Light.png](src/images/sCTkCheckBox_Light.png)
+`sCTkCheckBox` is a themeable subclass of `customtkinter.CTkCheckBox`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, including the checkmark color itself, and a distinct enabled/disabled visual state.
 
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkCheckBox(master)` | `sCTkCheckBox(master)` *(Binary Option Selector)* |
-| **File Mapping** | Everything runs under a single active component module. | Streamlined and compiled programmatically across `sCTkCheckBox.py` and `ThemeableWidget.py`. |
-| `state(mode)` | `self.configure(state=...)` | `Method (str)` handling layout tracking map transformations (`'normal'`, `'disabled'`) via sequential update passes. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-| `get()` | `self.get()` | Returns `1` if selected, or `0` if empty. |
-| `select()` / `deselect()` | Native methods | Forces check marks on or off programmatically. |
-
+<img src="src/images/sCTkCheckBox_Dark.png" alt="sCTkCheckBox_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkCheckBox_Light.png" alt="sCTkCheckBox_Light.png" style="border: 2px solid #555555;">
 ---
 
 ### Constructor
 
-Initialize a custom checkbox option instance. Pygubu parameters (such as `translator` or `on_first_object_cb`) are stripped, isolated, and safely processed early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkCheckBox(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkCheckBox` argument (e.g. `text`, `command`, `variable`, `onvalue`, `offvalue`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). No special extraction step — everything flows straight through to construction. |
 
 ```python
-# Instantiate a primary option selection checkbox
-logging_toggle = sCTkCheckBox(
-    master=control_panel,
-    text="ENABLE LOGGING FRAMEWORK",
-    command=on_logging_selection_changed
+agree_checkbox = sCTkCheckBox(
+    master=form_panel,
+    text="I agree to the terms",
+    command=on_agreement_toggled,
 )
-
-# Render the widget inside your parent container geometry tracker panel
-logging_toggle.pack(padx=20, pady=10)
+agree_checkbox.pack(anchor="w", padx=20, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Programmatically alter choices or evaluate state configurations on the fly
-is_active = logging_toggle.get()          # Returns 1 (checked) or 0 (unchecked)
-logging_toggle.select()                    # Forces the checkmark button state to fill inside the box
-logging_toggle.state("disabled")           # Disables checking interaction and applies muted gray fills
-```
+### Methods
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value leaves the state unchanged. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, `text_color`, `hover_color`, and `checkmark_color`. Queries for any other property name fall through to the native `CTkCheckBox.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `hover_color`, `text_color`, `checkmark_color`, `border_width`, and `font` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkCheckBox": {
-        "fg_color": ["#1A4375", "#1F6AA5"],
-        "border_color": ["#94A3B8", "#4B5563"],
-        "text_color": ["#111827", "#F9FAFB"],
+        "font": ["Arial", 15, "normal"],
+        "border_width": 3,
+        "border_color": ["#64748B", "#94A3B8"],
+        "fg_color": ["#1A4375", "#2471A3"],
+        "hover_color": ["#112A4B", "#1F618D"],
+        "text_color": ["#1F2937", "#D1D5DB"],
         "checkmark_color": ["#FFFFFF", "#FFFFFF"],
-        "border_width": 2,
-        "corner_radius": 4,
         "disabled_map": {
-            "fg_color": ["#E5E7EB", "#374151"],
-            "border_color": ["#CBD5E1", "#4B5563"],
             "text_color": ["#94A3B8", "#64748B"],
-            "checkmark_color": ["#94A3B8", "#4B5563"]
+            "fg_color": ["#E5E7EB", "#374151"],
+            "border_color": ["#CBD5E1", "#475569"],
+            "checkmark_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Middleman:** Completely removes transitional `baseui` template classes, mapping directly to `ctk.CTkCheckBox` and `ThemeableWidget` multiple inheritance pathways to avoid signature collisions.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute bottom of the initialization track to safely register instances with Pygubu layout trees out of the box.
+`checkmark_color` was added as a real theme key during this project's audit — previously the theme block didn't define it at all, so the checkmark silently always used CTkCheckBox's native default color regardless of what theme was active, even though the widget's own code was already set up to read it. When disabled, the checkmark dims to match `disabled_map.text_color`'s gray rather than staying bright against a grayed-out box.
+
+Note there's no `hover_color` entry in `disabled_map` — the widget's native disabled state is expected to suppress hover interaction entirely (consistent with the same behavior confirmed on other themed widgets in this project), so a disabled-specific hover color was judged unnecessary; this hasn't been independently re-confirmed for this specific widget.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`, though not separately re-confirmed for this widget's light/dark toggle specifically.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkCheckBox` alongside an interactive theme state track.
+### Example
 
 ```python
-
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for CheckBox
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTk, sCTkButtonPrimary, sCTkCheckBox
+from scustomtkinter import sCTk, sCTkFrame, sCTkCheckBox, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x300")
-    root.title("Checkbox Interaction Telemetry Bench")
+    root.geometry("400x300")
+    root.title("CheckBox Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkCheckBox(base, text="Enable Logging Framework")
-    widget.configure(command=lambda: print("Checked" if widget.get() == 1 else "Unchecked"))
-    widget.pack(expand=True, fill="none", padx=10, pady=10)
+    agree_checkbox = sCTkCheckBox(
+        base, text="I agree to the terms", command=lambda: print("Toggled")
+    )
+    agree_checkbox.pack(anchor="w", pady=10)
 
-    def toggle_widget_state():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        widget.configure(state=target)
-        btn_toggle.configure(text="Unlock Checkbox" if target == "disabled" else "Lock Checkbox (Set 'disabled')")
-        print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state()}")
+    def toggle_disabled():
+        target = "disabled" if agree_checkbox.get_state() == "normal" else "normal"
+        agree_checkbox.state(target)
+        disable_toggle.configure(text="Enable" if target == "disabled" else "Disable")
 
-    btn_toggle = sCTkButtonPrimary(base, text="Lock Checkbox (Set 'disabled')", command=toggle_widget_state)
-    btn_toggle.pack(side="bottom", pady=15)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    widget.state("disabled")
-    print("state (Disabled Pass) =", widget.get_state())
-
-    widget.state("normal")
-    print("state (Normal Pass)   =", widget.get_state())
-    print("========================================\n")
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Checkbox", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) silently leaves the state unchanged.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
+- Color reapplication after a `state()` change is deferred by one event-loop tick (`after_idle`), as a precaution carried over from a confirmed race condition on `sCTkButtonPrimary`. In virtually all normal usage this is imperceptible, but code that inspects colors in the same tick as a `state()` call may see the pre-change values.
 
 [Return to Table of Contents](#contents)
 
@@ -965,249 +1404,106 @@ if __name__ == "__main__":
 ## sCTkEntryPrimary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-themesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-Dominant form input lane widget variant designed for primary user data entry (e.g., core configuration inputs, direct numeric entries, or text queries). It implements a direct native class configuration architecture combined with the `ThemeableWidget` sanitizer pass to guarantee complete safety against keyword collisions.
+### Overview
 
-*For alternative helper input fields or metadata input channels, see the companion component documentation page:* [sCTkEntrySecondary](sCTkEntrySecondary.md).
+`sCTkEntryPrimary` is a themeable subclass of `customtkinter.CTkEntry` — the higher-emphasis of the library's two entry-field tiers (see also `sCTkEntrySecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a genuine three-state visual model: normal, readonly, and disabled.
 
+<img src="src/images/sCTkEntryPrimary_Dark.png" alt="sCTkEntryPrimary in dark mode" style="border: 2px solid #555555;"> &emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkEntryPrimary_Light.png" alt="sCTkEntryPrimary in light mode" style="border: 2px solid #555555;">
 
-![sCTkEntryPrimary_Dark.png](src/images/sCTkEntryPrimary_Dark.png)
-![sCTkEntryPrimary_Light.png](src/images/sCTkEntryPrimary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkEntry(master)` | `sCTkEntryPrimary(master)` *(Primary form data field)* |
-| **Maintenance** | Local style overrides duplicated across files manually. | Clean updates across all layouts modified directly in the JSON file. |
-| **File Mapping** | Everything runs under one core native text pipeline. | Streamlined and compiled cleanly across `sCTkEntryPrimary.py` and `ThemeableWidget.py`. |
-| **State Lock** | `self.configure(state="disabled")` | `input_field.state("disabled")`<br>**OR**<br>`input_field.configure(state="disabled")`<br><br>**Dual-Routing State Pipeline:** Natively handles both syntax paths. Freezes text interaction lanes, blocks keyboard event streams, and dynamically shifts colors out of `disabled_map` guidelines via strict sequential update passes. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
+All three states use CTk's native `state` option (`"normal"`, `"readonly"`, `"disabled"`). `normal`/`disabled` are confirmed correct by direct testing, consistent with every other widget in this library. `readonly` was added specifically to support `sCTkSpinbox`'s own readonly mode correctly (its entry can't be typed into directly, but the increment/decrement arrows stay clickable) — matching real `ttk.Spinbox` semantics, which distinguish readonly (arrows still work) from disabled (nothing works). Confirmed directly against CustomTkinter's own source: native `CTkEntry` already has full, deliberate support for a `"readonly"` state distinct from `"disabled"` — including a placeholder-text rule worth knowing about (see [Known Limitations](#known-limitations)).
 
 ---
 
 ### Constructor
 
-Initialize a custom primary form data field instance. High-level custom configuration parameters from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkEntryPrimary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkEntry` argument (e.g. `placeholder_text`, `width`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). `state` is extracted and applied after construction rather than passed to the native constructor. |
 
 ```python
-# Instantiate a primary frequency entry lane input field
-freq_input_field = sCTkEntryPrimary(
+freq_entry = sCTkEntryPrimary(
     master=control_panel,
-    placeholder_text="Enter Transceiver Frequency...",
-    textvariable=vfo_string_var
+    placeholder_text="Enter frequency (MHz)",
 )
-
-# Render the widget inside your parent container coordinate tracker panel
-freq_input_field.pack(fill="x", padx=40, pady=10)
+freq_entry.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Selectively manipulate the internal textual elements on the fly
-frequency_input.insert(0, "14.032.000") # Populates text buffer indices with data strings
-frequency_input.delete(0, \"end\")         # Wipes the entry line lane completely back to empty
-active_buffer = frequency_input.get()    # Queries the live active text character arrays
+### Methods
 
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = frequency_input.get_state() # Returns 'normal' or 'disabled'
-frequency_input.state("disabled")          # Locks data entry tracks and applies muted gray fills
-```
+| Method | Returns | Description |
+|---|---|---|
+| `state(state_string=None)` | `str` | Gets or sets the widget's visual state. `"normal"`/`"enabled"`/`"active"` all map to `"normal"`; `"readonly"` maps to `"readonly"`; `"disabled"` maps to `"disabled"`. All three use CTk's native `state` option. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `text_color`, `border_color`, and `placeholder_text_color`. Queries for any other property name fall through to the native `CTkEntry.configure`. |
 
-### Centralized Stylesheet Setup (`themes.json`)
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `text_color`, and `placeholder_text_color` are recomputed from the theme's normal values, its `disabled_map`, or its `readonly_map` every time you call `state()`.
+
 ```json
 {
     "sCTkEntryPrimary": {
+        "font": ["Arial", 15, "normal"],
+        "border_width": 1.5,
+        "border_color": ["#1A4375", "#64748B"],
         "fg_color": ["#FFFFFF", "#111827"],
-        "border_color": ["#1A4375", "#4B5563"],
-        "text_color": ["#1F2937", "#FFFFFF"],
+        "text_color": ["#1F2937", "#F9FAFB"],
         "placeholder_text_color": ["#94A3B8", "#64748B"],
+        "corner_radius": 6,
         "disabled_map": {
             "fg_color": ["#F3F4F6", "#1F2937"],
-            "border_color": ["#E5E7EB", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"],
-            "placeholder_text_color": ["#CBD5E1", "#475569"]
+            "border_color": ["#CBD5E1", "#475569"],
+            "text_color": ["#94A3B8", "#64748B"]
+        },
+        "readonly_map": {
+            "fg_color": ["#F8FAFC", "#1F2937"],
+            "border_color": ["#64748B", "#94A3B8"],
+            "text_color": ["#1F2937", "#F9FAFB"],
+            "placeholder_text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Middleman:** This widget inherits directly from `ctk.CTkEntry` and `ThemeableWidget`, entirely removing any autogenerated Pygubu intermediate templates. This simplifies the class footprint while fully retaining dynamic string translation and lifecycle callback capabilities natively.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization routine, the constructor fires `self._finalize_themeable_lifecycle()` to safely dispatch first-object registration notifications back up to Pygubu's master parent script systems.
+**`readonly_map` requires all four keys** (`fg_color`, `border_color`, `text_color`, `placeholder_text_color`) whenever `readonly` is actually requested — if any are missing, `state("readonly")` raises immediately rather than falling back to a guessed color. This check only runs when readonly is used, so existing code that never requests it is unaffected regardless of whether `readonly_map` is present.
+
+The design intent behind the values above: `text_color` in `readonly_map` deliberately matches `normal`'s `text_color` exactly — readonly means "you can still read this clearly, you just can't edit it," a different message from disabled's "this is inactive." `border_color` is the primary visual cue distinguishing readonly from normal, using a muted "locked" tone distinct from both normal's vivid border and disabled's washed-out one.
+
+`placeholder_text_color` is a genuinely distinct, themed value — not a fallback to `text_color`. This follows CustomTkinter's own convention: in the library's stock `dark-blue` theme, `text_color` is `["gray14", "gray84"]` while `placeholder_text_color` is a visibly more muted `["gray52", "gray62"]`. The value here reuses the muted gray already established throughout this theme file for disabled states — deliberate, but worth knowing if you'd rather placeholder text and disabled text look distinguishable from each other.
+
+Note: CTkEntry has no separate font for placeholder text — it always shares the single `font` property with typed text. This is a real limitation of the underlying widget, not a gap in this theme file; there's no way to make placeholder text use a different font.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkEntryPrimary` input lane field along with an interactive status switch toggle.
-
-```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Entry Secondary
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkFrameLabeledSecondary, sCTkButtonPrimary, sCTk, sCTkLabelTertiary, sCTkEntrySecondary
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes
-from sCTkFrame import sCTkFrame
-
-if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
-
-    root = ctk.CTk()
-    root.geometry("500x450")
-    root.title("sCTkEntryPrimary Real-Time Validation Bench")
-
-    base = sCTkFrame(root)
-    base.pack(expand=True, fill="both", padx=20, pady=20)
-
-    widget = sCTkEntryPrimary(base, placeholder_text="Enter Transceiver Callsign...")
-    widget.pack(fill="x", padx=20, pady=20)
-
-    def toggle_logger_states():
-        """Cycles operational states between active feed and locked desaturated tracks."""
-        current_state = widget.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
-
-        widget.configure(state=target)
-        btn_toggle.configure(text="Activate Entry Field" if target == "disabled" else "Lock Entry Field")
-        print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state().upper()}")
-
-    def toggle_appearance_skin():
-        current_mode = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_mode == "Dark" else "Dark")
-
-    btn_toggle = ctk.CTkButton(base, text="Lock Entry Field", command=toggle_logger_states)
-    btn_toggle.pack(fill="x", padx=10, pady=5)
-
-    btn_theme = ctk.CTkButton(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
-    btn_theme.pack(fill="x", padx=10, pady=5)
-
-    root.mainloop()
-
-```
-
-[Return to Table of Contents](#contents)
-
-
-
-## sCTkEntrySecondary
-
-### Table of Contents
-* [API Property Reference](#api-property-reference)
-* [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-themesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
-
----
-
-Auxiliary / secondary metadata input lane widget variant designed for secondary data capture (e.g., logging channels, station call signs, panel notes, or sub-metadata queries).
-
-*For dominant form input fields or direct operational data entry channels, see the primary component documentation page:* [sCTkEntryPrimary](sCTkEntryPrimary.md).
-
-
-![sCTkEntrySecondary_Dark.png](src/images/sCTkEntrySecondary_Dark.png)
-![sCTkEntrySecondary_Light.png](src/images/sCTkEntrySecondary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkEntry(master)` | `sCTkEntrySecondary(master)` *(Secondary metadata field)* |
-| **Maintenance** | Local style overrides duplicated across files manually. | Clean updates across all layouts modified directly in the JSON file. |
-| **File Mapping** | Everything runs under one core native text pipeline. | Streamlined and compiled cleanly across `sCTkEntrySecondary.py` and `ThemeableWidget.py`. |
-| **State Lock** | `self.configure(state="disabled")` | `input_field.state("disabled")`<br>**OR**<br>`input_field.configure(state="disabled")`<br><br>**Dual-Routing State Pipeline:** Natively handles both syntax paths. Freezes text interaction lanes, blocks keyboard event streams, and dynamically shifts colors out of `disabled_map` guidelines via sequential repaint loops. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-
----
-
-### Constructor
-
-Initialize a custom secondary data field instance. High-level custom configuration parameters from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
-
-```python
-# Instantiate a secondary metadata user entry field
-callsign_input = sCTkEntrySecondary(
-    master=control_panel,
-    placeholder_text="Enter Station Call Sign...",
-    textvariable=callsign_string_var
-)
-
-# Render the widget inside your parent container coordinate tracker panel
-callsign_input.pack(fill="x", padx=40, pady=10)
-```
-
----
-
-### Convenience Functions
-```python
-# Selectively manipulate the internal textual elements on the fly
-callsign_input.insert(0, "W1AW")         # Populates text buffer indices with data strings
-callsign_input.delete(0, "end")          # Wipes the entry line lane completely back to empty
-active_buffer = callsign_input.get()     # Queries the live active text character arrays
-
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = callsign_input.get_state() # Returns 'normal' or 'disabled'
-callsign_input.state("disabled")           # Locks data entry tracks and applies muted gray fills
-```
-
-### Centralized Stylesheet Setup (`themes.json`)
-```json
-{
-    "sCTkEntrySecondary": {
-        "fg_color": ["#F8FAFC", "#111827"],
-        "border_color": ["#94A3B8", "#374151"],
-        "text_color": ["#475569", "#94A3B8"],
-        "placeholder_text_color": ["#94A3B8", "#475569"],
-        "disabled_map": {
-            "fg_color": ["#F1F5F9", "#171412"],
-            "border_color": ["#E2E8F0", "#292524"],
-            "text_color": ["#94A3B8", "#57534E"],
-            "placeholder_text_color": ["#E5E7EB", "#1C1917"]
-        }
-    }
-}
-```
-
-### Other notes
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from `ctk.CTkEntry` and `ThemeableWidget`, bypassing the intermediate template layout files entirely. It connects the component straight to CustomTkinter's appearance modes while using the multiple inheritance protocol layer to sanitize keyword arrays.
-* **Coordinated Lifehook Repaint Pass:** Implements an overridden `_set_appearance_mode()` hook that catches global theme skin shifts (via dashboard buttons or native macOS preferences), briefly toggles the widget's internal state open to redraw vector lines, and locks it back down with zero color-caching freezes.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkEntrySecondary` input lane field along with an interactive status switch toggle.
+### Example
 
 ```python
 #!/usr/bin/python3
 
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for EntrySecondary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkLabelSecondary, sCTkEntrySecondary
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkLabelPrimary, sCTkEntryPrimary
 
 
 
@@ -1215,17 +1511,17 @@ if __name__ == "__main__":
 
     root = sCTk()
     root.geometry("450x260")
-    root.title("sCTkEntrySecondary Testing Deck")
+    root.title("sCTkEntryPrimary Testing Deck")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
     # Label notice layer to monitor buffer array activity
-    lbl_monitor = sCTkLabelSecondary(base, text="Console monitor active...")
+    lbl_monitor = sCTkLabelPrimary(base, text="Console monitor active...")
     lbl_monitor.pack(pady=10)
 
-    # Instantiate your custom secondary helper field
-    input_field = sCTkEntrySecondary(base, placeholder_text="Enter configuration metadata...")
+    # Instantiate your custom Primary helper field
+    input_field = sCTkEntryPrimary(base, placeholder_text="Enter configuration metadata...")
     input_field.pack(expand=False, fill="x", padx=40, pady=10)
 
     # Monitor keystrokes live
@@ -1257,6 +1553,151 @@ if __name__ == "__main__":
     root.mainloop()
 ```
 
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"`, `"readonly"`, and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
+- **`readonly` never deactivates placeholder text, even on focus** — confirmed directly against CustomTkinter's own source: native `CTkEntry`'s internal placeholder logic explicitly skips clearing the placeholder whenever `state` is `"readonly"`. This makes sense (there's no reason to clear a placeholder for typing on a field that can't be typed into), but it means a readonly field showing placeholder text will keep showing it indefinitely, regardless of focus.
+- The disable/enable-cycle cursor-position fix (`_reset_cursor_if_showing_placeholder`) is also applied on transitions into `readonly`, as a precaution — but this specific transition (unlike normal↔disabled, which is directly confirmed by testing) has not been independently verified. Given the point above, this is likely lower-risk than it might otherwise seem, since a readonly field showing placeholder text stays in that state continuously rather than toggling.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
+
+[Return to Table of Contents](#contents)
+
+
+
+## sCTkEntrySecondary
+
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
+
+---
+
+### Overview
+
+`sCTkEntrySecondary` is a themeable subclass of `customtkinter.CTkEntry` — the lower-emphasis of the library's two entry-field tiers (see also `sCTkEntryPrimary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a genuine three-state visual model: normal, readonly, and disabled.
+
+<img src="src/images/sCTkEntrySecondary_Dark.png" alt="sCTkEntrySecondary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkEntrySecondary_Light.png" alt="sCTkEntrySecondary in light mode" style="border: 2px solid #555555;">
+
+
+All three states use CTk's native `state` option (`"normal"`, `"readonly"`, `"disabled"`) — see `sCTkEntryPrimary`'s documentation for the full rationale and the readonly-specific placeholder behavior worth knowing about.
+
+---
+
+### Constructor
+
+```python
+sCTkEntrySecondary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkEntry` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). `state` is extracted and applied after construction rather than passed to the native constructor. |
+
+```python
+notes_entry = sCTkEntrySecondary(
+    master=control_panel,
+    placeholder_text="Optional notes",
+)
+notes_entry.pack(fill="x", padx=40, pady=10)
+```
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(state_string=None)` | `str` | Gets or sets the widget's visual state. `"normal"`/`"enabled"`/`"active"` all map to `"normal"`; `"readonly"` maps to `"readonly"`; `"disabled"` maps to `"disabled"`. All three use CTk's native `state` option. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `text_color`, `border_color`, and `placeholder_text_color`. Queries for any other property name fall through to the native `CTkEntry.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `text_color`, and `placeholder_text_color` are recomputed from the theme's normal values, its `disabled_map`, or its `readonly_map` every time you call `state()`.
+
+```json
+{
+    "sCTkEntrySecondary": {
+        "font": ["Arial", 13, "normal"],
+        "border_width": 1,
+        "border_color": ["#9CA3AF", "#4B5563"],
+        "fg_color": ["#F3F4F6", "#1F2937"],
+        "text_color": ["#4B5563", "#D1D5DB"],
+        "placeholder_text_color": ["#94A3B8", "#64748B"],
+        "corner_radius": 6,
+        "disabled_map": {
+            "fg_color": ["#F3F4F6", "#0B0F19"],
+            "border_color": ["#CBD5E1", "#374151"],
+            "text_color": ["#94A3B8", "#64748B"]
+        },
+        "readonly_map": {
+            "fg_color": ["#F3F4F6", "#1F2937"],
+            "border_color": ["#64748B", "#6B7280"],
+            "text_color": ["#4B5563", "#D1D5DB"],
+            "placeholder_text_color": ["#94A3B8", "#64748B"]
+        }
+    }
+}
+```
+
+**`readonly_map` requires all four keys** whenever `readonly` is actually requested — see `sCTkEntryPrimary`'s docs for the full requirement and design rationale (`text_color` deliberately matches normal exactly; `fg_color` stays close to normal too, since Secondary's normal state is already fairly subtle and there wasn't much room to differentiate further without it starting to look disabled instead).
+
+Same rationale as `sCTkEntryPrimary`: `placeholder_text_color` is a genuinely distinct, themed value, following CustomTkinter's own convention of giving placeholder text a visibly more muted color than typed text. CTkEntry has no separate font for placeholder text — it always shares the single `font` property with typed text; that's a real limitation of the underlying widget, not a gap in this theme file.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
+---
+
+### Example
+
+```python
+import customtkinter as ctk
+from scustomtkinter import sCTk, sCTkFrame, sCTkEntrySecondary, sCTkButtonPrimary
+
+if __name__ == "__main__":
+    root = sCTk()
+    root.geometry("400x250")
+    root.title("EntrySecondary Example")
+
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
+
+    notes_entry = sCTkEntrySecondary(base, placeholder_text="Optional notes")
+    notes_entry.pack(fill="x", pady=10)
+
+    def toggle_disabled():
+        target = "disabled" if notes_entry.get_state() == "normal" else "normal"
+        notes_entry.state(target)
+        disable_toggle.configure(text="Enable Field" if target == "disabled" else "Disable Field")
+
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Field", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
+
+    root.mainloop()
+```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"`, `"readonly"`, and `"normal"`/`"enabled"`/`"active"`; any other value leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
+- **`readonly` never deactivates placeholder text, even on focus** — confirmed directly against CustomTkinter's own source; see `sCTkEntryPrimary`'s docs for the full explanation.
+- The disable/enable-cycle cursor-position fix is also applied on transitions into `readonly`, as a precaution not independently verified the way normal↔disabled was — see `sCTkEntryPrimary`'s docs for why this is likely lower-risk than it sounds.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
+
 [Return to Table of Contents](#contents)
 
 
@@ -1264,134 +1705,117 @@ if __name__ == "__main__":
 ## sCTkLabelPrimary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-The dominant primary header typography display label widget component wrapping `customtkinter.CTkLabel`. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
+### Overview
 
+`sCTkLabelPrimary` is a themeable subclass of `customtkinter.CTkLabel` — the most prominent of the library's three label tiers (see also `sCTkLabelSecondary`, `sCTkLabelTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim — there's no click-blocking concern the way there is for buttons or checkboxes.
 
-![sCTkLabelPrimary_Dark.png](src/images/sCTkLabelPrimary_Dark.png)
-![sCTkLabelPrimary_Light.png](src/images/sCTkLabelPrimary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkLabel(master)` | `sCTkLabelPrimary(master)` *(Dominant Header Typography)* |
-| **File Mapping** | Direct module definitions run without structured configuration. | Streamlined and compiled programmatically across `sCTkLabelPrimary.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `primary_label.state("disabled")`<br>**OR**<br>`primary_label.configure(state="disabled")`<br><br>**Framework-Wide State Support:** Natively supported across all label components (`Primary`, `Secondary`, `Tertiary`). It intercepts state configuration calls and dynamically dims typography layouts based on centralized `disabled_map` metrics. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions. |
+<img src="src/images/sCTkLabelPrimary_Dark.png" alt="sCTkLabelPrimary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkLabelPrimary_Light.png" alt="sCTkLabelPrimary in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom primary header label instance. Configuration metrics map cleanly out of central stylesheet parameters and are automatically sanitized by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkLabelPrimary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | `state` is pulled out and applied after construction rather than passed to the native widget. Everything else is any native `CTkLabel` argument (e.g. `text`, `font`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a primary dominant dashboard header label element
 console_header = sCTkLabelPrimary(
     master=control_panel,
-    text="MAIN RADIO DECK CONSOLE"
+    text="Main Console",
 )
-
-# Render the widget inside your layout panel using geometry managers
 console_header.pack(expand=True, pady=10)
 ```
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only the literal string `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value matches neither branch and leaves the state unchanged. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `cget("state")` | `str` | Returns the current state, same as `get_state()`. Intercepted specially because native `CTkLabel` has no real `"state"` option to query — without this override, `cget("state")` would raise. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, and `text_color`. Queries for any other property name fall through to the native `CTkLabel.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `text_color`, and `font` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkLabelPrimary": {
+        "font": ["Arial", 18, "bold"],
         "fg_color": "transparent",
-        "text_color": ["#1A4375", "#FFFFFF"],
-        "font": ["Arial", 14, "bold"],
+        "text_color": ["#111827", "#F9FAFB"],
         "disabled_map": {
-            "text_color": ["#94A3B8", "gray50"]
+            "text_color": ["#64748B", "#94A3B8"]
         }
     }
 }
 ```
 
+`text_color` is required in whichever map is active — if it's missing, `_update_current_visual_state()` raises immediately rather than falling back to a default. This is deliberate: this project's design is for `ThemeableWidget`-based widgets to fail hard on incomplete theme data, not paper over it with a fallback color.
+
+Primary's disabled color is intentionally the least muted of the three label tiers — by design, a disabled `sCTkLabelPrimary` should still read as more prominent than a disabled `sCTkLabelSecondary` or `sCTkLabelTertiary`, echoing the hierarchy the three tiers already have when enabled.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
 ---
 
-### Other Notes
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native geometry constructor routines mutate and drop keys directly out of parsed configuration structures during early boot phases, the constructor clones your data configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This prevents layout repaints from failing.
-* **Dynamic Dark Mode Pass-Through:** When returning to an active state, the visual interceptor reads directly from your protected `_local_defaults` cache. If no hardcoded text color is explicitly discovered, it hands control back to CustomTkinter's master `ThemeManager` to natively paint high-contrast system fonts.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute bottom of the initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkLabelPrimary` header element along with an interactive status switch toggle.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Label Secondary
-# =====================================================================
-
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary,sCTk, sCTkLabelPrimary
+import customtkinter as ctk
+from scustomtkinter import sCTk, sCTkFrame, sCTkLabelPrimary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x280")
-    root.title("sCTkLabelPrimary Testing Deck")
+    root.geometry("400x250")
+    root.title("LabelPrimary Example")
 
-    container = sCTkFrame(root, fg_color="transparent")
-    container.pack(expand=True, fill="both", padx=30, pady=30)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    primary_label = sCTkLabelPrimary(container, text="MAIN RADIO DECK CONSOLE")
-    primary_label.pack(expand=True, pady=10)
+    header = sCTkLabelPrimary(base, text="Main Console")
+    header.pack(pady=10)
 
-    lbl_status = sCTkLabelSecondary(container, text="Current State Assertion: NORMAL", font=("Arial", 10, "italic"))
-    lbl_status.pack(side="bottom", pady=5)
+    def toggle_disabled():
+        target = "disabled" if header.get_state() == "normal" else "normal"
+        header.state(target)
+        disable_toggle.configure(text="Enable Header" if target == "disabled" else "Disable Header")
 
-    def toggle_label_states():
-        """Cycles the dominant header label states between normal and disabled profiles."""
-        current_state = primary_label.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
-
-        primary_label.configure(state=target)
-
-        if target == "disabled":
-            btn_toggle.configure(text="Activate Header (Set 'normal')")
-            lbl_status.configure(text="Current State Assertion: DISABLED")
-        else:
-            btn_toggle.configure(text="Dim Header (Set 'disabled')")
-            lbl_status.configure(text="Current State Assertion: NORMAL")
-
-        print(f"Logged Verification Hook -> primary_label.get_state() = {primary_label.get_state()}")
-
-    btn_toggle = sCTkButtonPrimary(
-        container,
-        text="Dim Header (Set 'disabled')",
-        command=toggle_label_states,
-        fg_color=("#1A4375", "#3B8ED0"),
-        hover_color=("#112A4B", "#1F6AA5")
-    )
-    btn_toggle.pack(expand=True, pady=15)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    primary_label.state("disabled")
-    print(f"state (Disabled Pass) = {primary_label.get_state().upper()}")
-
-    primary_label.state("normal")
-    print(f"state (Normal Pass)   = {primary_label.get_state().upper()}")
-    print("========================================\n")
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Header", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
+- Calling `configure("fg_color")` or `configure("text_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`text_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -1400,122 +1824,117 @@ if __name__ == "__main__":
 ## sCTkLabelSecondary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-The intermediate sub-section display typography label widget component. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
+### Overview
 
-*For dominant main dashboard header components, see the companion component documentation page:* [sCTkLabelPrimary](sCTkLabelPrimary.md).
+`sCTkLabelSecondary` is a themeable subclass of `customtkinter.CTkLabel` — the mid-emphasis tier of the library's three label styles, between `sCTkLabelPrimary` and `sCTkLabelTertiary`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim.
 
-
-![sCTkLabelSecondary_Dark.png](src/images/sCTkLabelSecondary_Dark.png)
-![sCTkLabelSecondary_Light.png](src/images/sCTkLabelSecondary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkLabel(master)` | `sCTkLabelSecondary(master)` *(Intermediate Section Typography)* |
-| **File Mapping** | Direct module definitions run without structured configuration. | Separated safely across `sCTkLabelSecondary.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `test_label.state("disabled")`<br>**OR**<br>`test_label.configure(state="disabled")`<br><br>**Framework-Wide State Support:** Natively supported across all label components (`Primary`, `Secondary`, `Tertiary`). It intercepts state configuration calls and dynamically dims typography layouts based on centralized `disabled_map` metrics. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions. |
+<img src="src/images/sCTkLabelSecondary_Dark.png" alt="sCTkLabelSecondary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkLabelSecondary_Light.png" alt="sCTkLabelSecondary in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom secondary intermediate label instance. Configuration metrics map cleanly out of central stylesheet parameters.
+```python
+sCTkLabelSecondary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | `state` is pulled out and applied after construction rather than passed to the native widget. Everything else is any native `CTkLabel` argument (e.g. `text`, `font`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a secondary intermediate dashboard label element
 panel_sub_label = sCTkLabelSecondary(
     master=control_panel,
-    text="VFO STATUS PANEL: ACTIVE"
+    text="Status: Active",
 )
-
-# Render the widget inside your layout panel using geometry managers
 panel_sub_label.pack(expand=True, pady=10)
 ```
 
 ---
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only the literal string `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value matches neither branch and leaves the state unchanged. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `cget("state")` | `str` | Returns the current state, same as `get_state()`. Intercepted specially because native `CTkLabel` has no real `"state"` option to query — without this override, `cget("state")` would raise. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, and `text_color`. Queries for any other property name fall through to the native `CTkLabel.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `text_color`, and `font` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkLabelSecondary": {
+        "font": ["Arial", 15, "normal"],
         "fg_color": "transparent",
-        "text_color": ["#475569", "#CBD5E1"],
-        "font": ["Arial", 11, "bold"],
+        "text_color": ["#374151", "#D1D5DB"],
         "disabled_map": {
-            "text_color": ["#94A3B8", "gray50"]
+            "text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
-### Other notes
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native geometry constructor routines mutate and drop keys directly out of parsed configuration structures during early boot phases, the constructor clones your data configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This prevents layout repaints from failing.
-* **Dynamic Dark Mode Pass-Through:** When returning to an active state, the visual interceptor reads directly from your protected `_local_defaults` cache. If no hardcoded text color is explicitly discovered, it hands control back to CustomTkinter's master `ThemeManager` to natively paint high-contrast system fonts.
+Unlike `sCTkLabelPrimary`/`sCTkLabelTertiary`'s history, this widget's `_update_current_visual_state()` was already never falling back to a default — but it also wasn't raising, either; a missing `text_color` would just silently never get set. As of this project's audit, all three label widgets now raise explicitly if `text_color` is missing from whichever map is active, per this project's design of failing hard on incomplete theme data rather than working around it.
+
+Secondary's disabled color sits deliberately in the middle of the three label tiers' disabled states — less muted than Tertiary's, more muted than Primary's — mirroring the emphasis hierarchy the three tiers already have when enabled.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkLabelSecondary` sub-section element along with an interactive status switch toggle.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Label Primery
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkButtonSecondary, sCTk, sCTkLabelSecondary
+from scustomtkinter import sCTk, sCTkFrame, sCTkLabelSecondary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x240")
-    root.title("sCTkLabelSecondary Testing Deck")
+    root.geometry("400x250")
+    root.title("LabelSecondary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # Instantiate your custom text component cell
-    widget = sCTkLabelSecondary(base, text="Active Teleceiver Signal Frequency Lane [94.1 MHz]")
-    widget.pack(expand=True, padx=20, pady=20)
+    status_label = sCTkLabelSecondary(base, text="Status: Active")
+    status_label.pack(pady=10)
 
+    def toggle_disabled():
+        target = "disabled" if status_label.get_state() == "normal" else "normal"
+        status_label.state(target)
+        disable_toggle.configure(text="Enable Label" if target == "disabled" else "Disable Label")
 
-    def toggle_operational_state():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        widget.configure(state=target)
-        btn_toggle.configure(text="Lock Label Text" if target == "normal" else "Unlock Label Text")
-
-
-    def toggle_appearance_skin():
-        current_mode = ctk.get_appearance_mode()
-        target = "Light" if current_mode == "Dark" else "Dark"
-        ctk.set_appearance_mode(target)
-
-
-    btn_theme = sCTkButtonPrimary(base, text="Toggle Skin Mode (Dark / Light)", command=toggle_appearance_skin)
-    btn_theme.pack(side="bottom", pady=(5, 5))
-
-    btn_toggle = sCTkButtonSecondary(base, text="Lock Label Text", command=toggle_operational_state)
-    btn_toggle.pack(side="bottom", pady=(10, 5))
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Label", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
+- Calling `configure("fg_color")` or `configure("text_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`text_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -1524,137 +1943,117 @@ if __name__ == "__main__":
 ## sCTkLabelTertiary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-The fine inline description, sub-legend, or auxiliary notice typography display label widget component wrapping `customtkinter.CTkLabel`. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
+### Overview
 
-*For prominent main dashboard header and mid-level sections, see the companion component pages:* [sCTkLabelPrimary](sCTkLabelPrimary.md) and [sCTkLabelSecondary](sCTkLabelSecondary.md).
+`sCTkLabelTertiary` is a themeable subclass of `customtkinter.CTkLabel` — the lowest-emphasis of the library's three label tiers (see also `sCTkLabelPrimary`, `sCTkLabelSecondary`), intended for inline descriptions, sub-legends, or auxiliary notices. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Since labels have no native interactivity to block, "disabled" here is purely a text-color dim.
 
-
-![sCTkLabelTertiary_Dark.png](src/images/sCTkLabelTertiary_Dark.png)
-![sCTkLabelTertiary_Light.png](src/images/sCTkLabelTertiary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkLabel(master)` | `sCTkLabelTertiary(master)` *(Inline Legend/Description Typography)* |
-| **File Mapping** | Direct module definitions run without structured configuration. | Streamlined and compiled programmatically across `sCTkLabelTertiary.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `tertiary_label.state("disabled")`<br>**OR**<br>`tertiary_label.configure(state="disabled")`<br><br>**Framework-Wide State Support:** Natively supported across all label components (`Primary`, `Secondary`, `Tertiary`). It intercepts state configuration calls and dynamically dims typography layouts based on centralized `disabled_map` metrics. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions. |
+<img src="src/images/sCTkLabelTertiary_Dark.png" alt="sCTkLabelTertiary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkLabelTertiary_Light.png" alt="sCTkLabelTertiary in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom tertiary description label instance. Configuration metrics map cleanly out of central stylesheet parameters and are automatically sanitized by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkLabelTertiary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | `state` is pulled out and applied after construction rather than passed to the native widget. Everything else is any native `CTkLabel` argument (e.g. `text`, `font`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a tertiary description dashboard label element
 panel_legend = sCTkLabelTertiary(
     master=control_panel,
-    text="Inline notice: tuning resolution bounded to 100Hz."
+    text="Note: values update every 5 seconds.",
 )
-
-# Render the widget inside your layout panel using geometry managers
 panel_legend.pack(expand=True, pady=10)
 ```
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only the literal string `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value matches neither branch and leaves the state unchanged. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `cget("state")` | `str` | Returns the current state, same as `get_state()`. Intercepted specially because native `CTkLabel` has no real `"state"` option to query — without this override, `cget("state")` would raise. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, and `text_color`. Queries for any other property name fall through to the native `CTkLabel.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `text_color`, and `font` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkLabelTertiary": {
+        "font": ["Arial", 13, "normal"],
         "fg_color": "transparent",
-        "text_color": ["#64748B", "#94A3B8"],
-        "font": ["Arial", 10, "italic"],
+        "text_color": ["#4B5563", "#9CA3AF"],
         "disabled_map": {
-            "text_color": ["#CBD5E1", "#334155"]
+            "text_color": ["#CBD5E1", "#475569"]
         }
     }
 }
 ```
 
+`text_color` is required in whichever map is active — if it's missing, `_update_current_visual_state()` raises immediately rather than falling back to a default. This is deliberate: this project's design is for `ThemeableWidget`-based widgets to fail hard on incomplete theme data, not paper over it with a fallback color.
+
+Tertiary's disabled color is intentionally the most muted of the three label tiers — by design, a disabled `sCTkLabelTertiary` should read as the least prominent of the three even while disabled, echoing the hierarchy the three tiers already have when enabled.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
 ---
 
-### Other Notes
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native geometry constructor routines mutate and drop keys directly out of parsed configuration structures during early boot phases, the constructor clones your data configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This prevents layout repaints from failing.
-* **Dynamic Dark Mode Pass-Through:** When returning to an active state, the visual interceptor reads directly from your protected `_local_defaults` cache. If no hardcoded text color is explicitly discovered, it hands control back to CustomTkinter's master `ThemeManager` to natively paint high-contrast system fonts.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute bottom of the initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkLabelTertiary` inline legend element along with an interactive status switch toggle.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Label Tertiary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkLabelTertiary
+from scustomtkinter import sCTk, sCTkFrame, sCTkLabelTertiary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x280")
-    root.title("sCTkLabelTertiary Testing Deck")
+    root.geometry("400x250")
+    root.title("LabelTertiary Example")
 
-    container = sCTkFrame(root, fg_color="transparent")
-    container.pack(expand=True, fill="both", padx=30, pady=30)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    tertiary_label = sCTkLabelTertiary(container, text="Inline notice: tuning resolution bounded to 100Hz.")
-    tertiary_label.pack(expand=True, pady=10)
+    legend = sCTkLabelTertiary(base, text="Note: values update every 5 seconds.")
+    legend.pack(pady=10)
 
-    lbl_status = sCTkLabelSecondary(container, text="Current State Assertion: NORMAL", font=("Arial", 10, "italic"))
-    lbl_status.pack(side="bottom", pady=5)
+    def toggle_disabled():
+        target = "disabled" if legend.get_state() == "normal" else "normal"
+        legend.state(target)
+        disable_toggle.configure(text="Enable Legend" if target == "disabled" else "Disable Legend")
 
-    def toggle_label_states():
-        """Cycles the description label states between normal and disabled profiles."""
-        current_state = tertiary_label.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
-
-        tertiary_label.configure(state=target)
-
-        if target == "disabled":
-            btn_toggle.configure(text="Activate Description (Set 'normal')")
-            lbl_status.configure(text="Current State Assertion: DISABLED")
-        else:
-            btn_toggle.configure(text="Dim Description (Set 'disabled')")
-            lbl_status.configure(text="Current State Assertion: NORMAL")
-
-        print(f"Logged Verification Hook -> tertiary_label.get_state() = {tertiary_label.get_state()}")
-
-    btn_toggle = sCTkButtonPrimary(
-        container,
-        text="Dim Description (Set 'disabled')",
-        command=toggle_label_states,
-        fg_color=("#1A4375", "#3B8ED0"),
-        hover_color=("#112A4B", "#1F6AA5")
-    )
-    btn_toggle.pack(expand=True, pady=15)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    tertiary_label.state("disabled")
-    print(f"state (Disabled Pass) = {tertiary_label.get_state().upper()}")
-
-    tertiary_label.state("normal")
-    print(f"state (Normal Pass)   = {tertiary_label.get_state().upper()}")
-    print("========================================\n")
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Legend", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
+- Calling `configure("fg_color")` or `configure("text_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`text_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -1663,180 +2062,117 @@ if __name__ == "__main__":
 ## sCTkProgressBar
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Progress Scaling & Movement Physics](#progress-scaling--movement-physics)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-An advanced theme-compliant linear progression indicator widget. It implements custom state hooks to dynamically morph track backgrounds and progress fill lanes into desaturated gray tokens on a programmatic lock, protecting visual dashboard metrics from freezing out of theme synchronization.
+### Overview
 
+`sCTkProgressBar` is a themeable subclass of `customtkinter.CTkProgressBar`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a purely visual "disabled" state — progress bars have no click behavior to block, so disabling one only dims its colors.
 
-![sCTkProgressBar_Dark.png](src/images/sCTkProgressBar_Dark.png)
-![sCTkProgressBar_Light.png](src/images/sCTkProgressBar_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkProgressBar(master)` | `sCTkProgressBar(master)` *(Themed Progress Bar)* |
-| **File Mapping** | Config metrics look up loose un-managed palette snapshot lists. | Separated safely across `sCTkProgressBar.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `widget.state("disabled")`<br>**OR**<br>`widget.configure(state="disabled")`<br><br>**Polymorphic State Controller:** Repaints the underlying vector fill segments to reflect a read-only lock state natively. |
+<img src="src/images/sCTkProgressBar_Dark.png" alt="sCTkProgressBar in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkProgressBar_Light.png" alt="sCTkProgressBar in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom themed progression indicator chassis.
+```python
+sCTkProgressBar(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | `state` is pulled out and applied after construction. Everything else is any native `CTkProgressBar` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a telemetry loading indicator bar
-load_bar = sCTkProgressBar(master=dashboard_panel)
-
-# FIX: Keep expand=False to prevent track heights from over-stretching vertically!
-load_bar.pack(expand=False, fill="x", padx=40, pady=10)
-
-# Feed status tracking values down the matrix (0.0 to 1.0)
-load_bar.set(0.45)
+signal_meter = sCTkProgressBar(master=control_panel)
+signal_meter.pack(fill="x", padx=40, pady=10)
+signal_meter.set(0.65)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Unpack active progress metrics programmatically
-current_value = load_bar.get()                # Returns float between 0.0 and 1.0
+### Methods
 
-
-# Force-apply a new progress position value across the track index
-load_bar.set(0.75)                            # Sets progress bar layout directly to 75%
-
-
-# Apply an immediate visual state lock across the tracker segment
-load_bar.state("disabled")                    # Repaints filled lanes to desaturated gray
-```
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's visual "disabled" state. Unlike most widgets in this library, any string is accepted and stored as-is (lowercased) — there's no validation against a fixed set of values. Only the literal `"disabled"` actually changes colors; anything else is treated as "not disabled". |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `cget("state")` | `str` | Returns the current state, same as `get_state()`. Intercepted specially because native `CTkProgressBar` has no real `"state"` option to query — without this override, `cget("state")` would raise. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `progress_color`, and `border_color`. Queries for any other property name fall through to the native `CTkProgressBar.configure`. |
 
 ---
 
-### Progress Scaling & Movement Physics
+### Theming (`sCTkThemes.json`)
 
-The progression indicator updates its visual fill index strictly via **floating-point values ranging from `0.0` (0%) to `1.0` (100%)**. To safely translate integer step adjustments (like hardware clicks, telemetry deltas, or button taps) into smooth fractional bar movement, utilize the following resolution guidelines:
+- **Applied once, at construction** — every key in the widget's theme block, including `width`, `height`, and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `progress_color`, `border_width`, and `corner_radius` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
 
-#### 1. Incrementing with Decimal Steps
-To move the bar forward by a specific percentage step, extract the active position float via `.get()` and add a corresponding fractional delta (`0.01` for a 1% step, `0.05` for a 5% step, `0.10` for a 10% step):
-
-```python
-# Advance progress bar position forward by exactly +5%
-current_position = load_bar.get()
-next_position = current_position + 0.05
-
-# Clamp the value at the 1.0 (100%) ceiling to prevent math layout overflow exceptions
-if next_position > 1.0:
-    next_position = 1.0
-
-load_bar.set(next_position)
-```
-
-#### 2. Reversing to Percentages for Labels
-To report the floating-point index back to the operator dashboard as a readable integer percentage string, multiply the float by `100` and cast it to a flat `int()` value:
-
-```python
-# Converts a position of 0.65 into a clean string layout: "65%"
-percentage_string = f"{int(load_bar.get() * 100)}%"
-my_dashboard_label.configure(text=percentage_string)
-```
-
----
-
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
 ```json
 {
     "sCTkProgressBar": {
-        "fg_color": ["#E2E8F0", "#2D2D2D"],
-        "progress_color": ["#3B82F6", "#1F6AA5"],
-        "border_color": ["#CBD5E1", "#334155"],
+        "width": 200,
+        "height": 6,
+        "fg_color": ["#E5E7EB", "#4B5563"],
+        "progress_color": ["#1A4375", "#2471A3"],
+        "corner_radius": 100,
         "disabled_map": {
-            "fg_color": ["#E2E8F0", "#1E293B"],
-            "progress_color": ["#94A3B8", "#475569"]
+            "fg_color": ["#CBD5E1", "#374151"],
+            "progress_color": ["#94A3B8", "#4B5563"]
         }
     }
 }
 ```
 
+There's no `border_color` anywhere in this theme block, even though the repaint loop checks for one — this style simply has no themed border, the same situation as `sCTkButtonPrimary`'s `border_color`.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained interactive test execution script demonstrating how to map percentage labels and step controllers natively alongside an `sCTkProgressBar`.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for ProgressBar
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkButtonSecondary, sCTkLabelSecondary, sCTk, sCTkProgressBar
+from scustomtkinter import sCTk, sCTkFrame, sCTkProgressBar, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x260")
-    root.title("sCTkProgressBar Interactive Testing Deck")
+    root.geometry("400x250")
+    root.title("ProgressBar Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    initial_val = 0.45
-    lbl_status = sCTkLabelSecondary(
-        base,
-        text=f"Telemetry Progress Output: {int(initial_val * 100)}% / 100%"
-    )
-    lbl_status.pack(pady=(10, 5))
+    meter = sCTkProgressBar(base)
+    meter.pack(fill="x", pady=10)
+    meter.set(0.65)
 
-    widget = sCTkProgressBar(base)
-    widget.pack(expand=False, fill="x", padx=40, pady=10)
-    widget.set(initial_val)
+    def toggle_disabled():
+        target = "disabled" if meter.get_state() == "normal" else "normal"
+        meter.state(target)
+        disable_toggle.configure(text="Enable Meter" if target == "disabled" else "Disable Meter")
 
-    def step_progress():
-        if widget.get_state() == "disabled":
-            print("⚠️ Cannot modify progress channel: Widget is currently locked!")
-            return
-
-        current_val = widget.get()
-        next_val = current_val + 0.05
-        if next_val > 1.0:
-            next_val = 0.0
-
-        widget.set(next_val)
-        lbl_status.configure(text=f"Telemetry Progress Output: {int(next_val * 100)}% / 100%")
-
-    btn_step = sCTkButtonPrimary(base, text="Step Telemetry Track (+5%)", command=step_progress)
-    btn_step.pack(pady=(5, 5))
-
-    def toggle_operational_lock():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        widget.configure(state=target)
-        btn_lock.configure(text="Lock Indicator Track" if target == "normal" else "Unlock Indicator Track")
-        btn_step.configure(state=target)
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Indicator Track", command=toggle_operational_lock)
-    btn_lock.pack(side="bottom", pady=(5, 10))
-
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-    btn_theme = sCTkButtonSecondary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=5)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Meter", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- `state()` performs no validation at all — any string you pass is stored verbatim; only `"disabled"` actually changes the rendered colors.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -1845,153 +2181,128 @@ if __name__ == "__main__":
 ## sCTkRadioButton
 
 ### Table of Contents
-* [System Architecture Overview](#system-architecture-overview)
-* [API Constructor Reference](#api-constructor-reference)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A theme-compliant custom mutual exclusion radio selection switch component wrapping `customtkinter.CTkRadioButton`. Specially engineered for cockpit tuning tasks—such as VFO selection banks, transmitter operation modes, and antenna relay switches—it decouples low-level parameter configurations to prevent layout validation crashes while keeping disabled states 100% theme-adaptive.
+### Overview
 
+`sCTkRadioButton` is a themeable subclass of `customtkinter.CTkRadioButton`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"` — confirmed by direct testing to correctly block clicks.
 
-![sCTkRadioButton_Dark.png](src/images/sCTkRadioButton_Dark.png)
-![sCTkRadioButton_Light.png](src/images/sCTkRadioButton_Light.png)
+<img src="src/images/sCTkRadioButton_Dark.png" alt="sCTkRadioButton in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkRadioButton_Light.png" alt="sCTkRadioButton in light mode" style="border: 2px solid #555555;">
 
 ---
 
-### API Constructor Reference
+### Constructor
 
 ```python
-sCTkRadioButton(master=None, variable=None, value=None, command=None, **kwargs)
+sCTkRadioButton(master=None, variable=None, value=None, command=None, **kw)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | *Required* | Reference pointer tracking your root window, parent layout layer, or container frame capsule. |
-| `variable` | `tk.Variable` | `None` | Shared Tkinter variable tracker (e.g. `tk.StringVar`) that logically interlocks multiple radio selections together. |
-| `value` | `any` | `None` | The specific absolute data value passed up to the shared variable anchor when this unique choice row is clicked. |
-| `command` | `callable` | `None` | Single-click selection callback executed automatically whenever a valid, active selection shift occurs. |
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `variable` | `tkinter.Variable` | `None` | Shared variable used for mutual exclusion within a group. |
+| `value` | any | `None` | This button's value — the button shows as selected when `variable` equals this. |
+| `command` | `callable` | `None` | Called when the button is selected. |
+| `**kw` | — | — | Any native `CTkRadioButton` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
+
+```python
+mode_var = tkinter.StringVar(value="AM")
+am_radio = sCTkRadioButton(control_panel, text="AM", variable=mode_var, value="AM")
+fm_radio = sCTkRadioButton(control_panel, text="FM", variable=mode_var, value="FM")
+am_radio.pack(anchor="w")
+fm_radio.pack(anchor="w")
+```
 
 ---
 
-### Convenience Functions
-```python
-# Evaluate current configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = switch_node.get_state()      # Returns 'normal' or 'disabled'
-switch_node.state("disabled")               # Freezes mouse selections and applies desaturated grays safely
+### Methods
 
-# Programmatically query state tracks out of application controllers
-active_choice = shared_radio_var.get()     # Extracts the active value string out of the central interlock lane
-```
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: `variable`/`value`/`command`/`state` are each routed individually. Rebinding `variable`/`value` to a new group after construction is confirmed correct by direct testing — it properly tears down the old variable's binding and establishes real mutual exclusion in the new group, with no leftover coupling to the original group. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`. |
 
-The component queries your centralized theme sheet profile matrix using standard `self._resolve_color()` lookup calls, ensuring that indicator dots and canvas borders translate colors smoothly across appearance updates.
+---
 
-To satisfy the framework configuration guidelines, ensure your theme matrix includes this structured asset block:
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `hover_color`, `text_color`, and `font` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
 
 ```json
 {
     "sCTkRadioButton": {
-        "fg_color": ["#1A4375", "#1F6AA5"],
-        "border_color": ["#94A3B8", "#4B5563"],
-        "text_color": ["#1F2937", "#FFFFFF"],
-        "hover_color": ["#112A4B", "#194A7A"],
-        "radiobutton_width": 22,
-        "radiobutton_height": 22,
-        "border_width": 3,
-        "font": ["Arial", 11, "bold"],
+        "font": ["Arial", 15, "normal"],
+        "text_color": ["#374151", "#D1D5DB"],
+        "border_width_unchecked": 4,
+        "border_width_checked": 6,
+        "border_color": ["#64748B", "#94A3B8"],
+        "fg_color": ["#1A4375", "#2471A3"],
+        "hover_color": ["#112A4B", "#1F618D"],
         "disabled_map": {
-            "fg_color": ["#CBD5E1", "#334155"],
-            "border_color": ["#E5E7EB", "#222222"],
-            "text_color": ["#94A3B8", "#4B5563"]
+            "text_color": ["#94A3B8", "#64748B"],
+            "fg_color": ["#CBD5E1", "#374151"],
+            "border_color": ["#CBD5E1", "#475569"]
         }
     }
 }
 ```
 
----
+`border_width_unchecked` and `border_width_checked` are real, top-level-only theme keys (not in `disabled_map`) that control the button's border thickness based on whether it's currently the selected button in its group — thicker when checked, to show the filled dot. They're applied once at construction and left alone afterward; the native widget switches between them internally based on the checked/unchecked state, so no repaint-time logic is needed here.
 
-### Other Notes
-* **Crash-Shield Parameter Interceptor:** Passing `value` or `variable` parameters directly into CustomTkinter's public `.configure()` pass after instantiation raises a fatal `ValueError`. The class overrides `.configure()` to catch these keys, assigning them safely through low-level hidden hooks to support dynamic updates without throwing errors.
-* **Chassis Alignment Rule:** Because radio string fields frequently contain disparate character lengths, packing them using standard parameters causes staggered checkbox positions. Always apply `anchor="w"` paired with `fill="x"` to cleanly lock indicator circles into a flat vertical left column.
-* **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu layouts out of the box.
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to layout a mutually exclusive radio stack inside a themeable frame capsule along with real-time feedback labels.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Radiobutton
-# =====================================================================
-
+import tkinter
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTkLabelSecondary, sCTk, sCTkRadioButton
+from scustomtkinter import sCTk, sCTkFrame, sCTkRadioButton, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x320")
-    root.title("sCTkRadioButton Mutual Exclusion Validation Bench")
+    root.geometry("400x300")
+    root.title("RadioButton Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # Centralized StringVar linking both buttons together
-    radio_var = ctk.StringVar(value="VFO_A")
+    mode_var = tkinter.StringVar(value="AM")
+    am_radio = sCTkRadioButton(base, text="AM", variable=mode_var, value="AM")
+    am_radio.pack(anchor="w", pady=5)
+    fm_radio = sCTkRadioButton(base, text="FM", variable=mode_var, value="FM")
+    fm_radio.pack(anchor="w", pady=5)
 
-    lbl_monitor = sCTkLabelSecondary(base, text="Active Telemetry Target: VFO_A")
-    lbl_monitor.pack(pady=10)
+    def toggle_disabled():
+        target = "disabled" if am_radio.get_state() == "normal" else "normal"
+        am_radio.state(target)
+        fm_radio.state(target)
+        disable_toggle.configure(text="Enable Group" if target == "disabled" else "Disable Group")
 
-
-    def print_result():
-        lbl_monitor.configure(text=f"Active Telemetry Target: {radio_var.get()}")
-
-
-    # 🔑 FIXED ALIGNMENT PACK ENGINE: Enforces left-anchoring with horizontal expansion
-    widget = sCTkRadioButton(base, text="Primary VFO A Link Target", variable=radio_var, value="VFO_A",
-                             command=print_result)
-    widget.pack(expand=False, fill="x", padx=60, pady=10, anchor="w")
-
-    widget2 = sCTkRadioButton(base, text="Secondary VFO B Link Target", variable=radio_var, value="VFO_B",
-                              command=print_result)
-    widget2.pack(expand=False, fill="x", padx=60, pady=10, anchor="w")
-
-
-    def toggle_radio_lock():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        widget.configure(state=target)
-        widget2.configure(state=target)
-        btn_lock.configure(text="Lock Radio Switch" if target == "normal" else "Unlock Radio Switch")
-
-
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Radio Switch", command=toggle_radio_lock)
-    btn_lock.pack(pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=10)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    widget.state("disabled")
-    print("state (Disabled Pass) =", widget.get_state())
-    widget.state("normal")
-    print("state (Normal Pass)   =", widget.get_state())
-    print("========================================\n")
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Group", command=toggle_disabled)
+    disable_toggle.pack(pady=15)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value matches neither branch, though colors are still harmlessly re-applied.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`border_color`/`text_color`/`hover_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -1999,63 +2310,58 @@ if __name__ == "__main__":
 
 ## sCTkScrollbar
 
-The `sCTkScrollbar` is a high-performance, theme-adaptive custom scrollbar element designed for the `sCustomTkinter` radio desktop interface, working in tandem with the unblocked `sCTkScrollArea` viewport container frame. It inherits from `ctk.CTkScrollbar` to preserve native light/dark appearance switches while introducing specialized hardware aggregators to handle inertial gestures smoothly.
+`sCTkScrollbar` is a themeable scrollbar — a subclass of `ctk.CTkScrollbar` with color resolution from `sCTkThemes.json` and orientation-aware default sizing. It's designed to pair with [`sCTkScrollArea`](sCTkScrollArea.md), which needs an external scrollbar, but works anywhere a `CTkScrollbar` would.
 
+<img src="src/images/sCTkScrollbar_Dark.png" alt="sCTkScrollbar_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkScrollbar_Light.png" alt="sCTkScrollbar_Light.png" style="border: 2px solid #555555;">
 
-![sCTkScrollbar_Dark.png](src/images/sCTkScrollbar_Dark.png)
-![sCTkScrollbar_Light.png](src/images/sCTkScrollbar_Light.png)
+**This widget contains no scroll-handling logic.** It's a scrollbar: it renders a draggable bar and reports its position. Wheel and trackpad handling belongs to the scrolling container — see [`ScrollBindingMixin`](ScrollBindingMixin.md). An earlier version of this page credited the scrollbar with an "inertial micro-delta aggregator"; that logic lives in `sCTkScrollArea`, not here.
 
-
-### 📌 Localized Table of Contents
-* [API Constructor Reference](#-api-constructor-reference)
-* [Native Viewport Alignment Handshake](#%EF%B8%8F-native-viewport-alignment-handshake)
-* [Centralized Stylesheet Integration](#-centralized-stylesheet-integration-sctkthemesjson)
-* [Implementation Reference Template](#-implementation-reference-template)
+<a name="contents"></a>
+### Table of Contents
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming](#theming)
+* [Example](#example)
+* [Known Limitations](#limitations)
 
 ---
 
-### 📋 API Constructor Reference
+<a name="constructor"></a>
+### Constructor
 
-#### `sCTkScrollbar` Constructor
 ```python
 scrollbar = sCTkScrollbar(master=None, orientation="vertical", **kwargs)
 ```
 
-#### `sCTkScrollArea` Constructor
-```python
-scroll_area = sCTkScrollArea(master=None, **kwargs)
-```
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkScrollbar(master)` | `sCTkScrollbar(master)` *(Isolated External Scroll Handle)* |
-| **Viewport Companion**| `ctk.CTkScrollableFrame` | `sCTkScrollArea(master)` *(Unblocked Direct Canvas Frame)* |
-| **High-Precision Logic**| Coarse notched delta wheels only | **Inertial Micro-Delta Aggregator:** Smoothly captures, normalizes, and dampens Apple Magic Mouse and Trackpad sweeps natively. |
-| **Event Routing** | Hardcoded internal grab hooks | **Direct Binding Pattern:** Attaches platform-synchronized event listeners across viewport and item rows automatically. |
+| Parameter | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `master` | widget | `None` | Parent container. |
+| `orientation` | `"vertical"` / `"horizontal"` | `"vertical"` | Layout direction. Sets a default `width` of 14 when vertical, or `height` of 14 when horizontal. |
+| `**kwargs` | — | — | Any native `CTkScrollbar` argument, or a theme-key override (see [Theming](#theming)). |
 
 ---
 
-### 🎛️ Native Viewport Alignment Handshake
-Connecting the themeable scrollbar to the unblocked container frame involves a single architectural lifecycle call. 
+<a name="methods"></a>
+### Methods
 
-When you pack the label items or tracking data lines inside the container frame, the underlying engine automatically routes vertical scroll gestures straight up into our fractional coordinate processor. This ensures that traditional mouse wheels and high-precision Apple touchpad momentum sweeps execute with perfect visual continuity.
+| Method | Returns | Description |
+| :--- | :--- | :--- |
+| `configure(**kwargs)` / `config(**kwargs)` | `None` | Standard configuration. Overrides of `button_color` and `button_hover_color` **persist** — see below. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for `button_color` and `button_hover_color`. Any other name passes through to the native widget. |
 
-```python
-# 1. Native alignment layout handshake
-scroll_view.hook_scrollbar(scrollbar)
+**Runtime color overrides persist.** `configure()` records the tracked theme keys into the widget's stored defaults *before* repainting, so an override survives the repaint and later appearance-mode switches. This matches CustomTkinter's own semantics, where `configure(button_color=...)` sticks.
 
-# 2. Populate data items directly into the scrolling content frame panel
-for i in range(25):
-    lbl_item = sCTkLabelSecondary(scroll_view.scroll_content, text="Telemetry Row")
-    lbl_item.pack()
-```
+This was previously broken. `_apply_custom_theme_colors()` runs on every `configure()` call and re-pushes both colors from the stored defaults — and since `configure()` never wrote to those defaults, `configure(button_color="red")` applied red and then had it overwritten on the very next line. Runtime color overrides silently did nothing.
 
-[Go to Piece 2 of 2](#%F0%9F%8E%A8-centralized-stylesheet-integration-sctkthemesjson) | [Return to Table of Contents](#%F0%9F%93%8C-localized-table-of-contents)
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+Two consequences worth knowing: passing a single color replaces the theme's `(light, dark)` tuple for that key, so **that property stops following light/dark** — which is what asking for one specific color means.
 
-`sCTkScrollbar` drives its color changes straight out of your central theme file. Redundant state mappings and broken disabled maps are completely omitted, maintaining a clean, production-grade JSON dictionary footprint.
+The single-argument query was also previously broken. The implementation tested `if args and isinstance(args, dict)`, but `args` is always a tuple, so that branch was dead and there was no query branch at all — `configure("button_color")` silently returned `None` instead of a property tuple.
+
+---
+
+<a name="theming"></a>
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
@@ -2068,421 +2374,467 @@ for i in range(25):
 }
 ```
 
+`button_color` is the bar itself; `button_hover_color` is the bar under the cursor. `fg_color` is the track behind it.
+
+**`button_color` and `button_hover_color` are required.** Construction raises `KeyError` naming the missing one. These previously carried hardcoded fallbacks, so a theme block missing either would silently substitute a plausible guess rather than failing loudly.
+
+`orientation` may also be supplied from the theme block. It's read from the resolved keywords rather than the raw constructor dict, so it's picked up whichever way it arrives — an earlier version read the raw dict *after* `ThemeableWidget` had processed it, which risked a horizontal scrollbar silently getting a default `width` instead of `height`.
+
+Colors are passed through as raw `(light, dark)` tuples rather than resolved ahead of time, so they follow appearance-mode changes automatically.
+
+**There is no `disabled_map`, and no disabled state.** CustomTkinter's scrollbar has none to lock. Containers that need an inert scrollbar block dragging at the binding level instead and dim the bar themselves — see [`ScrollBindingMixin`](ScrollBindingMixin.md#disabling-scroll).
+
 ---
 
-### 💻 Implementation Reference Template
+<a name="example"></a>
+### Example
 
 ```python
 #!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Scrollbar
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkScrollbar, sCTkScrollArea
+from scustomtkinter import (sCTk, sCTkFrame, sCTkLabelSecondary,
+                            sCTkScrollbar, sCTkScrollArea)
 
 if __name__ == "__main__":
     root = sCTk()
-    root.geometry("480x480")
-    root.title("sCTkScrollbar Unified Validation Deck")
-    root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
+    root.geometry("480x420")
+    root.title("sCTkScrollbar Validation Bench")
 
-    # 2. Arrange our isolated lower button layout panel tray
-    lower_tray = ctk.CTkFrame(root, fg_color="transparent")
-    lower_tray.pack(side="bottom", fill="x", padx=15, pady=(0, 15))
-
-    # 3. Mount master backplane panel frame capsule container
     main_layout = sCTkFrame(root, border_width=2)
     main_layout.pack(expand=True, fill="both", padx=15, pady=15)
 
-    status_monitor = sCTkLabelSecondary(main_layout, text="SYSTEM STATUS: [TELEMETRY FEED ACTIVE]")
-    status_monitor.pack(fill="x", padx=10, pady=(5, 10))
-
-    def toggle_appearance_skin():
-        ctk.set_appearance_mode("Light" if ctk.get_appearance_mode() == "Dark" else "Dark")
-
-    # Pack our skin preference toggler safely inside the isolated lower tray panel
-    btn_theme = sCTkButtonPrimary(lower_tray, text="Toggle UI Light/Dark Appearance", command=toggle_appearance_skin)
-    btn_theme.pack(fill="x", expand=True, padx=5)
-
-    # 4. Mount themeable custom scrollbar primitive
     scrollbar = sCTkScrollbar(main_layout, orientation="vertical")
     scrollbar.pack(side="right", fill="y", padx=(5, 10), pady=10)
 
-    # 5. Build nested viewport container layout tracks
     content_chassis = sCTkFrame(main_layout, border_width=0, fg_color="transparent")
     content_chassis.pack(side="left", fill="both", expand=True, padx=(10, 0), pady=10)
 
     scroll_view = sCTkScrollArea(content_chassis)
     scroll_view.pack(fill="both", expand=True)
 
-    # 6. Populate viewport with telemetry data and invoke the opt-in convenience propagator
     for i in range(25):
-        lbl_item = sCTkLabelSecondary(scroll_view.scroll_content, text=f"▶ Transceiver Core Channel Lane Code: {100 + i} [STATUS: OK]")
-        lbl_item.pack(anchor="w", padx=10, pady=4)
-        scroll_view.propagate_scroll_events(lbl_item)
+        sCTkLabelSecondary(
+            scroll_view.scroll_content,
+            text=f"Transceiver channel {100 + i} [OK]"
+        ).pack(anchor="w", padx=10, pady=4)
 
-    # 7. Wire hardware event pipelines natively together
     scroll_view.hook_scrollbar(scrollbar)
 
     root.mainloop()
 ```
 
-[Return to Table of Contents](#%F0%9F%93%8C-localized-table-of-contents)
+---
+
+<a name="limitations"></a>
+### Known Limitations
+
+- **No disabled state** — see [Theming](#theming).
+- **Only `button_color` and `button_hover_color` are tracked** for the persist-on-`configure()` behavior. Other properties still repaint from the theme.
+
+[Return to Table of Contents](#contents)
 
 
 
 ## sCTkSegmentedButton
 
-A custom, theme-compliant segmented button strip tracker widget designed for hardware-inspired radio control panel layouts. Inherits directly from `customtkinter.CTkSegmentedButton` and implements the `ThemeableWidget` mixin framework, enabling total alignment with centralized stylesheet configurations.
-
-![sCTkSegmentedButton_Dark.png](src/images/sCTkSegmentedButton_Dark.png)
-![sCTkSegmentedButton_Light.png](src/images/sCTkSegmentedButton_Light.png)
-
-
-
-### 🛠️ Architectural Design Features
-
-*   **Zero-Gap Contiguous Bar:** Bypasses CustomTkinter's native button spacing layout by programmatically flattening horizontal paddings down to absolute zero. Every tab segment welds tightly flush next to each other inside a single continuous capsule pill track profile.
-*   **Dynamic High-Contrast Legibility:** Forcefully overrides child element text layers dynamically on click events. This ensures the active choice badge maintains crisp pure white lettering over deep accent container fills, while adjacent unselected choices cleanly snap back to your rested dark gray or blue typography targets.
-*   **Pygubu Constructor Handshake Protection:** Implements an internal initialization shield gate that catches post-boot `.configure(state='disabled')` assignments passed down from Pygubu form layout engines before sub-button structures have completed generation. This prevents `AttributeError` freezes on initial application startup loops.
-*   **Virtual Lock Dimming Engine:** Integrates operational mode state switches straight down to your look dictionaries. Toggling the component to a disabled track automatically applies cohesive, muted, desaturated industrial gray tones over the capsule chasses natively.
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-### 🎨 Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Overview
 
-To drive the dual-blue layout metrics and clear-contrast typography text shifts accurately across both look preference sweeps, ensure your centralized theme profile file includes this exact element block:
+`sCTkSegmentedButton` is a themeable subclass of `customtkinter.CTkSegmentedButton` — a horizontal strip of connected text buttons where selecting one automatically unselects the others, similar to a row of radio buttons. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state, and per-segment text-color handling for the currently selected segment.
+
+<img src="src/images/sCTkSegmentedButton_Dark.png" alt="sCTkSegmentedButton_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSegmentedButton_Light.png" alt="sCTkSegmentedButton_Light.png" style="border: 2px solid #555555;">
+---
+
+### Constructor
+
+```python
+sCTkSegmentedButton(master=None, values=None, variable=None, command=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `values` | `list[str]` | native default (empty) | The segment labels. |
+| `variable` | `tkinter.StringVar` | `None` | Optional variable bound to the current selection. |
+| `command` | `callable` | `None` | Called with the selected value when the user picks a segment. |
+| `**kwargs` | — | — | Any native `CTkSegmentedButton` argument, or an override for `fg_color` / `selected_color`. |
+
+> **Not settable via constructor:** `unselected_color`, `unselected_hover_color`, `border_width`, `border_color`, and `selected_color_padding` are intentionally stripped out before the native widget is built, regardless of what you pass in. They're only ever pulled from `sCTkThemes.json` — see [Known Limitations](#known-limitations) for why setting them later doesn't stick either.
+
+```python
+mode_selector = sCTkSegmentedButton(
+    master=control_panel,
+    values=["Alpha", "Beta", "Gamma"],
+    command=on_mode_changed,
+)
+mode_selector.pack(fill="x", padx=40, pady=10)
+```
+
+Colors are first applied roughly 15ms after construction, not immediately — the widget's individual segment buttons don't exist yet at the moment `sCTkSegmentedButton.__init__` returns, so the initial color pass is deferred with `self.after(15, ...)`. In virtually all normal usage this is unnoticeable, but code that inspects a segment's color in the same tick as construction may see it before this pass runs.
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `get()` | `str` | Currently selected value (native `CTkSegmentedButton` behavior). |
+| `set(value)` | `None` | Selects a segment programmatically and repaints (native `set()`, plus a theme-color refresh). |
+| `state(mode=None)` | `str` \| `None` | Gets or sets the widget's enabled/disabled visual state. Only the literal string `"disabled"` (case-insensitive) is treated as disabled — **any other value, including typos, is treated as `"normal"`** with no error raised. Called with no argument, returns the current state as a lowercase string. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | — | Standard widget configuration. Passing `state=...` routes through `state()` rather than the native `state` option. A single positional argument (string or dict) is accepted, but — unlike `sCTkComboBox`/`sCTkCheckBox` — a single property-name string does **not** return a Pygubu-style query tuple here; it's forwarded directly to the native widget instead. (Broader Pygubu query-behavior gaps across the library are a known follow-up item, not specific to this widget.) |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+Same two-tier model as the other themed widgets:
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built, *except* the five keys listed under [Constructor](#constructor), which are deliberately excluded and applied only through the mechanism below.
+- **Re-applied on `state()` change, on selection, and on click** — `fg_color`, `selected_color`, `unselected_color`, `unselected_hover_color`, and each segment's `text_color` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`, `set()`, or click a segment.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than being resolved to a single value ahead of time, which means they correctly follow system/app appearance-mode changes automatically — including while the widget is disabled. Confirmed by direct testing: toggling light/dark mode on a disabled, pre-selected widget repaints it immediately, with no manual intervention needed.
 
 ```json
 {
     "sCTkSegmentedButton": {
         "fg_color": ["#4F75A2", "#2B4C7E"],
         "selected_color": ["#1A4375", "#3A6FA2"],
-        "selected_hover_color": ["#112A4B", "#2B5885"],
-        "unselected_color": "transparent",
         "unselected_hover_color": ["#3A5C85", "#3A5F8C"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
-        "text_color_disabled": ["#94A3B8", "#64748B"],
         "disabled_map": {
             "fg_color": ["#B2B9BC", "#222527"],
             "selected_color": ["#70777B", "#45494D"],
-            "selected_hover_color": ["#70777B", "#45494D"],
-            "unselected_color": "transparent",
-            "unselected_hover_color": "transparent"
+            "text_color": ["#94A3B8", "#64748B"],
+            "selected_text_color": ["#1F2937", "#FFFFFF"]
         }
     }
 }
 ```
 
+A couple of design decisions worth knowing if you're editing this block:
+
+- **Unselected segments always match `fg_color`, by design** — there's no independent `unselected_color` key. Segments are meant to blend into the widget's own background color rather than appear individually distinct or transparent.
+- **Hover is fully suppressed while disabled**, at the native widget level — confirmed by direct testing. There's no `disabled_map` entry for hover colors because a disabled segment never fires a hover event in the first place; any color set there would never be visible.
+- **The selected segment keeps a distinct, more prominent text color while disabled** (`disabled_map.selected_text_color`), so you can still tell which option was chosen even though the whole control is grayed out. Every other segment's disabled text color comes from the plain `disabled_map.text_color`.
+
+**Every key above is required,** at the top level or in `disabled_map` as shown. Construction raises `KeyError` naming the missing one.
+
+The colour lookups previously carried hardcoded fallbacks. Those were unreachable given the theme block as shipped — every key they guarded was present — but that was a property of the *theme file*, not the code. Deleting a key would have silently activated a fallback, producing a plausible-looking wrong colour instead of the loud failure every other widget now gives. They're gone.
+
+`selected_hover_color` has also been removed from the block. It was present in the theme but read by no code path at all — dead data, the same situation `pointer_color` was in for the dial family. A selected segment's hover behaviour comes from CustomTkinter's own default, since this widget never set it.
+
+Every color in this widget comes from `sCTkThemes.json` — there are no hardcoded hex values left in the widget's own source.
+
 ---
 
-### ⚙️ Public API Methods Reference
-
-| Method Name | Arguments | Return Type | Description |
-| :--- | :--- | :--- | :--- |
-| `state(mode)` | `mode: str (Optional)` | `str` | Dedicated operational state controller. If empty, returns the current active state (`'normal'` or `'disabled'`). If passed, triggers a look cascade pass. |
-| `get_state()` | `None` | `str` | Explicit state tracking query synchronized with framework validation benchmarks. |
-| `set(value)` | `value: str` | `None` | Programmatic value tracking setter. Updates the active button highlight and instantly swaps text colors across the live segment matrix. |
-| `cget(attribute)` | `attribute: str` | `Any` | Intercept shield layer that safely bridges requests for the `'state'` string parameter out of underlying tkinter dictionaries. |
-
----
-
-### 💻 Implementation Code Template
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for SegmentedButton
-# =====================================================================
-
-import os
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkSegmentedButton
+from scustomtkinter import sCTk, sCTkFrame, sCTkButtonPrimary, sCTkSegmentedButton
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("500x220")
-    root.title("sCTkSegmentedButton Simplified Dual-Blue Pill Verification Bench")
+    root.geometry("450x300")
+    root.title("SegmentedButton Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkSegmentedButton(base, values=["DOG", "CAT", "Fish"])
-    widget.pack(expand=False, fill="none", padx=10, pady=10)
-    widget.set("DOG")
+    widget = sCTkSegmentedButton(
+        base,
+        values=["Alpha", "Beta", "Gamma"],
+        command=lambda choice: print(f"Selected: {choice}"),
+    )
+    widget.pack(expand=True, fill="none", padx=10, pady=10)
+    widget.set("Beta")
 
-
-    def toggle_operational_lock():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
+    def toggle_widget_state():
+        target = "disabled" if widget.get_state() == "normal" else "normal"
         widget.configure(state=target)
-        btn_lock.configure(text="Lock Button Row" if target == "normal" else "Unlock Button Row")
+        btn_toggle.configure(text="Enable" if target == "disabled" else "Disable")
 
-
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Button Row", command=toggle_operational_lock)
-    btn_lock.pack(pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=5)
+    btn_toggle = sCTkButtonPrimary(base, text="Disable", command=toggle_widget_state)
+    btn_toggle.pack(side="bottom", pady=15)
 
     root.mainloop()
 ```
 
+---
+
+### Known Limitations
+
+- `state()` treats any value other than `"disabled"` (case-insensitive) as `"normal"` — including typos like `"disbaled"`. No exception is raised and no warning is logged.
+- `unselected_color`, `unselected_hover_color`, `border_width`, `border_color`, and `selected_color_padding` cannot be set via constructor kwargs (see [Constructor](#constructor)); the color-related ones only take effect through the theme file or the widget's own repaint logic.
+- Calling `configure("some_property_name")` with a single property name does not return a Pygubu-style query tuple the way `sCTkComboBox`/`sCTkCheckBox` do; it's forwarded to the native widget's `configure()`, which — per the wider Pygubu-query investigation set aside earlier in this project — does not support single-argument property queries at all for most properties.
+
+
+[Return to Table of Contents](#contents)
 
 
 ## sCTkSlider
 
-Standardized live track calibration adjustment slider providing real-time data value interception, disabled layout mapping overrides, and multi-zone Pygubu designer compatibility.
-
-
-![sCTkSlider_Dark.png](src/images/sCTkSlider_Dark.png)
-![sCTkSlider_Light.png](src/images/sCTkSlider_Light.png)
-
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-### 🎨 Centralized Stylesheet Setup (`themes.json`)
+### Overview
 
-To drive linear progress track filling and custom knob coordinate handle styles accurately across both look preference sweeps, ensure your centralized theme profile file includes this exact element block:
+`sCTkSlider` is a themeable subclass of `customtkinter.CTkSlider`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. Unlike every other widget in this library, its state isn't tracked in a separate instance attribute — it reads and writes CustomTkinter's own native `state` property directly, treating it as the single source of truth.
+
+<img src="src/images/sCTkSlider_Dark.png" alt="sCTkSlider in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSlider_Light.png" alt="sCTkSlider in light mode" style="border: 2px solid #555555;">
+
+---
+
+### Constructor
+
+```python
+sCTkSlider(master=None, command=None, variable=None, **kw)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `command` | `callable` | `None` | Called with the current value as the slider is dragged. |
+| `variable` | `tkinter.Variable` | `None` | Optional variable bound to the current value. |
+| `**kw` | — | — | Any native `CTkSlider` argument (e.g. `from_`, `to`, `number_of_steps`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
+
+```python
+volume_slider = sCTkSlider(
+    master=control_panel,
+    command=on_volume_changed,
+)
+volume_slider.pack(fill="x", padx=40, pady=10)
+```
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Queries read directly from the native widget's own `state` property rather than a parallel attribute. Setting forwards to `configure(state=mode)`, which reaches the native widget's own state handling — confirmed by direct testing to correctly block interaction. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: `command`/`variable` are routed individually; `state` is **not** specially intercepted — it flows straight through to the native widget's own `configure()`, which is what makes this widget's disable mechanism correct. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `progress_color`, `button_color`, and `button_hover_color`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `width`, `height`, `button_length`, and `border_width`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()`/`configure(state=...)` change** — `fg_color`, `progress_color`, `button_color`, and `button_hover_color` are recomputed from the theme's normal values or its `disabled_map`.
 
 ```json
 {
     "sCTkSlider": {
-        "fg_color": ["#E2E8F0", "#4B5563"],
-        "progress_color": ["#2471A3", "#3B8ED0"],
-        "button_color": ["#1A4375", "#1F6AA5"],
-        "button_hover_color": ["#112A4B", "#194A7A"],
+        "width": 200,
+        "height": 24,
+        "button_length": 12,
+        "border_width": 9,
+        "fg_color": ["#E5E7EB", "#4B5563"],
+        "progress_color": ["#1A4375", "#2471A3"],
+        "button_color": ["#2471A3", "#2471A3"],
+        "button_hover_color": ["#112A4B", "#1F618D"],
         "disabled_map": {
             "fg_color": ["#CBD5E1", "#374151"],
-            "progress_color": ["#94A3B8", "#4B5563"],
+            "progress_color": ["#CBD5E1", "#4B5563"],
             "button_color": ["#94A3B8", "#4B5563"]
         }
     }
 }
 ```
 
----
+`button_color` is the same value for both light and dark mode here — a deliberate accent color that doesn't shift with appearance mode. `disabled_map` has no `button_hover_color` entry; while disabled, the widget explicitly forces `button_hover_color` to match `button_color` instead, since hover can't trigger once natively disabled anyway.
 
-### ⚙️ Public API Methods Reference
-
-| Method Name | Arguments | Return Type | Description |
-| :--- | :--- | :--- | :--- |
-| `state(mode)` | `mode: str (Optional)` | `str` | Dedicated operational state manager. If empty, returns the current active state (`'normal'` or `'disabled'`). If passed, shifts tracking map parameters and cleanly freezes/unfreezes input handle loops. |
-| `get_state()` | `None` | `str` | Explicit state tracking query synchronized with framework validation benchmarks. |
-| `set(value)` | `value: float` | `None` | Manually positions the tracking slider handle directly onto a specific floating-point decimal location coordinate. |
-| `cget(attribute)` | `attribute: str` | `Any` | Intercept shield layer that safely queries current active arguments from native CustomTkinter property arrays. |
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### 💻 Implementation Code Template
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Slider
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkLabelSecondary, sCTk, sCTkSlider
+from scustomtkinter import sCTk, sCTkFrame, sCTkSlider, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x220")
-    root.title("Slider Real-Time Telemetry Monitor")
+    root.geometry("400x250")
+    root.title("Slider Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    lbl_telemetry = sCTkLabelSecondary(base, text="Slider Coordinate: 0.450", font=("Courier New", 12, "bold"))
+    volume_slider = sCTkSlider(base, command=lambda v: print(f"Value: {v:.2f}"))
+    volume_slider.pack(fill="x", pady=10)
 
-    widget = sCTkSlider(base)
-    widget.configure(command=lambda val: lbl_telemetry.configure(text=f"Slider Coordinate: {val:.3f}"))
-    widget.pack(expand=False, fill="x", padx=40, pady=15)
-    widget.set(0.450)
-    lbl_telemetry.pack(pady=10)
+    def toggle_disabled():
+        target = "disabled" if volume_slider.get_state() == "normal" else "normal"
+        volume_slider.state(target)
+        disable_toggle.configure(text="Enable Slider" if target == "disabled" else "Disable Slider")
 
-    # Verify look states transition flawlessly on the console
-    widget.state("disabled")
-    print("--- DISABLED PASS ---")
-    print("state (Disabled Pass) =", widget.get_state())
-
-    widget.state("normal")
-    print("\n--- NORMAL PASS ---")
-    print("state (Normal Pass)   =", widget.get_state())
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Slider", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
+
+[Return to Table of Contents](#contents)
 
 
 
 ## sCTkSwitch
 
-The `sCTkSwitch` is a theme-compliant, standard custom toggle switch component inheriting directly from `ctk.CTkSwitch`. It guarantees absolute layout engine continuity and native rendering execution pipelines. The widget enforces custom framework state management layers, text desaturation systems, and an airtight event priority tag shield when locked, without clashing with low-level canvas polygon caching locks.
-
-
-![sCTkSwitch_Dark.png](src/images/sCTkSwitch_Dark.png)
-![sCTkSwitch_Light.png](src/images/sCTkSwitch_Light.png)
-
-
-<a name="contents"></a>
-### 📍 Table of Contents
-* [API Constructor Reference](#constructor)
-* [Dynamic Interaction Lock Tag Shield](#tag-shield)
-* [Architectural Variants (Standard vs. Alt)](#variants)
-* [Global Object Instance Methods](#methods)
-* [Centralized Stylesheet Integration](#stylesheet)
-* [Implementation Reference Template](#template)
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-<a name="constructor"></a>
-### 📋 API Constructor Reference
+### Overview
 
-```python
-sCTkSwitch(master=None, text="", command=None, variable=None, textvariable=None, onvalue=1, offvalue=0, state="normal", font=None, **kw)
-```
+`sCTkSwitch` is a themeable subclass of `customtkinter.CTkSwitch`. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state that dims every color property, not just the label text. A previously separate widget, `sCTkSwitchAlt`, existed specifically to work around limitations that have since been resolved directly in this widget and has been retired.
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | `None` | Reference pointer tracking your root window or parent layout layer capsule container. |
-| `text` | `str` | `""` | The descriptive typography text string label displayed natively alongside the toggle switch track. |
-| `command` | `callable` | `None` | Optional event logging callback function executed instantly on state shifts, passing the active value. |
-| `variable` | `Variable` | `None` | Persistent Tkinter variable tracking hook (e.g. `tk.IntVar` or `tk.StringVar`) mapped to the toggle state value. |
-| `textvariable` | `Variable` | `None` | Dynamic data trace observer variable instance to update text description labels automatically. |
-| `onvalue` | `any` | `1` | The value coordinate passed to callbacks and written to variables when the toggle switch is checked. |
-| `offvalue` | `any` | `0` | The value coordinate passed to callbacks and written to variables when the toggle switch is unchecked. |
-| `state` | `str` | `"normal"` | Execution state controller. Toggling to `"disabled"` dampens text brightness and blocks user inputs. |
-| `font` | `tuple` / `str` | `None` | Typography configuration specifically assigned to resolve descriptive text labels. |
+<img src="src/images/sCTkSwitch_Dark.png" alt="sCTkSwitch in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSwitch_Light.png" alt="sCTkSwitch in light mode" style="border: 2px solid #555555;">
+
+Disabling combines two mechanisms: CustomTkinter's native `state="disabled"`, and a bindtag-based click interceptor that prepends a dedicated binding returning `"break"` on click. This is more robust than a simple event-unbind, since it intercepts clicks regardless of which internal level the native click handler is actually bound at.
 
 ---
 
-<a name="tag-shield"></a>
-### 🛡️ Dynamic Interaction Lock Tag Shield
-Natively, CustomTkinter handles `state="disabled"` passes via broad variable updates, leaving child canvas elements interactively vulnerable if theme recoloring actions occur post-initialization. 
+### Constructor
 
-The `sCTkSwitch` component overcomes this limitation by implementing a **High-Priority Event Capture Tag Shield**. When the widget state shifts to locked, a custom verification tag is pre-appended to the front of the sub-widget's low-level execution `bindtags` list. Clicks on the track or label instantly evaluate the blocker and return `"break"`, terminating event propagation immediately and freezing the switch toggle handle in place safely.
-
----
-
-<a name="variants"></a>
-### ⚡ Architectural Variants (Standard vs. Alt)
-Depending on your operational interface display requirements, the library offers two parallel switch components to choose from:
-
-1. **`sCTkSwitch` (Standard Base Variant):**
-   * *Underlying Engine:* Inherits directly from `ctk.CTkSwitch` for native performance footprint rendering.
-   * *Behavioral Limits:* Because CustomTkinter strictly locks down track and knob canvas polygons upon birth loop execution, this version **retains native color caching loops**. Live color shifts on the track/knob background fields are ignored when disabled; only text strings dim natively.
-   * *Animations:* Preserves CustomTkinter's native smooth handle slider transition curves out-of-the-box.
-
-2. **`sCTkSwitchAlt` (Alternative Composite Drawing Variant):**
-   * *Underlying Engine:* Built as a custom composite draw frame utilising separate target capsules.
-   * *Behavioral Advantages:* Grants **100% complete color rendering control** driven straight out of your central `themes.json` sheets. The background track maintains a constant unified color whether checked on or off when active, and flips entirely to distinct muted steel-gray tokens when disabled.
-   * *Animations:* Bypasses the native sliding transition loop pass; the circular selector disc knob snaps coordinates instantly upon tracking clicks.
-
----
-
-<a name="methods"></a>
-### ⚡ Global Object Instance Methods
-
-#### Query Dual-Routing State Parameters
 ```python
-# Returns the active system tracking string ('normal' or 'disabled')
-current_mode = switch.get_state()
+sCTkSwitch(master=None, onvalue=1, offvalue=0, command=None, **kw)
 ```
 
-#### Apply Absolute Operational Interaction Locks
-```python
-# Freezes input clicks natively while dimming text typography down to custom gray levels
-switch.state("disabled")
-```
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `onvalue` | any | `1` | Value reported when the switch is on. |
+| `offvalue` | any | `0` | Value reported when the switch is off. |
+| `command` | `callable` | `None` | Called on toggle. May accept the new value as a single argument, or no arguments at all — both styles are supported. |
+| `**kw` | — | — | `state` is pulled out explicitly. Everything else is either a native `CTkSwitch` argument or a theme-key override (see the "sCTkSwitch" block in [Theming](#theming-sctkthemesjson)). |
 
-#### Fetch Active State Position Values
 ```python
-# Returns the active onvalue or offvalue coordinate matching the handle position
-position_status = switch.get()
-```
-
-#### Programmatically Toggle Handle Placements
-```python
-# Forcefully moves the toggle switch handle to a specific value coordinate cleanly
-switch.set("on")
+notify_switch = sCTkSwitch(
+    master=control_panel,
+    text="Enable notifications",
+    command=on_notify_toggled,
+)
+notify_switch.pack(anchor="w", padx=40, pady=10)
 ```
 
 ---
 
-<a name="stylesheet"></a>
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+### Methods
 
-Both the standard and alternative switch widgets route look parameters natively through a single unified profile entry key block. The standard native-base version intelligently passes style tokens while ignoring the low-level track overrides it cannot natively paint.
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `cget("state")` / `cget("command")` | varies | Both intercepted specially, since they're tracked on the instance rather than delegated to the native widget. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration. Note the signature is `configure(require_redraw=None, **kwargs)`, matching real CTk's own convention, rather than `*args` — calling `configure("state")` positionally returns a Tkinter-style query tuple; a positional dict is merged into the update. |
+
+**Exceptions from your `command` propagate normally.** An earlier version silently swallowed every exception a command raised, hiding real bugs completely; this is now fixed, confirmed by direct testing. Tkinter's own default callback-exception handling reports propagated exceptions to the console without crashing the running application.
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()`/`configure()` change** — all five color properties (`fg_color`, `progress_color`, `button_color`, `button_hover_color`, `text_color`) are recomputed from the theme's normal values or its `disabled_map`. This full dimming is confirmed working by direct testing.
 
 ```json
 {
     "sCTkSwitch": {
-        "fg_color": ["#94A3B8", "#475569"],
+        "font": ["Arial", 14, "normal"],
+        "fg_color": ["#1A4375", "#1F6AA5"],
         "progress_color": ["#1A4375", "#1F6AA5"],
-        "button_color": ["#FFFFFF", "#CBD5E1"],
+        "button_color": ["#CBD5E1", "#CBD5E1"],
         "button_hover_color": ["#E5E7EB", "#94A3B8"],
         "text_color": ["#1F2937", "#F9FAFB"],
-        "font": ["Arial", 14, "normal"],
-        
         "disabled_map": {
-            "text_color": ["#94A3B8", "gray50"],
-            "fg_color": ["#E5E7EB", "#1F2937"],
-            "progress_color": ["#CBD5E1", "#334155"],
-            "button_color": ["#8A94A6", "#374151"],
-            "button_hover_color": ["#8A94A6", "#374151"]
+            "text_color": ["#94A3B8", "#64748B"],
+            "fg_color": ["#94A3B8", "#526071"],
+            "progress_color": ["#64748B", "#526071"],
+            "button_color": ["#CBD5E1", "#94A3B8"],
+            "button_hover_color": ["#CBD5E1", "#94A3B8"]
         }
     }
 }
 ```
 
+`button_color` uses the same light-mode value for both normal and hover states by design — it was retuned from an earlier pure-white value, which had too little contrast against light backgrounds in general (not a code bug; CustomTkinter already resolves the widget's background to match its real parent correctly on its own). The disabled-state track colors (`fg_color`/`progress_color`) were similarly retuned for the same reason — the original values were close enough to typical light backgrounds that a disabled switch's track could become hard to see at all.
+
+All five color properties are required to be present in both the top-level block and `disabled_map` — if any are missing, the widget raises immediately rather than substituting a hardcoded color.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they correctly follow system/app appearance-mode changes automatically — confirmed by direct testing, including while disabled.
+
 ---
 
-<a name="template"></a>
-### 💻 Implementation Reference Template
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Switch
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkSwitch
-
+from scustomtkinter import sCTk, sCTkFrame, sCTkSwitch, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x240")
-    root.title("sCTkSwitch Native Container Validation Bench")
+    root.geometry("400x250")
+    root.title("Switch Example")
 
-    base_container = sCTkFrame(root, border_width=2)
-    base_container.pack(expand=True, fill="both", padx=30, pady=30)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkSwitch(base_container, text="Lock Transceiver Pre-Amp Link")
-    widget.pack(expand=True, fill="none", padx=10, pady=10)
+    notify_switch = sCTkSwitch(base, text="Enable notifications", command=lambda v: print(f"Value: {v}"))
+    notify_switch.pack(anchor="w", pady=10)
 
-    def toggle_panel_lock():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        widget.configure(state=target)
-        btn_lock.configure(text="Unlock Switch (Set 'normal')" if target == "disabled" else "Lock Switch (Set 'disabled')")
-        print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state()}")
+    def toggle_disabled():
+        target = "disabled" if notify_switch.get_state() == "normal" else "normal"
+        notify_switch.state(target)
+        disable_toggle.configure(text="Enable Switch" if target == "disabled" else "Disable Switch")
 
-    btn_lock = sCTkButtonPrimary(root, text="Lock Switch (Set 'disabled')", command=toggle_panel_lock)
-    btn_lock.pack(side="bottom", pady=15)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Switch", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- If your `command` accepts exactly one argument and raises a `TypeError` for a reason unrelated to argument count, the wrapper's fallback logic can't tell the difference from "this command doesn't accept an argument" — it will retry calling your command with no arguments, which then fails with a second, different `TypeError` (a missing-argument error) layered on top of your real bug. Python's exception chaining keeps both visible in the console, so the real bug isn't hidden, just noisier than ideal.
+- Calling `configure("propname")` for a property name other than `"state"` is forwarded to the native widget's `configure()`, which does not support single-argument property queries — a known limitation shared with the wider Pygubu query investigation set aside elsewhere in this project.
 
 [Return to Table of Contents](#contents)
 
@@ -2490,186 +2842,219 @@ if __name__ == "__main__":
 
 ## sCTkTabview
 
-The `sCTkTabview` is a theme-compliant custom multi-page dashboard deck container widget engineered specifically for the `sCustomTkinter` desktop amateur radio cockpit application. It inherits from `baseui.sCTkTabviewUI` and `ThemeableWidget` to manage dense workstation layouts cleanly. The component provides absolute palette rendering flexibility driven straight out of your central `themes.json` sheets, ensuring uniform text desaturation and track flattening when frozen or locked.
+`sCTkTabview` is a themeable multi-page tab container — a subclass of `customtkinter.CTkTabview` with automatic light/dark theme resolution from `sCTkThemes.json`, a disabled state, and Pygubu Designer support.
 
-![sCTkTabview_Dark.png](src/images/sCTkTabview_Dark.png)
-![sCTkTabview_Light.png](src/images/sCTkTabview_Light.png)
+<img src="src/images/sCTkTabview_Dark.png" alt="sCTkTabview_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkTabview_Light.png" alt="sCTkTabview_Light.png" style="border: 2px solid #555555;">
 
+Its one structural difference from the native widget: `add()` and `tab()` return an **`sCTkFrame`**, not a `ctk.CTkFrame`. See [Tab Pages](#tab-pages).
 
 <a name="contents"></a>
-### Localized Table of Contents
-* [API Constructor Reference](#constructor)
-* [Pygubu Designer Workspace Tab Insertion Rules](#pygubu-designer)
-* [Programmatic Tab Creation & Content Hydration](#content-delivery)
-* [Global Object Instance Methods](#methods)
-* [Centralized Stylesheet Integration](#stylesheet)
-* [Implementation Reference Template](#template)
+### Table of Contents
+* [Constructor](#constructor)
+* [Tab Pages](#tab-pages)
+* [Pygubu Designer Tab Insertion](#pygubu-designer)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#stylesheet)
+* [Example](#template)
+* [Known Limitations](#limitations)
 
 ---
 
 <a name="constructor"></a>
-### API Constructor Reference
+### Constructor
 
 ```python
 tabview = sCTkTabview(master=None, **kw)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
+| Parameter | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `master` | `any` | `None` | Reference pointer tracking your root window or parent layout container. |
-| `kw` | `dict` | `None` | Optional keyword payload mapping standard configuration parameters natively down to the widget. |
+| `master` | widget | `None` | Parent container. |
+| `state` | `str` | `"normal"` | `"normal"` or `"disabled"`. Also settable via `configure(state=...)` or `state()`. |
+| `**kw` | — | — | Any native `CTkTabview` argument, or an override for one of the theme keys listed under [Theming](#stylesheet). |
+
+Construction **raises `KeyError` immediately** if the theme block is incomplete — see [Theming](#stylesheet).
+
+---
+
+<a name="tab-pages"></a>
+### Tab Pages
+
+Native `CTkTabview.add()` constructs a plain `ctk.CTkFrame` for each tab and grids it inline, with no hook to substitute a different class. Rather than reimplement `add()` against CustomTkinter's internals — or mutate the created frame's `__class__` at runtime, a fragile pattern deliberately retired elsewhere in this project — this widget embeds an `sCTkFrame` **inside** the native tab frame and hands that back instead.
+
+The native frame stays exactly where `CTkTabview` put it and keeps doing its own show/hide/grid work untouched; it just becomes an invisible outer shell. The wrapper is transparent with no border of its own, so the tab looks identical — the difference is purely structural: everything placed in a tab now has an `sCTk` widget as its parent.
+
+```python
+# add() returns the page directly -- no separate tab() call needed.
+page = widget.add("Transceiver Settings")
+
+inner_panel = sCTkFrame(page, border_width=1)
+inner_panel.pack(expand=True, fill="both", padx=10, pady=10)
+```
+
+`tab(name)` returns the same object on every call, and creates the wrapper on first use — so a tab created by any other path (`insert()`, or `CTkTabview`'s own machinery) still comes back correctly wrapped. If you specifically need the native outer shell, `ctk.CTkTabview.tab(widget, name)` still reaches it.
 
 ---
 
 <a name="pygubu-designer"></a>
-### 🔌 Pygubu Designer Workspace Tab Insertion Rules
-Because `sCTkTabview` derives its visual look from custom composite frames, nesting children within Pygubu-Designer layout pane requires strict structural adherence to CustomTkinter's native tab allocation slots to prevent immediate workspace crashes.
+### Pygubu Designer Tab Insertion
 
-#### Adding Multi-Page Tabs in Pygubu-Designer
-1. **Chassis Placement:** Locate the custom widget container on your workbench tree panel and place an instance of `sCTkTabview` right into your frame layout.
-2. **Tab Component Selection:** In the Pygubu-Designer widget selector tree,  expand the CustomTkinter widger set and locate the native element named **`CTkTabview.Tab`** . 
-3. **Parent Nesting Assignment:** Forcefully click and drop the **`CTkTabview.Tab`** element directly onto the parent `sCTkTabview` widget slot in your inspector tree layout.
-4. **Repeat Allocation:** Repeat this step for each additional layout page slot you want to grid. The designer layout engine will handle the recursive preview sweeps smoothly. You can then name the tabs individually using the workspace property sidebars.
+Nesting children within the Pygubu Designer layout pane requires adherence to CustomTkinter's native tab allocation slots.
 
-[Go to Piece 2 of 2](#content-delivery) | [Return to Table of Contents](#contents)
-<a name="content-delivery"></a>
-### Programmatic Tab Creation & Content Hydration
-When crafting your radio console layouts natively via Python scripts, adding navigation tabs and stacking contents involves a simple three-step lifecycle lookup:
+1. **Chassis placement:** Locate the custom widget container on your workbench tree panel and place an instance of `sCTkTabview` into your frame layout.
+2. **Tab component selection:** In the Pygubu Designer widget selector tree, expand the CustomTkinter widget set and locate the native element named **`CTkTabview.Tab`**.
+3. **Parent nesting assignment:** Drop the **`CTkTabview.Tab`** element directly onto the parent `sCTkTabview` widget slot in your inspector tree layout.
+4. **Repeat allocation:** Repeat for each additional page slot. Tabs can then be named individually using the workspace property sidebars.
 
-```python
-# Step 1: Append a new structural landing tab track layer to the widget chassis
-widget.add("Transceiver Settings")
-
-# Step 2: Grab the native master frame viewport reference object assigned to that specific tab name
-page_viewport = widget.tab("Transceiver Settings")
-
-# Step 3: Instantiated any framework component (like an sCTkFrame capsule) by passing the viewport as its master parent!
-inner_panel = sCTkFrame(page_viewport, border_width=1)
-inner_panel.pack(expand=True, fill="both", padx=10, pady=10)
-```
+Note that tabs created this way are native `CTkTabview.Tab` slots. Calling `widget.tab(name)` on one still returns a wrapped `sCTkFrame`, since wrapping happens lazily on first access.
 
 ---
 
 <a name="methods"></a>
-### ⚡ Global Object Instance Methods
+### Methods
 
-#### Unified State Gateway Handler
-```python
-# GETTER Pass: Returns the active operational state tracking string ('normal' or 'disabled')
-current_mode = widget.state()
+| Method | Returns | Description |
+| :--- | :--- | :--- |
+| `add(name)` | `sCTkFrame` | Creates a tab and returns its content page. Return type differs from native `CTkTabview.add()`. |
+| `tab(name)` | `sCTkFrame` | Returns a tab's content page, creating the wrapper on first use. Stable across calls. |
+| `delete(name)` | — | Deletes a tab, tearing down its page wrapper first so no stale entry is left behind. |
+| `state()` / `state(mode)` | `str` | Getter with no argument; setter with `"normal"` or `"disabled"`. Dims text, flattens the tab bar, and locks tab selection. |
+| `get_state()` | `str` | Equivalent to `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | `None` | Standard configuration. Accepts `state` alongside any native option. |
+| `configure("state")` | `tuple` | Pygubu-style single-argument query, returning `(name, name, name, default, current)`. |
+| `cget(name)` | `Any` | Extended to know about `state`; everything else passes through to the native widget. |
 
-# SETTER Pass: Flattens menu headers, locks click selections, and dims text elements
-widget.state("disabled")
-```
+All four state paths — `state()`, `get_state()`, `cget("state")`, and `configure(state=...)` — operate on the same underlying value and agree with each other.
+
+**On `bind()`:** native `CTkTabview.bind()` raises `NotImplementedError`. This widget overrides it to route through `tkinter.Frame.bind` instead, so Pygubu Designer click handling doesn't crash the workspace.
 
 ---
 
 <a name="stylesheet"></a>
-### Centralized Stylesheet Integration (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
     "sCTkTabview": {
-        "text_color": ["#1F2937", "#F9FAFB"],
-        "font": ["Arial", 13, "bold"],
-        "segmented_button_fg_color": ["#E2E8F0", "#1E293B"],
-        "segmented_button_selected_color": ["#1A4375", "#1F6AA5"],
-        "segmented_button_selected_hover_color": ["#15375B", "#1A5885"],
-        "segmented_button_unselected_color": ["#F8FAFC", "#334155"],
-        "segmented_button_unselected_hover_color": ["#E2E8F0", "#475569"],
+        "font": ["Arial", 15, "normal"],
+        "segmented_button_height": 36,
+        "fg_color": ["#FFFFFF", "#111827"],
+        "text_color": ["#FFFFFF", "#FFFFFF"],
+        "segmented_button_fg_color": ["#9E9E9E", "#111827"],
+        "segmented_button_selected_color": ["#1A4375", "#2471A3"],
+        "segmented_button_selected_hover_color": ["#112A4B", "#1F618D"],
+        "segmented_button_unselected_color": ["#9E9E9E", "#1F2937"],
+        "segmented_button_unselected_hover_color": ["#7D7D7D", "#374151"],
         "disabled_map": {
-            "text_color": ["#94A3B8", "#64748B"],
-            "segmented_button_fg_color": ["#E5E7EB", "#334155"],
-            "segmented_button_selected_color": ["#CBD5E1", "#475569"],
-            "segmented_button_unselected_color": ["#F1F5F9", "#1F2937"]
+            "segmented_button_fg_color": ["#FFFFFF", "#111827"],
+            "segmented_button_selected_color": ["#CBD5E1", "#374151"],
+            "segmented_button_unselected_color": ["#CBD5E1", "#374151"],
+            "text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
+**Every key above is required.** Construction raises `KeyError` naming exactly what's missing, rather than substituting a guessed color. This is the fail-loud principle used across the project — an earlier version fell back to hardcoded literals for all ten colors and the font, and because those guesses looked plausible, a broken or partial theme block was invisible.
+
+The split between the two blocks:
+
+| Keys | Required in |
+| :--- | :--- |
+| `text_color`, `segmented_button_fg_color`, `segmented_button_selected_color`, `segmented_button_unselected_color` | top level **and** `disabled_map` |
+| `segmented_button_selected_hover_color`, `segmented_button_unselected_hover_color`, `font`, `segmented_button_height` | top level only |
+
+The two hover colors deliberately have no `disabled_map` entry. A disabled tab bar must not light up under the cursor, so when disabled, hover collapses to the corresponding non-hover disabled color. There is no meaningful "dimmed hover" distinct from "dimmed", so requiring a separate key would only invite them to drift apart. `font` and `segmented_button_height` are top level only because neither changes with state.
+
+`font` and `segmented_button_height` are both intercepted before native construction and forwarded to the internal segmented button. This is not optional: `CTkTabview` names every parameter explicitly with no `**kwargs` catch-all, so any key it doesn't recognize raises `ValueError` from its constructor. They're applied once rather than on every repaint, since neither varies by state. See [Known Limitations](#limitations) regarding what `segmented_button_height` actually achieves.
+
+**Validation is scoped to direct construction.** A subclass reaches this constructor with `final_kw` built from *its own* theme block — `ThemeableWidget`'s run-once guard means it is never rebuilt — so validating these keys against a subclass's block would raise on every construction. Subclasses own their own theme contract.
+
 ---
 
 <a name="template"></a>
-### 💻 Implementation Reference Template
+### Example
 
 ```python
 #!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Tabview
-# =====================================================================
-
 import customtkinter as ctk
 from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelPrimary, sCTk, sCTkTabview
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("560x420")
+    root.geometry("640x480")
     root.title("sCTkTabview Container Validation Bench")
     root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
 
-    # 2. Mount custom master backplane frame capsule container
     base = sCTkFrame(root, border_width=2)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    # 3. Instantiate our custom multi-page tab container widget cleanly
     widget = sCTkTabview(base)
     widget.pack(expand=True, fill="both", padx=10, pady=10)
 
-    # Define our targeted operational dashboard page labels string array
-    tab_pages = ["Transceiver Settings", "Audio Filters", "System Logs"]
+    for page_name in ["Transceiver Settings", "Audio Filters", "System Logs"]:
+        # add() returns the sCTkFrame content page directly.
+        page_viewport = widget.add(page_name)
 
-    # 4. NESTED TAB FRAME GENERATION PASS:
-    # Loops through the strings, adds the tabs, and nests an sCTkFrame containing
-    # an sCTkLabelPrimary placeholder inside every viewport page cleanly!
-    for page_name in tab_pages:
-        # Add the structural landing track tab layer to the widget chassis
-        widget.add(page_name)
-
-        # Grab the native container reference object assigned to this specific tab page
-        page_viewport = widget.tab(page_name)
-
-        # Mount an inner sCTkFrame container capsule to pad out the sub-tab view workspace
         inner_frame = sCTkFrame(page_viewport, border_width=1, corner_radius=8)
         inner_frame.pack(expand=True, fill="both", padx=10, pady=10)
 
-        # Drop a high-visibility sCTkLabelPrimary component right in the center slot of the sub-frame
         test_label = sCTkLabelPrimary(inner_frame, text=f"Test Contents — {page_name}")
         test_label.pack(expand=True, fill="none", padx=20, pady=20)
 
-
-    # =====================================================================
-    # 🛠️ INTERACTIVE BENCH OPERATION CONTROLLERS
-    # =====================================================================
     def toggle_tab_lock():
-        """Toggles active data page switches and flattens tab button fills."""
-        current = widget.state()
-        target = "disabled" if current == "normal" else "normal"
-        widget.state(target)
+        target = "disabled" if widget.state() == "normal" else "normal"
+        widget.configure(state=target)
         btn_lock.configure(
             text="Unlock Tabview Navigation" if target == "disabled" else "Lock Tabview (Set 'disabled')")
-        print(f"Logged State Verification Hook -> widget.state() = {widget.state()}")
+        print(f"state()={widget.state()}  cget={widget.cget('state')}")
 
+    def toggle_temp_page():
+        if "Scratch Pad" in widget._sctk_pages:
+            widget.delete("Scratch Pad")
+            btn_temp.configure(text="Add Runtime Page")
+        else:
+            page = widget.add("Scratch Pad")
+            sCTkLabelPrimary(page, text="Created at runtime").pack(expand=True, padx=20, pady=20)
+            btn_temp.configure(text="Delete Runtime Page")
 
     def toggle_skin_preference():
-        """Toggles between Light and Dark interface appearance preferences."""
         ctk.set_appearance_mode("Light" if ctk.get_appearance_mode() == "Dark" else "Dark")
 
-
-    # Arrange test interaction buttons horizontally across the lower tray tray area
     control_tray = sCTkFrame(root, fg_color="transparent")
     control_tray.pack(side="bottom", fill="x", padx=20, pady=(0, 15))
 
     btn_lock = sCTkButtonPrimary(control_tray, text="Lock Tabview (Set 'disabled')", command=toggle_tab_lock)
-    btn_lock.pack(side="left", expand=True, padx=5)
+    btn_lock.pack(side="left", expand=True, padx=4)
+
+    btn_temp = sCTkButtonPrimary(control_tray, text="Add Runtime Page", command=toggle_temp_page)
+    btn_temp.pack(side="left", expand=True, padx=4)
 
     btn_skin = sCTkButtonPrimary(control_tray, text="Toggle UI Light/Dark Appearance", command=toggle_skin_preference)
-    btn_skin.pack(side="right", expand=True, padx=5)
+    btn_skin.pack(side="right", expand=True, padx=4)
 
     root.mainloop()
-
-
 ```
+
+---
+
+<a name="limitations"></a>
+### Known Limitations
+
+- **`segmented_button_height` is currently a no-op, retained for possible future use.** The value is applied to the internal segmented button and `cget("height")` reports it back accurately, but the visible tab strip does **not** grow to match. `CTkTabview` grids the segmented button into a row whose `minsize` comes from its own private spacing constants, and deliberately overlaps the button with the page frame below to produce the connected-tab look. A taller button is clipped by that row rather than expanding it. Confirmed by direct testing: a height of 128 reported back correctly and produced no visible change.
+
+  The key is deliberately kept, and kept **required**, rather than removed. It costs nothing, it keeps the theme contract stable, and it's already wired end-to-end — so if a future CustomTkinter release exposes the strip height, or the internals approach below is revisited, only the application step changes. Do not treat it as broken and delete it; changing the number is expected to do nothing today.
+
+  Making the strip actually taller would mean writing `CTkTabview`'s private `_top_spacing` / `_top_button_overhang` attributes and re-running its `_configure_grid()` — a dependency on CustomTkinter internals that could break on any upstream release. Deliberately not done.
+
+  Note this is a `CTkTabview` layout constraint, **not** a limitation of the segmented button: a standalone `sCTkSegmentedButton` honors `height` normally.
+- **Disabling does not cascade to children.** It dims the tab bar and locks tab selection, but widgets placed inside a page are unaffected — disabling them is the caller's responsibility.
+- **`add()` and `tab()` return a different type than the native widget.** Code doing an `isinstance` check against `ctk.CTkFrame`, or reaching for CTkFrame-specific internals on a tab page, would notice. `ctk.CTkTabview.tab(widget, name)` still reaches the native shell.
+- **The internal segmented button is a native `CTkSegmentedButton`**, not `sCTkSegmentedButton`. It is created inside `CTkTabview.__init__` and re-themed afterwards by pushing colors onto it. Replacing it with the themed variant would let it theme itself and remove most of that code, but the swap hasn't been made.
+- **Each tab page carries one extra frame layer** — the native shell plus the `sCTkFrame` wrapper inside it. Transparent and borderless, so invisible, but present in the widget tree.
+- **`text_color` is applied by reaching into the segmented button's private `_buttons_dict`**, since CustomTkinter exposes no public way to set per-button text color on a segmented button. This depends on a CustomTkinter internal and could break on a future release.
+- **Colors are resolved to a single value** via `_resolve_color()` rather than passed through as raw `(light, dark)` tuples, so appearance-mode changes rely on this widget's own `_set_appearance_mode()` hook re-running the theme pass rather than on CustomTkinter's native tracking.
 
 [Return to Table of Contents](#contents)
 
@@ -2677,108 +3062,123 @@ if __name__ == "__main__":
 
 ## sCTkTextboxPrimary
 
-A dominant theme-compliant messaging and logging terminal console wrapper that inherits natively from `customtkinter.CTkTextbox`. It implements a specialized sequential order of operations pass to enforce native, zero-leak read-only locks while completely preventing CustomTkinter's native disabled appearance mode freezes.
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
+---
 
-![sCTkTextboxPrimary_Dark.png](src/images/sCTkTextboxPrimary_Dark.png)
-![sCTkTextboxPrimary_Light.png](src/images/sCTkTextboxPrimary_Light.png)
+### Overview
 
+`sCTkTextboxPrimary` is a themeable subclass of `customtkinter.CTkTextbox` — a multi-line text area, the higher-emphasis of the library's two textbox tiers (see also `sCTkTextboxSecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"`.
 
-### Core Features
-*   **Native Read-Only Lockout**: Leverages CustomTkinter's native text buffer lockout states when disabled to provide a secure, native typing and text insertion freeze.
-*   **Standard Viewport Accessibility**: Leaves mouse wheel scrolling tracks and high-precision macOS trackpad touch gestures fully functional when locked down, matching standard native CustomTkinter behavioral layout guidelines.
-*   **Sequential Repaint Engine**: Forces structural scrollbar thumb vector updates *before* applying text engine state flags, ensuring internal canvas shapes never drop theme switches or freeze their color slots when locked.
-*   **ThemeableWidget Protocol Mixin**: Integrates natively with the central mixin repository layer to strip, isolate, and safely process custom Pygubu keywords (`translator`, `on_first_object_cb`, `image_loader`, `data_pool`) on startup, preventing constructor crashes.
-*   **Automated Asset Upgrades**: Automatically transforms raw incoming string icon file paths from Pygubu into modern vector-scaled `ctk.CTkImage` references behind the scenes.
+<img src="src/images/sCTkTextboxPrimary_Dark.png" alt="sCTkTextboxPrimary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkTextboxPrimary_Light.png" alt="sCTkTextboxPrimary in light mode" style="border: 2px solid #555555;">
 
-### Public Methods
+If `fg_color` resolves to `"transparent"` at construction, the widget copies its parent's actual `fg_color` instead, since `CTkTextbox` doesn't render true transparency the way canvas-based widgets can.
 
-#### `state(state_string: str = None) -> str`
-Operational state management controller. Coordinates background desaturation colors and native input locks safely.
-*   **Arguments**: 
-    *   `state_string` (*str*, optional): The target state to enforce (`"normal"` or `"disabled"`). If omitted, returns the active virtual configuration tracker state.
-*   **Returns**: The active operational state tracking string.
+---
 
-#### `configure(*args, **kwargs)`
-Handles both programmatic keyword modifications and Pygubu designer inspector positional dictionary queries safely. Automatically populates internal lifecycle handshake hooks (`_finalize_themeable_lifecycle`).
+### Constructor
 
-### Theme Configuration Matrix (`themes.json`)
+```python
+sCTkTextboxPrimary(master=None, **kw)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kw` | — | — | `state` is pulled out and applied after construction. Everything else is any native `CTkTextbox` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
+
+```python
+log_area = sCTkTextboxPrimary(master=control_panel)
+log_area.pack(fill="both", expand=True, padx=40, pady=10)
+```
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(state_string=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Uses CTk's native `state="disabled"`, consistent with the other widgets in this library confirmed to correctly block interaction this way. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` updates the tracked state and triggers a repaint. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `text_color`, `border_color`, `scrollbar_button_color`, and `scrollbar_button_hover_color`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font`, `border_width`, and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `text_color`, `scrollbar_button_color`, and `scrollbar_button_hover_color` are recomputed from the theme's normal values or its `disabled_map`. This includes manually re-theming the widget's internal scrollbar, which isn't automatically covered by a single `configure()` call.
+
 ```json
 {
-  "sCTkTextboxPrimary": {
-    "fg_color": ["#FFFFFF", "#1E1E1E"],
-    "border_color": ["#CBD5E1", "#3F3F46"],
-    "text_color": ["#000000", "#FFFFFF"],
-    "scrollbar_button_color": ["#94A3B8", "#475569"],
-    "scrollbar_button_hover_color": ["#64748B", "#334155"],
-    "disabled_map": {
-      "fg_color": ["#F1F5F9", "#18181B"],
-      "border_color": ["#E2E8F0", "#27272A"],
-      "text_color": ["#64748B", "#71717A"],
-      "scrollbar_button_color": ["#D1D5DB", "#374151"]
+    "sCTkTextboxPrimary": {
+        "font": ["Arial", 13, "normal"],
+        "border_width": 1,
+        "corner_radius": 6,
+        "border_color": ["#b5beb6", "#3d5242"],
+        "fg_color": ["#cbcfcb", "#1a1a1a"],
+        "text_color": ["#1c1d1c", "#e3ece4"],
+        "scrollbar_button_color": ["#64748B", "#4B5563"],
+        "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
+        "disabled_map": {
+            "fg_color": ["#E5E7EB", "#111827"],
+            "border_color": ["#CBD5E1", "#1F2937"],
+            "text_color": ["#94A3B8", "#64748B"],
+            "scrollbar_button_color": ["#E5E7EB", "#1F2937"],
+            "scrollbar_button_hover_color": ["#E5E7EB", "#1F2937"]
+        }
     }
-  }
 }
 ```
 
-### Implementation Example & Test Harness
+`scrollbar_button_color` and `scrollbar_button_hover_color` are required to be present in whichever map is active — if either is missing, the widget raises immediately rather than substituting a hardcoded color.
 
-Below is a complete, self-contained interactive test execution script demonstrating how to use a `sCTkTextboxPrimary`.
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
+---
+
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Textbox Primary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkTextboxPrimary
-
+from scustomtkinter import sCTk, sCTkFrame, sCTkTextboxPrimary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("500x450")
-    root.title("sCTkTextboxPrimary Native Pure Bench")
+    root.geometry("450x350")
+    root.title("TextboxPrimary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkTextboxPrimary(base)
-    widget.pack(expand=True, fill="both", padx=10, pady=10)
+    log_area = sCTkTextboxPrimary(base)
+    log_area.pack(fill="both", expand=True, pady=10)
+    log_area.insert("1.0", "Log output appears here...")
 
-    for i in range(30):
-        widget.insert("end", f"[{i:02d}] RX FREQ DATA TUNING RADAR AT INTERCEPT SECTOR TRACK -> VALID\n")
+    def toggle_disabled():
+        target = "disabled" if log_area.get_state() == "normal" else "normal"
+        log_area.state(target)
+        disable_toggle.configure(text="Enable Log" if target == "disabled" else "Disable Log")
 
-
-    def toggle_logger_states():
-        current_state = widget.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
-        widget.configure(state=target)
-
-        if target == "disabled":
-            btn_toggle.configure(text="Activate Logger Feed")
-            print("state (Disabled Sequence) =", widget.get_state().upper())
-        else:
-            btn_toggle.configure(text="Lock Logger Feed")
-            print("state (Normal Sequence)   =", widget.get_state().upper())
-
-
-    def toggle_appearance_skin():
-        current_mode = ctk.get_appearance_mode()
-        target = "Light" if current_mode == "Dark" else "Dark"
-        ctk.set_appearance_mode(target)
-
-
-    btn_toggle = sCTkButtonPrimary(base, text="Lock Logger Feed", command=toggle_logger_states)
-    btn_toggle.pack(fill="x", padx=10, pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
-    btn_theme.pack(fill="x", padx=10, pady=5)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Log", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for six specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -2786,101 +3186,121 @@ if __name__ == "__main__":
 
 ## sCTkTextboxSecondary
 
-A custom, theme-compliant secondary logging and auxiliary console text display viewport built cleanly and natively on top of `customtkinter.CTkTextbox`. Designed to match the exact programmatic engine of the primary console, it uses sequential repaint loops to guarantee native read-only input locks without visual color freezes or text canvas truncation errors.
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
+---
 
-![sCTkTextboxSecondary_Dark.png](src/images/sCTkTextboxSecondary_Dark.png)
-![sCTkTextboxSecondary_Light.png](src/images/sCTkTextboxSecondary_Light.png)
+### Overview
 
+`sCTkTextboxSecondary` is a themeable subclass of `customtkinter.CTkTextbox` — a multi-line text area, the lower-emphasis of the library's two textbox tiers (see also `sCTkTextboxPrimary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state, using CustomTkinter's native `state="disabled"`.
 
-### Core Features
-*   **Isolated Look Mappings**: Allows secondary terminal readouts and backup radio tracking data logs to manage distinct color desaturation maps separate from the primary dominant workspace console.
-*   **Sequential Repaint Engine**: Synchronizes the base widget text engine and internal scroll handles natively, executing look updates first to bypass framework disabled white-out traps completely.
-*   **Uninhibited Scroll Navigation**: Retains cross-platform mechanical mouse wheel and high-precision Apple Magic Mouse tracking loops across all states to ensure long-form system logs remain searchable.
-*   **ThemeableWidget Protocol Mixin**: Implements multiple inheritance from the central mixin class to provide instant support for Pygubu string translations (`translator`) and object generation hooks (`on_first_object_cb`).
+<img src="src/images/sCTkTextboxSecondary_Dark.png" alt="sCTkTextboxSecondary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkTextboxSecondary_Light.png" alt="sCTkTextboxSecondary in light mode" style="border: 2px solid #555555;">
 
-### Public Methods
+If `fg_color` resolves to `"transparent"` at construction, the widget copies its parent's actual `fg_color` instead — same rationale as `sCTkTextboxPrimary`'s identical fallback.
 
-#### `state(state_string: str = None) -> str`
-Operational state management controller. Coordinates background desaturation colors and typing masks safely.
-*   **Arguments**: 
-    *   `state_string` (*str*, optional): The target state to enforce (`"normal"` or `"disabled"`). If omitted, queries the active virtual state memory slot.
-*   **Returns**: The active virtual state tracking string.
+---
 
-### Theme Configuration Matrix (`themes.json`)
+### Constructor
+
+```python
+sCTkTextboxSecondary(master=None, **kw)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kw` | — | — | `state` is pulled out and applied after construction. Everything else is any native `CTkTextbox` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
+
+```python
+notes_area = sCTkTextboxSecondary(master=control_panel)
+notes_area.pack(fill="both", expand=True, padx=40, pady=10)
+```
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(state_string=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` updates the tracked state and triggers a repaint. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `text_color`, `border_color`, `scrollbar_button_color`, and `scrollbar_button_hover_color`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font`, is merged with any matching keyword arguments and applied when the widget is built. Note `border_width` and `corner_radius` are both `0` for this style — no visible border, unlike `sCTkTextboxPrimary`.
+- **Re-applied on every `state()` change** — `fg_color`, `text_color`, `scrollbar_button_color`, and `scrollbar_button_hover_color` are recomputed from the theme's normal values or its `disabled_map`, including manually re-theming the internal scrollbar.
+
 ```json
 {
-  "sCTkTextboxSecondary": {
-    "fg_color": ["#F8FAFC", "#121214"],
-    "border_color": ["#E2E8F0", "#2A2A2E"],
-    "text_color": ["#0F172A", "#E2E8F0"],
-    "scrollbar_button_color": ["#94A3B8", "#475569"],
-    "scrollbar_button_hover_color": ["#64748B", "#334155"],
-    "disabled_map": {
-      "fg_color": ["#E2E8F0", "#1A1A1C"],
-      "border_color": ["#CBD5E1", "#222224"],
-      "text_color": ["#475569", "#8E9196"],
-      "scrollbar_button_color": ["#D1D5DB", "#374151"]
+    "sCTkTextboxSecondary": {
+        "font": ["Arial", 12, "normal"],
+        "border_width": 0,
+        "corner_radius": 0,
+        "fg_color": ["#FFFFFF", "#111827"],
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "scrollbar_button_color": ["#64748B", "#4B5563"],
+        "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
+        "disabled_map": {
+            "fg_color": ["#E5E7EB", "#111827"],
+            "text_color": ["#94A3B8", "#64748B"],
+            "scrollbar_button_color": ["#E5E7EB", "#1F2937"],
+            "scrollbar_button_hover_color": ["#E5E7EB", "#1F2937"]
+        }
     }
-  }
 }
 ```
 
-### Implementation Example & Test Harness
+`scrollbar_button_color` and `scrollbar_button_hover_color` are required to be present in whichever map is active — if either is missing, the widget raises immediately rather than substituting a hardcoded color.
 
-Below is a complete, self-contained interactive test execution script demonstrating how to use a `sCTkTextboxSecondary`.
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
+---
+
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Textbox Secondary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkTextboxSecondary
+from scustomtkinter import sCTk, sCTkFrame, sCTkTextboxSecondary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("500x450")
-    root.title("sCTkTextboxSecondary Native Pure Bench")
+    root.geometry("450x350")
+    root.title("TextboxSecondary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkTextboxSecondary(base)
-    widget.pack(expand=True, fill="both", padx=10, pady=10)
+    notes_area = sCTkTextboxSecondary(base)
+    notes_area.pack(fill="both", expand=True, pady=10)
+    notes_area.insert("1.0", "Notes go here...")
 
-    for i in range(30):
-        widget.insert("end", f"[{i:02d}] SECONDARY FREQ TRANSLATION CHANNEL BUFFER -> VERIFIED\n")
+    def toggle_disabled():
+        target = "disabled" if notes_area.get_state() == "normal" else "normal"
+        notes_area.state(target)
+        disable_toggle.configure(text="Enable Notes" if target == "disabled" else "Disable Notes")
 
-
-    def toggle_logger_states():
-        current_state = widget.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
-        widget.configure(state=target)
-
-        if target == "disabled":
-            btn_toggle.configure(text="Activate Secondary Feed")
-        else:
-            btn_toggle.configure(text="Lock Secondary Feed")
-
-
-    def toggle_appearance_skin():
-        current_mode = ctk.get_appearance_mode()
-        target = "Light" if current_mode == "Dark" else "Dark"
-        ctk.set_appearance_mode(target)
-
-
-    btn_toggle = sCTkButtonPrimary(base, text="Lock Secondary Feed", command=toggle_logger_states)
-    btn_toggle.pack(fill="x", padx=10, pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
-    btn_theme.pack(fill="x", padx=10, pady=5)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Notes", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for six specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -2893,61 +3313,68 @@ Not a lot of choices here, but they should suffice.
 ## sCTkComboBox
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-themesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A theme-compliant, prominent data-entry combo box widget variant designed for multi-frequency array indexes, input lanes, and tracking channels. It features an independent deep-copy keyword caching shield and early parameter-popping filters to safeguard dropdown sub-component properties from native mutation deletion loops.
+### Overview
 
-![sCTkComboBox_Dark.png](src/images/sCTkComboBox_Dark.png)
-![sCTkComboBox_Light.png](src/images/sCTkComboBox_Light.png)
+`sCTkComboBox` is a themeable subclass of `customtkinter.CTkComboBox`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state (separate from, but synchronized with, the widget's native interactive lock), and Pygubu Designer property introspection support.
 
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkComboBox(master)` | `sCTkComboBox(master)` *(Composite Dropdown Input)* |
-| **File Mapping** | Component definitions bundle under single active tracks. | Streamlined and compiled programmatically across `sCTkComboBox.py` and `ThemeableWidget.py`. |
-| `state(mode)` | `self.configure(state=...)` | `Method (str)` handling layout tracking map transformations (`'normal'`, `'disabled'`) via strict sequential update loops. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-| `get()` | `self.get()` | Returns the active selected string item currently displayed inside the text frame field. |
-| `set(value)` | `self.set(str)` | Programmatically injects a custom string or forces selection updates onto the view face. |
+<img src="src/images/sCTkComboBox_Dark.png" alt="sCTkComboBox in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkComboBox_Light.png" alt="sCTkComboBox in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom combo box dropdown element instance. Custom attributes passed from Pygubu builder allocations (like string `translator` tracks or `data_pool` environments) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkComboBox(master=None, values=None, command=None, variable=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `values` | `list[str]` | `[""]` | Dropdown options. If the first entry is a non-empty string, it is selected automatically on creation. |
+| `command` | `callable` | `None` | Called with the selected value when the user picks an item. |
+| `variable` | `tkinter.StringVar` | `None` | Optional variable bound to the current selection. |
+| `**kwargs` | — | — | Any native `CTkComboBox` argument (e.g. `width`, `height`, `font`, `corner_radius`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). Anything not supplied falls back to the `sCTkComboBox` block of `sCTkThemes.json`. |
 
 ```python
-# Instantiate a custom combo box dropdown element
 frequency_dropdown = sCTkComboBox(
     master=control_panel,
     values=["Channel A (VHF)", "Channel B (UHF)", "Direct Audio Feed"],
-    command=on_frequency_channel_changed
+    command=on_frequency_channel_changed,
 )
-
-# Render the widget inside your parent container geometry packer layout panel
 frequency_dropdown.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Programmatically query entries or force alternative text items on the fly
-active_selection = frequency_dropdown.get() # Returns current text lane string
-frequency_dropdown.set("Channel B (UHF)")   # Snaps the visible box choice straight to the specified item
-frequency_dropdown.state("disabled")        # Freezes entry input lanes and applies muted gray fills
-```
+### Methods
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+| Method | Returns | Description |
+|---|---|---|
+| `get()` | `str` | Currently selected text (native `CTkComboBox` behavior). |
+| `set(value)` | `None` | Sets the displayed text (native `CTkComboBox` behavior). |
+| `state(mode=None)` | `str` \| `None` | Gets or sets the widget's enabled/disabled visual state. Accepts `"normal"`, `"enabled"`, or `"active"` (all equivalent) and `"disabled"`. Any other value is silently ignored. Called with no argument, returns the current state as a lowercase string. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, with two additions: passing `state=...` routes to `state()` rather than the native Tkinter `state` option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`. Queries for any other single property name fall through to the native `CTkComboBox.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+Theme values are used in two different ways, worth keeping separate:
+
+- **Applied once, at construction** — every key in the widget's theme block (including `corner_radius`) is merged with any matching keyword arguments you pass in and applied when the widget is built.
+- **Re-applied on every `state()` change** — only `fg_color`, `border_color`, `text_color`, `button_color`, `button_hover_color`, `dropdown_fg_color`, `dropdown_text_color`, `dropdown_hover_color`, `border_width`, and `font` are swapped between the theme's normal values and its `disabled_map` values when you call `state("disabled")` / `state("normal")`. Toggling state also sets the native Tkinter `state` flag, so a disabled combo box is both visually muted and non-interactive.
+
 ```json
 {
     "sCTkComboBox": {
@@ -2971,30 +3398,20 @@ frequency_dropdown.state("disabled")        # Freezes entry input lanes and appl
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, completely bypassing the intermediate template layout files entirely to avoid argument deadlocks.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
+> **Note:** `disabled_map` above has no entries for `dropdown_fg_color`, `dropdown_text_color`, `dropdown_hover_color`, or `button_hover_color`. Since only keys present in `disabled_map` are swapped, those four properties keep their *enabled*-state color when the widget is disabled. Add entries for them here if you want the dropdown portion to visually mute along with the rest of the widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkComboBox` alongside an interactive theme state track.
+### Example
 
 ```python
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for ComboBox
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTk, sCTkButtonPrimary, sCTkComboBox
+from scustomtkinter import sCTk, sCTkFrame, sCTkButtonPrimary, sCTkComboBox
 
 if __name__ == "__main__":
-
     root = sCTk()
     root.geometry("450x300")
-    root.title("ComboBox Interaction Telemetry Bench")
+    root.title("ComboBox Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
@@ -3002,179 +3419,159 @@ if __name__ == "__main__":
     widget = sCTkComboBox(
         base,
         values=["Channel A (VHF)", "Channel B (UHF)", "Direct Audio Feed"],
-        command=lambda choice: print(f"ComboBox Option Latched: {choice}")
+        command=lambda choice: print(f"Selected: {choice}"),
     )
     widget.pack(expand=True, fill="none", padx=10, pady=10)
 
     def toggle_widget_state():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
+        target = "disabled" if widget.get_state() == "normal" else "normal"
         widget.configure(state=target)
-        btn_toggle.configure(text="Unlock Dropdown" if target == "disabled" else "Lock Dropdown (Set 'disabled')")
-        print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state()}")
+        btn_toggle.configure(text="Enable" if target == "disabled" else "Disable")
 
-    btn_toggle = sCTkButtonPrimary(base, text="Lock Dropdown (Set 'disabled')", command=toggle_widget_state)
+    btn_toggle = sCTkButtonPrimary(base, text="Disable", command=toggle_widget_state)
     btn_toggle.pack(side="bottom", pady=15)
 
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    widget.state("disabled")
-    print("state (Disabled Pass) =", widget.get_state())
-
-    widget.state("normal")
-    print("state (Normal Pass)   =", widget.get_state())
-    print("========================================\n")
-
     root.mainloop()
-
 ```
 
-[Return to Table of Contents](#contents)
+---
 
+### Known Limitations
+
+- `state()` silently ignores any value other than `normal`, `enabled`, `active`, or `disabled` — no exception is raised and no warning is logged.
+- Passing a positional `dict` to `configure()` (e.g. `configure({"fg_color": "red"})`) is not merged into the update; only keyword arguments are applied. Use `configure(**your_dict)` instead.
+
+
+[Return to Table of Contents](#contents)
 
 
 ## sCTkOptionMenuPrimary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-themesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-The dominant primary option menu selector drop-down widget component wrapping `customtkinter.CTkOptionMenu`. It incorporates early parameter popping filters and an independent value-cloned deep copy caching layer to guarantee composite drop-down states remain permanently insulated against native CustomTkinter initialization dictionary data loss.
+### Overview
 
+`sCTkOptionMenuPrimary` is a themeable subclass of `customtkinter.CTkOptionMenu` — a dropdown option-selection button. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. See also `sCTkOptionMenuSecondary`, a composite bordered variant with a different internal architecture.
 
-![sCTkOptionMenuPrimary_Dark.png](src/images/sCTkOptionMenuPrimary_Dark.png)
-![sCTkOptionMenuPrimary_Light.png](src/images/sCTkOptionMenuPrimary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkOptionMenu(master)` | `sCTkOptionMenuPrimary(master)` *(Primary Drop-Down Menu)* |
-| **File Mapping** | Direct layouts bundle under unconfig-managed files. | Streamlined and compiled programmatically across `sCTkOptionMenuPrimary.py` and `ThemeableWidget.py`. |
-| **State Lock** | `self.configure(state="disabled")` | `menu_field.state("disabled")`<br>**OR**<br>`menu_field.configure(state="disabled")`<br><br>**Dual-Routing State Pipeline:** Natively intercepts state calls, unbinding drop-down trigger events while shifting background contrast rules safely out of `disabled_map` metrics via a strict sequential update pass. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
+<img src="src/images/sCTkOptionMenuPrimary_Dark.png" alt="sCTkOptionMenuPrimary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkOptionMenuPrimary_Light.png" alt="sCTkOptionMenuPrimary in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom primary drop-down menu instance. High-level configuration parameters like `values`, `command`, and `variable` are explicitly popped early inside `__init__` to protect the layout engine from keyword collisions. Custom layout parameters passed from Pygubu are handled seamlessly by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkOptionMenuPrimary(master=None, values=None, command=None, variable=None, **kw)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `values` | `list[str]` | native default | The dropdown options. |
+| `command` | `callable` | `None` | Called with the selected value when the user picks an item. |
+| `variable` | `tkinter.StringVar` | `None` | Optional variable bound to the current selection. |
+| `**kw` | — | — | Any native `CTkOptionMenu` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a primary operational mode selection option menu
-mode_dropdown = sCTkOptionMenuPrimary(
+mode_menu = sCTkOptionMenuPrimary(
     master=control_panel,
-    values=["Mode 1: Upper Sideband", "Mode 2: Lower Sideband", "Mode 3: Continuous Wave"],
-    command=on_mode_selection_changed
+    values=["AM", "FM", "SSB"],
+    command=on_mode_changed,
 )
-
-# Render the widget inside your parent layout frame panel
-mode_dropdown.pack(fill="x", padx=40, pady=10)
-```
-### Convenience Functions
-```python
-# Programmatically update menu item lists or query data frames
-mode_dropdown.set("Mode 3: Continuous Wave")  # Forces the dropdown choice to display a specific value string
-current_choice = mode_dropdown.get()           # Returns the active string item currently displayed
-mode_dropdown.update_list(["Option A", "Option B"]) # Safely replaces the visible array and handles indexing boundaries
-
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = mode_dropdown.get_state()       # Returns 'normal' or 'disabled'
-mode_dropdown.state("disabled")                # Locks dropdown triggers and applies muted gray fills
+mode_menu.pack(fill="x", padx=40, pady=10)
 ```
 
-### Centralized Stylesheet Setup (`themes.json`)
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Uses CTk's native `state="disabled"`, consistent with the other widgets in this library confirmed to correctly block interaction this way, though not independently re-tested for this specific widget. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: `values`/`command`/`variable` are routed individually; `state=...` routes through `state()`; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `button_color`, `button_hover_color`, and `text_color`. Queries for any other property name fall through to the native `CTkOptionMenu.configure`. |
+| `update_list(new_values, default_index=0)` | `None` | Replaces the dropdown's options and resets the visible selection. If `new_values` is empty, the widget is set to a single blank option. If `default_index` is out of range, falls back to index `0` rather than raising. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font`, `dropdown_font`, and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `button_color`, `button_hover_color`, `text_color`, `dropdown_fg_color`, `dropdown_text_color`, and `font` are recomputed from the theme's normal values or its `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkOptionMenuPrimary": {
-        "fg_color": ["#1A4375", "#1F6AA5"],
-        "button_color": ["#112A4B", "#194A7A"],
-        "button_hover_color": ["#0F2542", "#134267"],
+        "font": ["Arial", 15, "normal"],
+        "dropdown_font": ["Arial", 15, "normal"],
+        "fg_color": ["#1A4375", "#2471A3"],
+        "button_color": ["#112A4B", "#1F618D"],
+        "button_hover_color": ["#0D1F38", "#1A5276"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
+        "corner_radius": 6,
         "dropdown_fg_color": ["#FFFFFF", "#1F2937"],
-        "dropdown_text_color": ["#1F2937", "#FFFFFF"],
+        "dropdown_text_color": ["#1F2937", "#F9FAFB"],
+        "dropdown_hover_color": ["#E5E7EB", "#374151"],
         "disabled_map": {
-            "fg_color": ["#F3F4F6", "#1F2937"],
-            "button_color": ["#E5E7EB", "#374151"],
-            "button_hover_color": ["#E5E7EB", "#374151"],
+            "fg_color": ["#CBD5E1", "#374151"],
+            "button_color": ["#CBD5E1", "#374151"],
             "text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
-### Other Notes
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native option menu initialization code mutates, strips, and deletes keys directly out of raw dictionary data footprints during its boot phase, the constructor clones your configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This prevents normal state restorations from crashing on missing keys.
-* **Real-Time Repaint Loop:** The internal core engine is fortified to run color tuple lookups dynamically across both normal and locked state selections. This forces the option menu button faces, text fonts, and inner canvas drop tracks to adapt fluidly to theme skin toggle commands without white-out freezes.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization routine, the constructor fires `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
+`disabled_map` doesn't cover `button_hover_color`, `dropdown_fg_color`, `dropdown_text_color`, or `dropdown_hover_color` — consistent with every other themed widget in this library: once natively disabled, hover and dropdown-open interactions can't fire in the first place, so there's nothing for a disabled-state color on those properties to ever visibly apply to.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkOptionMenuPrimary` option dropdown field along with an interactive status switch toggle and skin mode updater.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for OptionMenu Primary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTkLabelSecondary, sCTk, sCTkOptionMenuPrimary
+from scustomtkinter import sCTk, sCTkFrame, sCTkOptionMenuPrimary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x320")
-    root.title("sCTkOptionMenuPrimary Real-Time Validation Bench")
+    root.geometry("400x250")
+    root.title("OptionMenuPrimary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    lbl_monitor = sCTkLabelSecondary(base, text="Active Selection: None")
-    lbl_monitor.pack(pady=10)
-
-    menu_field = sCTkOptionMenuPrimary(
-        base,
-        values=["Mode 1: USB", "Mode 2: LSB", "Mode 3: CW"],
-        command=lambda choice: lbl_monitor.configure(text=f"Active Selection: {choice}")
+    mode_menu = sCTkOptionMenuPrimary(
+        base, values=["AM", "FM", "SSB"], command=lambda choice: print(f"Selected: {choice}")
     )
-    menu_field.pack(expand=False, fill="x", padx=40, pady=10)
-    menu_field.set("Mode 1: USB")
+    mode_menu.pack(pady=10)
 
-    def toggle_operational_state():
-        current_mode = menu_field.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        menu_field.configure(state=target)
-        btn_toggle.configure(text="Lock Dropdown (Set 'disabled')" if target == "normal" else "Unlock Dropdown (Set 'normal')")
+    def toggle_disabled():
+        target = "disabled" if mode_menu.get_state() == "normal" else "normal"
+        mode_menu.state(target)
+        disable_toggle.configure(text="Enable Menu" if target == "disabled" else "Disable Menu")
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-    btn_toggle = sCTkButtonPrimary(base, text="Lock Dropdown (Set 'disabled')", command=toggle_operational_state)
-    btn_toggle.pack(side="bottom", pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=5)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    menu_field.state("disabled")
-    print("state (Disabled Pass) =", menu_field.get_state())
-
-    menu_field.state("normal")
-    print("state (Normal Pass)   =", menu_field.get_state())
-    print("========================================\n")
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Menu", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value matches neither branch, though colors are still harmlessly re-applied.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
 
@@ -3183,142 +3580,135 @@ if __name__ == "__main__":
 ## sCTkOptionMenuSecondary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-themesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-The auxiliary secondary option menu drop-down selector widget component variant wrapping a composite `ctk.CTkFrame` chassis encasing an inner text selector. It is tailored specifically for sub-metadata channels, filter widths, or tuning resolution parameters.
+### Overview
 
-*For dominant form drop-downs or principal system mode choices, see the master component documentation page:* [sCTkOptionMenuPrimary](sCTkOptionMenuPrimary.md).
+`sCTkOptionMenuSecondary` is a themeable, composite bordered dropdown option-selection menu. Unlike every other widget in this library, it is **not** a direct subclass of the widget it wraps — it's a `customtkinter.CTkFrame` containing a plain, native `customtkinter.CTkOptionMenu` inside it, giving the dropdown a themed border the native widget has no way to draw on its own. See also `sCTkOptionMenuPrimary`, a simpler direct-subclass variant.
 
+<img src="src/images/sCTkOptionMenuSecondary_Dark.png" alt="sCTkOptionMenuSecondary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkOptionMenuSecondary_Light.png" alt="sCTkOptionMenuSecondary in light mode" style="border: 2px solid #555555;">
 
-![sCTkOptionMenuSecondary_Dark.png](src/images/sCTkOptionMenuSecondary_Dark.png)
-![sCTkOptionMenuSecondary_Light.png](src/images/sCTkOptionMenuSecondary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkOptionMenu(master)` | `sCTkOptionMenuSecondary(master)` *(Secondary Helper Dropdown)* |
-| **File Mapping** | Component settings span single un-managed file layouts. | Separated safely across `sCTkOptionMenuSecondary.py` and `ThemeableWidget.py`. |
-| **State Lock** | `self.configure(state="disabled")` | `widget.state("disabled")`<br>**OR**<br>`widget.configure(state="disabled")`<br><br>**Dual-Routing State Pipeline:** Natively intercepts state updates. Locks both the base frame container layer and the interior dropdown menu elements securely to mask interactive hover events out of `disabled_map` guidelines. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
+Because configuring the outer widget affects the frame (border, background, size) while the dropdown itself is a separate inner object, most of this widget's behavior comes from keeping those two pieces in sync — see [Theming](#theming-sctkthemesjson) for how that split works.
 
 ---
 
 ### Constructor
 
-Initialize a custom secondary drop-down helper option menu instance. Keywords that cause collision errors with native container borders are filtered dynamically beforehand.
+```python
+sCTkOptionMenuSecondary(master=None, width=160, height=28, **kw)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `width` | `int` | `160` | Frame width, used unless overridden by a kwarg or the theme. |
+| `height` | `int` | `28` | Frame height, used unless overridden by a kwarg or the theme. |
+| `**kw` | — | — | `values` (list[str]), `command` (callable), and `variable` (tkinter.StringVar) are forwarded to the inner dropdown. Theme keys that belong to the inner menu rather than the outer frame — `font`, `dropdown_font`, `text_color`, `dropdown_fg_color`, `dropdown_text_color`, `dropdown_hover_color`, `button_hover_color` — are automatically routed there; everything else applies to the outer frame. See [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate an auxiliary DSP filter bandwidth selection drop-down menu
-filter_dropdown = sCTkOptionMenuSecondary(
+band_menu = sCTkOptionMenuSecondary(
     master=control_panel,
-    values=["Filter: Narrow", "Filter: Medium", "Filter: Wide"],
-    command=on_filter_width_changed
+    values=["80m", "40m", "20m", "10m"],
+    command=on_band_changed,
 )
-
-# Render the widget inside your parent layout frame panel
-filter_dropdown.pack(fill="x", padx=40, pady=10)
-```
-### Convenience Functions
-```python
-# Programmatically manipulate selection items or fetch choice parameters
-filter_dropdown.set("Filter: Narrow")      # Forces the visible dropdown face to display a specific option text
-active_filter = filter_dropdown.get()       # Returns the active string variable currently selected
-filter_dropdown.update_list(["A", "B"])     # Replaces choice index items safely while protecting bounds
-
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = filter_dropdown.get_state()  # Returns 'normal' or 'disabled'
-filter_dropdown.state("disabled")           # Freezes selection paths and applies muted flat gray skins
+band_menu.pack(fill="x", padx=40, pady=10)
 ```
 
-### Centralized Stylesheet Setup (`themes.json`)
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it. Passes `state="disabled"` to the **inner dropdown**, not the outer frame (which has nothing interactive to lock), consistent with the other widgets in this library confirmed to correctly block interaction this way. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `get()` | `str` | Delegates to the inner dropdown's `get()`. |
+| `set(value)` | `None` | Delegates to the inner dropdown's `set()`. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration for the **outer frame**, plus: `values`/`command`/`variable` are routed to the **inner dropdown**, not the frame; `state=...` routes through `state()`; calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, `text_color`, `width`, and `height`. Queries for any other property name fall through to the native `CTkFrame.configure`. |
+| `update_list(new_values, default_index=0)` | `None` | Replaces the inner dropdown's options and resets the visible selection. Empty list falls back to a blank option; out-of-range `default_index` falls back to `0`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is split between the outer frame and the inner dropdown (see the constructor table above for which keys go where), then applied when each is built.
+- **Re-applied on every `state()` change** — the outer frame's `border_color`, `fg_color`, `border_width`, and `corner_radius` are recomputed from the theme's normal values or `disabled_map`; the inner dropdown's `fg_color`, `button_color`, and `text_color` are recomputed the same way. `font`, `dropdown_font`, `dropdown_fg_color`, `dropdown_text_color`, `dropdown_hover_color`, and `button_hover_color` are **not** re-applied on state changes — they're static properties of the inner dropdown, set once and left alone.
+
 ```json
 {
     "sCTkOptionMenuSecondary": {
-        "fg_color": ["#FAFAFA", "#11141A"],
-        "border_color": ["#CBD5E1", "#222933"],
-        "border_width": 1,
+        "border_width": 1.25,
         "corner_radius": 6,
-        "text_color": ["#475569", "#94A3B8"],
-        "font": ["Arial", 11],
+        "border_color": ["#64748B", "#94A3B8"],
+        "fg_color": ["#F3F4F6", "#0B0F19"],
+        "font": ["Arial", 13, "normal"],
+        "dropdown_font": ["Arial", 13, "normal"],
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "button_hover_color": ["#94A3B8", "#374151"],
+        "dropdown_fg_color": ["#FFFFFF", "#1F2937"],
+        "dropdown_text_color": ["#1F2937", "#F9FAFB"],
+        "dropdown_hover_color": ["#E5E7EB", "#374151"],
         "disabled_map": {
-            "fg_color": ["#F1F5F9", "#0A0D14"],
-            "border_color": ["#E2E8F0", "#171C24"],
-            "text_color": ["#94A3B8", "#4B5563"]
+            "text_color": ["#94A3B8", "#64748B"],
+            "border_color": ["#CBD5E1", "#374151"],
+            "fg_color": ["#E5E7EB", "#0B0F19"]
         }
     }
 }
 ```
 
----
+`fg_color` and `text_color` are required to be present in whichever map is active — if either is missing, the widget raises immediately rather than substituting a hardcoded color, per this project's design of failing hard on incomplete theme data (see `sCTkLabelPrimary`/`Secondary`/`Tertiary` for the precedent). An earlier version of this widget used hardcoded hex fallbacks for both, and separately had a real bug where the theme's actual `button_hover_color` was computed correctly and then immediately overwritten with `fg_color` — both are fixed as of this project's audit.
 
-### Other Notes
-* **Inversion Blacklist Filter Shield:** Because this widget is a compound object utilizing an underlying `CTkFrame` container, passing core text parameters (like `font` or `text_color`) straight into the initialization tree causes a fatal `ValueError` crash. The constructor parses and pulls these tokens beforehand, feeding them explicitly down to the nested dropdown item instead.
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native option menu initialization code mutates, strips, and deletes keys directly out of raw dictionary data footprints during its boot phase, the constructor clones your configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This prevents normal state restorations from crashing on missing keys.
-* **Real-Time Repaint Loop:** The internal core engine is fortified to run color tuple lookups dynamically across both normal and locked state selections. This forces the secondary option menu dropdown faces, text fonts, and outer chassis frame layouts to adapt fluidly to theme skin toggle commands without white-out freezes.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization routine, the constructor fires `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkOptionMenuSecondary` dropdown helper while actively reporting choice changes onto a secondary telemetry label and supporting light/dark switches.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for OptionMenu Secondary
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary,sCTkLabelSecondary, sCTk, sCTkOptionMenuSecondary
+from scustomtkinter import sCTk, sCTkFrame, sCTkOptionMenuSecondary, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.geometry("450x320")
-    root.title("sCTkOptionMenuSecondary Real-Time Validation Bench")
+    root.geometry("400x250")
+    root.title("OptionMenuSecondary Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    lbl_monitor = sCTkLabelSecondary(base, text="Active Selection: Filter: Narrow")
-    lbl_monitor.pack(pady=10)
-
-    menu_field = sCTkOptionMenuSecondary(
-        base,
-        values=["Filter: Narrow", "Filter: Medium", "Filter: Wide"],
-        command=lambda choice: lbl_monitor.configure(text=f"Active Selection: {choice}")
+    band_menu = sCTkOptionMenuSecondary(
+        base, values=["80m", "40m", "20m", "10m"], command=lambda choice: print(f"Selected: {choice}")
     )
-    menu_field.pack(expand=False, fill="x", padx=40, pady=10)
-    menu_field.set("Filter: Narrow")
+    band_menu.pack(pady=10)
 
-    def toggle_operational_state():
-        current_mode = menu_field.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-        menu_field.configure(state=target)
-        btn_toggle.configure(text="Lock Dropdown (Set 'disabled')" if target == "normal" else "Unlock Dropdown (Set 'normal')")
+    def toggle_disabled():
+        target = "disabled" if band_menu.get_state() == "normal" else "normal"
+        band_menu.state(target)
+        disable_toggle.configure(text="Enable Menu" if target == "disabled" else "Disable Menu")
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
-
-    btn_toggle = sCTkButtonPrimary(base, text="Lock Dropdown (Set 'disabled')", command=toggle_operational_state)
-    btn_toggle.pack(side="bottom", pady=5)
-
-    btn_theme = sCTkButtonPrimary(base, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(side="bottom", pady=5)
+    disable_toggle = sCTkButtonPrimary(base, text="Disable Menu", command=toggle_disabled)
+    disable_toggle.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value matches neither branch, though colors are still harmlessly re-applied.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
+- Because this widget wraps rather than subclasses its inner control, `configure()` on the outer widget and `configure()` on `self._menu` (the inner dropdown) are genuinely different calls affecting different objects — code that expects a single unified `configure()` surface (as every other widget in this library provides) needs to be aware of this split.
 
 [Return to Table of Contents](#contents)
 
@@ -3330,53 +3720,133 @@ These are all the extra widgets that were added to the stock set provided with `
 
 ## sCTKDialBase
 
-Abstract foundational base class for theme-adaptive mechanical rotary encoder components. It coordinates vector canvas layouts, mouse interaction loops, and cross-platform OS theme repainting rules.
+Abstract base class for the rotary dial family. It owns the canvas rendering, the mouse and scroll interaction model, the theme contract, and the state machine shared by [`sCTkDialContinuous`](sCTkDialContinuous.md), [`sCTkDialSelector`](sCTkDialSelector.md), and [`sCTkDialRange`](sCTkDialRange.md).
 
-![sCTkDial_All_Dark.png](src/images/sCTkDial_All_Dark.png)
+<img src="src/images/sCTkDial_All_Dark.png" alt="sCTkDial_All_Dark.png" style="border: 2px solid #555555;">
 
-### Universal Dial Architecture
+This page is the reference for how dials are drawn and themed. The three variant pages describe only what differs.
 
-Every custom rotary knob in the ecosystem inherits its vector mechanics directly out of this core layout module. It establishes several universal features:
+Note the spelling: the class is `sCTKDialBase` with a capital K. It is never instantiated directly and has no theme block of its own — each concrete subclass resolves its own block by class name.
 
-* **Centralized Theme Mapping:** Resolves raw colors and styles out of `themes.json` using the specific runtime class name, automatically generating fallback properties if individual blocks are unconfigured.
-* **Cascading Interaction Blocks:** Toggling a component into a disabled state dynamically unbinds mouse clicks, trackpad sweeps, and scrolling event loops simultaneously to protect the live interface deck from input leaks.
-* **Translucency Shield Protection Engine:** Natively catches instances where a parent widget background resolves to `"transparent"`. It programmatically climbs up the window hierarchy tree to resolve the canvas background to a valid parent hex value string, completely eliminating Light Mode Tcl color crashes.
-* **Sequential Re-Binding Engine:** Forces real-time theme repaint sweeps to complete and settle background color layers *before* executing low-level pointer attachments, keeping Apple trackpad touch momentum and standard wheel clicks perfectly responsive upon coming back from a disabled state lockout.
-
-### API Property Reference (Shared Properties)
-
-| Property / Feature | Value Format | Description |
-| :--- | :--- | :--- |
-| `state(mode)` | `Method (str)` | Main state manager handling map transformations (`'normal'`, `'disabled'`). |
-| `get_state()` | `Method -> str` | Direct verification query returning the current operational lock status. |
-| `diameter` | `int` | Square bounding container metric enforcing canvas height and width equality. |
-| `divisions` | `int` | Total tick scale markings drawn symmetrically around the outer chassis ring track. |
+### Table of Contents
+* [Knob rendering](#knob-rendering)
+* [Theme contract](#theme-contract)
+* [Reading theme colours](#reading-theme-colours)
+* [Shared API](#shared-api)
+* [Redraw model](#redraw-model)
+* [Known limitations](#known-limitations)
 
 ---
 
-### Centralized Stylesheet Setup Reference (`themes.json`)
+<a name="knob-rendering"></a>
+### Knob rendering
 
-All concrete sub-classes read from this structural arrangement format inside your centralized style registries:
+The knob is drawn as a stack of concentric ovals stepping from `dial_shadow_color` at the rim to `dial_highlight_color` off-centre, each ring shifted toward a light source in the upper left. Tk's canvas has no gradient primitive and **no alpha channel**, so this is the only way to get a domed surface — every colour is a solid fill computed by interpolation, never a translucent overlay.
 
-```json
-{
-    "sCTkDialContinuous": {
-        "fg_color": ["#E2E8F0", "#262626"],
-        "shadow_color": ["#CBD5E1", "#02040A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "dial_color": ["#1E293B", "#181E2B"],
-        "pointer_glow_color": ["#CBD5E1", "#3A455C"],
-        "disabled_map": {
-            "fg_color": ["#E2E8F0", "#1A1D24"],
-            "text_color": ["#94A3B8", "#4B5563"]
-        }
-    }
-}
+Two arcs finish it: `dial_rim_light_color` across the upper-left edge and `dial_rim_shadow_color` across the lower-right.
+
+**The rim light does most of the work on dark knobs.** A black knob's shading range is clamped at the bottom — you cannot go darker than black at the edge — so it has roughly half the dynamic range of a light one. Remove the bright rim arc and a dark knob collapses back to a flat disc. This is why the highlight and shadow colours are explicit theme keys rather than derived from `dial_color` by a fixed lighten/darken: a percentage that produces a visible rim on black blows out on aluminium, and vice versa.
+
+Tuning constants live on the base class, so they can be overridden per subclass or per instance:
+
+| Constant | Default | Meaning |
+|---|---|---|
+| `KNOB_SHADE_STEPS` | `18` | Ring count. Below ~12 the steps read as contour bands; above ~24 costs more than it shows. |
+| `KNOB_SHADE_SHRINK` | `0.55` | How far the stack shrinks from rim to centre, as a fraction of radius. |
+| `KNOB_LIGHT_OFFSET` | `0.55` | How far each ring drifts toward the light. |
+| `DIMPLE_RADIUS_FRAC` | `0.36` | Finger dimple radius, as a fraction of knob radius. |
+| `DIMPLE_RIM_CLEARANCE_FRAC` | `0.06` | Gap between dimple edge and rim, same units. |
+| `POINTER_WIDTH` | `3.0` | Pointer line width in pixels. |
+| `POINTER_RIM_INSET` | `3` | How far short of the rim the pointer stops. |
+
+The dimple and clearance are **fractions, not pixels**. An earlier version used a fixed 14px inset with a fixed 14.5px radius, so the dimple was lost on a large dial and swallowed a small one.
+
+**Recesses shade opposite to domes.** The knob body is a dome, lit on the upper left. The dimple is a hole, so its shading inverts — shadowed on the upper-left interior wall, lit on the lower right. Drawn with the body's light direction it reads as a raised bump instead of something you can put a finger in.
+
+---
+
+<a name="theme-contract"></a>
+### Theme contract
+
+Every concrete dial requires these at the **top level** of its theme block:
+
+`fg_color`, `text_color`, `shadow_color`, `dial_color`, `dial_highlight_color`, `dial_shadow_color`, `dial_rim_light_color`, `dial_rim_shadow_color`
+
+and these inside **`disabled_map`**:
+
+`text_color`, `dial_color`
+
+Plus one variant-specific key each — see the individual pages.
+
+**Construction raises `KeyError`** naming the missing key and where it belongs. This replaced a pattern of `.get(key) or ("#hex", "#hex")` throughout the draw routine, which silently substituted a plausible guess and made an incomplete theme block look merely slightly-off rather than broken.
+
+`fg_color` is deliberately **not** required in `disabled_map`: the background does not dim when disabled, the knob face and text carry the signal. This also fixes a latent bug — the old code read `fg_color` from `disabled_map` for *both* the dial face and the background, so once that key existed the knob would have rendered the same colour as the surface behind it and vanished. The two only looked different because the map was empty and their hardcoded fallbacks happened to differ.
+
+The flat `disabled_text_color` / `disabled_dial_color` / `disabled_dimple_glow` keys used by earlier theme files are **retired**. They now live in `disabled_map` under their normal names, matching every other widget in the library.
+
+---
+
+<a name="reading-theme-colours"></a>
+### Reading theme colours
+
+> **Custom drawing colours must be read from the raw theme registry, not from `final_kw`.** This is a trap that produces plausible-looking wrong colours rather than an error, and it went unnoticed in this widget family for its entire existence.
+
+`ThemeableWidget` maintains a `CUSTOM_VECTOR_KEYS` set — `dial_color`, `shadow_color`, `text_color`, `pointer_color`, `pointer_glow_color`, `diameter` and others — which it strips out of `final_kw` for vector widgets, so they never reach the native `CTkFrame` constructor and raise `ValueError`. That stripping is correct and necessary.
+
+What was wrong was reading those colours back out of `final_kw` afterwards. They were never in there. Every fallback in the old draw code was therefore *always* taken, and the configured values for `dial_color`, `shadow_color`, `text_color` and `pointer_glow_color` were decorative — the dials rendered in hardcoded colours regardless of what the theme said. Applying fail-loud validation is what surfaced it.
+
+The base class now builds `_local_defaults` from the raw registry block, with `final_kw` layered on top so non-vector keys and constructor overrides keep their precedence:
+
+```python
+raw_block = _tw.GLOBAL_THEME_REGISTRY.get(self.__class__.__name__) or {}
+raw_colors = {k: v for k, v in raw_block.items() if not isinstance(v, dict)}
+self._local_defaults = ThemeableWidget._convert_lists_to_tuples(raw_colors)
+self._local_defaults.update(self.final_kw)
 ```
 
-### Other notes
-* **Keyword Isolation Guard:** The framework handles deep property filtering inside the master mixin initialization phase, stripping custom draw elements out before they can collide with native CustomTkinter frame assertions.
-* **Cross-Platform Auto Sensing:** Automatically pairs mousewheel and touchpad scroll tracks across macOS, Windows, and Linux operating systems cleanly out of the box.
+The registry is reached as a **module attribute**, not a direct name import, because `load_initial_framework_themes()` rebinds that global on load — `from ... import GLOBAL_THEME_REGISTRY` captures the empty dict that exists at import time.
+
+---
+
+<a name="shared-api"></a>
+### Shared API
+
+| Member | Type | Description |
+| :--- | :--- | :--- |
+| `state(mode=None)` | method | Getter with no argument; setter with `"normal"` or `"disabled"`. Unbinds clicks, wheel and trackpad input, and repaints from `disabled_map`. |
+| `get_state()` | method | Equivalent to `state()` with no argument. |
+| `configure(state=...)` | method | Same effect as `state()`. Both routes are supported. |
+| `configure(name)` | method | Pygubu-style single-argument query. |
+| `config` | alias | Bound to `configure` **on every class in the family**. |
+| `diameter` | `int` | Square bounding size; sets canvas width and height together. |
+| `divisions` | `int` | Tick count drawn around the outer ring. |
+
+**`config = configure` is declared separately on each class, and must be.** Tkinter binds `.config` to `.configure` as its own class attribute — it does not track whichever `configure()` a subclass defines. Without a per-class line, `.config(...)` skips every override and lands on the native widget, bypassing divisions/command/diameter handling and the theme repaint entirely. This was missing from all four dial classes; the same bug was confirmed on `sCTkSegmentedButton` earlier in this project's audit. An inherited alias would not help — it would point at the *parent's* `configure()`.
+
+---
+
+<a name="redraw-model"></a>
+### Redraw model
+
+Two entry points, deliberately separate:
+
+- **`_draw_dial_base()`** rebuilds everything. Call on geometry, theme or state change.
+- **`_redraw_indicator()`** redraws only the dimple or pointer line, leaving the knob body, ticks and labels alone. Call on a **value** change.
+
+The body is now roughly twenty shaded ovals plus ticks and labels, none of which changes as the dial turns. Rebuilding all of it per detent would make the shading cost real; the split makes it free while tuning. Same pattern as `sCTkSMeter._execute_needle_draw()`, which redraws its needle against a static face.
+
+`_redraw_indicator()` falls back to a full pass if the body isn't on the canvas — first paint, or after a resize wiped it — so a partial update can't leave the dial blank.
+
+---
+
+<a name="known-limitations"></a>
+### Known limitations
+
+- **Constructor overrides don't work for vector-guarded colours.** `sCTkDialContinuous(master, dial_color="#FF0000")` is silently ignored, because `ThemeableWidget` strips those names from its `kwargs` loop as well as from the theme block. Changing this means touching `themeable_widget.py`.
+- **The five shading keys aren't in `CUSTOM_VECTOR_KEYS`,** so they do land in `final_kw`. Harmless here — the dial's own `FRAME_VALID_KEYS` whitelist filters them before the native constructor — but a widget that forwarded `final_kw` wholesale would raise.
+- **Knurling teeth and the canvas background fallback remain hardcoded.** The teeth are a shadow effect rather than a palette choice; the background fallback is the "a raw canvas needs a renderable colour" case accepted elsewhere in this library.
+- **Ticks and labels are not affected by the body shading** — they sit outside the knob radius and draw flat in `text_color`.
+- **Scroll handling is duplicated across the three subclasses.** `_process_mac_touchpad_scroll` and `_process_scroll_wheel` are near-identical in each, differing only in the line that applies the step. This is not a candidate for `ScrollBindingMixin`: a dial steps discretely with a cooldown and has no `yview_scroll` target. It belongs in this base class with one overridable step method.
 
 
 
@@ -3395,8 +3865,8 @@ All concrete sub-classes read from this structural arrangement format inside you
 An infinite flywheel tuning encoder module tracking signed velocity delta step increments across an endless 360-degree rotation path (ideal for high-fidelity radio VFO controls, audio mixers, and multi-channel squelch encoders).
 
 
-![sCTkDialContinuous_Dark.png](src/images/sCTkDialContinuous_Dark.png)
-![sCTkDialContinuous_Light.png](src/images/sCTkDialContinuous_Light.png)
+<img src="src/images/sCTkDialContinuous_Dark.png" alt="sCTkDialContinuous_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkDialContinuous_Light.png" alt="sCTkDialContinuous_Light.png" style="border: 2px solid #555555;">
 
 
 ### API Property Reference
@@ -3446,20 +3916,38 @@ def on_vfo_dial_rotated(clicks_delta: int):
 ```
 
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
 ```json
 {
     "sCTkDialContinuous": {
-        "fg_color": "transparent",
-        "dial_color": ["#1E293B", "#181E2B"],
+        "fg_color": ["#F1F5F9", "#0A0A0A"],
+        "text_color": ["#1A4375", "#FF9100"],
         "shadow_color": ["#CBD5E1", "#02040A"],
+        "dial_color": ["#9E9E9E", "#2A2F3D"],
+        "dial_highlight_color": ["#E4E8EC", "#42454B"],
+        "dial_shadow_color": ["#5C6165", "#050507"],
+        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+        "dial_rim_shadow_color": ["#3E4245", "#000000"],
         "pointer_glow_color": ["#CBD5E1", "#3A455C"],
-        "border_width": 0,
-        "corner_radius": 0
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "dial_color": ["#E2E8F0", "#1A1D24"],
+            "pointer_glow_color": ["#CBD5E1", "#334155"]
+        }
     }
 }
 ```
 
+Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+
+`pointer_glow_color` is **specific to this variant**: it colours the ring around the finger dimple, and only this dial draws one. It is required in both the top level and `disabled_map`. Selector and Range require `pointer_color` instead.
+
+The dark-mode values above give a black anodised knob. For a brushed-aluminium look, raise `dial_shadow_color` and `dial_highlight_color` toward the light end and brighten the rim.
+
 ### Other notes
+* **Knob rendering:** the body is a shaded dome and the indicator is a recessed finger dimple, sized at 36% of the knob radius with 6% rim clearance — a VFO operator puts a finger in it to spin the dial quickly. Both scale with the knob. See [the base class page](sCTkDial.md#knob-rendering).
+* **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
+* **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
 * **Latching Override Independence:** Infinite flywheel dimples loop continuously around the chassis ring, ignoring arc boundary restrictions.
 * **Custom Accelerated Steps:** Attaching optional click callbacks allows click events to jump values by wider intervals (e.g., jumping 2 full indices per tap via `set_position_index(2)`) rather than dropping onto the baseline single-step tracking paths.
 * **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
@@ -3582,8 +4070,8 @@ if __name__ == "__main__":
 A concrete rotary encoder range variant designed for hard-bounded linear controls (e.g., AF/RF volume gain level sliders, squelch limits, or power thresholds). It enforces absolute mechanical dead stops at outer thresholds, preventing directional wraparound loops.
 
 
-![sCTkDialRange_Dark.png](src/images/sCTkDialRange_Dark.png)
-![sCTkDialRange_Light.png](src/images/sCTkDialRange_Light.png)
+<img src="src/images/sCTkDialRange_Dark.png" alt="sCTkDialRange_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkDialRange_Light.png" alt="sCTkDialRange_Light.png" style="border: 2px solid #555555;">
 
 
 ### API Property Reference
@@ -3637,22 +4125,35 @@ def on_volume_level_changed(active_value: int):
 ```
 
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
 ```json
 {
     "sCTkDialRange": {
-        "fg_color": "transparent",
-        "dial_color": ["#1E293B", "#181E2B"],
-        "border_color": ["#CBD5E1", "#334155"],
-        "text_color": ["#3B8ED0", "#FF9100"],
-        "pointer_color": ["#3B8ED0", "#FF9100"],
+        "fg_color": ["#F1F5F9", "#0A0A0A"],
+        "text_color": ["#1A4375", "#64748B"],
         "shadow_color": ["#CBD5E1", "#02040A"],
-        "border_width": 0,
-        "corner_radius": 0
+        "dial_color": ["#9E9E9E", "#2A2F3D"],
+        "dial_highlight_color": ["#E4E8EC", "#42454B"],
+        "dial_shadow_color": ["#5C6165", "#050507"],
+        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+        "dial_rim_shadow_color": ["#3E4245", "#000000"],
+        "pointer_color": ["#1A4375", "#FF9100"],
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "dial_color": ["#E2E8F0", "#1A1D24"]
+        }
     }
 }
 ```
 
+Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+
+`pointer_color` is **specific to this variant and its Selector sibling**, and colours the pointer line. It was present in the theme file for a long time but read by no code path at all — the pointer drew in `text_color` instead. It is now live, so the pointer can differ from the tick labels. It has no `disabled_map` entry; a disabled pointer falls back to the disabled `text_color`.
+
 ### Other notes
+* **Knob rendering:** the body is a shaded dome, marked with a plain straight line from dead centre out to just short of the rim. An earlier version drew an arrowhead and a raised centre cap; both are gone, along with the cap's two hardcoded outline colours. See [the base class page](sCTkDial.md#knob-rendering).
+* **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
+* **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
 * **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, completely bypassing the intermediate template layout files entirely to avoid argument deadlocks.
 * **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
 * **Absolute Threshold Dead Stops:** Unlike continuous or selector models, scrolling past upper or lower boundaries clips inputs securely using `max(self._from, min(self._to, value))`, blocking accidental overflow.
@@ -3758,8 +4259,8 @@ if __name__ == "__main__":
 A concrete rotary encoder switch variant designed for stepped selector controls (e.g., band configurations, operating modes, or filter sub-selections). It uses an explicit bounding arc configuration and outputs a clean integer mapping parameter tracking list item indices natively.
 
 
-![sCTkDialSelector_Dark.png](src/images/sCTkDialSelector_Dark.png)
-![sCTkDialSelector_Light.png](src/images/sCTkDialSelector_Light.png)
+<img src="src/images/sCTkDialSelector_Dark.png" alt="sCTkDialSelector_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkDialSelector_Light.png" alt="sCTkDialSelector_Light.png" style="border: 2px solid #555555;">
 
 
 ### API Property Reference
@@ -3810,22 +4311,35 @@ def on_operating_mode_changed(active_index: int):
 ```
 
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
 ```json
 {
     "sCTkDialSelector": {
-        "fg_color": "transparent",
-        "dial_color": ["#1E293B", "#181E2B"],
-        "border_color": ["#CBD5E1", "#334155"],
-        "text_color": ["#0284C7", "#38BDF8"],
-        "pointer_color": ["#0284C7", "#38BDF8"],
+        "fg_color": ["#F1F5F9", "#0A0A0A"],
+        "text_color": ["#1A4375", "#FF9100"],
         "shadow_color": ["#CBD5E1", "#02040A"],
-        "border_width": 0,
-        "corner_radius": 0
+        "dial_color": ["#9E9E9E", "#2A2F3D"],
+        "dial_highlight_color": ["#E4E8EC", "#42454B"],
+        "dial_shadow_color": ["#5C6165", "#050507"],
+        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+        "dial_rim_shadow_color": ["#3E4245", "#000000"],
+        "pointer_color": ["#1A4375", "#FF9100"],
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "dial_color": ["#E2E8F0", "#1A1D24"]
+        }
     }
 }
 ```
 
+Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+
+`pointer_color` is **specific to this variant and its Range sibling**, and colours the pointer line. It was present in the theme file for a long time but read by no code path at all — the pointer drew in `text_color` instead. It is now live, so the pointer can differ from the tick labels. It has no `disabled_map` entry; a disabled pointer falls back to the disabled `text_color`.
+
 ### Other notes
+* **Knob rendering:** the body is a shaded dome, marked with a plain straight line from dead centre out to just short of the rim. An earlier version drew an arrowhead and a raised centre cap; both are gone, along with the cap's two hardcoded outline colours. See [the base class page](sCTkDial.md#knob-rendering).
+* **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
+* **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
 * **Bypassing the BaseUI Skeletons:** This component avoids all autogenerated Pygubu intermediate templates, connecting the component straight to CustomTkinter's appearance modes via programmatic multiple inheritance tracks.
 * **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
 * **Rolling Selector Loops:** When spinning scroll wheels beyond boundary edges, the index modulo calculates the length of the string array, snapping the cursor back around to index 0 smoothly.
@@ -3919,218 +4433,151 @@ if __name__ == "__main__":
 
 
 ## sCTkFileExplorer
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Execution Event Callbacks](#execution-event-callbacks-command--double_click_command)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A theme-compliant, highly configurable custom file and folder navigation panel embedded directly within user layout cards. Designed to list paths and filter extensions dynamically without forcing external platform dialog boxes, it unbinds hover highlights and locks canvas scroll mechanisms seamlessly when interaction states toggle.
+### Overview
 
----
+`sCTkFileExplorer` is a theme-compliant, scrollable file/folder browser — a back button, an editable current-path entry, and a scrollable list of clickable file/folder rows. It inherits `ctk.CTkFrame`, `ScrollBindingMixin`, and `ThemeableWidget`, and builds its own scrolling machinery internally (a raw `tkinter.Canvas` plus a `CTkScrollbar`) rather than composing `sCTkScrollableFrame`.
 
-![sCTkFileExplorer_Dark.png](src/images/sCTkFileExplorer_Dark.png)
-![sCTkFileExplorer_Light.png](src/images/sCTkFileExplorer_Light.png)
+<img src="src/images/sCTkFileExplorer_Dark.png" alt="sCTkFileExplorer in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkFileExplorer_Light.png" alt="sCTkFileExplorer in light mode" style="border: 2px solid #555555;">
 
+**Scroll handling comes from `ScrollBindingMixin`,** the library's single shared implementation, also used by `sCTkScrollableFrame`. This widget supplies two hooks — `_scroll_target()` returns its own internal canvas (no `winfo_parent()` lookup needed, unlike `sCTkScrollableFrame`), and `_scroll_layers()` assembles the widget, canvas, scrollbar, and full row tree.
 
-### API Property Reference
+Three earlier problems are fixed as a result. A global `bind_all("<MouseWheel>", ...)` once affected the entire application rather than this widget, and handled only macOS plus a generic Windows-style delta with no Linux support. A scoped copy of `sCTkScrollableFrame`'s logic then replaced it — but that copy drifted: it walked only *one level* into the row frame, so a row's label or icon was never bound and the wheel did nothing over them, and it had no trackpad accumulator, scrolling on every raw event instead of gating on an accumulated threshold. Consolidating on the mixin fixes both, and trackpad scrolling now matches the rest of the library rather than being noticeably faster and coarser.
 
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | *Not Available Natively* | `sCTkFileExplorer(master)` *(Embedded Local File Navigator)* |
-| **File Mapping** | No native component layout handles inline folder index matrices. | Streamlined and compiled programmatically across `sCTkFileExplorer.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `explorer.state("disabled")`<br>**OR**<br>`explorer.configure(state="disabled")`<br><br>**Dual-Routing State Pipeline:** Natively handles both syntaxes. Freezes canvas item scrolling, strips active button double-clicks, and dims rows using centralized `disabled_map` presets. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions. |
+**Bindings maintain themselves.** Activation happens via `after_idle()` and `<Map>`, and a debounced `<Configure>` on the row frame rebinds whenever content changes — so navigating to a new folder, which replaces every row widget, is picked up automatically with no explicit call.
 
 ---
 
 ### Constructor
 
-Initialize a custom embedded directory explorer window panel. Specific configuration metrics like `filetypes` can be parsed straight out of layout inspectors without generating order-of-operation runtime exceptions. High-level custom configuration parameters from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
-
 ```python
-sCTkFileExplorer(master, type="directory", filetypes=None, initialdir=None, initialfile=None, command=None, double_click_command=None, width=400, height=300, corner_radius=None, border_width=None, bg_color="transparent", fg_color=None, border_color=None, background_corner_colors=None, overwrite_preferred_drawing_method=None, **kwargs)
+sCTkFileExplorer(master=None, initialdir=None, type="file", filetypes=None, ...)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | *Required* | Reference pointer tracking your root window, parent layout layer, or container frame capsule. |
-| `type` | `str` | `"directory"` | Structural layout operation mode. Options: `"directory"` (renders folders only) or `"file"` (renders folders and compatible files). |
-| `filetypes` | `list` / `str` | `None` | Filter array masking permitted file extensions. Formatted as an explicit python list or bracketed string array (e.g., `['.py', '.txt']`). Defers to unfiltered mode when `None`. |
-| `initialdir` | `str` | `None` | Starting navigation folder pathway string. Supports tilde user expansion (`~`) and forces normalization to absolute paths at instantiation. Defaults to `os.getcwd()` if omitted. |
-| `initialfile` | `str` | `None` | Default starting highlight target file path string. Highlights and selects the specified file asset row automatically on boot. |
-| `command` | `callable` | `None` | Single-click method event callback triggered instantly whenever a valid, active list row is highlighted. Requires a strict **two-argument footprint**. |
-| `double_click_command` | `callable` | `None` | Double-click selection method callback executed when an active row file is confirmed or executed. Requires a strict **two-argument footprint**. |
-| `width` | `int` | `400` | Manual horizontal width constraint boundary dimension allocated to the explorer component measured in pixels. |
-| `height` | `int` | `300` | Manual vertical height constraint boundary dimension allocated to the explorer component measured in pixels. |
-### Convenience Functions
-```python
-# Programmatically manipulate selection items, change views, or filter parameters dynamically
-explorer.set_mode("directory")               # Options: "file" or "directory"
-explorer.set_initial_dir("/path/to/folder") # Forces the navigation frame to jump to a specific directory
-explorer.set_initial_file("/path/file.py")   # Forces the text buffer lane to highlight a specific default file path
-explorer.set_filetypes([".py", ".json"])     # Updates the active file type visibility extension arrays
+| Parameter | Type | Description |
+|---|---|---|
+| `master` | widget | Parent container. |
+| `initialdir` | `str` | Starting directory. |
+| `type` | `"file"` / `"directory"` | Whether individual files are selectable, or only directories. |
+| `filetypes` | `list[str]` | File extension filter (only meaningful when `type="file"`). |
+| `command` | `callable` | Called with the clicked path (a string) on a single click. |
+| `double_click_command` | `callable` | Called with `(self, path)` on a double click. |
+| `width` / `height` | `int` | Overall widget dimensions. |
+| `**kwargs` | — | Any native `CTkFrame` argument, or a theme-key override (see [Theming](#theming-sctkthemesjson)). |
 
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = explorer.get_state()          # Returns 'normal' or 'disabled'
-explorer.state("disabled")                   # Freezes directory lines and dims row font components
+```python
+explorer = sCTkFileExplorer(control_panel, initialdir="/Users/you/Documents", type="directory", width=350, height=380)
+explorer.pack(fill="both", expand=True)
 ```
+
+**`command` receives a path, not the widget.** An earlier version passed `self` (the widget instance) instead of the clicked path — confirmed and fixed, since the only real-world caller (`sCTkPathChooser`) expected a path string and would have received garbage.
 
 ---
 
-### ⚡ Execution Event Callbacks (`command` & `double_click_command`)
+### Methods
 
-Both callback functions execute dynamically when rows are manipulated by the user. To prevent application layer traceback drops, **any method mapped to these commands must accept exactly two mandatory arguments**:
+| Method | Returns | Description |
+|---|---|---|
+| `_finalize_split_bindings()` | `None` | Wires the back button, path entry, and canvas resize handling, then loads the initial directory. Auto-scheduled via `self.after(10, ...)` inside `__init__` — you don't need to call it yourself. It no longer governs scroll activation; `ScrollBindingMixin` handles that independently via `after_idle()`, which fires when Tk is actually idle rather than after a guessed delay. |
+| `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming the back button, path entry, scrollbar, and all rows. Disabling also stops scrolling entirely — wheel, trackpad, and scrollbar dragging — matching `sCTkScrollableFrame`. |
+| `configure(**kwargs)` | `None` | Standard configuration, accepting `state`, `type`, `initialdir`, `initialfile`, `filetypes`, and `double_click_command` alongside native options. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the six properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and all six queries fell through to the native widget. Pygubu could not read any of them. |
 
-```python
-def my_explorer_callback(widget_instance, selected_path):
-    """
-    Mandatory Callback Signature Requirement
-    
-    1. widget_instance: The sCTkFileExplorer object triggering the method loop.
-    2. selected_path:   The absolute string file path matching the row just clicked.
-    """
-    print(f"Action detected from {widget_instance}: Processing path -> {selected_path}")
-```
-
-* **`command`**: Triggers when a folder or file row is highlighted on a single click. Passes the explorer instance pointer and the updated absolute string path of the row item.
-* **`double_click_command`**: Triggers when an active item row is double-clicked. If the targeted row is a subdirectory, the explorer automatically expands and steps *into* that directory. If the item is a valid file asset, it hands structural control back to the callback method, passing the explorer instance pointer and the absolute file location path.
+There's currently no public method for programmatic navigation from outside the widget — `path_to_show` (a `StringVar`) has no automatic refresh trace of its own (unlike `selected_path`), so navigating externally means setting it *and* explicitly calling the private `_fill_explorer()` afterward, matching the pattern used internally by the back button. This is a real API gap, not a documented feature.
 
 ---
 
-### 🎨 Centralized Stylesheet Setup (`sCTkThemes.json`)
-
-The file explorer queries your repository styling map profile matrix using standard `self._resolve_color()` lookup routines. This decoupling ensures that layout shapes, font styles, and path row aesthetics repaint smoothly during real-time theme profile adjustments.
-
-To satisfy the framework configuration guidelines, ensure your theme matrix includes this structured asset block:
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
     "sCTkFileExplorer": {
-        "fg_color": "transparent",
-        "btn_fg": ["#1A4375", "#1F6AA5"],
-        "btn_border_color": ["#94A3B8", "#4B5563"],
-        "btn_text_color": ["#FFFFFF", "#FFFFFF"],
-        "btn_hover": ["#112A4B", "#194A7A"],
-        "entry_fg": ["#FFFFFF", "#1E1E1E"],
-        "entry_border_color": ["#CBD5E1", "#334155"],
-        "entry_text_color": ["#1F2937", "#FFFFFF"],
-        "row_active_text": ["#111827", "#F9FAFB"],
-        "row_dimmed_text": ["#94A3B8", "gray50"],
-        "button_color": ["#64748B", "#475569"],
+        "btn_font": ["Arial", 11, "bold"],
+        "entry_font": ["Arial", 12, "normal"],
+        "btn_fg": ["#3B82F6", "#1D4ED8"],
+        "btn_hover": ["#2563EB", "#1E40AF"],
+        "btn_text_color": ["#FFFFFF", "#F9FAFB"],
+        "btn_border_color": ["#1E3A8A", "#1E3A8A"],
+        "entry_fg": ["#FFFFFF", "#111827"],
+        "entry_text_color": ["#1F2937", "#F9FAFB"],
+        "entry_border_color": ["#CBD5E1", "#475569"],
+        "row_active_text": ["#1F2937", "#F9FAFB"],
+        "row_dimmed_text": ["#94A3B8", "#64748B"],
+        "button_color": ["#64748B", "#4B5563"],
         "disabled_map": {
-            "btn_fg": ["#F3F4F6", "#111111"],
-            "btn_border_color": ["#E5E7EB", "#222222"],
-            "btn_text_color": ["#94A3B8", "#4B5563"],
-            "entry_fg": ["#F9FAFB", "#1A1A1A"],
-            "entry_border_color": ["#E5E7EB", "#222222"],
-            "entry_text_color": ["#94A3B8", "#4B5563"],
+            "btn_fg": ["#CBD5E1", "#334155"],
+            "btn_border_color": ["#CBD5E1", "#334155"],
+            "btn_text_color": ["#94A3B8", "#64748B"],
+            "entry_fg": ["#F3F4F6", "#1F2937"],
+            "entry_border_color": ["#CBD5E1", "#475569"],
+            "entry_text_color": ["#94A3B8", "#64748B"],
+            "row_dimmed_text": ["#5A6672", "#3A4552"],
             "button_color": ["#CBD5E1", "#334155"]
         }
     }
 }
 ```
 
+**`button_color` is required at the top level and in `disabled_map`.** This is a harder requirement than it looks: `_process_live_theme_repaint()` is bound to `<Visibility>`, so it fires essentially every time the widget is displayed, not only when explicitly disabled. A theme block missing `button_color` therefore raises `KeyError` on first display, not merely on disable. The values shown above (`["#64748B", "#4B5563"]` normal, `["#CBD5E1", "#334155"]` disabled) are the suggested pair.
+
+`button_color` controls the internal scrollbar's color, distinct from `btn_fg` (the back button).
+
+`row_active_text`/`row_dimmed_text` control file/folder row text color — `row_active_text` for a normal, selectable row; `row_dimmed_text` for either a row excluded by the current filter, or every row when the whole widget is disabled. Both required at the top level; `row_dimmed_text` is also hard-required in `disabled_map` for the whole-widget-disabled case.
+
+**Only `button_color` and `row_dimmed_text` genuinely hard-fail if missing from `disabled_map`.** The other six disabled-state keys (`btn_fg`, `btn_border_color`, `btn_text_color`, `entry_fg`, `entry_border_color`, `entry_text_color`) gracefully fall back to their top-level/normal value if `disabled_map` doesn't override them — not a crash risk, just means that specific property simply won't visually change when disabled unless you give it a distinct value.
+
+The internal raw `Canvas`'s background color isn't part of this theme block at all — it's derived from this widget's own `fg_color`, falling back to a fixed neutral pair (`#1C1C1C` dark / `#F3F4F6` light) if `fg_color` is `"transparent"`, since a raw Canvas can't render CTk's transparent pseudo-value. This is a different kind of fallback than the ones above — not a theme gap, but a genuine "needs an actual renderable color" situation, the same accepted pattern used in `sCTkFrameLabeledPrimary`'s scrollbar hiding.
+
 ---
 
-### Other Notes
-* **Standalone Embed Mechanics:** Instead of blocking main loops via operational platform modal windows (`filedialog`), this component behaves as a standard frame block that can pack or grid comfortably anywhere inside your primary interface layouts.
-* **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native container initialization loops mutate and delete attributes directly out of raw dictionary data footprints during its boot pass, the constructor clones your configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This preserves your color mappings safely.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkFileExplorer` workspace card alongside pure, composite companion input tools and entry lanes to drive runtime changes dynamically.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for FIle Explorer
-# =====================================================================
-
-import os
-import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkEntryPrimary, sCTkButtonPrimary
-from scustomtkinter import sCTkOptionMenuPrimary, sCTk, sCTkLabelSecondary, sCTkFileExplorer
+from scustomtkinter import sCTk, sCTkFrame, sCTkFileExplorer, sCTkLabelPrimary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.title("Standalone Embedded sCTkFileExplorer Panel View")
-    root.geometry("600x720")
+    root.geometry("420x480")
+    root.title("FileExplorer Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    lbl_monitor = sCTkLabelSecondary(base, text="Active Highlight Track: [None Selection]")
-    lbl_monitor.pack(pady=10)
+    status = sCTkLabelPrimary(base, text="Selected: (none yet)")
+    status.pack(anchor="w", pady=(0, 8))
 
-    def track_selection(explorer_instance):
-        path = explorer_instance.selected_path.get()
-        lbl_monitor.configure(text=f"Active Highlight Track: {os.path.basename(path)}")
-        print(f"SINGLE-CLICK HIGHLIGHT: {path}")
+    explorer = sCTkFileExplorer(
+        base, type="directory",
+        command=lambda path: status.configure(text=f"Selected: {path}"),
+    )
+    explorer.pack(expand=True, fill="both")
 
-    def execute_file(explorer_instance, path):
-        print(f"DOUBLE-CLICK CONFIRMED! Launching: {path}")
-
-    user_home_dir = os.path.expanduser("~")
-    explorer = sCTkFileExplorer(base, type="file", initialdir=user_home_dir, filetypes=[".py", ".md", ".json"], command=track_selection, double_click_command=execute_file, width=540, height=350)
-    explorer.pack(fill="both", expand=True, padx=15, pady=10)
-
-    control_deck = sCTkFrame(base, border_width=1, corner_radius=6)
-    control_deck.pack(fill="x", padx=15, pady=10)
-
-    row1 = sCTkFrame(control_deck)
-    row1.pack(fill="x", padx=10, pady=5)
-    sCTkLabelSecondary(row1, text="Explorer Mode:", width=100, anchor="w").pack(side="left", padx=5)
-
-    def on_mode_menu_changed(choice):
-        mode_type = "file" if "File" in choice else "directory"
-        explorer.set_mode(mode_type)
-        entry_filter.configure(state="disabled" if mode_type == "directory" else "normal")
-
-    opt_mode = sCTkOptionMenuPrimary(row1, values=["File Mode (Show Items)", "Directory Mode (Folders Only)"], command=on_mode_menu_changed, width=250)
-    opt_mode.pack(side="left", padx=5)
-    opt_mode.set("File Mode (Show Items)")
-
-    row2 = sCTkFrame(control_deck)
-    row2.pack(fill="x", padx=10, pady=5)
-    sCTkLabelSecondary(row2, text="File Filter List:", width=100, anchor="w").pack(side="left", padx=5)
-
-    entry_filter = sCTkEntryPrimary(row2, placeholder_text="['.py', '.md', '.json', '.txt']")
-    entry_filter.pack(side="left", fill="x", expand=True, padx=5)
-    entry_filter.bind("<Return>", lambda e: explorer.set_filetypes(entry_filter.get().strip()))
-
-    row3 = sCTkFrame(control_deck)
-    row3.pack(fill="x", padx=10, pady=5)
-    sCTkLabelSecondary(row3, text="Jump to Path:", width=100, anchor="w").pack(side="left", padx=5)
-
-    entry_path = sCTkEntryPrimary(row3, placeholder_text="Enter absolute directory path...")
-    entry_path.insert(0, user_home_dir)
-    entry_path.pack(side="left", fill="x", expand=True, padx=5)
-    entry_path.bind("<Return>", lambda e: explorer.set_initial_dir(entry_path.get().strip()))
-
-    def toggle_explorer_lock():
-        target = "disabled" if explorer.get_state() == "normal" else "normal"
-        explorer.configure(state=target)
-        opt_mode.configure(state=target)
-        entry_filter.configure(state=target)
-        entry_path.configure(state=target)
-        btn_lock.configure(text="Lock Explorer Deck" if target == "normal" else "Unlock Explorer Deck")
-
-    btn_lock = sCTkButtonPrimary(base, text="Lock Explorer Deck", command=toggle_explorer_lock)
-    btn_lock.pack(side="bottom", pady=10)
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- No public method for programmatic navigation — see [Methods](#methods) above.
+- Missing a required theme key raises `KeyError` at first use, naming exactly which key and whether it's needed at the top level or in `disabled_map`.
+- **The debounced rebind also runs on genuine resizes.** `<Configure>` on the row frame doesn't distinguish "rows were added" from "the window was dragged", so resizing rebinds too. One coalesced pass rather than one per event, but on a very large directory it isn't free.
+- **The internal `Canvas` is a raw `tkinter.Canvas`,** not a themed widget, so its background is derived rather than themed — see the note at the end of [Theming](#theming-sctkthemesjson).
+- **The scrollbar stays visible when disabled, just inert.** It can't be dragged, but it isn't hidden — CustomTkinter's scrollbar has no native disabled state to lock. Same limitation as `sCTkScrollableFrame`.
+
+**Fixed:** dragging the scrollbar when the files didn't fill the frame used to push the rows down to the bottom, leaving empty space above them. The scroll region was set straight from `bbox("all")`, which is *shorter* than the visible canvas when content is short, and Tk will still scroll within an undersized region. The region is now grown to at least the canvas height in that case, so `yview` has nowhere to go and scrolling correctly does nothing.
 
 [Return to Table of Contents](#contents)
 
@@ -4139,430 +4586,271 @@ if __name__ == "__main__":
 ## sCTkFrameLabeledPrimary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Advanced Layout Inspection API](#advanced-layout-inspection-api)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A clean, theme-compliant custom header-labeled scrollable container card frame built directly on top of CustomTkinter's native text/scroll classes. It is engineered to act as an organized panel matrix tree that seamlessly suppresses visible scrollbar components out of view by hard-matching scrollbar background canvas elements directly to frame asset color backgrounds.
+### Overview
 
-![sCTkFrameLabeledPrimary_Dark.png](src/images/sCTkFrameLabeledPrimary_Dark.png)
-![sCTkFrameLabeledPrimary_Light.png](src/images/sCTkFrameLabeledPrimary_Light.png)
+`sCTkFrameLabeledPrimary` is a themeable, high-emphasis labeled container panel — the more prominent of the library's two labeled frame tiers (see also `sCTkFrameLabeledSecondary`). It's built on `customtkinter.CTkScrollableFrame`, but deliberately used purely for its native title-label feature — the model here is `ttk.LabelFrame`, which never scrolls. Scrolling is intentionally suppressed; this is a labeled, bordered panel, not a scroll viewport.
 
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkFrame(master)` *(No label natively)* | `sCTkFrameLabeledPrimary(master)` *(Labeled Frame Enclosure)* |
-| **File Mapping** | Config metrics look up loose un-managed palette snapshot lists. | Streamlined and compiled programmatically across `sCTkFrameLabeledPrimary.py` and `ThemeableWidget.py`. |
-| `winfo_children()` | Returns raw internal widgets, including heading text blocks. | Overridden signature supporting filtered inner form component lookups. |
-| `get_children()` | *Not Supported Natively* | Convenience method returning clean application-level custom components. |
-| `get_all_children()` | *Not Supported Natively* | Convenience method returning direct, unfiltered access to the entire core frame tree. |
+<img src="src/images/sCTkFrameLabeledPrimary_Dark.png" alt="sCTkFrameLabeledPrimary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkFrameLabeledPrimary_Light.png" alt="sCTkFrameLabeledPrimary in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom scrollable labeled container frame option deck card. Scrollbar tracks are hidden automatically upon completing instantiation passes. High-level custom configuration parameters from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkFrameLabeledPrimary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkScrollableFrame` argument (most usefully `label_text`, the panel's title), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a primary header-labeled scrollable matrix panel deck frame
-channel_grid = sCTkFrameLabeledPrimary(
-    master=root_window,
-    label_text="RIG CHANNEL MATRIX CONTROLLER"
+channel_panel = sCTkFrameLabeledPrimary(
+    master=control_root,
+    label_text="Channel Settings",
 )
-
-# Render the widget container view using standard geometry packer layout trackers
-channel_grid.pack(expand=True, fill="both", padx=25, pady=25)
+channel_panel.pack(expand=True, fill="both", padx=25, pady=25)
 ```
 
 ---
 
-### Advanced Layout Inspection API
+### Methods
 
-Because labeled frame capsules bundle an integrated text header directly onto their border chassis, native widget sweeps can accidentally overwrite heading text constraints. The class overrides window queries to isolate your layout data cleanly.
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's visual "disabled" state. This is purely cosmetic — plain frame-family widgets have no native interactivity to lock. Disabling this panel does **not** automatically disable widgets placed inside it; that's the caller's responsibility, the same pattern used in this project's own test harness (loop over the panel's children and call `.configure(state=...)` on each one). |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()`. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, and `label_text_color`. |
+| `winfo_children(include_private=False)` | `list` | By default, filters out children whose exact class name is `"CTkLabel"`, `"Label"`, `"CTkFrame"`, or `"Frame"` — internal furniture `CTkScrollableFrame` creates for its own title row and canvas wrapper. Pass `include_private=True` for the raw, unfiltered list. **Known limitation:** this is a class-name check, not an identity check — a plain, un-themed `customtkinter.CTkLabel`/`CTkFrame` added directly as a child would be filtered out too, since its class name matches. Themed `sCTk`-prefixed widgets are unaffected. |
+| `get_children()` | `list` | Equivalent to `winfo_children(include_private=False)`. |
+| `get_all_children()` | `list` | Equivalent to `winfo_children(include_private=True)`. |
+| `get_container()` | `self` | Returns the widget itself. Provided for API symmetry with composite widgets (like `sCTkOptionMenuSecondary`) that wrap a separate inner container. |
 
-#### `winfo_children(include_private: bool = False) -> list`
+---
 
-* **`include_private=False` (Default):** Isolates and hides the internal `CTkLabel` heading widget and frame layout backplane blocks. Loops crawling your dashboard lanes will discover only the actual primary input rows packed inside the box, preventing title typography parameters from getting corrupted during runtime style shifts.
-* **`include_private=True`:** Immediately deactivates the filter mesh to return the raw, unmanipulated Tkinter structural window lineage hierarchy.
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `label_font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `label_text_color`, `border_width`, and `label_font` are recomputed from the theme's normal values or its `disabled_map`.
+
 ```json
 {
     "sCTkFrameLabeledPrimary": {
-        "fg_color": ["#FFFFFF", "#1E293B"],
-        "border_color": ["#E2E8F0", "#334155"],
-        "label_text_color": ["#1A4375", "#38BDF8"],
-        "border_width": 1,
+        "border_width": 2,
+        "border_color": ["#1A4375", "#2471A3"],
+        "fg_color": ["#FFFFFF", "#111827"],
         "corner_radius": 8,
+        "label_font": ["Arial", 15, "bold"],
+        "label_text_color": ["#111827", "#F9FAFB"],
         "disabled_map": {
-            "fg_color": ["#F1F5F9", "#111111"],
-            "border_color": ["#E2E8F0", "#222222"],
-            "label_text_color": ["#94A3B8", "#4B5563"]
+            "border_color": ["#CBD5E1", "#374151"],
+            "label_text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
+**On the internal scrollbar:** since this widget is built on `CTkScrollableFrame`, a scrollbar exists internally even though scrolling isn't the intent. It's suppressed by matching its colors to the frame's background and collapsing its width to `0`. This is a workaround, not a true disable — confirmed by direct investigation, CustomTkinter's native scrollbar has no disabled state to lock in the first place, even on an unwrapped `CTkScrollableFrame`. Matching colors and zeroing width is the closest achievable approximation.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
+**Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkFrameLabeledPrimary` directly, construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkScrollableFrame` actually accepts (confirmed directly against CustomTkinter's source, which has no fallback `**kwargs` at all — every parameter is explicitly named, so this matters more here than for most widgets). This only matters for that composition pattern — constructing a plain `sCTkFrameLabeledPrimary` directly is unaffected either way.
+
 ---
 
-### Other Notes
-* **Chassis Child Interceptor Shield:** Calling standard native `.winfo_children()` on a scrollable canvas widget leaks CustomTkinter's private system geometry framework bars (`_parent_frame`, `_view_frame`, etc.). This override cuts directly to the true internal workspace data window array, returning clean lists of only your functional custom widgets.
-* **Scrollbar Suppression Engine Protection:** Instead of executing complex system canvas unbinding loops that destroy track physics, `_hide_internal_scrollbars()` sets scroll widths down to zero and safely maps track colors to your frame background through an absolute tuple resolution call beforehand. This permanently avoids alpha translucent `transparent` name crashes in Light Mode.
-* **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkFrameLabeledPrimary` alongside an application-layer cascading state loop tracker.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame Labeled Primary
-# =====================================================================
-
-from scustomtkinter import sCTkButtonPrimary, sCTkLabelSecondary, CTk, sCTkFrameLabeledPrimary
-
+from scustomtkinter import sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkFrameLabeledPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
     root.geometry("450x450")
-    root.title("Labeled Scrollable Frame Test Bench")
+    root.title("FrameLabeledPrimary Example")
 
-    scroll_panel = sCTkFrameLabeledPrimary(root, label_text="RIG CHANNEL MATRIX CONTROLLER")
-    scroll_panel.pack(expand=True, fill="both", padx=25, pady=25)
+    channel_panel = sCTkFrameLabeledPrimary(root, label_text="Channel Settings")
+    channel_panel.pack(expand=True, fill="both", padx=25, pady=25)
 
-    for i in range(1, 21):
-        lbl_item = sCTkLabelSecondary(scroll_panel, text=f"Channel Lane Array Entry #{i:02d} - Active Track [100Hz]")
-        lbl_item.pack(pady=4, fill="x", padx=10)
+    for i in range(1, 6):
+        item = sCTkLabelSecondary(channel_panel, text=f"Setting {i}")
+        item.pack(pady=4, fill="x", padx=10)
 
+    def toggle_panel_state():
+        target = "disabled" if channel_panel.get_state() == "normal" else "normal"
+        channel_panel.configure(state=target)
 
-    def toggle_frame_states():
-        current_mode = scroll_panel.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-
-        scroll_panel.configure(state=target)
-
-        true_children = scroll_panel.winfo_children()
-        print(f"DEBUG ASSERTER: Successfully captured {len(true_children)} label elements...")
-
-        for child in true_children:
+        # Disabling the panel is purely cosmetic -- cascade to children explicitly.
+        for child in channel_panel.get_children():
             if hasattr(child, "configure"):
                 child.configure(state=target)
 
-        btn_toggle.configure(
-            text="Lock Container (Set 'disabled')" if target == "normal" else "Unlock Container (Set 'normal')")
-        print(f"Logged Verification Hook -> scroll_panel.get_state() = {scroll_panel.get_state()}\n")
+        toggle_btn.configure(text="Enable Panel" if target == "disabled" else "Disable Panel")
 
-
-    btn_toggle = sCTkButtonPrimary(root, text="Lock Container (Set 'disabled')", command=toggle_frame_states)
-    btn_toggle.pack(pady=15)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    scroll_panel.state("disabled")
-    print(f"state (Disabled Pass) = {scroll_panel.get_state().upper()}")
-
-    scroll_panel.state("normal")
-    print(f"state (Normal Pass)   = {scroll_panel.get_state().upper()}")
-    print("========================================\n")
+    toggle_btn = sCTkButtonPrimary(root, text="Disable Panel", command=toggle_panel_state)
+    toggle_btn.pack(pady=15)
 
     root.mainloop()
-
-
 ```
+
+---
+
+### Known Limitations
+
+- Disabling this widget is purely cosmetic — it does not lock interactivity, and does not cascade to child widgets automatically.
+- The internal scrollbar cannot be truly disabled (a CustomTkinter limitation, confirmed by direct investigation, not something this wrapper can work around) — only visually hidden via color-matching and zero width.
+- `winfo_children()`'s default filtering is a class-name check, not an identity check — see the Methods table above for the specific edge case this can miss.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
 
 [Return to Table of Contents](#contents)
 
 
 
-## sCTkLabelSecondary
+## sCTkFrameLabeledSecondary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-The custom secondary interface typography display label widget component wrapping `customtkinter.CTkLabel`. It features an independent deep-copy keyword caching shield and an advanced multi-state color-dimming interceptor to automatically shift text contrasts when subsystem components enter disabled sequences.
+### Overview
 
+`sCTkFrameLabeledSecondary` is a themeable, lower-emphasis labeled container panel — see also `sCTkFrameLabeledPrimary`. It's built on `customtkinter.CTkScrollableFrame`, but deliberately used purely for its native title-label feature — the model here is `ttk.LabelFrame`, which never scrolls. Scrolling is intentionally suppressed; this is a labeled, bordered panel, not a scroll viewport.
 
-![sCTkFrameLabeledSecondary_Dark.png](src/images/sCTkFrameLabeledSecondary_Dark.png)
-![sCTkFrameLabeledSecondary_Light.png](src/images/sCTkFrameLabeledSecondary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkLabel(master)` | `sCTkLabelSecondary(master)` *(Secondary Interface Text Label)* |
-| **File Mapping** | Direct module definitions run without structured configuration. | Streamlined and compiled programmatically across `sCTkLabelSecondary.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `secondary_label.state("disabled")`<br>**OR**<br>`secondary_label.configure(state="disabled")`<br><br>**Framework-Wide State Support:** Natively supported across all label components (`Primary`, `Secondary`, `Tertiary`). It intercepts state configuration calls and dynamically dims typography layouts based on centralized `disabled_map` metrics. |
-| `get_state()` | *Not Supported Natively* | `Method -> str` explicit verification query matching system test assertions. |
+<img src="src/images/sCTkFrameLabeledSecondary_Dark.png" alt="sCTkFrameLabeledSecondary in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkFrameLabeledSecondary_Light.png" alt="sCTkFrameLabeledSecondary in light mode" style="border: 2px solid #555555;">
 
 ---
 
 ### Constructor
 
-Initialize a custom secondary text label instance. Configuration metrics map cleanly out of central stylesheet parameters and are automatically sanitized by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkFrameLabeledSecondary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkScrollableFrame` argument (most usefully `label_text`, the panel's title), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-# Instantiate a secondary user interface text display label element
-lane_label = sCTkLabelSecondary(
-    master=control_panel,
-    text="Active Teleceiver Signal Frequency Lane [94.1 MHz]"
+notes_panel = sCTkFrameLabeledSecondary(
+    master=control_root,
+    label_text="Notes",
 )
-
-# Render the widget inside your layout panel using geometry managers
-lane_label.pack(expand=True, padx=20, pady=20)
+notes_panel.pack(expand=True, fill="both", padx=25, pady=25)
 ```
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` | `str` | Gets or sets the widget's visual "disabled" state. Purely cosmetic — does not lock interactivity, and does not cascade to child widgets automatically. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()`. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, and `label_text_color`. |
+| `winfo_children(include_private=False)` | `list` | By default, filters out children whose exact class name is `"CTkLabel"`, `"Label"`, `"CTkFrame"`, or `"Frame"` — internal furniture `CTkScrollableFrame` creates for its own title row and canvas wrapper. Pass `include_private=True` for the raw, unfiltered list. Same class-name-based known limitation as `sCTkFrameLabeledPrimary` — see that widget's docs for the specific edge case. |
+| `get_children()` | `list` | Equivalent to `winfo_children(include_private=False)`. |
+| `get_all_children()` | `list` | Equivalent to `winfo_children(include_private=True)`. |
+| `get_container()` | `self` | Returns the widget itself. Provided for API symmetry with composite widgets that wrap a separate inner container. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `label_text_color`, `border_width`, and `label_font` are recomputed from the theme's normal values or its `disabled_map`.
+
 ```json
 {
-    "sCTkLabelSecondary": {
-        "fg_color": "transparent",
-        "text_color": ["#475569", "#94A3B8"],
-        "font": ["Arial", 11, "bold"],
+    "sCTkFrameLabeledSecondary": {
+        "border_width": 1,
+        "border_color": ["#64748B", "#94A3B8"],
+        "fg_color": ["#F3F4F6", "#111827"],
+        "corner_radius": 6,
+        "label_font": ["Arial", 12, "normal"],
+        "label_text_color": ["#4B5563", "#D1D5DB"],
         "disabled_map": {
-            "text_color": ["#CBD5E1", "#4B5563"]
+            "border_color": ["#CBD5E1", "#374151"],
+            "label_text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
----
+**On the internal scrollbar:** same situation as `sCTkFrameLabeledPrimary` — a scrollbar exists internally since this is built on `CTkScrollableFrame`, even though scrolling isn't the intent. It's suppressed by matching its colors to the frame's background and collapsing its width to `0`, since CustomTkinter's native scrollbar has no disabled state to lock in the first place.
 
-### Other Notes
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, completely bypassing the intermediate template layout files entirely to avoid argument deadlocks and preserve image scaling properties.
-* **Deep-Copy Dictionary Isolation Shield:** Because CustomTkinter's native geometry constructor routines mutate and drop keys directly out of parsed configuration structures during early boot phases, the constructor clones your data configurations into `self._local_defaults = dict(self.final_kw)` beforehand. This prevents layout repaints from failing.
-* **Dynamic Dark Mode Pass-Through:** When returning to an active state, the visual interceptor reads directly from your protected `_local_defaults` cache. If no hardcoded text color is explicitly discovered, it hands control back to CustomTkinter's master `ThemeManager` to natively paint high-contrast system fonts.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute bottom of the initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
+
+**Safe to use as a base class for your own composite widgets.** Same protection as `sCTkFrameLabeledPrimary` — see that widget's docs for the full reasoning (the run-once guard in `ThemeableWidget.__init__`, plus this widget's own constructor filtering keys down to only what native `CTkScrollableFrame` actually accepts before its own constructor call).
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkLabelSecondary` component element along with an interactive status switch toggle.
+### Example
 
 ```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame Labeled Secondary
-# =====================================================================
-
-from scustomtkinter import sCTkButtonPrimary, sCTkLabelTertiary, sCTk, sCTkFrameLabeledSecondary
+from scustomtkinter import sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkFrameLabeledSecondary
 
 if __name__ == "__main__":
-
     root = sCTk()
     root.geometry("450x450")
-    root.title("Labeled Scrollable Secondary Frame Test Bench")
+    root.title("FrameLabeledSecondary Example")
 
-    # Instantiate your custom scrollable secondary frame container [INDEX]
-    scroll_panel = sCTkFrameLabeledSecondary(root, label_text="AUXILIARY METADATA TRACK MATRIX")
-    scroll_panel.pack(expand=True, fill="both", padx=25, pady=25)
+    notes_panel = sCTkFrameLabeledSecondary(root, label_text="Notes")
+    notes_panel.pack(expand=True, fill="both", padx=25, pady=25)
 
-    # Populate scroll panel container slots with helper sCTkLabelTertiary notice items [INDEX]
-    for i in range(1, 21):
-        lbl_item = sCTkLabelTertiary(scroll_panel,
-                                     text=f"Helper Node Index [ID: {i:02d}] - Calibration Offset [0.00Hz]")
-        lbl_item.pack(pady=4, fill="x", padx=10)
+    for i in range(1, 6):
+        item = sCTkLabelSecondary(notes_panel, text=f"Note {i}")
+        item.pack(pady=4, fill="x", padx=10)
 
+    def toggle_panel_state():
+        target = "disabled" if notes_panel.get_state() == "normal" else "normal"
+        notes_panel.configure(state=target)
 
-    def toggle_frame_states():
-        """Toggles the container panel and cascades the state down to all child widgets [INDEX]."""
-        current_mode = scroll_panel.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-
-        # 1. Update the parent scrollable frame's visual layout variables via dual-routing syntax [INDEX]
-        scroll_panel.configure(state=target)
-
-        # 2. Native standard cascade loop leveraging your winfo_children() override [INDEX]
-        true_children = scroll_panel.winfo_children()
-        print(f"DEBUG ASSERTER: Successfully captured {len(true_children)} label elements...")
-
-        for child in true_children:
+        # Disabling the panel is purely cosmetic -- cascade to children explicitly.
+        for child in notes_panel.get_children():
             if hasattr(child, "configure"):
                 child.configure(state=target)
 
-        btn_toggle.configure(
-            text="Lock Container (Set 'disabled')" if target == "normal" else "Unlock Container (Set 'normal')")
-        print(f"Logged Verification Hook -> scroll_panel.get_state() = {scroll_panel.get_state()}\n")
+        toggle_btn.configure(text="Enable Panel" if target == "disabled" else "Disable Panel")
 
-
-    btn_toggle = sCTkButtonPrimary(root, text="Lock Container (Set 'disabled')", command=toggle_frame_states)
-    btn_toggle.pack(pady=15)
-
-    # Run the interactive boot tracking logs [INDEX]
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    scroll_panel.state("disabled")
-    print(f"state (Disabled Pass) = {scroll_panel.get_state().upper()}")
-
-    scroll_panel.state("normal")
-    print(f"state (Normal Pass)   = {scroll_panel.get_state().upper()}")
-    print("========================================\n")
+    toggle_btn = sCTkButtonPrimary(root, text="Disable Panel", command=toggle_panel_state)
+    toggle_btn.pack(pady=15)
 
     root.mainloop()
-
-
 ```
+
+---
+
+### Known Limitations
+
+- Disabling this widget is purely cosmetic — it does not lock interactivity, and does not cascade to child widgets automatically.
+- The internal scrollbar cannot be truly disabled (a CustomTkinter limitation, confirmed by direct investigation) — only visually hidden via color-matching and zero width.
+- `winfo_children()`'s default filtering is a class-name check, not an identity check — see `sCTkFrameLabeledPrimary`'s docs for the specific edge case this can miss.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
 
 [Return to Table of Contents](#contents)
-
-
-
-## sCTkFrameOutlined
-
-A clean, theme-compliant container frame variant explicitly styled to act as an outlined structural card or passive layout grouping box. It integrates a clean operational state interceptor layer to gracefully absorb cascading configuration switches without throwing unrecognized keyword violations.
-
-![sCTkFrameOutlined_Dark.png](src/images/sCTkFrameOutlined_Dark.png)
-![sCTkFrameOutlined_Light.png](src/images/sCTkFrameOutlined_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkFrame(master)` | `sCTkFrameOutlined(master)` *(Functions as Outlined Panel Box)* |
-| **Maintenance** | Manual alignment of background and boundary color borders. | Clean style updates modified globally right inside the master JSON file. |
-| **File Mapping** | Everything runs under one core native pipeline track. | Streamlined and compiled programmatically across `sCTkFrameOutlined.py` and `ThemeableWidget.py`. |
-| `state(mode)` | *Not Available Natively* | `Method (str)` managing layout tracking map transformations (`'normal'`, `'disabled'`). |
-| `get_state()` | *Not Available Natively* | `Method -> str` explicit verification query matching system test assertions. |
-
----
-
-### Constructor
-
-Initialize a custom outlined container chassis layout instance. Border widths, corners, and framework properties layer cleanly over configuration choices and are automatically sanitized by the `ThemeableWidget` mixin layer before the native constructor fires.
-
-```python
-# Instantiate a theme-compliant outlined group card panel box
-vfo_preset_card = sCTkFrameOutlined(
-    master=main_dashboard,
-    border_width=2,
-    corner_radius=6
-)
-
-# Render the widget inside your parent container coordinate tracker layout
-vfo_preset_card.pack(fill="both", expand=True, padx=20, pady=20)
-```
-
----
-
-### Convenience Functions
-```python
-# Evaluate active visual modes or apply absolute user interaction locks via dual-routing syntax
-current_mode = vfo_preset_card.get_state() # Returns 'normal' or 'disabled'
-vfo_preset_card.state("disabled")          # Softens border highlights and fades panel backgrounds safely
-
-# Smoothly query standard Tkinter children references inside the grouping chassis
-for child in vfo_preset_card.winfo_children():
-    # Structural Check: Ensure control buttons are skipped during cascading locks
-    if child == master_unlock_button:
-        continue
-    if hasattr(child, "configure"):
-        child.configure(state="disabled")
-```
-### Centralized Stylesheet Setup (`themes.json`)
-```json
-{
-    "sCTkFrameOutlined": {
-        "fg_color": ["#FFFFFF", "#1E1E1E"],
-        "border_color": ["#1A4375", "#FF9100"],
-        "corner_radius": 8,
-        "border_width": 2,
-        "disabled_map": {
-            "fg_color": ["#F1F5F9", "#121212"],
-            "border_color": ["#CBD5E1", "#4B5563"]
-        }
-    }
-}
-```
-
----
-
-### Other Notes
-* **Universal State Interceptor:** Intercepts incoming `state` configuration commands, stripping them out completely to protect native CustomTkinter validation threads from fatal unhandled type exceptions, while successfully updating frame visual accents via an internal tuple resolution pass.
-* **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
-* **Containment Architecture Guard:** When implementing an automatic state sweep across standard `.winfo_children()` layers, always isolate your action trigger button. If it is packed inside the same outline frame layout without a bypass filter, it will freeze its own execution threads and lock the workspace.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkFrameOutlined` card along with an application-layer cascading state toggle switch.
-
-```python
-#!/usr/bin/python3
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame Outlined
-# =====================================================================
-
-from scustomtkinter import (sCTkButtonPrimary, sCTkEntryPrimary, sCTkLabelSecondary,
-                            sCTk, sCTkFrameOutlined)
-
-if __name__ == "__main__":
-
-    root = sCTk()
-    root.title("Passive Outline Frame Test Suite")
-    root.geometry("450x300")
-
-    frame_group = sCTkFrameOutlined(root, border_width=2)
-    frame_group.pack(fill="both", expand=True, padx=20, pady=20)
-
-    lbl_title = sCTkLabelSecondary(frame_group, text="TRANSCEIVER FREQUENCY PRESET PROFILE")
-    lbl_title.pack(pady=(12, 4), padx=10, fill="x")
-
-    mock_entry = sCTkEntryPrimary(frame_group, placeholder_text="Standard data field...")
-    mock_entry.pack(pady=10, padx=25, fill="x")
-
-
-    def toggle_frame_states():
-        """Toggles the outlined card panel and cascades the state change down to child widgets, skipping the trigger."""
-        current_mode = frame_group.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
-
-        frame_group.configure(state=target)
-
-        for child in frame_group.winfo_children():
-            if child == btn_toggle:
-                continue
-            if hasattr(child, "configure"):
-                child.configure(state=target)
-
-        btn_toggle.configure(
-            text="Lock Outline Deck (Set 'disabled')" if target == "normal" else "Unlock Outline Deck (Set 'normal')")
-        print(f"Logged Verification Hook -> frame_group.get_state() = {frame_group.get_state()}")
-
-
-    btn_toggle = sCTkButtonPrimary(frame_group, text="Lock Outline Deck (Set 'disabled')", command=toggle_frame_states)
-    btn_toggle.pack(side="bottom", pady=15)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    print(f"Initial Outline Frame State = {frame_group.get_state().upper()}")
-    print("========================================\n")
-
-    root.mainloop()
-
-
-```
 
 
 
 ## sCTkMessagebox
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
 * [API Constructor Reference](#api-constructor-reference)
@@ -4570,6 +4858,7 @@ if __name__ == "__main__":
 * [Simple Syntax Quick-Reference Guide](#simple-syntax-quick-reference-guide)
 * [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
 * [Layout & Text Wrapping Integration Rules](#layout--text-wrapping-integration-rules)
+* [Configuration](#configuration)
 * [Implementation Example & Test Harness](#implementation-example--test-harness)
 
 ---
@@ -4579,8 +4868,8 @@ The `sCTkMessagebox` is an advanced, themeable dialog window system designed to 
 ---
 
 
-![sCTkMessagebox_Dark.png](src/images/sCTkMessagebox_Dark.png)
-![sCTkMessagebox_Light.png](src/images/sCTkMessagebox_Light.png)
+<img src="src/images/sCTkMessagebox_Dark.png" alt="sCTkMessagebox_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkMessagebox_Light.png" alt="sCTkMessagebox_Light.png" style="border: 2px solid #555555;">
 
 
 ### API Constructor Reference
@@ -4696,16 +4985,23 @@ if sCTkMessagebox.askerroryesno("Cascade Failure", "Buffer buffer overflow hit. 
 
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
 
-The component relies heavily on your centralized style dictionary system. To prevent the mixin parser tracking structures from raising runtime validation faults, verify your shared stylesheet contains this asset entry:
-
 ```json
 {
     "sCTkMessagebox": {
+        "fg_color": ["#F1F5F9", "#1C1C1C"],
         "font": ["Arial", 14],
         "text_color": ["#1A1A1A", "#E5E5E5"]
     }
 }
 ```
+
+**Every key above is required.** Construction raises `KeyError` naming the missing one, rather than substituting a plausible default that would make an incomplete block look merely slightly-off.
+
+`font` and `text_color` style the message label. `fg_color` is the dialog window background, and is **new** — this widget previously forwarded its raw constructor keywords to native `CTkToplevel` rather than the resolved theme keywords, so the theme block never reached the window at all and the dialog rendered in CustomTkinter's own default background. `ThemeableWidget`'s resolution work was discarded for everything except the two label keys read back manually.
+
+**Keyword filtering.** Theme keywords are now filtered against a whitelist before the native constructor sees them, because `CTkToplevel` names only `fg_color` explicitly and passes everything else through to `tkinter.Toplevel`, which raises `TclError` on any option it doesn't recognise. This closes a latent crash as well: a caller passing `font=` to this widget would previously have had it forwarded straight through.
+
+**There is no `disabled_map` and no `state()`.** This is a modal dialog — it grabs input on construction and destroys itself on dismissal, so there is no interval in which a disabled appearance would mean anything.
 
 ---
 
@@ -4717,6 +5013,19 @@ Observe these implementation traits:
 * **Horizontal Capsule Brackets**: When `buttons="yes_no"` is active, Column 0 and Column 1 utilize an interlocking `uniform="dialog_buttons"` constraint map. This completely locks both buttons to an identical layout grid pixel width, regardless of text length mismatches.
 * **Vertical Safety Gutter**: Text layout nodes use `padx=(10, 35)` paired alongside a calculated character width subtraction map. This forces word bounds to drop downwards well before interacting with the physical window frame margin boundary.
 * **Autonomous Resizing**: The `_center_window` geometry calculations lock your custom manual `width` pixel profile constraint, but query the active required widget layout height parameters dynamically via `winfo_reqheight()`. This allows window frames to expand or shrink vertically based on your text content volume requirements automatically.
+
+---
+
+<a name="configuration"></a>
+### Configuration
+
+`configure()` and `config()` behave as they do elsewhere in the library: keyword arguments are applied normally, a single positional dict is merged into them, and any other single positional value is forwarded to the native widget.
+
+Three separate defects were fixed here, all silent:
+
+- **`super().configure(args)` passed the whole tuple** as one positional argument instead of unwrapping it, so every single-argument call forwarded a malformed value.
+- **`if args and isinstance(args, dict)`** — `args` is always a tuple, so that branch could never fire and the dict form of `configure()` was dead code.
+- **No `config = configure` alias existed,** so `.config(...)` bypassed the override entirely and landed on the native widget. Tkinter binds `.config` as a separate class attribute; it does not track a subclass's override.
 
 ---
 
@@ -4765,152 +5074,130 @@ if __name__ == "__main__":
 ## sCTkPathChooser
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-An advanced composite field-and-trigger widget pairing a fluid single-line text lane entry block directly alongside an integrated modal browser toggle button. It translates local paths, expands system tilde keys (`~`), and dynamically opens an embedded, theme-synchronized `sCTkFileExplorer` portal centered accurately over your parent layout dimensions without locking primary background execution threads.
+### Overview
 
+`sCTkPathChooser` is a theme-compliant single-line path entry paired with a "Browse..." button that opens an `sCTkFileExplorer` in a modal popup. It inherits `ctk.CTkFrame` directly, composing an internal `sCTkEntryPrimary` and `sCTkButtonPrimary`.
 
-![sCTkPathChooser_Dark.png](src/images/sCTkPathChooser_Dark.png)
-![sCTkPathChooser_Light.png](src/images/sCTkPathChooser_Light.png)
+<img src="src/images/sCTkPathChooser_Dark.png" alt="sCTkPathChooser in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkPathChooser_Light.png" alt="sCTkPathChooser in light mode" style="border: 2px solid #555555;">
 
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | *Not Available Natively* | `sCTkPathChooser(master)` *(Compound Path Selector)* |
-| **File Mapping** | No unified compound object natively synchronizes text cells with buttons. | Separated safely across `sCTkPathChooser.py` and `ThemeableWidget.py`. |
-| **State Lock** | `self.configure(state="disabled")` | `chooser.state("disabled")`<br>**OR**<br>`chooser.configure(state="disabled")`<br><br>**Polymorphic State Control:** Simultaneously locks the entry string text buffer lane and freezes the browser launcher button out of centralized `disabled_map` guidelines. |
-| `get_state()` | *Not Available Natively* | `Method -> str` explicit verification query matching system test assertions. |
+Every property this widget forwards to its internal entry (`justify`, `width`, `height`) has been confirmed valid against CustomTkinter's own real `CTkEntry` source, the same verification done for `sCTkSpinbox`. There's no risk of this widget sending an unrecognized property to its own entry.
 
 ---
 
 ### Constructor
 
-Initialize a custom compound directory path or file selector instance. Offset parameters like `btn_width` or `entry_height` can be passed cleanly during instantiation to stretch internal sub-elements independently.
-
 ```python
-sCTkPathChooser(master, type="directory", title="Select Path", filetypes=None, initialdir=None, initialfile=None, command=None, width=350, height=32, justify="left", entry_height=32, btn_width=110, btn_height=32, btn_text=None, browser_width=500, browser_height=450, **kwargs)
+sCTkPathChooser(master=None, initialdir=None, initialfile=None, type="file",
+                 filetypes=None, title=None, defaultextension=None,
+                 justify="left", entry_height=None, browser_width=None,
+                 browser_height=None, btn_text="Browse...", **kwargs)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | *Required* | Reference pointer tracking your root window, parent layout layer, or container frame capsule. |
-| `type` | `str` | `"directory"` | Structural layout operation mode. Options: `"directory"` (renders folder browser options) or `"file"` (enforces file extension checks). |
-| `title` | `str` | `"Select Path"` | Text heading string displayed inside the top title deck of the popup modal browser window. |
-| `filetypes` | `list` / `str` | `None` | Filter array masking permitted file extensions. Formatted as an explicit python list or bracketed string array (e.g., `['.py', '.json']`). |
-| `justify` | `str` | `"left"` | Text alignment profile string inside the input field lane. Accepts `"left"`, `"right"`, or `"center"`. |
-| `entry_height` | `int` | *Matches height* | Manual vertical height footprint tracking restriction assigned to the text box lane measured in pixels. |
-| `btn_width` | `int` | `110` | Manual horizontal width allocated to the macro click trigger browse button measured in pixels. |
-| `btn_text` | `str` | `None` | Display string override assigned to the browse button. Automatically falls back to mode labels if left as `None`. |
-| `command` | `callable` | `None` | Single-click method event callback executed whenever a file selection path is successfully submitted or confirmed. |
-### Convenience Functions
-```python
-# Programmatically manipulate selector entries, fetch strings, or trigger modal windows on the fly
-chooser.set("/Users/name/Documents") # Clears the current buffer and inserts an expanded absolute pathway
-active_path = chooser.get()          # Returns the active character path string array currently displayed
+| Parameter | Type | Description |
+|---|---|---|
+| `master` | widget | Parent container. |
+| `initialdir` / `initialfile` | `str` | Starting directory/filename for the browser popup. |
+| `type` | `"file"` / `"directory"` | Whether individual files are selectable, or only directories. |
+| `filetypes` | `list[str]` | File extension filter. |
+| `justify` | `str` | Text alignment inside the entry. |
+| `btn_text` | `str` | The browse button's label. |
+| `**kwargs` | — | Any native `CTkFrame` argument, or a theme-key override (see [Theming](#theming-sctkthemesjson)). |
 
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = chooser.get_state()   # Returns 'normal' or 'disabled'
-chooser.state("disabled")            # Freezes button triggers and applies muted flat gray skins
+```python
+save_path = sCTkPathChooser(control_panel, type="directory", initialdir="/Users/you/Documents")
+save_path.pack(fill="x", padx=20, pady=10)
 ```
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `get()` | `str` | Current path text. |
+| `set(path)` | `None` | Sets the displayed path, normalizing and expanding it. |
+| `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming both the entry and the browse button. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, accepting `state`, `type`, `title`, `justify`, `btn_text`, `entry_height`, `btn_width` and `btn_height` as first-class properties. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the eight properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and failed — all eight queries fell through to the native widget and Pygubu could read none of them. The dict form of `configure()` was dead for the same reason (`isinstance(args, dict)` on a tuple is never true). |
+
+Clicking "Browse..." opens an `sCTkFileExplorer` in a modal popup; selecting a path there calls `self.set(...)` on this widget automatically.
+
+---
+
+### Theming (`sCTkThemes.json`)
+
 ```json
 {
     "sCTkPathChooser": {
-        "entry_fg": ["#FFFFFF", "#1E1E1E"],
-        "entry_border_color": ["#CBD5E1", "#334155"],
-        "entry_text_color": ["#1F2937", "#FFFFFF"],
-        "entry_font": ["Arial", 12],
-        "btn_fg": ["#1A4375", "#1F6AA5"],
-        "btn_border_color": ["#94A3B8", "#4B5563"],
-        "btn_text_color": ["#FFFFFF", "#FFFFFF"],
-        "btn_hover": ["#112A4B", "#194A7A"],
-        "btn_font": ["Arial", 11, "bold"],
+        "entry_font": ["Arial", 13],
+        "entry_fg": ["#F9F9FA", "#343638"],
+        "entry_border_color": ["#979DA2", "#565B5E"],
+        "entry_text_color": ["#000000", "#FFFFFF"],
+        "btn_font": ["Arial", 13, "bold"],
+        "btn_fg": ["#3B8ED0", "#1F6AA5"],
+        "btn_hover": ["#2C74B3", "#144E75"],
+        "btn_text_color": ["#DCE4EE", "#F9F9FA"],
+        "btn_border_color": ["#3B8ED0", "#1F6AA5"],
         "disabled_map": {
-            "entry_fg": ["#F9FAFB", "#1A1A1A"],
-            "entry_border_color": ["#E5E7EB", "#222222"],
-            "entry_text_color": ["#94A3B8", "#4B5563"],
-            "btn_fg": ["#F3F4F6", "#111111"],
-            "btn_border_color": ["#E5E7EB", "#222222"],
-            "btn_text_color": ["#94A3B8", "#4B5563"]
+            "entry_fg": ["#EAEAEA", "#2B2B2C"],
+            "entry_border_color": ["#D3D3D3", "#3A3A3C"],
+            "entry_text_color": ["#A0A0A0", "#7C7C7C"],
+            "btn_fg": ["#D3D3D3", "#2D2F31"],
+            "btn_border_color": ["#D3D3D3", "#2D2F31"],
+            "btn_text_color": ["#A0A0A0", "#5A5C5E"]
         }
     }
 }
 ```
 
----
+Every key the code references is present in both the top-level block and `disabled_map` — confirmed by direct cross-check against the actual source, nothing missing.
 
-### Other Notes
-* **Inversion Blacklist & Mutation Shield:** To bypass CustomTkinter's private constructor sweeping arrays that destructively mutate configuration dictionary values, the constructor copies your data parameters into `self._local_defaults = dict(self.final_kw)` beforehand. This preserves your geometric variables safely.
-* **Polymorphic Cascade Safety:** State changes automatically flow downward. Passing a `.state("disabled")` loop locks down both the interior text lane and the macro browse button, preventing unwanted modal triggers and hover events uniformly.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute bottom of the initialization track to cleanly pass instance registration hooks straight back up to Pygubu layout trees out of the box.
+Every top-level key is now required and validated at construction, matching `sCTkFileExplorer`/`sCTkTableview`/`sCTkSpinbox`/`sCTkSelector` — missing any raises immediately, naming the exact key. `disabled_map` entries deliberately keep their original, more lenient behavior: gracefully falling back to the top-level/normal value if not overridden, rather than hard-failing, since that's intentional and already correct.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to embed an `sCTkPathChooser` within an isolated `sCTkFrame` chassis backplane while implementing runtime lock states and interactive selection feedback loops.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Path Chooser
-# =====================================================================
-
-import os
-import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkPathChooser
+from scustomtkinter import sCTk, sCTkFrame, sCTkPathChooser, sCTkButtonPrimary
 
 if __name__ == "__main__":
-
     root = sCTk()
-    root.title("Compound Path Chooser Test Suite")
-    root.geometry("700x260")
+    root.geometry("450x200")
+    root.title("PathChooser Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    lbl_monitor = sCTkLabelSecondary(base, text="Active Telemetry Target: [None Selection]")
-    lbl_monitor.pack(pady=10)
+    chooser = sCTkPathChooser(base, type="directory")
+    chooser.pack(fill="x", pady=10)
 
-    def print_result(path):
-        lbl_monitor.configure(text=f"Active Telemetry Target: {os.path.basename(path)}")
-        print(f"MAIN CONSOLE PATH SELECTION -> {path}")
-
-    chooser = sCTkPathChooser(
-        base, type="file", title="Select Log Target", filetypes=[".py"], command=print_result,
-        justify="right", width=550, height=50, state="normal", entry_height=40, btn_width=40,
-        btn_height=40, btn_text="▶", browser_width=550, browser_height=500
-    )
-    chooser.pack(padx=20, pady=15)
-
-    def toggle_chooser_lock():
+    def toggle_disabled():
         target = "disabled" if chooser.get_state() == "normal" else "normal"
-        chooser.configure(state=target)
-        btn_lock.configure(text="Lock Chooser Deck" if target == "normal" else "Unlock Chooser Deck")
-        print(f"Logged Verification Hook -> chooser.get_state() = {chooser.get_state()}")
+        chooser.state(target)
+        toggle_btn.configure(text="Enable" if target == "disabled" else "Disable")
 
-    btn_lock = sCTkButtonPrimary(base, text="Lock Chooser Deck", command=toggle_chooser_lock)
-    btn_lock.pack(side="bottom", pady=5)
-
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    chooser.state("disabled")
-    print("state (Disabled Pass) =", chooser.get_state())
-    chooser.state("normal")
-    print("state (Normal Pass)   =", chooser.get_state())
-    print("========================================\n")
+    toggle_btn = sCTkButtonPrimary(base, text="Disable", command=toggle_disabled)
+    toggle_btn.pack(pady=10)
 
     root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- **No readonly support** — unlike `sCTkSpinbox`, this widget only has `"normal"`/`"disabled"`, even though the same design opportunity applies (the entry could be readonly-locked while "Browse..." stays clickable, since it's the intended alternative way to set the value). Identified as a genuine future enhancement, not implemented yet.
 
 [Return to Table of Contents](#contents)
 
@@ -4918,274 +5205,459 @@ if __name__ == "__main__":
 
 ## sCTkScrollArea
 
-The `sCTkScrollArea` is an unblocked viewport container layout chassis designed for the `sCustomTkinter` radio desktop interface. It acts as a direct canvas frame alternative to `ctk.CTkScrollableFrame`, allowing isolated external scrolling elements to connect natively to an internal view surface. It isolates internal frame elements to capture mouse wheels and high-precision touchpad momentum sweeps smoothly across all target rows.
+`sCTkScrollArea` is a scrollable viewport container built on a raw `tkinter.Canvas`, offered as an alternative to `ctk.CTkScrollableFrame` for cases where you want to supply your own external scrollbar and control child event binding explicitly. It inherits `ctk.CTkFrame` and `ScrollBindingMixin`.
 
-![sCTkScrollArea_Dark.png](src/images/sCTkScrollArea_Dark.png)
-![sCTkScrollArea_Light.png](src/images/sCTkScrollArea_Light.png)
 
-### 📌 Localized Table of Contents
-* [API Constructor Reference](#-api-constructor-reference)
-* [Native Viewport Alignment Handshake](#%EF%B8%8F-native-viewport-alignment-handshake)
-* [Centralized Stylesheet Integration](#-centralized-stylesheet-integration-sctkthemesjson)
-* [Implementation Reference Template](#-implementation-reference-template)
+Its companion is [`sCTkScrollbar`](sCTkScrollbar.md). Scroll handling comes from [`ScrollBindingMixin`](ScrollBindingMixin.md), which is the reference for how scrolling works across this library.
+
+<a name="contents"></a>
+### Table of Contents
+* [Constructor](#constructor)
+* [Attributes](#attributes)
+* [Methods](#methods)
+* [Wiring it up](#wiring)
+* [Theming](#theming)
+* [Example](#example)
+* [Known Limitations](#limitations)
 
 ---
 
-### 📋 API Constructor Reference
+<a name="constructor"></a>
+### Constructor
 
-#### `sCTkScrollArea` Constructor
 ```python
 scroll_area = sCTkScrollArea(master=None, **kwargs)
 ```
 
-#### `sCTkScrollbar` Constructor
-```python
-scrollbar = sCTkScrollbar(master=None, orientation="vertical", **kwargs)
-```
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
+| Parameter | Type | Description |
 | :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkScrollableFrame(master)` | `sCTkScrollArea(master)` *(Unblocked Direct Canvas Frame)* |
-| **Viewport Target** | Fixed internal scrolling handle | `scroll_view.scroll_content` *(Exposed content container frame parent)* |
-| **High-Precision Logic**| Hardcoded scroll layout chains | **Inertial Micro-Delta Aggregator:** Smoothly captures, normalizes, and dampens Apple Magic Mouse and Trackpad sweeps natively. |
-| **Event Routing** | Restricts wheel events outside bounds | **Event Propagator Pattern:** Broadcaster hooks platform-synchronized event listeners across viewport rows automatically. |
+| `master` | widget | Parent container. |
+| `**kwargs` | — | Passed to `ctk.CTkFrame`. Note `fg_color="transparent"` and `border_width=0` are set internally and can't be overridden. |
 
 ---
 
-### 🎛️ Native Viewport Alignment Handshake
-Connecting the unblocked container frame to an isolated themeable scrollbar involves a single architectural lifecycle call.
+<a name="attributes"></a>
+### Attributes
 
-When you pack the label items or tracking data lines inside the container frame, you invoke the convenience event propagator. This ensures that traditional mouse wheels and high-precision Apple touchpad momentum sweeps execute with perfect visual continuity even when hovering over nested child items.
+| Attribute | What it is |
+| :--- | :--- |
+| `scroll_content` | The frame your content goes into. A raw `tkinter.Frame`, not a themed widget. |
+| `canvas` | The raw `tkinter.Canvas` providing the scrolling viewport. |
+
+---
+
+<a name="methods"></a>
+### Methods
+
+| Method | Description |
+| :--- | :--- |
+| `hook_scrollbar(scrollbar_widget)` | Connects a scrollbar to the canvas in both directions, and registers it as a scroll layer so the wheel keeps working while the pointer is over the bar itself. |
+| `propagate_scroll_events(target_widget)` | Registers a widget outside `scroll_content` to receive scroll events, along with its descendants. **Rarely needed now** — see below. |
+| `process_incoming_scroll(event)` | Compatibility shim. Scroll events are dispatched by the mixin directly; this remains only for external callers that bound this method themselves. |
+
+**`propagate_scroll_events()` is no longer required for ordinary content.** Anything placed inside `scroll_content` is bound automatically and re-bound whenever it changes, so the per-item call shown in older examples is redundant. It's still useful for widgets that sit *outside* that tree.
+
+Its behavior also changed: registered widgets are now **remembered** and re-bound on every subsequent pass. The previous implementation bound once and forgot, so any later rebind lost them.
+
+---
+
+<a name="wiring"></a>
+### Wiring it up
 
 ```python
-# 1. Native alignment layout handshake
+scroll_view = sCTkScrollArea(container)
+scroll_view.pack(fill="both", expand=True)
+
+scrollbar = sCTkScrollbar(container, orientation="vertical")
+scrollbar.pack(side="right", fill="y")
+
 scroll_view.hook_scrollbar(scrollbar)
 
-# 2. Populate data items directly into the scrolling content frame panel
 for i in range(25):
-    lbl_item = sCTkLabelSecondary(scroll_view.scroll_content, text="Telemetry Row")
-    lbl_item.pack()
-    
-    # 3. Propagate scroll wheel sweeps from children back up to the canvas base
-    scroll_view.propagate_scroll_events(lbl_item)
+    sCTkLabelSecondary(scroll_view.scroll_content, text=f"Row {i}").pack(anchor="w")
 ```
 
-[Go to Piece 2 of 2](#%F0%9F%8E%A8-centralized-stylesheet-integration-sctkthemesjson) | [Return to Table of Contents](#%F0%9F%93%8C-localized-table-of-contents)
-
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
-
-`sCTkScrollArea` drives its configuration rules out of your central theme file. Redundant layout wrappers and broken configuration keys are completely omitted, maintaining a clean, production-grade JSON dictionary footprint.
-
-```json
-{
-    "sCTkScrollArea": {
-        "corner_radius": 0,
-        "fg_color": "transparent",
-        "border_width": 0,
-        "border_color": "transparent"
-    }
-}
-```
+No `propagate_scroll_events()` call is needed — the rows are inside `scroll_content`, so the content rebind picks them up.
 
 ---
 
-### 💻 Implementation Reference Template
+<a name="theming"></a>
+### Theming
+
+**This widget is not part of the theme system.** It doesn't inherit `ThemeableWidget`, doesn't read `sCTkThemes.json`, and has no theme block. An earlier version of this page showed an `sCTkScrollArea` JSON block — nothing reads it, and adding it has no effect.
+
+The canvas and content-frame backgrounds are hardcoded: `#FAFAFA` in light mode, `#1A1A1A` in dark, switched by the widget's own `_set_appearance_mode()` hook. `scroll_content` is a raw `tkinter.Frame`, which cannot render CustomTkinter's transparent pseudo-value or `(light, dark)` tuples, so it needs a literal color.
+
+Bringing this widget into the theme system is an open item, tied to the Pygubu Designer integration work.
+
+---
+
+<a name="example"></a>
+### Example
 
 ```python
 #!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for ScrollArea
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkScrollbar, sCTkScrollArea
+from scustomtkinter import (sCTk, sCTkFrame, sCTkButtonPrimary, sCTkLabelSecondary,
+                            sCTkScrollbar, sCTkScrollArea)
 
 if __name__ == "__main__":
     root = sCTk()
     root.geometry("480x480")
-    root.title("sCTkScrollArea Unified Validation Deck")
+    root.title("sCTkScrollArea Validation Bench")
     root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
 
-    # 2. Arrange our isolated lower button layout panel tray
-    lower_tray = ctk.CTkFrame(root, fg_color="transparent")
+    lower_tray = sCTkFrame(root, fg_color="transparent")
     lower_tray.pack(side="bottom", fill="x", padx=15, pady=(0, 15))
 
-    # 3. Mount master backplane panel frame capsule container
     main_layout = sCTkFrame(root, border_width=2)
     main_layout.pack(expand=True, fill="both", padx=15, pady=15)
 
-    status_monitor = sCTkLabelSecondary(main_layout, text="SYSTEM STATUS: [VIEWPORT CHASSIS ONLINE]")
+    status_monitor = sCTkLabelSecondary(main_layout, text="STATUS: viewport online")
     status_monitor.pack(fill="x", padx=10, pady=(5, 10))
 
     def toggle_appearance_skin():
         ctk.set_appearance_mode("Light" if ctk.get_appearance_mode() == "Dark" else "Dark")
 
-    # Pack our skin preference toggler safely inside the isolated lower tray panel
-    btn_theme = sCTkButtonPrimary(lower_tray, text="Toggle UI Light/Dark Appearance", command=toggle_appearance_skin)
+    btn_theme = sCTkButtonPrimary(lower_tray, text="Toggle Light/Dark", command=toggle_appearance_skin)
     btn_theme.pack(fill="x", expand=True, padx=5)
 
-    # 4. Mount themeable custom scrollbar primitive
     scrollbar = sCTkScrollbar(main_layout, orientation="vertical")
     scrollbar.pack(side="right", fill="y", padx=(5, 10), pady=10)
 
-    # 5. Build nested viewport container layout tracks
     content_chassis = sCTkFrame(main_layout, border_width=0, fg_color="transparent")
     content_chassis.pack(side="left", fill="both", expand=True, padx=(10, 0), pady=10)
 
     scroll_view = sCTkScrollArea(content_chassis)
     scroll_view.pack(fill="both", expand=True)
 
-    # 6. Populate viewport with telemetry data and invoke the opt-in convenience propagator
     for i in range(25):
-        lbl_item = sCTkLabelSecondary(scroll_view.scroll_content, text=f"▶ Transceiver Core Channel Lane Code: {100 + i} [STATUS: OK]")
-        lbl_item.pack(anchor="w", padx=10, pady=4)
-        scroll_view.propagate_scroll_events(lbl_item)
+        sCTkLabelSecondary(
+            scroll_view.scroll_content,
+            text=f"Transceiver channel {100 + i} [OK]"
+        ).pack(anchor="w", padx=10, pady=4)
 
-    # 7. Wire hardware event pipelines natively together
     scroll_view.hook_scrollbar(scrollbar)
 
     root.mainloop()
 ```
 
-[Return to Table of Contents](#%F0%9F%93%8C-localized-table-of-contents)
+---
+
+<a name="limitations"></a>
+### Known Limitations
+
+- **Outside the theme system entirely** — see [Theming](#theming). It's the only widget in this library in that position.
+- **No `_finalize_themeable_lifecycle()` handshake,** so Pygubu Designer gets no registration signal from it.
+- **No disabled state.** Unlike `sCTkScrollableFrame` and `sCTkFileExplorer`, there's no `state()` here and no way to make it inert.
+- **`scroll_content` is a raw `tkinter.Frame`,** so widgets placed in it don't inherit CustomTkinter background propagation. Themed `sCTk` children render correctly; plain `tk` children may need their `bg` set to match.
+- **The debounced rebind also runs on genuine resizes** — see the [mixin page](ScrollBindingMixin.md#activation-and-rebinding).
+
+**Behavior changed when this widget adopted the shared mixin.** Three corrections, all bringing it in line with the rest of the library: Windows wheel travel halved (it previously doubled the `/120` delta), the two's-complement boundary at exactly 32768 was fixed, and the packed touchpad delta is now decoded by bit-shifting rather than reading `event.delta_y`. It also gained the nested-frame boundary guard and the automatic content rebind.
+
+[Return to Table of Contents](#contents)
+
+
+
+## ScrollBindingMixin
+
+The single shared implementation of cross-platform mouse wheel and macOS trackpad scroll handling for this library. Used by `sCTkScrollableFrame` (and therefore `sCTkTableview`), `sCTkFileExplorer`, and `sCTkScrollArea`.
+
+This page is the reference for how scrolling works. The individual widget pages describe only their own hooks and link here.
+
+### Table of Contents
+* [Why it exists](#why-it-exists)
+* [Platform behavior](#platform-behavior)
+* [Tuning constants](#tuning-constants)
+* [Activation and rebinding](#activation-and-rebinding)
+* [Disabling scroll](#disabling-scroll)
+* [Nested scrollable frames](#nested-scrollable-frames)
+* [Host contract](#host-contract)
+
+---
+
+<a name="why-it-exists"></a>
+### Why it exists
+
+This logic previously existed as three independent copies, each adapted by hand from the first. They drifted, as duplicated code does:
+
+- **The two's-complement sign correction disagreed.** `sCTkScrollableFrame` used `>= 0x8000`; `sCTkScrollArea` used `> 32768`. Those differ at exactly 32768 — the smallest *negative* value in a signed 16-bit field — which one read as −32768 and the other as +32768, inverting direction at that value.
+- **`sCTkScrollArea` decoded the packed touchpad delta differently again**, reading `event.delta_y` when present and applying a 16-bit correction to what may be a 32-bit packed value, rather than bit-shifting out the signed components.
+- **Windows wheel scaling disagreed:** `/120` unscaled in `sCTkScrollableFrame`, `/120 * 2` in `sCTkScrollArea` — twice the travel per notch.
+- **`sCTkFileExplorer` had no touchpad accumulator at all**, scrolling on every raw event instead of gating on an accumulated threshold. Trackpad scrolling there was markedly faster and coarser than everywhere else.
+- **`sCTkFileExplorer` walked only one level** into its row frame, so a row's label or icon was never bound and the wheel did nothing over them.
+- **The nested-scrollable boundary guard existed in exactly one of the three.**
+
+Every fix had to be made three times, and none of them were. Where the copies disagreed, `sCTkScrollableFrame`'s version — the maintainer-verified reference, confirmed smooth in live testing on macOS with both an Apple mouse and a trackpad — is the one that won.
+
+---
+
+<a name="platform-behavior"></a>
+### Platform behavior
+
+Three genuinely different platform models are handled:
+
+| Platform | Mechanism |
+|---|---|
+| Windows | `<MouseWheel>` with a `/120`-scaled delta |
+| Linux | Discrete `<Button-4>`/`<Button-5>` events — no continuous delta exists |
+| macOS | Its own `<MouseWheel>` scaling, **plus** a separate higher-precision `<TouchpadScroll>` synthetic event |
+
+macOS `<TouchpadScroll>` packs a two-axis delta into a single 32-bit integer — X in the high 16 bits, Y in the low 16 — each an *unsigned* field that must be converted back to signed, or every upward scroll reads as a large positive number.
+
+Trackpad events arrive far more frequently and with far finer deltas than wheel notches, so scrolling on each one is unusably fast. Deltas accumulate and move the view only once a threshold is crossed. The accumulator resets on a direction reversal, so reversing responds immediately instead of first cancelling out what had built up.
+
+---
+
+<a name="tuning-constants"></a>
+### Tuning constants
+
+Class attributes on the mixin, so they can be overridden per subclass or per instance without any additional machinery. **These are macOS-tuned**; other platforms may want different values.
+
+| Constant | Default | Meaning |
+|---|---|---|
+| `MAC_SCROLL_SENSITIVITY` | `3` | Amplification for macOS wheel deltas, which are much smaller than Windows' `/120` steps |
+| `MAC_SCROLL_MAX_STEP` | `5` | Ceiling on units travelled per macOS wheel event |
+| `TOUCHPAD_ACCUMULATION_THRESHOLD` | `12.0` | Accumulated trackpad delta required before the view moves |
+
+**`MAC_SCROLL_MAX_STEP` exists because macOS reports wildly different delta magnitudes depending on hardware.** An Apple Magic Mouse sends fine-grained values near 1; a conventional wheel mouse sends a large value per detent — around 38 in live testing. Multiplying that by the sensitivity gave 114 units from a single wheel click, jumping a 100-row list end to end. The amplification is still correct for fine-grained hardware, so rather than dropping it, the result is clamped: small deltas scale normally, large ones saturate.
+
+Resulting travel per event:
+
+| `event.delta` | Hardware | Units |
+|---|---|---|
+| 0.4 | Magic Mouse | 3 |
+| 1 | Magic Mouse | 3 |
+| 2 | Magic Mouse | 5 (clamped) |
+| 38 | Wheel detent | 5 (clamped) |
+
+Setting `MAC_SCROLL_MAX_STEP` to 3 gives the conventional three-lines-per-notch that matches macOS defaults. Values below 3 slow the Magic Mouse too, since its fine deltas already scale to 3 before the clamp applies.
+
+Whether these should move somewhere more discoverable than class attributes is an open question.
+
+---
+
+<a name="activation-and-rebinding"></a>
+### Activation and rebinding
+
+Bindings are automatic and self-maintaining. No activation call is needed, and content added after a widget is placed is picked up on its own.
+
+That reliability takes four mechanisms, each covering a gap the others don't. All are idempotent — bindings are always torn down before being rebuilt — so overlapping coverage costs nothing.
+
+| Mechanism | Covers |
+|---|---|
+| `<Map>` on the host | Later remaps, e.g. `pack_forget()` then re-placement |
+| `<Map>` on `extra_map_widget` | The widget the geometry manager actually sees |
+| `after_idle()` at construction | Initial activation, independent of mapping semantics |
+| `<Configure>` on `content_widget`, debounced | Content added *after* activation |
+
+**Why `<Map>` alone isn't enough.** `CTkScrollableFrame` is not the widget that gets placed: it builds an internal `_parent_frame` plus a canvas, inserts *itself* into that canvas via `create_window()`, and overrides `pack()`/`grid()`/`place()` to operate on `_parent_frame`. The widget is therefore a canvas-window child and may never receive `<Map>` the way an ordinarily-managed widget does. `after_idle()` is what actually establishes bindings in practice.
+
+**Why the content rebind is needed.** Activation happens once, at a moment when the container is usually still empty — callers construct, place, and *then* populate. Confirmed by live testing: an `sCTkTableview` bound at activation time collected 16 layers (frame, canvas, header cells) because `load_dataset()` hadn't run yet; the 32 data cells created afterwards were never bound, so it scrolled beside its rows but not over them.
+
+`<Configure>` fires when children change the container's layout, so it catches every content-adding path. It's debounced through `after_idle` because building a table fires it once per cell — one rebind instead of 32, run after the burst rather than during it, so it sees the finished tree.
+
+`<Configure>` can't distinguish "children were added" from "the window was dragged", so **resizing rebinds too**. Coalesced, but not free on a very large content tree.
+
+> **Do not replace `tk.Misc.bind(self, ...)` with `self.bind(...)`.** CustomTkinter overrides `CTkScrollableFrame.bind()` to forward every binding to `self._parent_canvas` instead of attaching it to the widget. An earlier version used `self.bind()`, and bindings never landed on the frame — scroll handling was silently never installed, and widgets only appeared to scroll where native CustomTkinter's own global `bind_all` handler happened to cover for it. `tk.Misc.bind` called unbound reaches the real Tkinter implementation. This looks like a needless complication and is not.
+
+---
+
+<a name="disabling-scroll"></a>
+### Disabling scroll
+
+When a host's `_scroll_permitted()` returns `False`, the mixin doesn't merely unbind — it installs **blocking** handlers. Two separate mechanisms are involved, because neither alone is sufficient.
+
+**Wheel and trackpad events.** Unbinding is not enough: native `CTkScrollableFrame.__init__` installs its own application-global `bind_all("<MouseWheel>")` handler that survives any `unbind()`. Calling `unbind_all()` would disable scrolling for *every other* scrollable widget in the application. Instead a handler returning `"break"` is installed on each layer. Tk dispatches bindings by bindtag in order — widget, class, toplevel, then `all` — and `bind_all` lands on that final tag, so a widget-level `"break"` halts the chain before the global handler is reached. Confirmed by live testing: with two independent scrollable frames side by side, disabling one left the other scrolling normally with both a mouse wheel and a trackpad.
+
+**Scrollbar dragging.** `unbind()` is actively dangerous here — Tk's `unbind()` removes *every* binding for an event on a widget, so calling it on a scrollbar's `<Button-1>` would destroy CustomTkinter's own drag handler permanently, with no way to restore it. Binding a blocker with `add="+"` doesn't work either: handlers fire in the order added, and CustomTkinter's was added during its own construction, so `"break"` at that point is too late. A private, per-instance bindtag is inserted at the **front** of the widget's tag list instead, so the blocker runs before CustomTkinter's bindings. Re-enabling removes the tag; CustomTkinter's bindings are never modified.
+
+The tag name embeds `id(self)`, so disabling one host has no effect on any other in the same application.
+
+**The scrollbar stays visible when blocked, just inert.** CustomTkinter's scrollbar has no native disabled state to lock, so there's no greyed-out appearance to switch to.
+
+---
+
+<a name="nested-scrollable-frames"></a>
+### Nested scrollable frames
+
+The descendant walk stops at any nested `CTkScrollableFrame` boundary — covering `sCTkScrollableFrame` and anything built on it, such as `sCTkSelector` and `sCTkTableview`. Without this, an inner scrollable frame placed inside an outer one would have its canvas, scrollbar, and entire content tree bound to the *outer* host's handler as well as its own, and since bindings use `add="+"`, both fire on the same event and scroll both at once. Native CustomTkinter guards the same boundary in its own `_check_if_valid_scroll`.
+
+The guard applies to descendants only, so a scrollable host still binds its own layers.
+
+**Not yet live-tested.** The logic mirrors CustomTkinter's own guard and is straightforward, but an actual nested case hasn't been exercised against it.
+
+A separate scrolling region built directly on a plain `Canvas` is **not** guarded — the check keys on `CTkScrollableFrame` specifically. Guarding that would need an explicit opt-out convention, since a plain `Canvas` has no way to declare itself an independent scroll region.
+
+---
+
+<a name="host-contract"></a>
+### Host contract
+
+A host class must implement two methods and may override two more:
+
+| Method | Required | Returns |
+|---|---|---|
+| `_scroll_target()` | yes | The widget to call `yview_scroll()` on, or `None` if scrolling isn't currently possible |
+| `_scroll_layers()` | yes | The ordered, deduplicated list of widgets to bind |
+| `_scroll_permitted()` | no | `False` to install blocking handlers instead of scroll handlers. Default `True` |
+| `_scroll_drag_targets()` | no | Widgets whose click-drag should also be blocked when not permitted. Default none |
+
+Hosts call two setup methods from `__init__`:
+
+```python
+self._init_scroll_state()                       # must run before any binding
+self._install_scroll_activation(
+    extra_map_widget=...,                       # optional
+    content_widget=...,                         # optional
+)
+```
+
+**`content_widget` matters.** It defaults to `self`, which is correct only when content is added directly to the host. A host that puts content in a separate inner frame **must** pass that frame — adding rows to an inner frame doesn't resize the outer widget, so `<Configure>` on `self` would never fire and the content rebind would silently never happen.
+
+Hosts may also define `_USE_CUSTOM_SCROLL_BINDING = False` as a kill switch, falling back to whatever native CustomTkinter provides. It's checked inside `_toggle_scroll_bindings()` rather than at the call sites, so it can't be bypassed by reaching that method through a different entry point — the exact bug that made the toggle ineffective in an earlier revision.
+
+#### Host implementations
+
+| Host | `_scroll_target()` | Notes |
+|---|---|---|
+| `sCTkScrollableFrame` | Parent canvas via `winfo_parent()` | Wrapped by a native `CTkScrollableFrame` that owns the canvas. Passes `_parent_frame` as `extra_map_widget`. Disabling stops scrolling. |
+| `sCTkFileExplorer` | `self.canvas` | Builds its own canvas, so no lookup needed. Passes `explorer_frame` as `content_widget`. Disabling stops scrolling. |
+| `sCTkScrollArea` | `self.canvas` | Builds its own canvas. Passes `scroll_content` as `content_widget`. No disabled state. |
+
+[Return to Table of Contents](#table-of-contents)
 
 
 
 ## sCTkSelector
 
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
+
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-An advanced theme-compliant option list selector widget. It pairs an optional high-contrast string prefix search lane with a dynamic checklist scrollback chassis to safely manage multi-state checkbox row configurations natively.
+### Overview
 
+`sCTkSelector` is a theme-compliant, scrollable multi-select (or single-select) list of checkboxes, with an optional live-filtering search field. It's built by composing a themed frame, an `sCTkScrollableFrame` for the checkbox list, and one `sCTkCheckBox` per item — not by subclassing a single native CustomTkinter widget.
 
-![sCTkSelector_Dark.png](src/images/sCTkSelector_Dark.png)
-![sCTkSelector_Light.png](src/images/sCTkSelector_Light.png)
+<img src="src/images/sCTkSelector_Dark.png" alt="sCTkSelector in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSelector_Light.png" alt="sCTkSelector in light mode" style="border: 2px solid #555555;">
 
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | *Not Available Natively* | `sCTkSelector(master)` *(Scrollable Options Selector)* |
-| **File Mapping** | Array elements bundle manually without centralized theme hooks. | Separated safely across `sCTkSelector.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `theSelector.state("disabled")`<br>**OR**<br>`theSelector.configure(state="disabled")`<br><br>**Polymorphic State Controller:** Simultaneously locks the top search bar entry field and paralyzes all child selection checkbox tracks natively using a low-level event intercept matrix. |
-| `searchBox` | *Not Supported Natively* | `Property -> bool`. Controls visibility of the dynamic search bar lane. |
+This widget inherits `sCTkFrame` directly (rather than raw `ctk.CTkFrame`) — a composition pattern that previously carried a real risk of `ThemeableWidget.__init__` running twice per instance and silently corrupting this widget's own resolved theme data. That risk is now fully closed: `ThemeableWidget` has a run-once guard preventing the double-init, and `sCTkFrame` itself filters its inbound kwargs down to only what native `CTkFrame` actually accepts before its own constructor call. Neither fix required any change to this widget.
 
 ---
 
 ### Constructor
 
-Initialize a custom themed selector option array tree layout.
+```python
+sCTkSelector(master, items=None, multiple_choices=True, searchBox=True, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | — | Parent container. |
+| `items` | `list[str]` | `None` | Initial list of checkbox labels. Must not contain duplicates — raises `ValueError` if it does. |
+| `multiple_choices` | `bool` | `True` | If `False`, selecting one item automatically deselects any other currently-selected item. |
+| `searchBox` | `bool` | `True` | Whether the live-filtering search field is shown above the checkbox list. |
+| `**kwargs` | — | — | Any native `CTkFrame` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-items = ["vw", "porsche", "roadster", "tesla", "ferrari", "mclaren"]
-
-# Instantiate with multi-selection active but search functionality turned off
-theSelector = sCTkSelector(
-    master=root, 
-    items=items, 
-    multiple_choices=True, 
-    searchBox=False
-)
-
-# Render the widget inside your container panel
-theSelector.pack(expand=True, fill="both", padx=15, pady=15)
+channel_selector = sCTkSelector(control_panel, items=["Ch 1", "Ch 2", "Ch 3"], multiple_choices=False)
+channel_selector.pack(expand=True, fill="both", padx=20, pady=20)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Unpack current active choices dynamically
-active_items = theSelector.get_selections()  # Returns list of strings e.g. ['porsche', 'tesla']
+### Methods
 
-# Return all mapped string names managed by the element index
-all_options = theSelector.get_all_items()     # Returns list of all items
+| Method | Returns | Description |
+|---|---|---|
+| `get_all_items()` | `list[str]` | Every checkbox's label text, regardless of current search filter or selection state. |
+| `state(mode=None)` | `str` | Gets or sets the widget's visual state. `"disabled"` locks and dims every checkbox and the search field (routed to the search field's own `"readonly"`, not `"disabled"` — see Known Limitations); anything in `("normal", "enabled", "active")` re-enables both. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus `items`, `multiple_choices`, `searchBox`, `pack_propagate`, `grid_propagate`, and `state` are all handled as first-class properties, matching the constructor. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `multiple_choices`, `searchBox`, `items`, `pack_propagate`, `grid_propagate`, and `fg_color`/`border_color`/`text_color`. |
 
-# Wipe selection arrays clean uniformly
-theSelector.clear_selections()
+---
 
-# Adjust layout properties or component visibilities on the fly
-theSelector.configure(searchBox=True)        # Dynamically mounts and renders search bar lane
-```
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — `fg_color` and `corner_radius` control the outer frame; the checkbox-related keys and `border_color` are validated and applied once at construction time (not repeatedly on every state change).
+- **Re-applied on every `state()` change** — the checkbox colors below are recomputed from normal values or `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkSelector": {
-        "fg_color": ["#FAFAFA", "#11141A"],
-        "border_color": ["#CBD5E1", "#222933"],
-        "text_color": ["#1F2937", "#FFFFFF"],
+        "fg_color": "transparent",
+        "corner_radius": 6,
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "checkbox_fg_color": ["#1A4375", "#1F6AA5"],
+        "checkbox_hover_color": ["#112A4B", "#1A5885"],
+        "border_color": ["#94A3B8", "#4B5563"],
+        "checkmark_color": ["#FFFFFF", "#FFFFFF"],
         "disabled_map": {
-            "fg_color": ["#F1F5F9", "#0A0D14"],
-            "border_color": ["#E2E8F0", "#171C24"]
+            "text_color": ["#808080", "#666666"],
+            "checkbox_fg_color": ["#CBD5E1", "#475569"],
+            "border_color": ["#CBD5E1", "#334155"],
+            "checkmark_color": ["#F1F5F9", "#94A3B8"]
         }
     }
 }
 ```
 
+**`checkbox_fg_color`/`checkbox_hover_color` are dedicated keys, not reused from `fg_color`.** An earlier version derived each checkbox's accent color from this widget's own `fg_color` — the same key that controls the outer frame's background — falling back to a hardcoded generic blue whenever `fg_color` was `"transparent"` (a common, legitimate choice for a frame, not a theme gap). Reusing one key for two different visual purposes didn't work well; dedicated keys fix that cleanly. All five top-level keys (`text_color`, `checkbox_fg_color`, `checkbox_hover_color`, `border_color`, `checkmark_color`) and four `disabled_map` keys (all but `checkbox_hover_color` — disabled checkboxes reuse `checkbox_fg_color` for hover too, since hover can't meaningfully trigger while disabled) are required; missing any raises immediately at construction.
+
+**`border_color` is also shared with this widget's two internal sub-widgets** (the search field and the checkbox-list frame), passed in once at construction so their *normal*-state border visually matches this widget's own border — confirmed by direct testing that these two sub-widgets' own independent default themes can otherwise visibly mismatch, especially in dark mode. This only establishes the shared normal-state value; each sub-widget's own state-driven color changes (the search field's readonly/disabled coloring in particular) are left completely untouched afterward.
+
+Every color is passed through as a raw `(light, dark)` tuple, letting CustomTkinter's native appearance-mode tracking handle repaints automatically, consistent with the approach used throughout this project.
+
 ---
 
-### Other Notes
-* **Crash-Shield Transparency Interceptor:** Native checkboxes throw a fatal `ValueError` if their indicator fills map to `transparent`. If the selector's master frame layout returns a transparent background, the visual router automatically overrides the checkbox container tracks with solid high-contrast corporate hex codes on boot.
-* **Light Mode Contrast Guard:** To bypass CustomTkinter's native washed-out white checkmark bug on locked elements, the repaint engine manually forces a dark gray checkmark selection overlay inside Light Mode, keeping checked rows perfectly legible.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization sequence, the constructor fires `self._finalize_themeable_lifecycle()` to safely pass instance registration hooks straight back up to Pygubu layout trees.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained testing suite containing interactive buttons to safely evaluate option configurations, state locks, and real-time global look preference shifts.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Selector
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkButtonPrimary, sCTk, sCTkSelector
-
+from scustomtkinter import sCTk, sCTkFrame, sCTkSelector, sCTkButtonPrimary, sCTkLabelPrimary
 
 if __name__ == "__main__":
-    def on_confirm(): print(f"Active Selection Telemetry Array: {theSelector.get_selections()}")
-
     root = sCTk()
-    root.geometry("250x420")
-    root.title("sCTkSelector Validation Bench")
+    root.geometry("400x420")
+    root.title("Selector Example")
 
-    items = ["vw", "porsche", "roadster", "tesla", "ferrari", "mclaren"]
-    theSelector = sCTkSelector(root, items=items, multiple_choices=True)
-    theSelector.pack(expand=True, fill="both", padx=15, pady=15)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    def toggle_selector_lock():
-        target = "disabled" if theSelector.get_state() == "normal" else "normal"
-        theSelector.configure(state=target)
-        btn_lock.configure(text="Lock Selector Deck" if target == "normal" else "Unlock Selector Deck")
+    selector = sCTkSelector(base, items=[f"Item {i}" for i in range(1, 21)])
+    selector.pack(expand=True, fill="both", pady=10)
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
+    status = sCTkLabelPrimary(base, text=f"state: {selector.get_state()}")
+    status.pack(pady=5)
 
-    confirm_btn = sCTkButtonPrimary(root, text="Confirm Selections", command=on_confirm)
-    confirm_btn.pack(pady=5)
-    btn_lock = sCTkButtonPrimary(root, text="Lock Selector Deck", command=toggle_selector_lock)
-    btn_lock.pack(pady=5)
-    btn_theme = sCTkButtonPrimary(root, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(pady=(5, 15))
+    def toggle_disabled():
+        target = "disabled" if selector.get_state() == "normal" else "normal"
+        selector.state(target)
+        status.configure(text=f"state: {selector.get_state()}")
+        toggle_btn.configure(text="Enable" if target == "disabled" else "Disable")
+
+    toggle_btn = sCTkButtonPrimary(base, text="Disable", command=toggle_disabled)
+    toggle_btn.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- **Disabling this widget routes the search field to `"readonly"`, not `"disabled"`** — deliberate, so its text remains selectable/copyable, but worth knowing if you expected a uniform `"disabled"` state across every sub-component.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **`.config()` previously bypassed this widget entirely.** Tkinter binds `.config` to `.configure` as a separate class attribute rather than tracking a subclass's override, and this class had no `config = configure` line — so `.config(...)` skipped the `items`/`searchBox`/`multiple_choices`/`state` handling and landed on `sCTkFrame`'s `configure()` instead. Fixed. Note this widget uses the older `(self, cnf=None, **kwargs)` signature rather than `*args`; that's correct here and is *not* the shape that caused the tuple-comparison bugs found elsewhere in the library, since `cnf` is a real parameter holding the value itself.
+- `items` must not contain duplicate labels — `configure(items=[...])` raises `ValueError` if it does, since selection tracking is index-based and duplicate labels would make search filtering ambiguous.
 
 [Return to Table of Contents](#contents)
 
@@ -5193,14 +5665,16 @@ if __name__ == "__main__":
 
 ## sCTkSeparator
 
-(Derived from Selector class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com) )
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
 * [System Architecture Overview](#system-architecture-overview)
 * [API Property Reference](#api-property-reference)
+* [State](#state)
 * [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
 * [Layout Manager Integration](#layout-manager-integration)
 * [Pygubu Designer Properties Guide](#pygubu-designer-properties-guide)
+* [Event Binding](#event-binding)
 * [Implementation Example & Test Harness](#implementation-example--test-harness)
 
 ---
@@ -5209,8 +5683,8 @@ The *sCTkSeparator* is an advanced, themeable divider widget for CustomTkinter. 
 
 --- 
 
-![sCTkSeparator_Dark.png](src/images/sCTkSeparator_Dark.png)
-![sCTkSeparator_Light.png](src/images/sCTkSeparator_Light.png)
+<img src="src/images/sCTkSeparator_Dark.png" alt="sCTkSeparator_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSeparator_Light.png" alt="sCTkSeparator_Light.png" style="border: 2px solid #555555;">
 
 
 ### System Architecture Overview
@@ -5239,6 +5713,21 @@ The visual update matrix implements two important enhancements:
 
 ---
 
+<a name="state"></a>
+### State
+
+| Method | Description |
+| :--- | :--- |
+| `state(mode=None)` | Getter with no argument; setter with `"normal"` or `"disabled"`. |
+| `get_state()` | Equivalent to `state()` with no argument. |
+| `configure(state=...)` | Same effect. Both routes are supported. |
+| `cget("state")` | Reads the current state. |
+| `configure("state")` | Pygubu-style single-argument query. |
+
+A separator has nothing to interact with, so disabling only repaints it from `disabled_map` — the line and any header text dim together. It exists so a panel can disable every widget it contains uniformly.
+
+---
+
 ### Centralized Stylesheet Setup (`sCTkThemes.json`)
 
 The component queries your centralized theme sheet profile matrix using standard `self._resolve_color()` lookup calls, ensuring that indicator dots and canvas borders translate colors smoothly across appearance updates.
@@ -5255,11 +5744,22 @@ To satisfy the framework configuration guidelines, ensure your theme matrix incl
         "text_color": ["#1A1A1A", "#FFFFFF"],
         "disabled_map": {
             "fg_color": ["#CBD5E1", "#475569"],
-            "text_color": ["#94A3B8", "gray50"]
+            "text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
+
+**Every key above is required,** including `disabled_map`. Construction raises `KeyError` naming the missing key and whether it belongs at the top level or in `disabled_map`.
+
+This matters because the disabled colours were previously unreachable. `_draw()` read them with hardcoded fallbacks — `.get("fg_color", ["#CBD5E1", "#475569"])` and `.get("text_color", ["#94A3B8", "gray50"])` — and since the theme block had no `disabled_map` at all, those fallbacks were **always** taken. A disabled separator never used the configured theme. The values shown above are those same fallbacks promoted into the theme file, so the appearance is unchanged; the one exception is dark-mode disabled text, where the Tk colour name `gray50` is replaced by `#64748B`, matching the disabled text colour used across the rest of the library.
+
+`font` and `corner_radius` lost their fallbacks for the same reason. `text_color` additionally used to fall back to `ctk.ThemeManager.theme["CTkLabel"]["text_color"]` — borrowing another widget class's colour, which would now only mask a theme gap.
+
+**Structural parameters are not required in the theme.** `orientation`, `length`, `width`, `text` and `dash` are read from the resolved keywords, so the theme *can* supply them, but they are constructor arguments with sensible defaults and requiring them would push layout decisions into the stylesheet.
+
+---
+
 ### Layout Manager Integration
 
 Mixing layout manager tracking loops within the same immediate frame layer is completely blocked. When handling automated expansion parameters across scaling monitor resolutions, enforce the following geometry behaviors:
@@ -5291,6 +5791,20 @@ When configuring layouts visually within the Pygubu Designer editing workspace p
    * Type `5,5` for standard clean dash blocks.
    * Type `2,6` for clean dotted layout maps.
    * Leave blank or type `None` to restore solid rounded vector shapes.
+
+---
+
+<a name="event-binding"></a>
+### Event Binding
+
+`bind()` and `unbind()` are overridden to route to the internal canvas, which is what actually receives events — `CTkBaseClass` filters direct binds on the widget itself.
+
+Both previously discarded an argument, and both were fixed:
+
+- **`bind()` accepted `add` and ignored it,** hardcoding `add=True` in the forwarded call. A caller passing `add=False` to *replace* an existing binding would silently accumulate one instead.
+- **`unbind()` accepted `funcid` and discarded it,** so it removed *every* binding for that sequence rather than the one identified. This is the same destructive behaviour that made `unbind()` unusable for blocking scrollbar drags in `sCTkScrollableFrame`: Tk's `unbind()` with no `funcid` wipes bindings this widget never installed, with no way to restore them.
+
+If existing code depended on the old behaviour it will change — though neither method did what its signature promised.
 
 ---
 
@@ -5355,8 +5869,8 @@ if __name__ == "__main__":
 The `sCTkSMeter` is a standalone, theme-adaptive analog S-Meter/Power Output gauge instrument designed specifically for ham radio transceiver desktop interfaces. Natively inheriting container footprints from `customtkinter.CTkFrame`, it delivers smooth telemetry tracking sweeps without the overhead of extraneous nesting modules.
 
 
-![sCTkSMeter_Dark.png](src/images/sCTkSMeter_Dark.png)
-![sCTkSMeter_Light.png](src/images/sCTkSMeter_Light.png)
+<img src="src/images/sCTkSMeter_Dark.png" alt="sCTkSMeter_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSMeter_Light.png" alt="sCTkSMeter_Light.png" style="border: 2px solid #555555;">
 
 
 ---
@@ -5373,14 +5887,15 @@ The instrument face is split mathematically to mirror classic analog transceiver
 ### 📋 API Constructor Reference
 
 ```python
-sCTkSMeter(master=None, width=340, height=130, **kw)
+sCTkSMeter(master=None, width=250, height=130, state="normal", **kw)
 ```
 
 | Parameter Name | Data Type | Default Value | Description |
 | :--- | :--- | :--- | :--- |
 | `master` | `any` | `None` | Reference pointer tracking your root window or parent `sCTkFrame` container layout layer. |
-| `width` | `int` | `340` | Manual hardware panel horizontal width boundary tracking profile measured in pixels. Supports on-the-fly Pygubu geometry defaults resetting queries safely. |
-| `height` | `int` | `130` | Manual hardware panel vertical height boundary tracking profile measured in pixels. Supports on-the-fly Pygubu geometry defaults resetting queries safely. |
+| `width` | `int` | `250` | Panel width in pixels. Supports Pygubu geometry-default reset queries. |
+| `height` | `int` | `130` | Panel height in pixels. Supports Pygubu geometry-default reset queries. |
+| `state` | `str` | `"normal"` | `"normal"` or `"disabled"`. See [State](#state) below. |
 
 ---
 
@@ -5394,33 +5909,50 @@ To drive the needle tracking sweep fluidly inside background receiver threads, a
 smeter.set(value)
 ```
 
+<a name="state"></a>
+### State
+
+| Method | Description |
+| :--- | :--- |
+| `state(mode=None)` | Getter with no argument; setter with `"normal"` or `"disabled"`. |
+| `get_state()` | Equivalent to `state()` with no argument. |
+| `configure(state=...)` | Same effect. Both routes are supported. |
+| `cget("state")` | Reads the current state. |
+| `configure("state")` | Pygubu-style single-argument query. |
+
+**Disabling dims, it does not freeze.** `state("disabled")` changes only the palette. `set()` continues to update the needle, and the gauge keeps tracking live values in the dimmed colours. This is deliberate for an output-only instrument: a meter that held its last reading while greyed out would be indistinguishable from one showing a current value, which on a radio panel is actively misleading. There is no input to lock out — the state exists so a panel can disable every widget it contains uniformly.
+
+The background is deliberately **not** dimmed; the face and needle carry the signal, matching `sCTkScrollableFrame` and the dial family.
+
 ---
 
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.py`)
+### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
 
-The component is deeply integrated with your centralized theme dictionary layout. To ensure that canvas backgrounds, typography text arcs, and indicator colors translate cleanly during startup initialization sweeps or global appearance mode switches, verify your shared configuration contains this asset block:
-
-```python
-THEME_DEFAULTS = {
+```json
+{
     "sCTkSMeter": {
-        # Light Mode: Clean White Face | Dark Mode: Deep Obsidian Cockpit Black
-        "fg_color": ("#F8FAFC", "#0A0A0A"),       
-        
-        # High-Contrast Brand Blue for bright rooms / Illuminated Glowing Neon Amber for dark setups
-        "text_color": ("#1A4375", "#FF9100"),     
-        
-        # Solid High-Contrast Crimson / Intense Mechanical Redline alert arc warning zone
-        "alarm_color": ("#990000", "#FF2200"),    
-        
-        # Deep Cobalt-Navy Slate indicator pointer / Blazing Orange needle tracking sweep
-        "needle_color": ("#112A4B", "#FF9100"),
-        
-        # Dial layout calibration typography fonts
-        "font": ("Arial", 10, "bold")
-    },
-    # ... your other widget entries
+        "fg_color": ["#F4F7FA", "#0A0A0A"],
+        "text_color": ["#1A4375", "#FF9100"],
+        "alarm_color": ["#990000", "#FF2200"],
+        "needle_color": ["#112A4B", "#FF9100"],
+        "font": ["Arial", 10, "bold"],
+        "scale_font": ["Arial", 10, "bold"],
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "alarm_color": ["#CBD5E1", "#4B5563"],
+            "needle_color": ["#94A3B8", "#4B5563"]
+        }
+    }
 }
 ```
+
+**Every key above is required.** Construction raises `KeyError` naming the missing key and whether it belongs at the top level or in `disabled_map`. This replaced a pattern of `.get(key, ("#hex", "#hex"))` throughout the draw code, which silently substituted a plausible guess and made an incomplete theme block look merely slightly-off rather than broken.
+
+`font` is used for the "SIGNAL" and "RF OUTPUT" captions; `scale_font` for the numeric tick labels and the "S" marker. They're separate keys because the widget makes that distinction, even though the default values happen to match.
+
+> **Font size has layout consequences.** Label positions are computed from fixed pixel offsets tuned for 10pt text. A noticeably larger font will overlap the tick marks and the arc — the widget does not measure text and adjust. Change these values in small steps and look at the result.
+
+**Fixed:** the configured `fg_color` never actually rendered. It was popped out of the resolved defaults in the constructor (correctly — the native frame takes it separately) and then read back afterwards from the dictionary it had been removed from, so the background always fell through to a hardcoded value. Light mode is where this was visible.
 
 ---
 
@@ -5492,8 +6024,8 @@ if __name__ == "__main__":
 The `sCTkSMeterBar` is a standalone, low-profile horizontal discrete 30-segment LED bar instrumentation widget displaying independent telemetry tracks for incoming receiver S-Units, transmitter SWR ratio levels, and forward RF Power output percentage. Like all sCTk widgets, it is fully theme-adaptive.
 
 
-![sCTkSMeterBar_Dark.png](src/images/sCTkSMeterBar_Dark.png)
-![sCTkSMeterBar_Light.png](src/images/sCTkSMeterBar_Light.png)
+<img src="src/images/sCTkSMeterBar_Dark.png" alt="sCTkSMeterBar_Dark.png" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSMeterBar_Light.png" alt="sCTkSMeterBar_Light.png" style="border: 2px solid #555555;">
 
 
 ---
@@ -5510,18 +6042,20 @@ The discrete LED matrix map shifts automatically based on the device operational
 ### 📋 API Constructor Reference
 
 ```python
-sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True, hide_lower_row=False, width=340, height=110, **kw)
+sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True,
+              hide_lower_row=False, width=320, height=110, state="normal", **kw)
 ```
 
 | Parameter Name | Data Type | Default Value | Description |
 | :--- | :--- | :--- | :--- |
 | `master` | `any` | `None` | Reference pointer tracking your root window or parent `sCTkFrame` container layout layer. |
 | `swr_max_value` | `float` | `5.0` | The explicit maximum scale boundary representing the far right edge limit tracking your transmitter's SWR track. |
-| `swr_visible` | `bool` | `True` | Visibility flag for the SWR cluster. Flipping to `False` shifts the text, ticks, and active LEDs into a faded, disabled palette look. |
-| `pwr_visible` | `bool` | `True` | Visibility flag for the PWR cluster. Flipping to `False` shifts the text, ticks, and active LEDs into a faded, disabled palette look. |
+| `swr_visible` | `bool` | `True` | Visibility flag for the SWR cluster. `False` greys its text, ticks and LEDs to `inactive_color`. Distinct from widget state — see [State](#state). |
+| `pwr_visible` | `bool` | `True` | Visibility flag for the PWR cluster. `False` greys its text, ticks and LEDs to `inactive_color`. Distinct from widget state — see [State](#state). |
 | `hide_lower_row` | `bool` | `False` | Layout override command. When `True`, the entire lower instrumentation cluster collapses and vanishes, pushing the `SIG` bar to the true vertical center of the card footprint. |
-| `width` | `int` | `340` | Manual hardware panel horizontal width boundary tracking profile measured in pixels. Supports on-the-fly Pygubu geometry defaults resetting queries safely. |
-| `height` | `int` | `110` | Manual hardware panel vertical height boundary tracking profile measured in pixels. Supports on-the-fly Pygubu geometry defaults resetting queries safely. |
+| `width` | `int` | `320` | Panel width in pixels. Supports Pygubu geometry-default reset queries. |
+| `height` | `int` | `110` | Panel height in pixels. Supports Pygubu geometry-default reset queries. |
+| `state` | `str` | `"normal"` | `"normal"` or `"disabled"`. See [State](#state) below. |
 
 ---
 
@@ -5540,33 +6074,57 @@ led_bar_gauge.set(s_value=9.2, swr_value=1.4, pwr_value=45.0)
 led_bar_gauge.configure_visibility(swr_visible=False, pwr_visible=True, hide_lower_row=False)
 ```
 
+<a name="state"></a>
+### State
+
+| Method | Description |
+| :--- | :--- |
+| `state(mode=None)` | Getter with no argument; setter with `"normal"` or `"disabled"`. |
+| `get_state()` | Equivalent to `state()` with no argument. |
+| `configure(state=...)` | Same effect. Both routes are supported. |
+| `cget("state")` | Reads the current state. |
+| `configure("state")` | Pygubu-style single-argument query. |
+
+**Disabling dims, it does not freeze.** `state("disabled")` changes only the palette. `set()` continues to update all three telemetry rows, and the bar keeps tracking live values in the dimmed colours. This is deliberate for an output-only instrument: a meter that held its last reading while greyed out would be indistinguishable from one showing a current value, which on a radio panel is actively misleading. There is no input to lock out — the state exists so a panel can disable every widget it contains uniformly.
+
+**State and row visibility are independent.** `state("disabled")` dims the whole widget via `disabled_map`. `configure_visibility(swr_visible=False)` greys just that cluster to `inactive_color`. A row can be hidden on an enabled widget, and a disabled widget still shows whichever rows are visible. Both can apply at once.
+
+The background is deliberately **not** dimmed; the LEDs and labels carry the signal.
+
 ---
 
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.py`)
+### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
 
-The component relies heavily on your centralized style dictionary system. To prevent the mixin parser tracking structures from raising runtime validation faults during initialization cycles, verify your shared stylesheet contains this asset configuration block:
-
-```python
-THEME_DEFAULTS = {
+```json
+{
     "sCTkSMeterBar": {
-        # Light Mode: Clean Slate-White Face | Dark Mode: Deep Obsidian Cockpit Black
-        "fg_color": ("#F8FAFC", "#0A0A0A"),       
-        
-        # High-Contrast Brand Blue for bright rooms / Illuminated Glowing Neon Amber for dark setups
-        "text_color": ("#1A4375", "#FF9100"),     
-        
-        # Solid High-Contrast Crimson / Intense Mechanical Redline alert segment zones
-        "alarm_color": ("#DC2626", "#FF2200"),    
-        
-        # Active illuminated LED block color tracks mapped out below threshold limits
-        "led_on_color": ("#2471A3", "#10B981"),   
-        
-        # Unlit background matrix segment pockets visible behind dark/inactive areas
-        "led_off_color": ("#E2E8F0", "#1F2937")   
-    },
-    # ... your other widget entries
+        "fg_color": ["#FFFFFF", "#0A0A0A"],
+        "text_color": ["#1A4375", "#FF9100"],
+        "alarm_color": ["#DC2626", "#FF2200"],
+        "led_on_color": ["#2471A3", "#FF9100"],
+        "led_off_color": ["#E2E8F0", "#1A1D20"],
+        "inactive_color": ["#94A3B8", "#334155"],
+        "font": ["Arial", 10, "bold"],
+        "scale_font": ["Arial", 9, "bold"],
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "alarm_color": ["#CBD5E1", "#4B5563"],
+            "led_on_color": ["#CBD5E1", "#374151"],
+            "led_off_color": ["#F1F5F9", "#1A1D20"]
+        }
+    }
 }
 ```
+
+**Every key above is required.** Construction raises `KeyError` naming the missing key and whether it belongs at the top level or in `disabled_map`. This replaced a pattern of `.get(key, ("#hex", "#hex"))` throughout the draw code, which silently substituted a plausible guess and made an incomplete theme block look merely slightly-off rather than broken.
+
+`inactive_color` greys the SWR or PWR cluster when that row is switched off via `configure_visibility()`. It has no `disabled_map` entry because it is not a state colour — see [State](#state). This value was previously hardcoded in the draw routine with no theme lookup at all, the only colour in this widget the theme could not reach.
+
+`font` is used for the "SIG", "SWR" and "PWR" section labels; `scale_font` for the numeric scale markings — S units, SWR values and power percentages. These were previously hardcoded across eight separate `create_text` calls and never consulted the theme.
+
+> **Font size has layout consequences.** Label positions are computed from fixed pixel offsets tuned for 9pt and 10pt text. A noticeably larger font will overlap the tick marks and the LED rows — the widget does not measure text and adjust. Change these values in small steps and look at the result.
+
+**Fixed:** the configured `fg_color` never actually rendered. It was popped out of the resolved defaults in the constructor (correctly — the native frame takes it separately) and then read back afterwards from the dictionary it had been removed from, so the background always fell through to a hardcoded value. Light mode is where this was visible.
 
 ---
 
@@ -5643,660 +6201,289 @@ if __name__ == "__main__":
 
 ## sCTkSpinbox
 
-The `sCTkSpinbox` is a highly configurable, theme-compliant custom spinbox wrapper widget. It extends `ctk.CTkFrame` and aggregates an internal `sCTkEntryPrimary` alongside two flanking or stacked directional button controls. The component dynamically supports two operational tracking modes: standard numerical incrementation step ranges, and discrete string text array index navigation. Like all sCTk widgets, it is fully theme-adaptive.
-
-
-![sCTkSpinbox_Dark.png](src/images/sCTkSpinbox_Dark.png)
-![sCTkSpinbox_Light.png](src/images/sCTkSpinbox_Light.png)
-
-
-<a name="contents"></a>
-### 📍 Table of Contents
-* [API Constructor Reference](#constructor)
-* [Custom Keyword Extensions (**kw)](#extensions)
-* [Global Object Instance Methods](#methods)
-* [Centralized Stylesheet Integration](#stylesheet)
-* [Implementation Reference Template](#template)
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-<a name="constructor"></a>
-### 📋 API Constructor Reference
+### Overview
 
-```python
-sCTkSpinbox(master=None, from_=0.0, to=100.0, step_size=1.0, command=None, state="normal", wrap=False, justify="left", show=None, placeholder_text=None, exportselection=True, width=140, height=32, **kw)
-```
+`sCTkSpinbox` is a theme-compliant subclass of `customtkinter.CTkFrame` that composes an internal `sCTkEntryPrimary` alongside two increment/decrement buttons. It supports two operating modes: stepping a numeric value between `from_` and `to` in increments of `step_size`, or cycling through a fixed list of string values.
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | `None` | Reference pointer tracking your root window or parent layout layer capsule container. |
-| `from_` | `float` | `0.0` | The lower numerical limit boundary representing the floor of your adjustment range. |
-| `to` | `float` | `100.0` | The upper numerical limit boundary representing the ceiling of your adjustment range. |
-| `step_size` | `float` | `1.0` | The exact mathematical offset added or subtracted from your tracking float on every button click. |
-| `command` | `callable` | `None` | Optional event logging callback function executed instantly on text shifts, passing the active value. |
-| `state` | `str` | `"normal"` | Execution state controller. Toggling to `"disabled"` dampens and locks out all inputs and arrows. |
-| `wrap` | `bool` | `False` | Mechanical boundary iteration loop flag. When `True`, stepping past limits wraps around to alternative poles. |
-| `justify` | `str` | `"left"` | Content text arrangement alignment tracking mask within the entry area. Options: `"left"`, `"center"`, `"right"`. |
-| `show` | `str` | `None` | Character masking input indicator string sequence (e.g. `show="*"` for password entries). |
-| `placeholder_text` | `str` | `None` | Faded background prompt text block displayed natively whenever the input cell field is completely empty. |
-| `exportselection` | `bool` | `True` | Standard Tkinter selection clipboard persistence state identifier switch. |
-| `width` | `int` | `140` | Manual hardware panel horizontal width layout footprint dimension measured in pixels. |
-| `height` | `int` | `32` | Manual hardware panel vertical height layout footprint dimension measured in pixels. |
+<img src="src/images/sCTkSpinbox_Dark.png" alt="sCTkSpinbox in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkSpinbox_Light.png" alt="sCTkSpinbox in light mode" style="border: 2px solid #555555;">
+
+Like `sCTkEntryPrimary`, this widget has a genuine three-state model — normal, readonly, and disabled — matching real `ttk.Spinbox` semantics. The key distinction: in readonly mode, the entry can't be typed into directly, but the increment/decrement buttons stay fully clickable, since they're the intended alternative way to change the value. The buttons themselves only ever report `"normal"` or `"disabled"` — `"readonly"` isn't a real native `CTkButton` concept, and there's no reason for the buttons to look any different in readonly mode, since nothing about their own behavior changes.
+
+Every property this widget forwards to its internal entry (`width`, `height`, `justify`, `show`, `exportselection`, `placeholder_text`, `fg_color`, `border_color`, `text_color`, `state`) has been confirmed valid against CustomTkinter's own real `CTkEntry` source — both its explicit named constructor/configure parameters and its `_valid_tk_entry_attributes` whitelist. There's no risk of this widget sending an unrecognized property to its own entry.
 
 ---
 
-<a name="extensions"></a>
-### 🛠️ Custom Keyword Extensions (`**kw`)
-These exclusive configuration parameters override default geometry behaviors, resolve theme definitions, and style proportions dynamically:
+### Constructor
 
-| Extension Parameter | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `button_width` | `int` | `22` | The horizontal width tracking measurement assigned to increment/decrement button frames in pixels. |
-| `button_height` | `int` | `None` | The vertical button height. If `None`, scales automatically based on active grid parameters. |
-| `button_side` | `str` | `"right"` | Hardware control grid positioning side anchor layout. Options: `"right"`, `"left"`, `"split"`. |
-| `orientation` | `str` | `"vertical"` | Structural grid layout arrangement axis profile track. Options: `"vertical"`, `"horizontal"`. |
-| `arrow_font_size` | `int` | `11` | Typography scaling rule explicitly defining point sizes for the raw directional glyph markings inside Pygubu. |
-| `format` | `str` | `""` | Numerical formatting mask specifier string rule (supports C percent styles `%.3f` or bracket masks `{:.3f}`). |
-| `values` | `str` / `list` | `None` | Literal input values array string loader. Setting choices converts your widget into Discrete Text List Mode. |
-
----
-
-<a name="methods"></a>
-### ⚡ Global Object Instance Methods
-
-#### Programmatically Set Value Elements
 ```python
-# Insert a distinct float, integer, or matching list mode text option string natively
-spinbox.set(12.5)
+sCTkSpinbox(master=None, from_=0.0, to=100.0, step_size=1.0, command=None,
+            state="normal", wrap=False, justify="left", show=None,
+            placeholder_text=None, exportselection=True, width=140, height=32, **kw)
 ```
 
-#### Fetch Active Value Strings
-```python
-# Reaches into the data entry track, pulling back the active string layout contents
-current_selection = spinbox.get()
-```
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `from_` | `float` | `0.0` | Lower bound of the numeric range. Ignored in discrete-value mode (see `values` below). |
+| `to` | `float` | `100.0` | Upper bound of the numeric range. Ignored in discrete-value mode. |
+| `step_size` | `float` | `1.0` | Amount added or subtracted per click of the up/down buttons. |
+| `command` | `callable` | `None` | Called with the new value whenever it changes, via either button click or `set()`. |
+| `state` | `str` | `"normal"` | Initial state: `"normal"`, `"readonly"`, or `"disabled"`. Any other value is treated as `"normal"`. |
+| `wrap` | `bool` | `False` | If `True`, stepping past either bound (or past either end of a discrete value list) wraps around instead of stopping. |
+| `justify` | `str` | `"left"` | Text alignment inside the entry: `"left"`, `"center"`, or `"right"`. |
+| `show` | `str` | `None` | Character-masking string, e.g. `"*"` for password-style display. |
+| `placeholder_text` | `str` | `None` | Placeholder shown when the entry is empty. |
+| `exportselection` | `bool` | `True` | Standard Tkinter selection-to-clipboard behavior. |
+| `width` / `height` | `int` | `140` / `32` | Overall widget dimensions in pixels. |
+| `**kw` | — | — | `button_width`, `button_height`, `button_side` (`"left"`/`"right"`/`"split"`), `orientation` (`"vertical"`/`"horizontal"`), `arrow_font_size`, `format`, `values` — see [Theming](#theming-sctkthemesjson) for where these come from — plus any theme-key override.|
 
-#### Discrete Values Array Loader Shortcut
 ```python
-# Programmatically inject custom space-separated lines or list records on the fly
-spinbox.set_values('Slow Normal Fast "Turbo Speed" Max')
-```
-
-#### Layout Parameter Configuration Modifier
-```python
-# Updates interactive structural layouts or boundaries cleanly without layout recreation overhead
-spinbox.configure(orientation="horizontal", button_side="split", arrow_font_size=14, wrap=True)
-```
-
-#### Advanced Sub-Component Style Targeting
-If an explicit overrides requirement arises at runtime that bypasses the compiled stylesheet definitions, you can directly interact with the isolated increment/decrement components safely without initialization crashes:
-```python
-# Manually altering internal button typography fonts or text strings at runtime safely
-spinbox.up_button.configure(font=("Arial", 10, "normal"))   # Increment button control instance
-spinbox.down_button.configure(font=("Arial", 10, "normal")) # Decrement button control instance
+freq_spinbox = sCTkSpinbox(control_panel, from_=88.0, to=108.0, step_size=0.1, placeholder_text="MHz")
+freq_spinbox.pack(pady=10)
 ```
 
 ---
 
-<a name="stylesheet"></a>
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+### Methods
 
-The widget relies heavily on direct index key lookups within your central styling map profile matrix. The component automatically feeds state updates down to your nested `sCTkEntryPrimary` instance, cascading text dimming transitions natively.
+| Method | Returns | Description |
+|---|---|---|
+| `get()` | `str` | Current entry text. |
+| `set(value)` | `None` | Sets the displayed value (a number, or a string matching one of `values` in discrete mode), and calls `command` if one was given. Temporarily re-enables the entry to update its text if it isn't currently `"normal"`, then restores whatever state it was actually in — including `"readonly"`, not just `"normal"`/`"disabled"`. |
+| `set_values(list_of_strings)` | `None` | Switches to discrete-value mode with the given list, or back to numeric mode if given an empty list. |
+| `state(mode=None)` | `str` | Gets or sets the widget's normal/readonly/disabled state. The entry receives the full three-way state (routed through its own `state()`); the up/down buttons only ever receive `"normal"` or `"disabled"`. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus all the constructor's custom keywords (`button_width`, `orientation`, `format`, `values`, etc.) can be changed at runtime the same way. |
+| `cget(attribute_name)` | varies | Supports querying `state`, `from_`, `to`, `step_size`, `button_width`, `button_height`, `button_side`, `orientation`, `arrow_font_size`, `format`, `wrap`, and `values` directly, in addition to standard native properties. |
+
+---
+
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
     "sCTkSpinbox": {
         "font": ["Arial", 15, "normal"],
-        "arrow_font_size": 11,
+        "arrow_font": ["Arial", 8, "normal"],
         "arrow_up_char": "▲",
         "arrow_down_char": "▼",
         "arrow_right_char": "▶",
         "arrow_left_char": "◀",
-        "format": "%.2f",
         "border_width": 1.5,
         "corner_radius": 6,
-        
         "entry_color": ["#FFFFFF", "#111827"],
         "border_color": ["#1A4375", "#64748B"],
         "text_color": ["#1F2937", "#F9FAFB"],
         "placeholder_text_color": ["#5A6E7F", "#526071"],
         "button_color": ["#9E9E9E", "#2A2F3D"],
         "button_hover_color": ["#7D7D7D", "#374151"],
-
         "disabled_map": {
             "entry_color": ["#F3F4F6", "#1F2937"],
             "border_color": ["#CBD5E1", "#475569"],
             "text_color": ["#94A3B8", "#64748B"],
             "button_color": ["#CBD5E1", "#334155"]
+        },
+        "readonly_map": {
+            "entry_color": ["#F8FAFC", "#1F2937"],
+            "border_color": ["#64748B", "#94A3B8"],
+            "text_color": ["#1F2937", "#F9FAFB"]
         }
     }
 }
 ```
 
+`entry_color`/`border_color`/`text_color` override the internal entry's own colors for all three states, a deliberate design choice: this widget controls its entry's look via its own theme keys rather than the entry's independent defaults. `readonly_map` requires `entry_color`, `border_color`, and `text_color` whenever readonly is actually requested — missing any raises immediately. No readonly-specific `button_color` exists or is needed, since buttons always use normal `button_color`/`button_hover_color` whenever they aren't disabled — they're meant to look completely ordinary in readonly mode.
+
+`arrow_font` is read in full — family, size, and weight — and applied to both increment/decrement buttons. It can also be overridden at runtime via `configure(arrow_font=(...))`, or `configure(arrow_font_size=...)` to change just the size without respecifying the full tuple.
+
 ---
 
-<a name="template"></a>
-### 💻 Implementation Reference Template
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Spinbox
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkComboBox, sCTkLabelSecondary, sCTkEntryPrimary, sCTk, sCTkSpinbox
-
+from scustomtkinter import sCTk, sCTkFrame, sCTkSpinbox, sCTkButtonPrimary, sCTkLabelPrimary
 
 if __name__ == "__main__":
+    root = sCTk()
+    root.geometry("400x250")
+    root.title("Spinbox Example")
 
-    app = sCTk()
-    app.title("sCTk Advanced Spinbox Tester Deck")
-    app.geometry("490x740")
-    app.configure(fg_color=("#F1F5F9", "#1C1C1C"))
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    def on_spinbox_value_changed(val):
-        if isinstance(val, float): vfo_readout.configure(text=f"Telemetry Output: {val:.3f}")
-        else: vfo_readout.configure(text=f"Telemetry Output: '{str(val)}'")
+    freq_spinbox = sCTkSpinbox(base, from_=88.0, to=108.0, step_size=0.1, placeholder_text="MHz")
+    freq_spinbox.pack(pady=10)
 
-    dashboard_panel = sCTkFrame(app, fg_color="transparent", border_width=0)
-    dashboard_panel.pack(padx=25, pady=15, fill="both", expand=True)
+    status = sCTkLabelPrimary(base, text=f"state: {freq_spinbox.get_state()}")
+    status.pack(pady=5)
 
-    vfo_readout = sCTkLabelSecondary(dashboard_panel, text="Telemetry Output: Initializing...", font=("Arial", 22, "bold"), text_color=("#1A4375", "#FF9100"))
-    vfo_readout.pack(pady=10)
+    def cycle_state():
+        order = ["normal", "readonly", "disabled"]
+        current = freq_spinbox.get_state()
+        next_state = order[(order.index(current) + 1) % len(order)]
+        freq_spinbox.state(next_state)
+        status.configure(text=f"state: {freq_spinbox.get_state()}")
 
-    spinbox = sCTkSpinbox(dashboard_panel, from_=1.0, to=50.0, step_size=0.5, wrap=True, justify="center", placeholder_text="Click Me", command=on_spinbox_value_changed, width=180, height=34)
-    spinbox.pack(pady=10)
+    cycle_btn = sCTkButtonPrimary(base, text="Cycle State", command=cycle_state)
+    cycle_btn.pack(pady=10)
 
-    control_frame = sCTkFrame(dashboard_panel, fg_color=("#E2E8F0", "#262626"), corner_radius=6)
-    control_frame.pack(fill="both", expand=True, padx=5, pady=10)
-    control_frame.grid_columnconfigure(0, weight=1); control_frame.grid_columnconfigure(1, weight=1)
-
-    lbl_state = sCTkLabelSecondary(control_frame, text="Component State:", font=("Arial", 11, "bold"))
-    lbl_state.grid(row=0, column=0, padx=15, pady=5, sticky="w")
-    state_dropdown = sCTkComboBox(control_frame, values=["Normal State (Active)", "Disabled State (Locked)"], command=lambda choice: spinbox.configure(state="disabled" if "Disabled" in choice else "normal"), width=170)
-    state_dropdown.grid(row=0, column=1, padx=15, pady=5, sticky="e"); state_dropdown.set("Normal State (Active)")
-
-    lbl_justify = sCTkLabelSecondary(control_frame, text="Text Alignment (Justify):", font=("Arial", 11, "bold"))
-    lbl_justify.grid(row=1, column=0, padx=15, pady=5, sticky="w")
-    justify_dropdown = sCTkComboBox(control_frame, values=["Center", "Left", "Right"], command=lambda choice: spinbox.configure(justify=choice.lower()), width=170)
-    justify_dropdown.grid(row=1, column=1, padx=15, pady=5, sticky="e"); justify_dropdown.set("Center")
-
-    lbl_format = sCTkLabelSecondary(control_frame, text="Masking Format Pattern:", font=("Arial", 11, "bold"))
-    lbl_format.grid(row=2, column=0, padx=15, pady=5, sticky="w")
-    format_dropdown = sCTkComboBox(control_frame, values=["None (Default)", "%.1f kHz", "{:.2f}", "{:.3f}"], command=lambda choice: spinbox.configure(format={"%.1f kHz": "%.1f kHz", "{:.2f}": "{:.2f}", "{:.3f}": "{:.3f}", "None (Default)": ""}.get(choice, "")), width=170)
-    format_dropdown.grid(row=2, column=1, padx=15, pady=5, sticky="e"); format_dropdown.set("None (Default)")
-
-    lbl_wrap = sCTkLabelSecondary(control_frame, text="Boundary Iteration Wrap:", font=("Arial", 11, "bold"))
-    lbl_wrap.grid(row=3, column=0, padx=15, pady=5, sticky="w")
-    wrap_dropdown = ctk.CTkComboBox(control_frame, values=["True (Loop Enabled)", "False (Hard Limits)"], command=lambda choice: spinbox.configure(wrap=True if "True" in choice else False), width=170)
-    wrap_dropdown.grid(row=3, column=1, padx=15, pady=5, sticky="e"); wrap_dropdown.set("True (Loop Enabled)")
-
-    lbl_mode = sCTkLabelSecondary(control_frame, text="Data Array Input Mode:", font=("Arial", 11, "bold"))
-    lbl_mode.grid(row=4, column=0, padx=15, pady=5, sticky="w")
-    def on_mode_changed(choice):
-        if "Discrete List" in choice: spinbox.set_values(txt_custom_values.get())
-        else: spinbox.set_values([]); spinbox.set(5.0)
-    mode_dropdown = sCTkComboBox(control_frame, values=["Numerical Mode (1.0 - 50.0)", "Discrete List Mode (Strings)"], command=on_mode_changed, width=170)
-    mode_dropdown.grid(row=4, column=1, padx=15, pady=5, sticky="e"); mode_dropdown.set("Numerical Mode (1.0 - 50.0)")
-
-    lbl_custom_vals = sCTkLabelSecondary(control_frame, text="List Strings Configuration:", font=("Arial", 11, "bold"))
-    lbl_custom_vals.grid(row=5, column=0, padx=15, pady=5, sticky="w")
-    txt_custom_values = sCTkEntryPrimary(control_frame, width=170, height=28, placeholder_text="Item1 'Item Two' Item3...")
-    txt_custom_values.grid(row=5, column=1, padx=15, pady=5, sticky="e"); txt_custom_values.insert(0, 'Slow Normal Fast "Turbo Speed" Max')
-    txt_custom_values.bind("<Return>", lambda e: spinbox.set_values(txt_custom_values.get()) if "Discrete List" in mode_dropdown.get() else None)
-
-    lbl_side = sCTkLabelSecondary(control_frame, text="Hardware Button Side:", font=("Arial", 11, "bold"))
-    lbl_side.grid(row=6, column=0, padx=15, pady=5, sticky="w")
-    side_dropdown = sCTkComboBox(control_frame, values=["Right", "Left", "Split"], command=lambda choice: spinbox.configure(button_side=choice.lower()), width=170)
-    side_dropdown.grid(row=6, column=1, padx=15, pady=5, sticky="e"); side_dropdown.set("Right")
-
-    lbl_orient = sCTkLabelSecondary(control_frame, text="Control Grid Orientation:", font=("Arial", 11, "bold"))
-    lbl_orient.grid(row=7, column=0, padx=15, pady=5, sticky="w")
-    orient_dropdown = sCTkComboBox(control_frame, values=["Vertical", "Horizontal"], command=lambda choice: spinbox.configure(orientation=choice.lower()), width=170)
-    orient_dropdown.grid(row=7, column=1, padx=15, pady=5, sticky="e"); orient_dropdown.set("Vertical")
-
-    lbl_arrow_size = sCTkLabelSecondary(control_frame, text="Arrow Glyphs Font Size:", font=("Arial", 11, "bold"))
-    lbl_arrow_size.grid(row=8, column=0, padx=15, pady=5, sticky="w")
-    arrow_size_dropdown = sCTkComboBox(control_frame, values=["8 pt (Default)", "11 pt (Medium)", "14 pt (Large)", "18 pt"], command=lambda choice: spinbox.configure(arrow_font_size=int(choice.split()[0])), width=170)
-    arrow_size_dropdown.grid(row=8, column=1, padx=15, pady=5, sticky="e"); arrow_size_dropdown.set("8 pt (Default)")
-
-    app.mainloop()
-
+    root.mainloop()
 ```
+
+---
+
+### Known Limitations
+
+- **The disable/enable-cycle cursor-position fix is not independently confirmed for readonly transitions** — the underlying entry inherits this caveat from `sCTkEntryPrimary`; see that widget's docs for the full explanation.
+- **`readonly` mode's placeholder behavior follows `sCTkEntryPrimary`'s** — a readonly field showing placeholder text never clears it on focus, since native CustomTkinter deliberately never deactivates a placeholder while `state` is `"readonly"`.
+- Calling `configure("propname")` for most single-argument property queries returns a Tkinter-style tuple whose `current` value may be `str()` of a `(light, dark)` color tuple rather than a single resolved color — the same known gap as elsewhere in this project's Pygubu-query investigation.
 
 [Return to Table of Contents](#contents)
 
 
 
-## sCTkSwitchAlt
-
-The `sCTkSwitchAlt` is an advanced custom composite toggle switch component built on a high-performance vector graphics `ctk.CTkCanvas` layout engine. Unlike the native inheritance model found in the `sCTkSwitch` (Standard Switch), the alternative variant is engineered specifically to shatter CustomTkinter's low-level polygon color caching locks. This enables **100% complete color rendering control** driven straight out of your central `themes.json` sheets across both the track background and moving selector handle elements, completely eliminating square bounding box ghosts and artifact dropouts.
-
-
-![sCTkSwitchAlt_Dark.png](src/images/sCTkSwitchAlt_Dark.png)
-![sCTkSwitchAlt_Light.png](src/images/sCTkSwitchAlt_Light.png)
-
-
-<a name="contents"></a>
-### 📍 Table of Contents
-* [API Constructor Reference](#constructor)
-* [Vector Canvas Drawing Architecture](#canvas-engine)
-* [Architectural Comparison (Standard Switch vs. Alt)](#comparison)
-* [Global Object Instance Methods](#methods)
-* [Centralized Stylesheet Integration](#stylesheet)
-* [Implementation Reference Template](#template)
-
----
-
-<a name="constructor"></a>
-### 📋 API Constructor Reference
-
-```python
-sCTkSwitchAlt(master=None, text="", command=None, variable=None, textvariable=None, onvalue=1, offvalue=0, state="normal", font=None, **kw)
-```
-
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | `None` | Reference pointer tracking your root window or parent layout layer capsule container. |
-| `text` | `str` | `""` | The descriptive typography text string label displayed natively alongside the custom toggle switch canvas track. |
-| `command` | `callable` | `None` | Optional event logging callback function executed instantly on state shifts, passing the active value. |
-| `variable` | `Variable` | `None` | Persistent Tkinter variable tracking hook (e.g. `tk.IntVar` or `tk.StringVar`) mapped to the toggle state value. |
-| `textvariable` | `Variable` | `None` | Dynamic data trace observer variable instance to update text description labels automatically. |
-| `onvalue` | `any` | `1` | The value coordinate written to variables and passed to callbacks when the slider knob is checked. |
-| `offvalue` | `any` | `0` | The value coordinate written to variables and passed to callbacks when the slider knob is unchecked. |
-| `state` | `str` | `"normal"` | Execution state controller. Toggling to `"disabled"` dampens colors and activates total interaction locks. |
-| `font` | `tuple` / `str` | `None` | Typography configuration specifically assigned to resolve descriptive text labels. |
-
----
-
-<a name="canvas-engine"></a>
-### 🛡️ Vector Canvas Drawing Architecture
-Standard CustomTkinter switches lock color palettes inside native canvas properties upon birth initialization, making post-boot track recoloring impossible. Furthermore, nesting traditional rounded shapes frequently results in white or black hard-edged "square" background bounding boxes bleeding through the layout under alternative global preference skins.
-
-The `sCTkSwitchAlt` overcomes this limitation by implementing a **Pure Primitives Reconstruct Engine**. Built using `ctk.CTkCanvas`, the widget deletes and redraws the precise geometry lines of the capsule track (`create_oval` + `create_rectangle`) and a proportional 16px circle knob disc handle dynamically on every state transition. This guarantees high-visibility rendering, zero layout drift, and smooth color changes with absolute fidelity to your central stylesheets.
-
----
-
-<a name="comparison"></a>
-### 🔀 Architectural Comparison (Standard Switch vs. Alt)
-The framework provides two unified, parallel switch variants engineered for distinct interface layout profiles:
-
-1. **`sCTkSwitch` (Standard Switch Base Variant):**
-   * *Underlying Engine:* Direct subclass of `ctk.CTkSwitch` maintaining native performance properties.
-   * *Color Management:* Retains native color caching constraints. When disabled, the track background remains frozen on its base palette; only the description typography text dims down to gray.
-   * *Animations:* Retains the native multi-frame linear handle slide translation animation curves.
-
-2. **`sCTkSwitchAlt` (Alternative Composite Variant):**
-   * *Underlying Engine:* Powered by an open vector canvas primitive layout container.
-   * *Color Management:* Fully unlocked look layers. When enabled, the track remains a static blue (matching primary panel elements) instead of shifting hues. When disabled, the track capsule and circular disc knob instantly paint themselves in high-visibility steel and slate disabled tokens.
-   * *Animations:* Bypasses sliding transitions; the indicator knob disc snaps to true coordinates instantly.
-
----
-
-<a name="methods"></a>
-### ⚡ Global Object Instance Methods
-
-#### Fetch Active State Coordinates
-```python
-# Returns the active onvalue or offvalue parameter matching the position ledger register
-active_choice = switch_alt.get()
-```
-
-#### Programmatically Toggle Placements
-```python
-# Forcefully sets the toggle position value, rendering the knob handle on or off instantly
-switch_alt.set("on")
-```
-
-#### Query Active Operation Modes
-```python
-# Returns the active interaction mode string ('normal' or 'disabled')
-current_state = switch_alt.get_state()
-```
-
-#### Apply Absolute Operational Interaction Locks
-```python
-# Disables click events on the canvas primitives while dimming all shapes down to custom gray levels
-switch_alt.state("disabled")
-```
-
----
-
-<a name="stylesheet"></a>
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
-
-To minimize repository file footprint configurations, both the standard and alternative widgets share a single unified `"sCTkSwitch"` style map profile block. The alternative variant leverages the shared parameters to drive its track and circular knob fills dynamically:
-
-```json
-{
-    "sCTkSwitch": {
-        "fg_color": ["#1A4375", "#1F6AA5"],
-        "progress_color": ["#1A4375", "#1F6AA5"],
-        "button_color": ["#FFFFFF", "#CBD5E1"],
-        "button_hover_color": ["#E5E7EB", "#94A3B8"],
-        "text_color": ["#1F2937", "#F9FAFB"],
-        "font": ["Arial", 14, "normal"],
-        "disabled_map": {
-            "text_color": ["#94A3B8", "#64748B"],
-            "fg_color": ["#E5E7EB", "#526071"],
-            "progress_color": ["#CBD5E1", "#526071"],
-            "button_color": ["#8A94A6", "#94A3B8"],
-            "button_hover_color": ["#8A94A6", "#94A3B8"]
-        }
-    }
-}
-```
-
----
-
-<a name="template"></a>
-### 💻 Implementation Reference Template
-
-This standalone verification program demonstrates how to correctly embed both the `sCTkSwitch` (Standard Switch) and the advanced `sCTkSwitchAlt` within a shared panel interface, tracking live variables and skin preferred overrides simultaneously.
-
-```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Switch - alt
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkLabelSecondary, sCTkButtonPrimary, sCTk, sCTkSwitch, sCTkSwitchAlt
-
-
-if __name__ == "__main__":
-
-    root = sCTk()
-    root.geometry("520x460")
-    root.title("sCustomTkinter Dual Switch Validation Bench")
-    root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
-
-    base = sCTkFrame(root, border_width=2)
-    base.pack(expand=True, fill="both", padx=30, pady=30)
-
-    # Configure the internal panel weights cache grid system to force left alignment
-    base.grid_columnconfigure(0, weight=1)
-
-    # =====================================================================
-    # 🎛️ MODULE 1: Standard Switch (Native Inheritance Variant)
-    # =====================================================================
-    # 🔑 LEFT REALIGNMENT PASS: Configured with sticky="w" to lock alignment flush left!
-    lbl_std = sCTkLabelSecondary(base, text="[Standard ctk.CTkSwitch Subclass]", font=("Arial", 11, "bold"))
-    lbl_std.grid(row=0, column=0, padx=40, pady=(15, 2), sticky="w")
-
-    switch_std = sCTkSwitch(
-        base,
-        text="Standard Pre-Amp Link Channel",
-        command=lambda val: print(f"Standard Pass -> State Value: {val}")
-    )
-    switch_std.grid(row=1, column=0, padx=40, pady=10, sticky="w")
-
-    # =====================================================================
-    # 🎛️ MODULE 2: Alternative Switch (Custom Composite Drawing Variant)
-    # =====================================================================
-    lbl_alt = sCTkLabelSecondary(base, text="[Alternative sCTkSwitchAlt Custom Draw]", font=("Arial", 11, "bold"))
-    lbl_alt.grid(row=2, column=0, padx=40, pady=(25, 2), sticky="w")
-
-    switch_alt = sCTkSwitchAlt(
-        base,
-        text="Advanced VFO Frequency Lock Link",
-        command=lambda val: print(f"Alternative Pass -> State Value: {val}")
-    )
-    switch_alt.grid(row=3, column=0, padx=40, pady=10, sticky="w")
-
-
-    # =====================================================================
-    # 🛠️ INTERACTIVE BENCH LOOK CONTROLLERS
-    # =====================================================================
-    def toggle_framework_locks():
-        """Toggles operational locked states across both components smoothly."""
-        current_std = switch_std.get_state()
-        target = "disabled" if current_std == "normal" else "normal"
-
-        switch_std.configure(state=target)
-        switch_alt.configure(state=target)
-
-        btn_lock.configure(
-            text="Unlock Panel (Set 'normal')" if target == "disabled" else "Lock Panel (Set 'disabled')")
-
-
-    def toggle_skin_preference():
-        """Toggles between Light and Dark application window appearances dynamically."""
-        ctk.set_appearance_mode("Light" if ctk.get_appearance_mode() == "Dark" else "Dark")
-
-
-    # Arrange execution buttons layout grids at the lower edge of the screen capsule
-    btn_lock = sCTkButtonPrimary(root, text="Lock Panel (Set 'disabled')", command=toggle_framework_locks)
-    btn_lock.pack(side="bottom", pady=5)
-
-    btn_skin = sCTkButtonPrimary(root, text="Toggle UI Light/Dark Appearance", command=toggle_skin_preference)
-    btn_skin.pack(side="bottom", pady=5)
-
-    root.mainloop()
-```
-
-
-
-
 ## sCTkTableview
 
-The `sCTkTableview` is a high-performance, theme-adaptive, and interactive data grid widget engineered specifically for the `sCustomTkinter` desktop amateur radio workspace architecture. It wraps a specialized scrollable container viewport to render structured, matrix-aligned logging rows, transceiver channels, or telemetry tracking data.
-
-
-![sCTkTableview_Dark.png](src/images/sCTkTableview_Dark.png)
-![sCTkTableview_Light.png](src/images/sCTkTableview_Light.png)
-
-
-<a name="contents"></a>
-### 📌 Localized Table of Contents
-* [API Constructor Reference](#constructor)
-* [Method Resolution Order (MRO) Taxonomy](#mro-taxonomy)
-* [Pygubu Workspace Property Envelopes](#pygubu-envelopes)
-* [Global Object Instance Methods](#methods)
-* [Centralized Stylesheet Integration](#stylesheet)
-* [Implementation Reference Template](#template)
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-<a name="constructor"></a>
-### 📋 API Constructor Reference
+### Overview
+
+`sCTkTableview` is a theme-compliant, scrollable grid of labeled cells — a simple spreadsheet-like table, with optional zebra-striped rows, click and edit callbacks, and in-place cell editing. It's built by inheriting `sCTkScrollableFrame` directly, using its scrolling and label feature, then laying out its own header row and cell grid on top.
+
+<img src="src/images/sCTkTableview_Dark.png" alt="sCTkTableview in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkTableview_Light.png" alt="sCTkTableview in light mode" style="border: 2px solid #555555;">
+
+This widget inherits `sCTkScrollableFrame` directly — the same composition pattern used by `sCTkSelector` — and previously needed a fragile workaround for it: temporarily overwriting its own `self.__class__.__name__` during construction, to trick `sCTkScrollableFrame`'s internal `ThemeableWidget.__init__` call into reading a harmless theme block instead of corrupting this widget's own. That workaround has been removed entirely. `ThemeableWidget`'s run-once guard now prevents the double-init outright, and `sCTkScrollableFrame` itself filters its inbound kwargs down to only what native `CTkScrollableFrame` actually accepts — confirmed directly against CustomTkinter's source to have no `**kwargs` catch-all at all, so this filtering matters more here than for almost any other widget in this project.
+
+---
+
+### Constructor
 
 ```python
-table = sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra", header_line_width=2, outline_width=1.0, outline_radius=4, state="normal", num_columns=3, num_rows=1, show_headers=True, cell_bg_color=None, cell_alt_bg_color=None, *args, **kwargs)
+sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra",
+              header_line_width=2, outline_width=1.0, outline_radius=4,
+              state="normal", num_columns=3, num_rows=1, show_headers=True,
+              cell_bg_color=None, cell_alt_bg_color=None, *args, **kwargs)
 ```
 
-| Parameter Name | Data Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `master` | `any` | *Required* | Reference pointer tracking your root window or parent layout container. |
-| `columns` | `list` / `str` | `None` | Structured list of header strings or a raw comma-separated tracking string token payload. |
-| `grid_mode` | `str` | `"zebra"` | Visual row background arrangement tracker: can accept `"grid"`, `"zebra"`, or `"none"`. |
-| `header_line_width`| `int` | `2` | Dimensional vertical scale of the separating accent bar gridded underneath the header elements. |
-| `outline_width` | `float` | `1.0` | Outer bounding box line size bounding the master border layout frame container. |
-| `outline_radius` | `int` | `4` | Corner corner-radius roundness assigned specifically onto the bounding frame layouts. |
-| `state` | `str` | `"normal"` | Initial execution state ring variable: can accept `"normal"` or `"disabled"`. |
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | — | Parent container. |
+| `columns` | `list[str]` or comma-separated `str` | `None` | Column header labels. |
+| `width` / `height` | `int` | `500` / `300` | Overall widget dimensions in pixels. |
+| `grid_mode` | `"zebra"` / `"grid"` / `"none"` | `"zebra"` | Row background styling. |
+| `header_line_width` | `int` | `2` | Header row's bottom border thickness. |
+| `outline_width` / `outline_radius` | `float` / `int` | `1.0` / `4` | Outer table border thickness and corner rounding. |
+| `state` | `"normal"` / `"disabled"` | `"normal"` | Initial state. |
+| `num_columns` / `num_rows` | `int` | `3` / `1` | Initial grid size when `columns` isn't given. |
+| `show_headers` | `bool` | `True` | Whether the header row is shown. |
+| `cell_bg_color` / `cell_alt_bg_color` | color | `None` | Overrides the theme's cell background colors for this instance specifically — see [Theming](#theming-sctkthemesjson) for how this interacts with the theme file. |
+| `**kwargs` | — | — | Any native `CTkScrollableFrame` argument, or an override for one of the other theme keys listed under [Theming](#theming-sctkthemesjson). |
 
-[Go to Piece 1B of 2](#mro-taxonomy) | [Return to Table of Contents](#contents)
-<a name="methods"></a>
-### ⚡ Global Object Instance Methods
-
-#### Unified State Gateway Handler
 ```python
-# GETTER: Returns the active operational state string ('normal' or 'disabled')
-current_mode = table.state()
-
-# SETTER: Freezes grid cell edits and dynamically applies themes.json desaturation tokens
-table.state("disabled")
-```
-
-#### Programmatically Apply Live Configuration Changes
-```python
-# Dynamically adjusts grid modes or row limits and triggers full table redraw sweeps
-table.configure(grid_mode="grid", num_rows=12)
-```
-
-#### Fetch Active Operational Tracking Dimensions
-```python
-row_count = table.get_num_rows()       # Returns absolute gridded row limits
-column_count = table.get_num_columns() # Returns true managed structural column counts
-```
-
-#### Manage Column Properties & Justification Anchors
-```python
-# Configures structural widths and justifies cell strings ('w', 'center', 'e') safely
-table.set_column_properties(column_index=0, width=140, anchor="w")
-```
-
-#### Register Callback Intercept Listeners
-```python
-# Selection Listener Pass
-table.bind_selection_callback(lambda r_idx, row_data: print(f"Row {r_idx} clicked: {row_data}"))
-
-# Inline Edit Pre-Save Validator (Must return True to accept changes, or False to reject)
-table.bind_validation_callback(lambda col_idx, raw_string: len(raw_input_string.strip()) > 0)
-
-# Post-Save Commit Event Callback
-table.bind_edit_callback(lambda r, c, committed_val: log.info(f"Committed cell update: {committed_val}"))
+readings_table = sCTkTableview(control_panel, columns=["Time", "Frequency", "Signal"], num_rows=8)
+readings_table.pack(expand=True, fill="both", padx=20, pady=20)
 ```
 
 ---
 
-<a name="stylesheet"></a>
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+### Methods
 
-To minimize repository file footprints, the component drives its cascading color passes from a single profile key block. The standard text desaturation variables, grid dividers, and zebra backgrounds align natively within a single block configuration.
+| Method | Returns | Description |
+|---|---|---|
+| `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus `state=...` triggers a full color/font re-application across every header and cell. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key below, plus `cell_bg_color`/`cell_alt_bg_color` (which can also come from the constructor, see below).
+- **Re-applied on every `state()` change.**
 
 ```json
 {
     "sCTkTableview": {
-        "header_bg_color": ["#1A4375", "#1F6AA5"],
-        "header_text_color": ["#FFFFFF", "#FFFFFF"],
-        "header_font": ["Arial", 13, "bold"],
-        "cell_bg_color": ["#FFFFFF", "#1E293B"],
-        "cell_alt_bg_color": ["#F8FAFC", "#334155"],
-        "cell_text_color": ["#1A1A1A", "#FFFFFF"],
-        "cell_font": ["Arial", 12, "normal"],
-        "grid_line_color": ["#CBD5E1", "#475569"],
+        "header_bg_color": ["#E2E8F0", "#0F172A"],
+        "header_text_color": ["#0F172A", "#F8FAFC"],
+        "header_font": ["Arial", 14, "bold"],
+        "cell_bg_color": ["#FFFFFF", "#111827"],
+        "cell_alt_bg_color": ["#D1DCEE", "#222C3A"],
+        "cell_text_color": ["#1E293B", "#E2E8F0"],
+        "cell_font": ["Arial", 13, "normal"],
+        "grid_line_color": ["#CBD5E1", "#334155"],
         "disabled_map": {
-            "header_bg_color": ["#CBD5E1", "#334155"],
+            "header_bg_color": ["#CBD5E1", "#1E293B"],
             "header_text_color": ["#94A3B8", "#64748B"],
             "cell_bg_color": ["#F1F5F9", "#1F2937"],
-            "cell_alt_bg_color": ["#E2E8F0", "#111827"],
+            "cell_alt_bg_color": ["#E2E8F0", "#263241"],
             "cell_text_color": ["#94A3B8", "#64748B"],
-            "grid_line_color": ["#CBD5E1", "#475569"]
+            "grid_line_color": ["#E2E8F0", "#293548"]
         }
     }
 }
 ```
 
-[Go to Piece 2B of 3](#template) | [Return to Table of Contents](#contents)
-<a name="template"></a>
-### 💻 Implementation Reference Template
+All six colors are required both at the top level and in `disabled_map` — missing any raises immediately at construction, naming the exact key. `header_font`/`cell_font` are required only at the top level; no widget in this project uses a disabled-state font variant.
 
-This standalone verification program demonstrates how to correctly embed the `sCTkTableview` within a parent container panel, tracking cell data inputs and state locks cleanly.
+**`cell_bg_color`/`cell_alt_bg_color` are the two exceptions** — they can come from either the theme block *or* the constructor kwarg of the same name, so it's only a hard failure if *neither* provides a value. Whichever one this instance resolves to at construction is remembered and correctly restored on every return to `"normal"` — an earlier version always reverted to the theme's value on re-enable, silently discarding a constructor override after a disable/enable cycle.
+
+Colors are passed through as raw `(light, dark)` tuples, letting CustomTkinter's native appearance-mode tracking handle repaints — an earlier version resolved disabled-state colors to a single fixed string while leaving enabled-state colors as tuples, meaning a disabled table would stop following light/dark mode changes while an enabled one kept working correctly. Both branches are now consistent.
+
+---
+
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Tableview
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelPrimary, sCTk, sCTkTableview
+from scustomtkinter import sCTk, sCTkFrame, sCTkTableview, sCTkButtonPrimary
 
 if __name__ == "__main__":
     root = sCTk()
-    root.title("sCTkTableview Full Validation & State Showcase")
-    root.geometry("640x540")
-    root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
+    root.geometry("400x300")
+    root.title("Tableview Example")
 
-    # 2. Mount custom master container using framework primitives
-    border_capsule = sCTkFrame(root, border_width=2)
-    border_capsule.pack(padx=20, pady=20, fill="both", expand=True)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    cols = ["Channel Label", "Frequency (MHz)", "Mode", "Station Name"]
+    table = sCTkTableview(base, columns=["Time", "Frequency", "Signal"], num_rows=6)
+    table.pack(expand=True, fill="both", pady=10)
 
-    # 3. Initialize data grid component wrapper cleanly
-    table = sCTkTableview(
-        border_capsule,
-        columns=cols,
-        grid_mode="zebra",
-        header_line_width=3,
-        outline_width=1.5,
-        outline_radius=6,
-        state="normal"
-    )
-    table.pack(padx=12, pady=12, fill="both", expand=True)
-
-    # Establish proportional column dimension parameters and text anchors
-    table.set_column_properties(0, width=110, anchor="w")
-    table.set_column_properties(1, width=120, anchor="center")
-    table.set_column_properties(2, width=70, anchor="center")
-    table.set_column_properties(3, width=250, anchor="w")
-
-    ham_stations = [
-        ["160M-VOX", "1.8400", "LSB", "160m - Voice / Calling"],
-        ["40M-LSB", "7.2000", "LSB", "40m - LSB Voice Calling"],
-        ["40M-FT8", "7.0740", "USB", "40m - FT8 Digital Mode"],
-        ["20M-FT8", "14.0740", "USB", "20m - FT8 Digital Mode"],
-        ["17M-USB", "18.1300", "USB", "17m - USB Voice Calling"],
-        ["15M-USB", "21.3000", "USB", "15m - USB Voice Calling"],
-        ["12M-USB", "24.9500", "USB", "12m - USB Voice Calling"],
-        ["10M-USB", "28.4000", "USB", "10m - Tech / General Voice"]
-    ]
-    table.load_dataset(ham_stations)
-
-    # 4. Define robust cell entry constraints to filter updates safely
-    def validate_table_cell_changes(column_index: int, raw_input_string: str) -> bool:
-        cleaned_input = str(raw_input_string).strip()
-        if column_index == 1:
-            try:
-                float(cleaned_input)
-                return True
-            except ValueError:
-                return False
-        if column_index == 2:
-            return cleaned_input.upper() in ["LSB", "USB", "AM", "FM", "CW"]
-        return len(cleaned_input) > 0
-
-    # 5. Bind callback listeners cleanly to public forwarding hooks
-    table.bind_validation_callback(validate_table_cell_changes)
-    table.bind_selection_callback(lambda r, vals: print(f"📡 Clicked Row: {r} -> {vals}"))
-    table.bind_edit_callback(lambda r, c, val: print(f"📝 Persistent Data Saved ({r}, {c}) -> '{val}'"))
-
-    # =====================================================================
-    # 🛠️ PANEL LAYOUT ACTION INTERCEPT CONTROLLERS
-    # =====================================================================
-    def toggle_grid_lock():
-        """Toggles active data row selections and blocks text entry editing."""
-        current_mode = table.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
+    def toggle_disabled():
+        target = "disabled" if table.get_state() == "normal" else "normal"
         table.configure(state=target)
-        btn_lock.configure(text="Unlock Tableview Grid" if target == "disabled" else "Lock Tableview Grid (Set 'disabled')")
-        print(f"Logged Verification Hook -> table.get_state() = {table.get_state()}")
+        toggle_btn.configure(text="Enable Table" if target == "disabled" else "Disable Table")
 
-    def toggle_skin_preference():
-        """Toggles between Light and Dark interface appearance preferences."""
-        ctk.set_appearance_mode("Light" if ctk.get_appearance_mode() == "Dark" else "Dark")
-
-    # Arrange test interaction buttons horizontally across the lower tray area
-    control_tray = sCTkFrame(root, fg_color="transparent")
-    control_tray.pack(side="bottom", fill="x", padx=20, pady=(0, 15))
-
-    btn_lock = sCTkButtonPrimary(control_tray, text="Lock Tableview Grid (Set 'disabled')", command=toggle_grid_lock)
-    btn_lock.pack(side="left", expand=True, padx=5)
-
-    btn_skin = sCTkButtonPrimary(control_tray, text="Toggle UI Light/Dark Appearance", command=toggle_skin_preference)
-    btn_skin.pack(side="right", expand=True, padx=5)
-
-    # table.bind_validation_callback(validate_table_cell_changes)
-    # table.bind_selection_callback(lambda r, vals: print(f"📡 Clicked Row: {r} -> {vals}"))
-    # table.bind_edit_callback(lambda r, c, val: print(f"📝 Persistent Data Saved ({r}, {c}) -> '{val}'"))
-    # table.configure(state="disabled")
+    toggle_btn = sCTkButtonPrimary(base, text="Disable Table", command=toggle_disabled)
+    toggle_btn.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- Missing a required theme key raises `KeyError` at construction, naming exactly which key and whether it's needed at the top level or in `disabled_map` — check the exact message if construction fails after a theme file change.
+- Calling `configure("propname")` for most single-argument property queries falls through to the native widget's `configure()`, which doesn't support arbitrary single-argument queries — the same known gap as elsewhere in this project's Pygubu-query investigation.
 
 [Return to Table of Contents](#contents)
 

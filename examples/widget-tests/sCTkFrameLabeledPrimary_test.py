@@ -4,7 +4,7 @@
 # 🛠️ TESTING HARNESS IMPORTS & SETUP for Frame Labeled Primary
 # =====================================================================
 
-from scustomtkinter import sCTkButtonPrimary, sCTkLabelSecondary, CTk, sCTkFrameLabeledPrimary
+from scustomtkinter import sCTkButtonPrimary, sCTkLabelSecondary, sCTk, sCTkFrameLabeledPrimary
 
 
 if __name__ == "__main__":

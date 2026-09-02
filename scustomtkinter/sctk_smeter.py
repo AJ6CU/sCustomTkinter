@@ -13,17 +13,38 @@ import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
 
 class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
-    def __init__(self, master=None, width=250, height=130, **kw):
+    # Required at the TOP LEVEL of the theme block. No `.get(key, fallback)`
+    # anywhere in the draw code: an incomplete block fails at construction
+    # naming the missing key, rather than silently substituting a plausible
+    # guess that makes a broken theme look merely slightly-off.
+    _REQUIRED_THEME_KEYS = ("fg_color", "text_color", "alarm_color",
+                            "needle_color", "font", "scale_font")
+
+    # Required inside disabled_map. fg_color deliberately excluded -- the
+    # background stays put when disabled and the face carries the signal,
+    # matching sCTkScrollableFrame and the dial family.
+    _REQUIRED_DISABLED_KEYS = ("text_color", "alarm_color", "needle_color")
+
+    def __init__(self, master=None, width=250, height=130, state="normal", **kw):
         # 1. Initialize our Themeable mixin tracker cleanly
         ThemeableWidget.__init__(self, kw)
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
+        self._state = "normal" if str(state).lower() == "normal" else "disabled"
+        self._validate_theme_keys()
 
-        # 2. 🔑 FIXED FALLBACK VALUE: Set the default background track to an adaptive Light/Dark tuple pair!
-        theme_bg_raw = self._local_defaults.pop("fg_color", ("#F8FAFC", "#0A0A0A"))
+        # 2. Background track. Popped because super().__init__() takes it as a
+        # separate argument -- but RETAINED on the instance, which is the fix
+        # for a real bug: _draw_meter() and _update_theme_colors() both did
+        # self._local_defaults.get("fg_color", hardcoded) AFTER this pop
+        # removed the key, so the background always rendered the hardcoded
+        # fallback and the configured fg_color never applied.
+        theme_bg_raw = self._local_defaults.pop("fg_color")
+        self._theme_bg_raw = theme_bg_raw
 
         # Forcefully scrub custom canvas-drawing parameters out of self.final_kw
-        for gauge_custom_key in ["fg_color", "text_color", "alarm_color", "needle_color", "font"]:
+        for gauge_custom_key in ["fg_color", "text_color", "alarm_color", "needle_color",
+                                 "font", "scale_font"]:
             self.final_kw.pop(gauge_custom_key, None)
 
         # 3. Pass dimensions and sanitized kwargs down to the parent frame engine safely
@@ -46,6 +67,76 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
         self.canvas.bind("<Configure>", lambda e: self._draw_meter())
         self._finalize_themeable_lifecycle()
 
+    def _validate_theme_keys(self) -> None:
+        """
+        Hard-fails at construction on an incomplete theme block, naming the
+        missing key and where it belongs. Same fail-loud principle used
+        across this project.
+
+        Raises:
+            KeyError: naming the first missing key found.
+        """
+        name = self.__class__.__name__
+        for key in self._REQUIRED_THEME_KEYS:
+            if self._local_defaults.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' at the top level "
+                    f"of sCTkThemes.json."
+                )
+        for key in self._REQUIRED_DISABLED_KEYS:
+            if self._custom_disabled_map.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' in disabled_map."
+                )
+
+    def _themed(self, key: str):
+        """
+        Returns the disabled-state value for a key when disabled and one
+        exists, otherwise the normal value.
+
+        Args:
+            key: Theme key to resolve.
+
+        Returns:
+            A raw (light, dark) tuple -- pass through _resolve_color().
+        """
+        if self._state == "disabled" and self._custom_disabled_map.get(key) is not None:
+            return self._custom_disabled_map[key]
+        return self._local_defaults.get(key)
+
+    def get_state(self) -> str:
+        """Returns the current state, "normal" or "disabled"."""
+        return self._state
+
+    def state(self, mode: str = None) -> str:
+        """
+        Gets or sets the widget state.
+
+        This is an output-only instrument -- there is nothing to lock out --
+        so disabling dims the face rather than blocking interaction. It exists
+        for consistency with the rest of the library, so a panel can disable
+        every widget it contains uniformly.
+
+        Args:
+            mode: None to query. "normal"/"enabled"/"active" or "disabled" to set.
+
+        Returns:
+            The resulting state.
+        """
+        if mode is None:
+            return self._state
+        target = str(mode).lower()
+        self._state = "normal" if target in ("normal", "enabled", "active") else "disabled"
+        if hasattr(self, "canvas") and self.canvas.winfo_exists():
+            self._draw_meter()
+        return self._state
+
+    def cget(self, attribute_name):
+        """Standard accessor, extended to know about `state`."""
+        if attribute_name == "state":
+            return self._state
+        return super().cget(attribute_name)
+
     def configure(self, *args, **kwargs):
         """Handles Pygubu layout inspector dictionary merges and parameter modifications safely."""
         if args and len(args) == 1:
@@ -54,10 +145,20 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
                 return ('width', 'width', 'Width', self._default_width, super().cget("width"))
             if pname == "height":
                 return ('height', 'height', 'Height', self._default_height, super().cget("height"))
+            if pname == "state":
+                return ('state', 'state', 'state', 'normal', self._state)
             return super().configure(*args, **kwargs)
 
-        if args and isinstance(args, dict):
-            kwargs = args | kwargs
+        # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
+        # tuple, so this never fired and the dict form of configure() was dead
+        # code. Same tautology fixed across the batch-one widgets.
+        if len(args) == 1 and isinstance(args[0], dict):
+            kwargs = {**args[0], **kwargs}
+
+        # state is this library's own property, not a native CTkFrame one, and
+        # must be removed before the super() call below.
+        if "state" in kwargs:
+            self.state(kwargs.pop("state"))
 
         if "width" in kwargs:
             w = kwargs["width"]
@@ -66,7 +167,8 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
             h = kwargs["height"]
             kwargs["height"] = int(h) if (h and str(h).strip()) else self._default_height
 
-        super().configure(**kwargs)
+        if kwargs:
+            super().configure(**kwargs)
         if hasattr(self, "canvas") and self.canvas.winfo_exists():
             self._draw_meter()
 
@@ -84,7 +186,7 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
 
     def _update_theme_colors(self):
         """Refreshes the canvas widget background color directly from your asset maps."""
-        bg_color = self._resolve_color(self._local_defaults.get("fg_color", ("#F8FAFC", "#0A0A0A")))
+        bg_color = self._resolve_color(self._theme_bg_raw)
         self.canvas.configure(bg=bg_color)
         self._draw_meter()
 
@@ -95,11 +197,13 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
         height = self.canvas.winfo_height()
         if width < 10 or height < 10: return
 
-        # 🔑 FIXED FALLBACK VALUES: Ensure the look variables map to adaptive profiles safely
-        bg = self._resolve_color(self._local_defaults.get("fg_color", ("#F8FAFC", "#0A0A0A")))
-        amber = self._resolve_color(self._local_defaults.get("text_color", ("#FF9100", "#FF9100")))
-        red = self._resolve_color(self._local_defaults.get("alarm_color", ("#FF2200", "#FF2200")))
-        font = self._local_defaults.get("font", ("Arial", 10, "bold"))
+        # No fallbacks: _validate_theme_keys() hard-failed at construction if
+        # any of these were missing, so every lookup is guaranteed to resolve.
+        bg = self._resolve_color(self._theme_bg_raw)
+        amber = self._resolve_color(self._themed("text_color"))
+        red = self._resolve_color(self._themed("alarm_color"))
+        font = self._local_defaults.get("font")
+        scale_font = self._local_defaults.get("scale_font")
         self.canvas.configure(bg=bg)
 
         # UNIFIED GEOMETRY BASELINE: Establishes a singular, shared layout pivot for lines and needles
@@ -134,12 +238,12 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
                 label = "" if i == 0 else (f"{i}" if i <= 9 else {11: "+20", 13: "+40", 15: "+60"}.get(i, ""))
                 text_radius = radius_sig + 16
                 tx, ty = center_x + text_radius * math.cos(ang), center_y - text_radius * math.sin(ang)
-                if label: self.canvas.create_text(tx, ty, text=label, fill=red if is_red else amber, font=font)
+                if label: self.canvas.create_text(tx, ty, text=label, fill=red if is_red else amber, font=scale_font)
 
                 if i == 1:
                     ang_zero = math.radians(self.start_angle + (self.extent_angle * (1.0 - 0.0)))
                     sx, sy = center_x + text_radius * math.cos(ang_zero), center_y - text_radius * math.sin(ang_zero)
-                    self.canvas.create_text(sx, sy, text="S", fill=amber, font=font)
+                    self.canvas.create_text(sx, sy, text="S", fill=amber, font=scale_font)
 
         self._execute_needle_draw(center_x, center_y, radius_sig)
 
@@ -153,7 +257,7 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
 
         nx, ny = cx + (rad + 2) * math.cos(ang), cy - (rad + 2) * math.sin(ang)
         bx, by = cx + (rad - 60) * math.cos(ang), cy - (rad - 60) * math.sin(ang)
-        color = self._resolve_color(self._local_defaults.get("needle_color", ("#94A3B8", "#FF9100")))
+        color = self._resolve_color(self._themed("needle_color"))
 
         self.canvas.delete("needle")
         self.canvas.create_line(bx, by, nx, ny, fill=color, width=2, tags="needle")

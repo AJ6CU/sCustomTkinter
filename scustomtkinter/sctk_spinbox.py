@@ -1,10 +1,23 @@
 #!/usr/bin/python3
 """
-sCTkSpinbox - Piece 1 of 3
+sCTkSpinbox
 
 A theme-compliant, highly configurable custom spinbox wrapper component.
 Operates entirely programmatically via get() and set() methods, bypassing
 textvariable trace conflicts to guarantee pristine placeholder rendering.
+
+Supports a genuine three-state model: normal / readonly / disabled, matching
+real ttk.Spinbox semantics. In readonly mode, the entry can't be typed into
+directly, but the increment/decrement buttons stay fully clickable -- an
+earlier version collapsed anything that wasn't literally "disabled" into
+"normal", silently discarding any readonly request (confirmed: two separate
+mechanisms both erased it -- the state-cascade applied one value uniformly to
+entry and buttons, which can't express the distinction readonly needs, and
+_apply_custom_theme_colors() ran a hardcoded disabled-or-normal binary check
+unconditionally after every configure() call, overwriting whatever the
+cascade had done). Readonly routes through sCTkEntryPrimary's own three-state
+_update_current_visual_state(), which is where the actual readonly colors and
+required-key validation live -- see that widget for the full detail.
 """
 import shlex
 
@@ -20,13 +33,43 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
 
         ThemeableWidget.__init__(self, kw)
         self._local_defaults = dict(self.final_kw)
-        self._custom_disabled_map = self._local_defaults.get("disabled_map", {})
+        # FIX: an earlier version read "disabled_map" out of self._local_defaults
+        # (== dict(self.final_kw)), but ThemeableWidget.__init__ deliberately
+        # excludes "disabled_map" from final_kw -- this always evaluated to the
+        # empty-dict default, meaning EVERY disabled-state color lookup below
+        # silently fell back to its hardcoded literal instead of the real
+        # theme. Confirmed identical bug, same fix, as sCTkSwitch and
+        # sCTkTableview elsewhere in this project.
+        self._custom_disabled_map = dict(self._widget_disabled_map)
+        # readonly_map: mirrors sCTkEntryPrimary's own pattern -- required
+        # only when readonly is actually requested, validated in
+        # _apply_custom_theme_colors().
+        self._custom_readonly_map = dict(self._widget_readonly_map)
 
         button_width = self._local_defaults.pop("button_width", 22)
         button_height = self._local_defaults.pop("button_height", None)
         button_side = self._local_defaults.pop("button_side", "right")
         orientation = self._local_defaults.pop("orientation", "vertical")
-        arrow_font_size = self._local_defaults.pop("arrow_font_size", 11)
+        # FIX: an earlier version only ever looked for "arrow_font_size" (a
+        # bare number) here, but the real theme key is "arrow_font" -- a full
+        # (family, size, weight) tuple, matching the convention used for
+        # every other font in this theme file. Since "arrow_font_size" never
+        # actually existed in the theme, this always silently fell back to
+        # its hardcoded default (11), and the font family/weight were
+        # separately hardcoded to "Arial"/"normal" a few lines down --
+        # meaning the real theme's arrow_font value was never applied at
+        # all. Now reads arrow_font properly, while still allowing
+        # arrow_font_size to independently override just the size (e.g. via
+        # configure(arrow_font_size=14)) without needing to respecify the
+        # full tuple.
+        arrow_font_theme = self._local_defaults.pop("arrow_font", None)
+        if isinstance(arrow_font_theme, (list, tuple)) and len(arrow_font_theme) >= 2:
+            default_arrow_family = str(arrow_font_theme[0])
+            default_arrow_size = arrow_font_theme[1]
+            default_arrow_weight = str(arrow_font_theme[2]) if len(arrow_font_theme) >= 3 else "normal"
+        else:
+            default_arrow_family, default_arrow_size, default_arrow_weight = "Arial", 11, "normal"
+        arrow_font_size = self._local_defaults.pop("arrow_font_size", default_arrow_size)
         format_str = self._local_defaults.pop("format", None)
         values = self._local_defaults.pop("values", None)
         wrap_val = kw.pop("wrap", wrap)
@@ -42,7 +85,8 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
 
         super().__init__(master, width=width, height=height, fg_color="transparent", **self.final_kw)
 
-        self._arrow_font_family = "Arial"
+        self._arrow_font_family = default_arrow_family
+        self._arrow_font_weight = default_arrow_weight
         self._arrow_font_size = int(arrow_font_size)
         self._from, self._to, self._step_size = float(from_), float(to), float(step_size)
         self._wrap = wrap_val if isinstance(wrap_val, bool) else (str(wrap_val).lower() in ("true", "1", "yes"))
@@ -52,7 +96,13 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         self._values = self._parse_string_list(values) if values else []
         self._current_index = 0 if self._values else -1
         self._button_width, self._button_side, self._orientation = int(button_width), str(button_side).lower(), str(orientation).lower()
-        self._state = "normal" if str(state).lower() == "normal" else "disabled"
+        # FIX: an earlier version collapsed anything that wasn't literally
+        # "normal" into "disabled" -- meaning state="readonly" passed to the
+        # constructor was silently treated as disabled. Now supports a
+        # genuine three-state model matching ttk.Spinbox's real semantics
+        # (normal/readonly/disabled); see class docstring.
+        _initial_state = str(state).lower()
+        self._state = _initial_state if _initial_state in ("normal", "readonly", "disabled") else "normal"
         self._button_height = int(button_height) if button_height is not None else ((height // 2) - 1 if self._orientation == "vertical" else height)
 
         used_buttons = 2 if self._button_side == "split" or self._orientation == "horizontal" else 1
@@ -91,8 +141,8 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
 
         up_char = self._local_defaults.get("arrow_right_char", "▶") if self._orientation == "horizontal" else self._local_defaults.get("arrow_up_char", "▲")
         down_char = self._local_defaults.get("arrow_left_char", "◀") if self._orientation == "horizontal" else self._local_defaults.get("arrow_down_char", "▼")
-        self.up_button.configure(text=up_char, font=(self._arrow_font_family, self._arrow_font_size))
-        self.down_button.configure(text=down_char, font=(self._arrow_font_family, self._arrow_font_size))
+        self.up_button.configure(text=up_char, font=(self._arrow_font_family, self._arrow_font_size, self._arrow_font_weight))
+        self.down_button.configure(text=down_char, font=(self._arrow_font_family, self._arrow_font_size, self._arrow_font_weight))
 
         if self._orientation == "horizontal":
             self.grid_rowconfigure(0, weight=1); self.grid_columnconfigure(1, weight=1)
@@ -159,6 +209,17 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             rebuild_grid = True
 
         if "arrow_font_size" in kwargs: self._arrow_font_size = int(kwargs.pop("arrow_font_size")); rebuild_grid = True
+        # New: allows setting the full (family, size, weight) tuple at once,
+        # now that these attributes are genuinely used rather than
+        # hardcoded. arrow_font_size above remains available too, for
+        # changing just the size without respecifying family/weight.
+        if "arrow_font" in kwargs:
+            new_arrow_font = kwargs.pop("arrow_font")
+            if isinstance(new_arrow_font, (list, tuple)) and len(new_arrow_font) >= 2:
+                self._arrow_font_family = str(new_arrow_font[0])
+                self._arrow_font_size = int(new_arrow_font[1])
+                self._arrow_font_weight = str(new_arrow_font[2]) if len(new_arrow_font) >= 3 else "normal"
+                rebuild_grid = True
         if "placeholder_text" in kwargs:
             self._placeholder_text = kwargs["placeholder_text"]
             if self._placeholder_text and str(self._placeholder_text).strip() != "" and hasattr(self, "entry") and self.entry.winfo_exists():
@@ -176,10 +237,25 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
 
         if "state" in kwargs:
             self._state = str(kwargs.pop("state")).lower()
-            for child in [self.entry, self.up_button, self.down_button]:
-                if hasattr(child, "winfo_exists") and child.winfo_exists(): child.configure(state=self._state)
+            if self._state not in ("normal", "readonly", "disabled"):
+                self._state = "normal"
+            # Entry gets the full three-way state -- routed through its own
+            # state() so sCTkEntryPrimary's own readonly_map/disabled_map
+            # color logic applies correctly. Buttons only ever get normal/
+            # disabled -- "readonly" is not a real native CTkButton state,
+            # and per ttk.Spinbox's own readonly semantics, the
+            # increment/decrement arrows stay fully clickable in readonly
+            # mode; only the entry becomes non-typable.
+            if hasattr(self.entry, "winfo_exists") and self.entry.winfo_exists():
+                if hasattr(self.entry, "state"):
+                    self.entry.state(self._state)
+                else:
+                    self.entry.configure(state=self._state)
+            button_state = "disabled" if self._state == "disabled" else "normal"
+            for child in [self.up_button, self.down_button]:
+                if hasattr(child, "winfo_exists") and child.winfo_exists(): child.configure(state=button_state)
 
-        for pop_custom_key in ["from_", "to", "step_size", "button_width", "button_height", "button_side", "orientation", "arrow_font_size", "format", "values", "wrap"]: kwargs.pop(pop_custom_key, None)
+        for pop_custom_key in ["from_", "to", "step_size", "button_width", "button_height", "button_side", "orientation", "arrow_font_size", "arrow_font", "format", "values", "wrap"]: kwargs.pop(pop_custom_key, None)
         for k, v in list(kwargs.items()):
             if v == "": kwargs.pop(k)
 
@@ -190,6 +266,11 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
 
     def cget(self, attribute_name):
         pname = str(attribute_name).lower()
+        if pname == "arrow_font":
+            # Special case: no single self._arrow_font attribute exists --
+            # family/size/weight are tracked separately (see __init__), so
+            # the generic dynamic-lookup pattern below can't be reused here.
+            return (self._arrow_font_family, self._arrow_font_size, self._arrow_font_weight)
         if pname in ["state", "from_", "to", "step_size", "button_width", "button_height", "button_side", "orientation",
                      "arrow_font_size", "format", "wrap", "values"]: return getattr(self, f"_{pname}")
         return super().cget(attribute_name)
@@ -246,10 +327,18 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             if getattr(self, "_values", None):
                 display_text = str(value)
                 if display_text in self._values: self._current_index = self._values.index(display_text)
-                self.entry.configure(state="normal");
-                self.entry.delete(0, "end");
-                self.entry.insert(0, display_text);
-                self.entry.configure(state="normal" if self._state == "normal" else "readonly")
+                # FIX: an earlier version hardcoded state="normal" if self._state
+                # == "normal" else "readonly" here -- meaning a disabled spinbox
+                # would incorrectly end up "readonly" instead of staying
+                # disabled. Uses the same save/restore pattern already correct
+                # in the success path above, which works regardless of which
+                # of the three real states (normal/readonly/disabled) was
+                # actually active.
+                old = self.entry.cget("state")
+                self.entry.configure(state="normal")
+                self.entry.delete(0, "end")
+                self.entry.insert(0, display_text)
+                self.entry.configure(state=old)
 
     def _increment_callback(self):
         if self._state == "disabled": return
@@ -303,6 +392,24 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         self._apply_custom_theme_colors()
 
     def state(self, mode: str = None) -> str:
+        """
+        Gets or sets the widget's normal/readonly/disabled visual state.
+
+        Args:
+            mode: If None, returns the current state without changing
+                anything. Otherwise forwarded to configure(state=mode), which
+                validates against ("normal", "readonly", "disabled") and
+                cascades correctly: the entry gets the full three-way state
+                (routed through its own state()), while the up/down buttons
+                only ever receive "normal" or "disabled" -- "readonly" is not
+                a real native CTkButton state, and per ttk.Spinbox's own
+                semantics, the arrows stay clickable in readonly mode anyway.
+
+        Returns:
+            If setting: echoes back `mode` exactly as given (not re-queried
+            afterward -- may not match self._state if configure() rejected
+            an invalid value). If querying: the current state string.
+        """
         if mode is None: return str(getattr(self, "_state", "normal")).lower()
         self.configure(state=mode)
         return mode
@@ -311,31 +418,100 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         return self.state()
 
     def _apply_custom_theme_colors(self):
-        if not hasattr(self, "entry") or not self.entry.winfo_exists(): return
-        is_disabled = self._state == "disabled"
-        m = self._custom_disabled_map if is_disabled else self._local_defaults
-        dm = self._custom_disabled_map
+        """
+        Applies colors and native state to the entry and both buttons, based
+        on self._state (normal/readonly/disabled).
 
-        d_b_text = self._resolve_color(dm.get("text_color", ("#94A3B8", "gray50")))
+        The entry's own colors are handled by its own state() call, which
+        triggers sCTkEntryPrimary's own three-state _update_current_visual_state()
+        -- see that widget for the full readonly-color logic and its required-
+        key validation. This method THEN overrides the entry's fg_color/
+        border_color/text_color with Spinbox's own theme keys ("entry_color"/
+        "border_color"/"text_color" from Spinbox's own theme block) for all
+        three states -- a deliberate, pre-existing design choice: Spinbox
+        controls its own entry's look via Spinbox-specific theme keys, not
+        the entry's own defaults. entry_color, border_color, and text_color
+        are required to be present in readonly_map specifically when readonly
+        is the current state -- if any are missing, this raises immediately
+        rather than silently falling back to normal/disabled colors, matching
+        the same principle used in sCTkEntryPrimary's own readonly validation.
+
+        Buttons only ever receive "normal" or "disabled" -- never "readonly",
+        which is not a real native CTkButton state, and which ttk.Spinbox's
+        own semantics require to stay clickable anyway. Button colors are
+        always read from self._local_defaults (normal) unless disabled, so
+        buttons look completely ordinary in readonly mode -- no readonly-
+        specific button color key exists or is needed.
+        """
+        if not hasattr(self, "entry") or not self.entry.winfo_exists(): return
+        current = self._state
+        is_disabled = current == "disabled"
+        is_readonly = current == "readonly"
+
+        # FIX: an earlier version used .get(key, hardcoded_literal) throughout
+        # this method for entry_color/border_color/text_color/button_color/
+        # button_hover_color -- silently substituting a guessed value whenever
+        # the real theme was incomplete. Matches the same hard-fail principle
+        # applied to sCTkSwitch, the label family, and sCTkTableview elsewhere
+        # in this project.
+        for required_key in ("entry_color", "border_color", "button_color", "button_hover_color", "text_color"):
+            if self._local_defaults.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
+                )
+        for required_key in ("entry_color", "border_color", "text_color", "button_color"):
+            if self._custom_disabled_map.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                )
+
+        if is_disabled:
+            m = self._custom_disabled_map
+        elif is_readonly:
+            m = self._custom_readonly_map
+            for required_key in ("entry_color", "border_color", "text_color"):
+                if m.get(required_key) is None:
+                    raise KeyError(
+                        f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                        f"in readonly_map -- required because state 'readonly' was requested."
+                    )
+        else:
+            m = self._local_defaults
+
+        dm = self._custom_disabled_map
+        d_b_text = dm.get("text_color")
 
         # 🔑 NATIVE ACTION ROUTING:
-        # Forcefully route the active status through sCTkEntryPrimary's public state tracker.
-        # This allows your custom entry class to execute its native content desaturation path seamlessly!
+        # Route the full three-way state through sCTkEntryPrimary's own
+        # public state tracker, so its own readonly_map/disabled_map color
+        # logic (and required-key validation for readonly) applies correctly.
         if hasattr(self.entry, "state"):
-            self.entry.state("disabled" if is_disabled else "normal")
+            self.entry.state(current)
         else:
-            self.entry.configure(state="disabled" if is_disabled else "normal")
+            self.entry.configure(state=current)
 
-        # Refresh fallback surface colors safely
-        self.entry.configure(
-            fg_color=m.get("entry_color", ("#FFFFFF", "#1E293B")),
-            border_color=m.get("border_color", ("#CBD5E1", "#475569"))
-        )
+        # Spinbox-specific color override, applied for all three states now.
+        entry_override = {
+            "fg_color": m.get("entry_color"),
+            "border_color": m.get("border_color"),
+        }
+        if is_readonly:
+            # text_color is only overridden for readonly -- normal/disabled
+            # never included it here originally, and sCTkEntryPrimary's own
+            # state() call already applies the correct text_color for those
+            # two states. Readonly needs it here too since Spinbox's own
+            # readonly_map is the source of truth for this override.
+            entry_override["text_color"] = m.get("text_color")
+        self.entry.configure(**entry_override)
 
-        b_color = self._resolve_color(self._local_defaults.get("button_color", ("#1A4375", "#1F6AA5")))
-        b_hover = self._resolve_color(self._local_defaults.get("button_hover_color", ("#112A4B", "#194A7A")))
-        b_text = self._resolve_color(self._local_defaults.get("text_color", ("#FFFFFF", "#FFFFFF")))
-        d_b_color = self._resolve_color(dm.get("button_color", ("#CBD5E1", "#374151")))
+        b_color = self._local_defaults.get("button_color")
+        b_hover = self._local_defaults.get("button_hover_color")
+        b_text = self._local_defaults.get("text_color")
+        d_b_color = dm.get("button_color")
+
+        # Buttons only ever get normal/disabled -- never readonly.
+        button_state = "disabled" if is_disabled else "normal"
 
         for b in [self.up_button, self.down_button]:
             if hasattr(b, "winfo_exists") and b.winfo_exists():
@@ -344,6 +520,6 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
                     hover_color=d_b_color if is_disabled else b_hover,
                     text_color=d_b_text if is_disabled else b_text,
                     text_color_disabled=d_b_text,
-                    state="disabled" if is_disabled else "normal"
+                    state=button_state
                 )
 

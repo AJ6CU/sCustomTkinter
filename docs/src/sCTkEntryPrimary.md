@@ -1,143 +1,163 @@
 ## sCTkEntryPrimary
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-themesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-Dominant form input lane widget variant designed for primary user data entry (e.g., core configuration inputs, direct numeric entries, or text queries). It implements a direct native class configuration architecture combined with the `ThemeableWidget` sanitizer pass to guarantee complete safety against keyword collisions.
+### Overview
 
-*For alternative helper input fields or metadata input channels, see the companion component documentation page:* [sCTkEntrySecondary](sCTkEntrySecondary.md).
+`sCTkEntryPrimary` is a themeable subclass of `customtkinter.CTkEntry` — the higher-emphasis of the library's two entry-field tiers (see also `sCTkEntrySecondary`). It adds automatic light/dark theme resolution from `sCTkThemes.json` and a genuine three-state visual model: normal, readonly, and disabled.
 
+	![sCTkEntryPrimary in dark mode](images/sCTkEntryPrimary_Dark.png) &emsp; &emsp; &emsp; &emsp;
+	![sCTkEntryPrimary in light mode](images/sCTkEntryPrimary_Light.png)
 
-![sCTkEntryPrimary_Dark.png](images/sCTkEntryPrimary_Dark.png)
-![sCTkEntryPrimary_Light.png](images/sCTkEntryPrimary_Light.png)
-
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkEntry(master)` | `sCTkEntryPrimary(master)` *(Primary form data field)* |
-| **Maintenance** | Local style overrides duplicated across files manually. | Clean updates across all layouts modified directly in the JSON file. |
-| **File Mapping** | Everything runs under one core native text pipeline. | Streamlined and compiled cleanly across `sCTkEntryPrimary.py` and `ThemeableWidget.py`. |
-| **State Lock** | `self.configure(state="disabled")` | `input_field.state("disabled")`<br>**OR**<br>`input_field.configure(state="disabled")`<br><br>**Dual-Routing State Pipeline:** Natively handles both syntax paths. Freezes text interaction lanes, blocks keyboard event streams, and dynamically shifts colors out of `disabled_map` guidelines via strict sequential update passes. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
+All three states use CTk's native `state` option (`"normal"`, `"readonly"`, `"disabled"`). `normal`/`disabled` are confirmed correct by direct testing, consistent with every other widget in this library. `readonly` was added specifically to support `sCTkSpinbox`'s own readonly mode correctly (its entry can't be typed into directly, but the increment/decrement arrows stay clickable) — matching real `ttk.Spinbox` semantics, which distinguish readonly (arrows still work) from disabled (nothing works). Confirmed directly against CustomTkinter's own source: native `CTkEntry` already has full, deliberate support for a `"readonly"` state distinct from `"disabled"` — including a placeholder-text rule worth knowing about (see [Known Limitations](#known-limitations)).
 
 ---
 
 ### Constructor
 
-Initialize a custom primary form data field instance. High-level custom configuration parameters from Pygubu (like `translator`, `on_first_object_cb`, `image_loader`, and `data_pool`) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkEntryPrimary(master=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `**kwargs` | — | — | Any native `CTkEntry` argument (e.g. `placeholder_text`, `width`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). `state` is extracted and applied after construction rather than passed to the native constructor. |
 
 ```python
-# Instantiate a primary frequency entry lane input field
-freq_input_field = sCTkEntryPrimary(
+freq_entry = sCTkEntryPrimary(
     master=control_panel,
-    placeholder_text="Enter Transceiver Frequency...",
-    textvariable=vfo_string_var
+    placeholder_text="Enter frequency (MHz)",
 )
-
-# Render the widget inside your parent container coordinate tracker panel
-freq_input_field.pack(fill="x", padx=40, pady=10)
+freq_entry.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Selectively manipulate the internal textual elements on the fly
-frequency_input.insert(0, "14.032.000") # Populates text buffer indices with data strings
-frequency_input.delete(0, \"end\")         # Wipes the entry line lane completely back to empty
-active_buffer = frequency_input.get()    # Queries the live active text character arrays
+### Methods
 
-# Evaluate current state configurations or apply absolute user interaction locks via dual-routing syntax
-current_mode = frequency_input.get_state() # Returns 'normal' or 'disabled'
-frequency_input.state("disabled")          # Locks data entry tracks and applies muted gray fills
-```
+| Method | Returns | Description |
+|---|---|---|
+| `state(state_string=None)` | `str` | Gets or sets the widget's visual state. `"normal"`/`"enabled"`/`"active"` all map to `"normal"`; `"readonly"` maps to `"readonly"`; `"disabled"` maps to `"disabled"`. All three use CTk's native `state` option. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `text_color`, `border_color`, and `placeholder_text_color`. Queries for any other property name fall through to the native `CTkEntry.configure`. |
 
-### Centralized Stylesheet Setup (`themes.json`)
+---
+
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
+- **Re-applied on every `state()` change** — `fg_color`, `border_color`, `text_color`, and `placeholder_text_color` are recomputed from the theme's normal values, its `disabled_map`, or its `readonly_map` every time you call `state()`.
+
 ```json
 {
     "sCTkEntryPrimary": {
+        "font": ["Arial", 15, "normal"],
+        "border_width": 1.5,
+        "border_color": ["#1A4375", "#64748B"],
         "fg_color": ["#FFFFFF", "#111827"],
-        "border_color": ["#1A4375", "#4B5563"],
-        "text_color": ["#1F2937", "#FFFFFF"],
+        "text_color": ["#1F2937", "#F9FAFB"],
         "placeholder_text_color": ["#94A3B8", "#64748B"],
+        "corner_radius": 6,
         "disabled_map": {
             "fg_color": ["#F3F4F6", "#1F2937"],
-            "border_color": ["#E5E7EB", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"],
-            "placeholder_text_color": ["#CBD5E1", "#475569"]
+            "border_color": ["#CBD5E1", "#475569"],
+            "text_color": ["#94A3B8", "#64748B"]
+        },
+        "readonly_map": {
+            "fg_color": ["#F8FAFC", "#1F2937"],
+            "border_color": ["#64748B", "#94A3B8"],
+            "text_color": ["#1F2937", "#F9FAFB"],
+            "placeholder_text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Middleman:** This widget inherits directly from `ctk.CTkEntry` and `ThemeableWidget`, entirely removing any autogenerated Pygubu intermediate templates. This simplifies the class footprint while fully retaining dynamic string translation and lifecycle callback capabilities natively.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization routine, the constructor fires `self._finalize_themeable_lifecycle()` to safely dispatch first-object registration notifications back up to Pygubu's master parent script systems.
+**`readonly_map` requires all four keys** (`fg_color`, `border_color`, `text_color`, `placeholder_text_color`) whenever `readonly` is actually requested — if any are missing, `state("readonly")` raises immediately rather than falling back to a guessed color. This check only runs when readonly is used, so existing code that never requests it is unaffected regardless of whether `readonly_map` is present.
+
+The design intent behind the values above: `text_color` in `readonly_map` deliberately matches `normal`'s `text_color` exactly — readonly means "you can still read this clearly, you just can't edit it," a different message from disabled's "this is inactive." `border_color` is the primary visual cue distinguishing readonly from normal, using a muted "locked" tone distinct from both normal's vivid border and disabled's washed-out one.
+
+`placeholder_text_color` is a genuinely distinct, themed value — not a fallback to `text_color`. This follows CustomTkinter's own convention: in the library's stock `dark-blue` theme, `text_color` is `["gray14", "gray84"]` while `placeholder_text_color` is a visibly more muted `["gray52", "gray62"]`. The value here reuses the muted gray already established throughout this theme file for disabled states — deliberate, but worth knowing if you'd rather placeholder text and disabled text look distinguishable from each other.
+
+Note: CTkEntry has no separate font for placeholder text — it always shares the single `font` property with typed text. This is a real limitation of the underlying widget, not a gap in this theme file; there's no way to make placeholder text use a different font.
+
+Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkEntryPrimary` input lane field along with an interactive status switch toggle.
+### Example
 
 ```python
 #!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Entry Secondary
-# =====================================================================
 
 import customtkinter as ctk
-from scustomtkinter import sCTkFrameLabeledSecondary, sCTkButtonPrimary, sCTk, sCTkLabelTertiary, sCTkEntrySecondary
+from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTk, sCTkLabelPrimary, sCTkEntryPrimary
 
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP
-# =====================================================================
-import sCTkThemes
-from sCTkFrame import sCTkFrame
+
 
 if __name__ == "__main__":
-    sCTkThemes.apply_sCTkThemes()
 
-    root = ctk.CTk()
-    root.geometry("500x450")
-    root.title("sCTkEntryPrimary Real-Time Validation Bench")
+    root = sCTk()
+    root.geometry("450x260")
+    root.title("sCTkEntryPrimary Testing Deck")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    widget = sCTkEntryPrimary(base, placeholder_text="Enter Transceiver Callsign...")
-    widget.pack(fill="x", padx=20, pady=20)
+    # Label notice layer to monitor buffer array activity
+    lbl_monitor = sCTkLabelPrimary(base, text="Console monitor active...")
+    lbl_monitor.pack(pady=10)
 
-    def toggle_logger_states():
-        """Cycles operational states between active feed and locked desaturated tracks."""
-        current_state = widget.get_state()
-        target = "disabled" if current_state == "normal" else "normal"
+    # Instantiate your custom Primary helper field
+    input_field = sCTkEntryPrimary(base, placeholder_text="Enter configuration metadata...")
+    input_field.pack(expand=False, fill="x", padx=40, pady=10)
 
-        widget.configure(state=target)
-        btn_toggle.configure(text="Activate Entry Field" if target == "disabled" else "Lock Entry Field")
-        print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state().upper()}")
+    # Monitor keystrokes live
+    input_field.bind("<KeyRelease>", lambda e: lbl_monitor.configure(text=f"Live Buffer: {input_field.get()}"))
 
-    def toggle_appearance_skin():
-        current_mode = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_mode == "Dark" else "Dark")
+    def toggle_operational_state():
+        """Toggles the helper input field between normal active and dimmed disabled profiles."""
+        current_mode = input_field.get_state()
+        target = "disabled" if current_mode == "normal" else "normal"
 
-    btn_toggle = ctk.CTkButton(base, text="Lock Entry Field", command=toggle_logger_states)
-    btn_toggle.pack(fill="x", padx=10, pady=5)
+        # Explicitly testing the dual-routing capability via configure()
+        input_field.configure(state=target)
+        btn_toggle.configure(
+            text="Lock Helper Input (Set 'disabled')" if target == "normal" else "Unlock Helper Input (Set 'normal')")
+        print(f"Logged Verification Hook -> input_field.get_state() = {input_field.get_state()}")
 
-    btn_theme = ctk.CTkButton(base, text="Toggle Theme Skin", command=toggle_appearance_skin)
-    btn_theme.pack(fill="x", padx=10, pady=5)
+    btn_toggle = sCTkButtonPrimary(base, text="Lock Helper Input (Set 'disabled')", command=toggle_operational_state)
+    btn_toggle.pack(side="bottom", pady=15)
+
+    # Run the interactive boot tracking logs
+    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
+    input_field.state("disabled")
+    print("state (Disabled Pass) =", input_field.get_state())  # Output: disabled
+
+    input_field.state("normal")
+    print("state (Normal Pass)   =", input_field.get_state())  # Output: normal
+    print("========================================\n")
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()` only recognizes `"disabled"`, `"readonly"`, and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
+- **`readonly` never deactivates placeholder text, even on focus** — confirmed directly against CustomTkinter's own source: native `CTkEntry`'s internal placeholder logic explicitly skips clearing the placeholder whenever `state` is `"readonly"`. This makes sense (there's no reason to clear a placeholder for typing on a field that can't be typed into), but it means a readonly field showing placeholder text will keep showing it indefinitely, regardless of focus.
+- The disable/enable-cycle cursor-position fix (`_reset_cursor_if_showing_placeholder`) is also applied on transitions into `readonly`, as a precaution — but this specific transition (unlike normal↔disabled, which is directly confirmed by testing) has not been independently verified. Given the point above, this is likely lower-risk than it might otherwise seem, since a readonly field showing placeholder text stays in that state continuously rather than toggling.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

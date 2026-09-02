@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkTableview - Piece 1 of 4
+sCTkTableview
 
 A theme-compliant custom data grid component wrapper.
 Inherits cleanly from sCTkScrollableFrame and ThemeableWidget to manage
@@ -27,21 +27,94 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         # 1. Run shared mixin logic first to parse master themes.json data maps safely
         ThemeableWidget.__init__(self, kwargs)
 
-        # 2. Extract and assign local theme metrics smoothly from our parsed table block
-        self._header_bg = self.final_kw.get("header_bg_color", ("#1A4375", "#1F6AA5"))
-        self._header_fg = self.final_kw.get("header_text_color", ("#FFFFFF", "#FFFFFF"))
-        self._header_font = self.final_kw.get("header_font", ("Arial", 13, "bold"))
-
-        self._cell_bg = cell_bg_color if cell_bg_color is not None else self.final_kw.get("cell_bg_color",
-                                                                                          ("#FFFFFF", "#1E293B"))
-        self._cell_alt_bg = cell_alt_bg_color if cell_alt_bg_color is not None else self.final_kw.get(
-            "cell_alt_bg_color", ("#F8FAFC", "#334155"))
-        self._cell_fg = self.final_kw.get("cell_text_color", ("#1A1A1A", "#FFFFFF"))
-        self._cell_font = self.final_kw.get("cell_font", ("Arial", 12, "normal"))
-        self._grid_line_color = self.final_kw.get("grid_line_color", ("#CBD5E1", "#475569"))
-
+        # 2. Resolve theme profiles FIRST, before extracting individual
+        # values, so required keys can be validated before anything reads
+        # them.
         self._switch_theme_profile = dict(self.final_kw)
-        self._custom_disabled_map = self._switch_theme_profile.get("disabled_map", {})
+        # FIX: an earlier version read "disabled_map" out of
+        # self._switch_theme_profile (== dict(self.final_kw)), but
+        # ThemeableWidget.__init__ deliberately excludes "disabled_map" from
+        # final_kw -- this always evaluated to the empty-dict default, meaning
+        # EVERY disabled-state color lookup in _apply_state_and_theme_updates()
+        # silently fell back to its hardcoded literal instead of the real
+        # theme. Confirmed identical bug, same fix, as sCTkSwitch and
+        # sCTkSpinbox elsewhere in this project.
+        self._custom_disabled_map = dict(self._widget_disabled_map)
+
+        # FIX: an earlier version used .get(key, hardcoded_literal) for every
+        # color/font below, both here and in _apply_state_and_theme_updates(),
+        # silently substituting a guessed value whenever the real theme was
+        # incomplete rather than surfacing the gap. Matches the same hard-fail
+        # principle established for sCTkSwitch and the label family elsewhere
+        # in this project: required keys must be present in both the
+        # top-level theme block and disabled_map, or construction raises
+        # immediately with a clear message naming exactly what's missing.
+        #
+        # Colors need a disabled_map entry too, since they visually change
+        # when disabled. Fonts don't -- BUG, confirmed by direct testing: an
+        # earlier version of this validation incorrectly bundled
+        # header_font/cell_font into this same loop, requiring them in
+        # disabled_map too, even though no widget in this project uses a
+        # disabled-state font variant (fonts are always top-level-only).
+        # Split into two separate loops below to fix this.
+        for required_key in ("header_bg_color", "header_text_color",
+                              "cell_text_color", "grid_line_color"):
+            if self._switch_theme_profile.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
+                )
+            if self._custom_disabled_map.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                )
+
+        # Fonts only need to exist at the top level.
+        for required_key in ("header_font", "cell_font"):
+            if self._switch_theme_profile.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
+                )
+
+        # cell_bg_color/cell_alt_bg_color are different: they have a genuine
+        # constructor-kwarg override, so it's not automatically a theme gap
+        # if the theme itself doesn't define them -- only a problem if
+        # NEITHER the kwarg NOR the theme provides a value. disabled_map is
+        # still required either way, since there's no disabled-state kwarg
+        # override.
+        for ctor_key, ctor_val in (("cell_bg_color", cell_bg_color), ("cell_alt_bg_color", cell_alt_bg_color)):
+            if ctor_val is None and self._switch_theme_profile.get(ctor_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}': '{ctor_key}' must be provided either as a "
+                    f"constructor argument or in the theme's top-level block."
+                )
+            if self._custom_disabled_map.get(ctor_key) is None:
+                raise KeyError(f"'{self.__class__.__name__}' theme block is missing '{ctor_key}' in disabled_map.")
+
+        # 3. Extract theme-driven values -- safe to read directly via .get()
+        # now, without a fallback, since the validation above guarantees each
+        # key exists.
+        self._header_bg = self._switch_theme_profile.get("header_bg_color")
+        self._header_fg = self._switch_theme_profile.get("header_text_color")
+        self._header_font = self._switch_theme_profile.get("header_font")
+
+        self._cell_bg = cell_bg_color if cell_bg_color is not None else self._switch_theme_profile.get("cell_bg_color")
+        self._cell_alt_bg = cell_alt_bg_color if cell_alt_bg_color is not None else self._switch_theme_profile.get("cell_alt_bg_color")
+        self._cell_fg = self._switch_theme_profile.get("cell_text_color")
+        self._cell_font = self._switch_theme_profile.get("cell_font")
+        self._grid_line_color = self._switch_theme_profile.get("grid_line_color")
+
+        # FIX (related bug found while eliminating the fallback above): an
+        # earlier version of _apply_state_and_theme_updates() always reverted
+        # cell_bg_color/cell_alt_bg_color to the theme's value when
+        # transitioning back to "normal", silently discarding a constructor
+        # kwarg override (e.g. sCTkTableview(master, cell_bg_color="red"))
+        # after a disable/enable cycle. Caching the actually-resolved values
+        # here lets that method correctly restore whichever one this
+        # constructor call actually resolved to, not just the theme default.
+        self._resolved_normal_cell_bg = self._cell_bg
+        self._resolved_normal_cell_alt_bg = self._cell_alt_bg
 
         # 3. Initialize specialized layout tracking fields
         self._grid_mode = str(grid_mode).replace("'", "").replace('"', "").strip().lower()
@@ -66,16 +139,22 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
             columns = [c.strip() for c in clean_str.split(',') if c.strip()]
         self.columns_list = list(columns) if (columns and isinstance(columns, list)) else [""] * self._num_columns
 
-        # 4. 🔑 THE METACLASS IDENTITY OVERRIDE SHIELD: Mask type descriptors safely
-        original_class_name = self.__class__.__name__
-        self.__class__.__name__ = "sCTkScrollableFrame"
-
-        try:
-            # 5. Initialize the custom scroll frame wrapper securely within the pre-hydrated class name context
-            super().__init__(master=master, width=width, height=height, *args)
-        finally:
-            # 6. Restore the true class descriptor string immediately after compilation completes
-            self.__class__.__name__ = original_class_name
+        # FIX: an earlier version temporarily overwrote self.__class__.__name__
+        # to "sCTkScrollableFrame" here, then restored it immediately after --
+        # a workaround for two problems that are now solved properly upstream:
+        # (1) sCTkScrollableFrame.__init__'s own internal ThemeableWidget.__init__
+        # call would otherwise run a second time on this instance, using
+        # self.__class__.__name__ (always "sCTkTableview", regardless of which
+        # class's code is executing) to look up the wrong theme block and
+        # overwrite this widget's correctly-built final_kw -- now prevented by
+        # ThemeableWidget's own run-once guard (see themeable_widget.py). (2)
+        # even with final_kw correctly preserved, sCTkScrollableFrame's own
+        # super().__init__() call would forward Tableview-specific keys like
+        # header_bg_color to the native CTkScrollableFrame constructor, which
+        # doesn't recognize them and has no **kwargs catch-all to fall back on
+        # -- now prevented by sCTkScrollableFrame's own whitelist filtering of
+        # its inbound kwargs before that call. Confirmed safe to call directly.
+        super().__init__(master=master, width=width, height=height, *args)
 
         super().configure(border_width=0, corner_radius=0, fg_color=self._cell_bg)
         self.table_outline_frame = ctk.CTkFrame(self, fg_color=self._grid_line_color, border_width=self._outline_width, border_color=self._grid_line_color, corner_radius=self._outline_radius)
@@ -180,11 +259,25 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         entry.destroy()
         if self._validation_callback and not self._validation_callback(c_idx, val): val = self._data_matrix[r_idx][
             c_idx]
+
+        # FIX: an earlier version compared self._data_matrix[r_idx][c_idx]
+        # against val AFTER the assignment below had already written val into
+        # that exact cell -- a tautology that was always true, so the edit
+        # callback fired on every save regardless of whether anything had
+        # actually changed. The intended behavior is change detection, so the
+        # previous value has to be captured BEFORE the write.
+        #
+        # This also gives correct behavior on a rejected edit for free: the
+        # validation check above reverts val to the cell's existing content
+        # when the callback rejects it, so old_val == val and the edit
+        # callback correctly stays silent.
+        old_val = self._data_matrix[r_idx][c_idx]
+
         self._data_matrix[r_idx][c_idx] = val
         txt_anchor = self._column_anchors[c_idx]
         display_val = "    " + str(val) if txt_anchor == "w" else (str(val) + "    " if txt_anchor == "e" else str(val))
         self._cell_widgets[r_idx][c_idx].configure(text=display_val)
-        if self._edit_callback and self._data_matrix[r_idx][c_idx] == val: self._edit_callback(r_idx, c_idx, val)
+        if self._edit_callback and old_val != val: self._edit_callback(r_idx, c_idx, val)
 
     def configure(self, require_redraw=False, **kwargs):
         if require_redraw is not None and not kwargs and isinstance(require_redraw, str):
@@ -246,25 +339,23 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         if "state" not in kwargs: return
         self._state = str(kwargs.pop("state")).lower()
         dis_map = self._custom_disabled_map
+        normal_map = self._switch_theme_profile
+        is_disabled = self._state == "disabled"
 
-        self._header_bg = self._resolve_color(dis_map.get("header_bg_color", ("#CBD5E1",
-                                                                              "#334155"))) if self._state == "disabled" else self._switch_theme_profile.get(
-            "header_bg_color", ("#1A4375", "#1F6AA5"))
-        self._header_fg = self._resolve_color(dis_map.get("header_text_color", ("#94A3B8",
-                                                                                "#64748B"))) if self._state == "disabled" else self._switch_theme_profile.get(
-            "header_text_color", ("#FFFFFF", "#FFFFFF"))
-        self._cell_bg = self._resolve_color(dis_map.get("cell_bg_color", ("#F1F5F9",
-                                                                          "#1F2937"))) if self._state == "disabled" else self._switch_theme_profile.get(
-            "cell_bg_color", ("#FFFFFF", "#1E293B"))
-        self._cell_alt_bg = self._resolve_color(dis_map.get("cell_alt_bg_color", ("#E2E8F0",
-                                                                                  "#111827"))) if self._state == "disabled" else self._switch_theme_profile.get(
-            "cell_alt_bg_color", ("#F8FAFC", "#334155"))
-        self._cell_fg = self._resolve_color(dis_map.get("cell_text_color", ("#94A3B8",
-                                                                            "#64748B"))) if self._state == "disabled" else self._switch_theme_profile.get(
-            "cell_text_color", ("#1A1A1A", "#FFFFFF"))
-        self._grid_line_color = self._resolve_color(dis_map.get("grid_line_color", ("#CBD5E1",
-                                                                                    "#475569"))) if self._state == "disabled" else self._switch_theme_profile.get(
-            "grid_line_color", ("#CBD5E1", "#475569"))
+        # FIX: an earlier version repeated the same hardcoded fallback
+        # literals here as __init__ (see that method's comments) -- removed
+        # now that required keys are validated once, at construction. Also
+        # fixes a related bug: cell_bg_color/cell_alt_bg_color now correctly
+        # restore whatever this instance actually resolved to when
+        # constructed (theme value or constructor kwarg override), instead
+        # of always reverting to the theme's value and silently discarding a
+        # constructor override on every return to "normal".
+        self._header_bg = dis_map.get("header_bg_color") if is_disabled else normal_map.get("header_bg_color")
+        self._header_fg = dis_map.get("header_text_color") if is_disabled else normal_map.get("header_text_color")
+        self._cell_bg = dis_map.get("cell_bg_color") if is_disabled else self._resolved_normal_cell_bg
+        self._cell_alt_bg = dis_map.get("cell_alt_bg_color") if is_disabled else self._resolved_normal_cell_alt_bg
+        self._cell_fg = dis_map.get("cell_text_color") if is_disabled else normal_map.get("cell_text_color")
+        self._grid_line_color = dis_map.get("grid_line_color") if is_disabled else normal_map.get("grid_line_color")
 
         if hasattr(self, "table_outline_frame") and self.table_outline_frame:
             self.table_outline_frame.configure(fg_color=self._grid_line_color, border_color=self._grid_line_color)
@@ -314,5 +405,3 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
 
     def bind_validation_callback(self, callback: Callable):
         self._validation_callback = callback
-
-

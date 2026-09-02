@@ -1,10 +1,11 @@
 #!/usr/bin/python3
 """
-sCTkMessage - Piece 1 of 2
+sCTkMessage
 
 An advanced, themeable dialog window system subclassed from ctk.CTkToplevel.
 Supports customizable single prompt text or dual choice prompts returning boolean states.
-Derived from Selector class by Fastattack, 2024.
+Derived from Message class by Fastattack, 2024.
+https://github.com/fastattackv/MoreCustomTkinterWidget
 """
 import os
 import textwrap
@@ -21,6 +22,20 @@ from .sctk_label_primary import sCTkLabelPrimary
 
 class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
     """Advanced themeable message dialog window supporting single or dual prompt states."""
+
+    # Required at the TOP LEVEL of the theme block.
+    _REQUIRED_THEME_KEYS = ("font", "text_color", "fg_color")
+
+    # WHITELIST GUARD. Native CTkToplevel names fg_color explicitly and passes
+    # everything else through to tkinter.Toplevel, which raises TclError on any
+    # option it doesn't know. Theme keys like `font` and `text_color` are for
+    # this widget's own label, NOT for the window, so final_kw is filtered down
+    # to this set before the native constructor sees it.
+    _NATIVE_CTKTOPLEVEL_KWARGS = frozenset({"fg_color"})
+
+    # There is no disabled_map and no state(): this is a modal dialog. It grabs
+    # input on construction and destroys itself on dismissal, so there is no
+    # window of time in which a disabled appearance would mean anything.
 
     def __init__(self,
                  title: str,
@@ -39,9 +54,22 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
 
         # 2. 🛠️ THE MUTATION SAFEGUARD DEEP COPY:
         self._local_defaults = dict(self.final_kw)
+        self._validate_theme_keys()
 
-        # 3. Initialize CTkToplevel natively
-        super().__init__(master=master, *args, **kwargs)
+        # 3. Initialize CTkToplevel natively.
+        #
+        # FIX: this previously forwarded the RAW kwargs dict rather than the
+        # resolved final_kw, so the theme block never reached the native
+        # constructor at all -- the dialog window itself was unthemed, and
+        # ThemeableWidget's resolution work was discarded for everything
+        # except the two keys read back manually below. Passing final_kw
+        # through the whitelist above fixes that and simultaneously protects
+        # the native constructor: a caller passing font= to this widget would
+        # previously have had it forwarded to tkinter.Toplevel, which raises
+        # TclError on an option it doesn't recognize.
+        native_kwargs = {k: v for k, v in self.final_kw.items()
+                         if k in self._NATIVE_CTKTOPLEVEL_KWARGS}
+        super().__init__(master=master, *args, **native_kwargs)
         self.withdraw()
 
         self._result = None
@@ -51,8 +79,9 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
         self.grab_set()
         self.title(title)
 
-        font_config = self._local_defaults.get("font") or ("Arial", 14)
-        text_color_config = self._local_defaults.get("text_color") or ("#1A1A1A", "#E5E5E5")
+        # No fallbacks: validated at construction, so both lookups resolve.
+        font_config = self._local_defaults.get("font")
+        text_color_config = self._local_defaults.get("text_color")
 
         # 4. Custom Local Icon Asset Extraction Loops
         # 4. 🔑 DYNAMIC ASSET PATH ANCHOR: Safely navigates down into assets/images/
@@ -123,13 +152,52 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
             y = (self.winfo_screenheight() // 2) - (height // 2)
         self.geometry(f"{width}x{height}+{max(0, x)}+{max(0, y)}")
 
+    def _validate_theme_keys(self) -> None:
+        """
+        Hard-fails at construction on an incomplete theme block, naming the
+        missing key.
+
+        Raises:
+            KeyError: naming the first missing key found.
+        """
+        name = self.__class__.__name__
+        for key in self._REQUIRED_THEME_KEYS:
+            if self._local_defaults.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' at the top level "
+                    f"of sCTkThemes.json."
+                )
+
     def configure(self, *args, **kwargs):
-        if args and len(args) == 1: return super().configure(args)
-        if args and isinstance(args, dict): kwargs = args | kwargs
+        """
+        Standard configuration with positional-argument handling.
+
+        Three separate bugs were fixed here:
+
+        1. `super().configure(args)` passed the whole TUPLE as one positional
+           argument rather than unwrapping it, so every single-argument query
+           forwarded a malformed value.
+        2. `if args and isinstance(args, dict)` -- args is ALWAYS a tuple, so
+           the dict-merge branch was dead code. Same tautology fixed across
+           the batch-one widgets.
+        3. No `config = configure` alias existed, so `.config(...)` bypassed
+           this override entirely and landed on the native widget.
+        """
+        if len(args) == 1:
+            if isinstance(args[0], dict):
+                kwargs = {**args[0], **kwargs}
+            else:
+                return super().configure(args[0])
+
         for k, v in list(kwargs.items()):
             if v == "": kwargs.pop(k)
         if kwargs: return super().configure(**kwargs)
         return None
+
+    # Tkinter binds .config to .configure as a SEPARATE class attribute -- it
+    # does not track a subclass's override. Without this, .config(...) skips
+    # everything above.
+    config = configure
 
     def _close_dialog(self):
         self.grab_release()
@@ -187,4 +255,3 @@ sCTkMessagebox.showerror = showerror
 sCTkMessagebox.askyesno = askyesno
 sCTkMessagebox.askwarningyesno = askwarningyesno
 sCTkMessagebox.askerroryesno = askerroryesno
-

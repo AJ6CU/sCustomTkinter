@@ -13,6 +13,12 @@ def get_asset_path(relative_path: str) -> str:
 
 from .sctk_core import sCTk
 from .sctk_button_primary import sCTkButtonPrimary
+from . import sctk_button_primarybo
+
+# __all__ = [
+#     "sctk_button_primarybo",
+# ]
+
 from .sctk_button_secondary import sCTkButtonSecondary
 from .sctk_button_tertiary import sCTkButtonTertiary
 from .sctk_checkbox import sCTkCheckBox
@@ -29,7 +35,6 @@ from .sctk_file_explorer import sCTkFileExplorer
 from .sctk_frame import sCTkFrame
 from .sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
 from .sctk_frame_labeled_secondary import sCTkFrameLabeledSecondary
-from .sctk_frame_outlined import sCTkFrameOutlined
 from .sctk_label_primary import sCTkLabelPrimary
 from .sctk_label_secondary import sCTkLabelSecondary
 from .sctk_label_tertiary import sCTkLabelTertiary
@@ -69,7 +74,6 @@ from .sctk_smeter import sCTkSMeter
 from .sctk_smeter_bar import sCTkSMeterBar
 from .sctk_spinbox import sCTkSpinbox
 from .sctk_switch import sCTkSwitch
-from .sctk_switch_alt import sCTkSwitchAlt
 from .sctk_tableview import sCTkTableview
 from .sctk_tabview import sCTkTabview
 from .sctk_textbox_primary import sCTkTextboxPrimary

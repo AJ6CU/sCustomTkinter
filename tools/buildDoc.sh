@@ -39,3 +39,9 @@ done < order.txt
 # Works perfectly on both macOS and Linux:
 perl -pi -e 's|\(images/|\(src/images/|g' ../docs/README.md
 
+# =====================================================================
+# 4. Add a border around the images
+# =====================================================================
+# Works perfectly on both macOS and Linux:
+python3 highlightMD.py
+

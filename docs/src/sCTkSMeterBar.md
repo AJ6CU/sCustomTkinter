@@ -3,8 +3,8 @@
 The `sCTkSMeterBar` is a standalone, low-profile horizontal discrete 30-segment LED bar instrumentation widget displaying independent telemetry tracks for incoming receiver S-Units, transmitter SWR ratio levels, and forward RF Power output percentage. Like all sCTk widgets, it is fully theme-adaptive.
 
 
-![sCTkSMeterBar_Dark.png](images/sCTkSMeterBar_Dark.png)
-![sCTkSMeterBar_Light.png](images/sCTkSMeterBar_Light.png)
+  ![sCTkSMeterBar_Dark.png](images/sCTkSMeterBar_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkSMeterBar_Light.png](images/sCTkSMeterBar_Light.png)
 
 
 ---
@@ -21,18 +21,20 @@ The discrete LED matrix map shifts automatically based on the device operational
 ### 📋 API Constructor Reference
 
 ```python
-sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True, hide_lower_row=False, width=340, height=110, **kw)
+sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True,
+              hide_lower_row=False, width=320, height=110, state="normal", **kw)
 ```
 
 | Parameter Name | Data Type | Default Value | Description |
 | :--- | :--- | :--- | :--- |
 | `master` | `any` | `None` | Reference pointer tracking your root window or parent `sCTkFrame` container layout layer. |
 | `swr_max_value` | `float` | `5.0` | The explicit maximum scale boundary representing the far right edge limit tracking your transmitter's SWR track. |
-| `swr_visible` | `bool` | `True` | Visibility flag for the SWR cluster. Flipping to `False` shifts the text, ticks, and active LEDs into a faded, disabled palette look. |
-| `pwr_visible` | `bool` | `True` | Visibility flag for the PWR cluster. Flipping to `False` shifts the text, ticks, and active LEDs into a faded, disabled palette look. |
+| `swr_visible` | `bool` | `True` | Visibility flag for the SWR cluster. `False` greys its text, ticks and LEDs to `inactive_color`. Distinct from widget state — see [State](#state). |
+| `pwr_visible` | `bool` | `True` | Visibility flag for the PWR cluster. `False` greys its text, ticks and LEDs to `inactive_color`. Distinct from widget state — see [State](#state). |
 | `hide_lower_row` | `bool` | `False` | Layout override command. When `True`, the entire lower instrumentation cluster collapses and vanishes, pushing the `SIG` bar to the true vertical center of the card footprint. |
-| `width` | `int` | `340` | Manual hardware panel horizontal width boundary tracking profile measured in pixels. Supports on-the-fly Pygubu geometry defaults resetting queries safely. |
-| `height` | `int` | `110` | Manual hardware panel vertical height boundary tracking profile measured in pixels. Supports on-the-fly Pygubu geometry defaults resetting queries safely. |
+| `width` | `int` | `320` | Panel width in pixels. Supports Pygubu geometry-default reset queries. |
+| `height` | `int` | `110` | Panel height in pixels. Supports Pygubu geometry-default reset queries. |
+| `state` | `str` | `"normal"` | `"normal"` or `"disabled"`. See [State](#state) below. |
 
 ---
 
@@ -51,33 +53,57 @@ led_bar_gauge.set(s_value=9.2, swr_value=1.4, pwr_value=45.0)
 led_bar_gauge.configure_visibility(swr_visible=False, pwr_visible=True, hide_lower_row=False)
 ```
 
+<a name="state"></a>
+### State
+
+| Method | Description |
+| :--- | :--- |
+| `state(mode=None)` | Getter with no argument; setter with `"normal"` or `"disabled"`. |
+| `get_state()` | Equivalent to `state()` with no argument. |
+| `configure(state=...)` | Same effect. Both routes are supported. |
+| `cget("state")` | Reads the current state. |
+| `configure("state")` | Pygubu-style single-argument query. |
+
+**Disabling dims, it does not freeze.** `state("disabled")` changes only the palette. `set()` continues to update all three telemetry rows, and the bar keeps tracking live values in the dimmed colours. This is deliberate for an output-only instrument: a meter that held its last reading while greyed out would be indistinguishable from one showing a current value, which on a radio panel is actively misleading. There is no input to lock out — the state exists so a panel can disable every widget it contains uniformly.
+
+**State and row visibility are independent.** `state("disabled")` dims the whole widget via `disabled_map`. `configure_visibility(swr_visible=False)` greys just that cluster to `inactive_color`. A row can be hidden on an enabled widget, and a disabled widget still shows whichever rows are visible. Both can apply at once.
+
+The background is deliberately **not** dimmed; the LEDs and labels carry the signal.
+
 ---
 
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.py`)
+### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
 
-The component relies heavily on your centralized style dictionary system. To prevent the mixin parser tracking structures from raising runtime validation faults during initialization cycles, verify your shared stylesheet contains this asset configuration block:
-
-```python
-THEME_DEFAULTS = {
+```json
+{
     "sCTkSMeterBar": {
-        # Light Mode: Clean Slate-White Face | Dark Mode: Deep Obsidian Cockpit Black
-        "fg_color": ("#F8FAFC", "#0A0A0A"),       
-        
-        # High-Contrast Brand Blue for bright rooms / Illuminated Glowing Neon Amber for dark setups
-        "text_color": ("#1A4375", "#FF9100"),     
-        
-        # Solid High-Contrast Crimson / Intense Mechanical Redline alert segment zones
-        "alarm_color": ("#DC2626", "#FF2200"),    
-        
-        # Active illuminated LED block color tracks mapped out below threshold limits
-        "led_on_color": ("#2471A3", "#10B981"),   
-        
-        # Unlit background matrix segment pockets visible behind dark/inactive areas
-        "led_off_color": ("#E2E8F0", "#1F2937")   
-    },
-    # ... your other widget entries
+        "fg_color": ["#FFFFFF", "#0A0A0A"],
+        "text_color": ["#1A4375", "#FF9100"],
+        "alarm_color": ["#DC2626", "#FF2200"],
+        "led_on_color": ["#2471A3", "#FF9100"],
+        "led_off_color": ["#E2E8F0", "#1A1D20"],
+        "inactive_color": ["#94A3B8", "#334155"],
+        "font": ["Arial", 10, "bold"],
+        "scale_font": ["Arial", 9, "bold"],
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#4B5563"],
+            "alarm_color": ["#CBD5E1", "#4B5563"],
+            "led_on_color": ["#CBD5E1", "#374151"],
+            "led_off_color": ["#F1F5F9", "#1A1D20"]
+        }
+    }
 }
 ```
+
+**Every key above is required.** Construction raises `KeyError` naming the missing key and whether it belongs at the top level or in `disabled_map`. This replaced a pattern of `.get(key, ("#hex", "#hex"))` throughout the draw code, which silently substituted a plausible guess and made an incomplete theme block look merely slightly-off rather than broken.
+
+`inactive_color` greys the SWR or PWR cluster when that row is switched off via `configure_visibility()`. It has no `disabled_map` entry because it is not a state colour — see [State](#state). This value was previously hardcoded in the draw routine with no theme lookup at all, the only colour in this widget the theme could not reach.
+
+`font` is used for the "SIG", "SWR" and "PWR" section labels; `scale_font` for the numeric scale markings — S units, SWR values and power percentages. These were previously hardcoded across eight separate `create_text` calls and never consulted the theme.
+
+> **Font size has layout consequences.** Label positions are computed from fixed pixel offsets tuned for 9pt and 10pt text. A noticeably larger font will overlap the tick marks and the LED rows — the widget does not measure text and adjust. Change these values in small steps and look at the result.
+
+**Fixed:** the configured `fg_color` never actually rendered. It was popped out of the resolved defaults in the constructor (correctly — the native frame takes it separately) and then read back afterwards from the dictionary it had been removed from, so the background always fell through to a hardcoded value. Light mode is where this was visible.
 
 ---
 

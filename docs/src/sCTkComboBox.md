@@ -1,61 +1,68 @@
 ## sCTkComboBox
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-themesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-A theme-compliant, prominent data-entry combo box widget variant designed for multi-frequency array indexes, input lanes, and tracking channels. It features an independent deep-copy keyword caching shield and early parameter-popping filters to safeguard dropdown sub-component properties from native mutation deletion loops.
+### Overview
 
-![sCTkComboBox_Dark.png](images/sCTkComboBox_Dark.png)
-![sCTkComboBox_Light.png](images/sCTkComboBox_Light.png)
+`sCTkComboBox` is a themeable subclass of `customtkinter.CTkComboBox`. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state (separate from, but synchronized with, the widget's native interactive lock), and Pygubu Designer property introspection support.
 
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | `ctk.CTkComboBox(master)` | `sCTkComboBox(master)` *(Composite Dropdown Input)* |
-| **File Mapping** | Component definitions bundle under single active tracks. | Streamlined and compiled programmatically across `sCTkComboBox.py` and `ThemeableWidget.py`. |
-| `state(mode)` | `self.configure(state=...)` | `Method (str)` handling layout tracking map transformations (`'normal'`, `'disabled'`) via strict sequential update loops. |
-| `get_state()` | `self.cget("state")` | `Method -> str` explicit verification query matching system test assertions. |
-| `get()` | `self.get()` | Returns the active selected string item currently displayed inside the text frame field. |
-| `set(value)` | `self.set(str)` | Programmatically injects a custom string or forces selection updates onto the view face. |
+  ![sCTkComboBox in dark mode](images/sCTkComboBox_Dark.png)&emsp; &emsp; &emsp; &emsp;
+  ![sCTkComboBox in light mode](images/sCTkComboBox_Light.png)
 
 ---
 
 ### Constructor
 
-Initialize a custom combo box dropdown element instance. Custom attributes passed from Pygubu builder allocations (like string `translator` tracks or `data_pool` environments) are automatically intercepted, processed, and purged early by the `ThemeableWidget` mixin layer before the native constructor fires.
+```python
+sCTkComboBox(master=None, values=None, command=None, variable=None, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `values` | `list[str]` | `[""]` | Dropdown options. If the first entry is a non-empty string, it is selected automatically on creation. |
+| `command` | `callable` | `None` | Called with the selected value when the user picks an item. |
+| `variable` | `tkinter.StringVar` | `None` | Optional variable bound to the current selection. |
+| `**kwargs` | — | — | Any native `CTkComboBox` argument (e.g. `width`, `height`, `font`, `corner_radius`), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). Anything not supplied falls back to the `sCTkComboBox` block of `sCTkThemes.json`. |
 
 ```python
-# Instantiate a custom combo box dropdown element
 frequency_dropdown = sCTkComboBox(
     master=control_panel,
     values=["Channel A (VHF)", "Channel B (UHF)", "Direct Audio Feed"],
-    command=on_frequency_channel_changed
+    command=on_frequency_channel_changed,
 )
-
-# Render the widget inside your parent container geometry packer layout panel
 frequency_dropdown.pack(fill="x", padx=40, pady=10)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Programmatically query entries or force alternative text items on the fly
-active_selection = frequency_dropdown.get() # Returns current text lane string
-frequency_dropdown.set("Channel B (UHF)")   # Snaps the visible box choice straight to the specified item
-frequency_dropdown.state("disabled")        # Freezes entry input lanes and applies muted gray fills
-```
+### Methods
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+| Method | Returns | Description |
+|---|---|---|
+| `get()` | `str` | Currently selected text (native `CTkComboBox` behavior). |
+| `set(value)` | `None` | Sets the displayed text (native `CTkComboBox` behavior). |
+| `state(mode=None)` | `str` \| `None` | Gets or sets the widget's enabled/disabled visual state. Accepts `"normal"`, `"enabled"`, or `"active"` (all equivalent) and `"disabled"`. Any other value is silently ignored. Called with no argument, returns the current state as a lowercase string. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, with two additions: passing `state=...` routes to `state()` rather than the native Tkinter `state` option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`. Queries for any other single property name fall through to the native `CTkComboBox.configure`. |
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+Theme values are used in two different ways, worth keeping separate:
+
+- **Applied once, at construction** — every key in the widget's theme block (including `corner_radius`) is merged with any matching keyword arguments you pass in and applied when the widget is built.
+- **Re-applied on every `state()` change** — only `fg_color`, `border_color`, `text_color`, `button_color`, `button_hover_color`, `dropdown_fg_color`, `dropdown_text_color`, `dropdown_hover_color`, `border_width`, and `font` are swapped between the theme's normal values and its `disabled_map` values when you call `state("disabled")` / `state("normal")`. Toggling state also sets the native Tkinter `state` flag, so a disabled combo box is both visually muted and non-interactive.
+
 ```json
 {
     "sCTkComboBox": {
@@ -79,30 +86,20 @@ frequency_dropdown.state("disabled")        # Freezes entry input lanes and appl
 }
 ```
 
-### Other notes
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, completely bypassing the intermediate template layout files entirely to avoid argument deadlocks.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
+> **Note:** `disabled_map` above has no entries for `dropdown_fg_color`, `dropdown_text_color`, `dropdown_hover_color`, or `button_hover_color`. Since only keys present in `disabled_map` are swapped, those four properties keep their *enabled*-state color when the widget is disabled. Add entries for them here if you want the dropdown portion to visually mute along with the rest of the widget.
 
 ---
 
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkComboBox` alongside an interactive theme state track.
+### Example
 
 ```python
-
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for ComboBox
-# =====================================================================
-
 import customtkinter as ctk
-from scustomtkinter import sCTkFrame, sCTk, sCTkButtonPrimary, sCTkComboBox
+from scustomtkinter import sCTk, sCTkFrame, sCTkButtonPrimary, sCTkComboBox
 
 if __name__ == "__main__":
-
     root = sCTk()
     root.geometry("450x300")
-    root.title("ComboBox Interaction Telemetry Bench")
+    root.title("ComboBox Example")
 
     base = sCTkFrame(root)
     base.pack(expand=True, fill="both", padx=20, pady=20)
@@ -110,30 +107,27 @@ if __name__ == "__main__":
     widget = sCTkComboBox(
         base,
         values=["Channel A (VHF)", "Channel B (UHF)", "Direct Audio Feed"],
-        command=lambda choice: print(f"ComboBox Option Latched: {choice}")
+        command=lambda choice: print(f"Selected: {choice}"),
     )
     widget.pack(expand=True, fill="none", padx=10, pady=10)
 
     def toggle_widget_state():
-        current_mode = widget.get_state()
-        target = "disabled" if current_mode == "normal" else "normal"
+        target = "disabled" if widget.get_state() == "normal" else "normal"
         widget.configure(state=target)
-        btn_toggle.configure(text="Unlock Dropdown" if target == "disabled" else "Lock Dropdown (Set 'disabled')")
-        print(f"Logged Verification Hook -> widget.get_state() = {widget.get_state()}")
+        btn_toggle.configure(text="Enable" if target == "disabled" else "Disable")
 
-    btn_toggle = sCTkButtonPrimary(base, text="Lock Dropdown (Set 'disabled')", command=toggle_widget_state)
+    btn_toggle = sCTkButtonPrimary(base, text="Disable", command=toggle_widget_state)
     btn_toggle.pack(side="bottom", pady=15)
 
-    print("--- BOOT INITIALIZATION PASSTHROUGH ---")
-    widget.state("disabled")
-    print("state (Disabled Pass) =", widget.get_state())
-
-    widget.state("normal")
-    print("state (Normal Pass)   =", widget.get_state())
-    print("========================================\n")
-
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- `state()` silently ignores any value other than `normal`, `enabled`, `active`, or `disabled` — no exception is raised and no warning is logged.
+- Passing a positional `dict` to `configure()` (e.g. `configure({"fg_color": "red"})`) is not merged into the update; only keyword arguments are applied. Use `configure(**your_dict)` instead.
+
 
 [Return to Table of Contents](#contents)

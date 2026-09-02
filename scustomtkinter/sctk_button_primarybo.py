@@ -1,11 +1,5 @@
 #!/usr/bin/python3
-"""
-sCTkButtonPrimary
 
-sublass of CTkButton
-
-UI source file: sCTkButtonPrimary.ui
-"""
 import tkinter as tk
 import tkinter.ttk as ttk
 from customtkinter import CTkButton
@@ -13,6 +7,7 @@ from pygubu.api.v1 import (
     BuilderObject,
     register_widget,
 )
+
 from .sctk_button_primary import sCTkButtonPrimary
 
 from pygubu.plugins.customtkinter import nsctk
@@ -23,7 +18,7 @@ from pygubu.api.v1 import copy_custom_property
 #
 # Builder definition section
 #
-widget_namespace = "sCTkButtonPrimary"
+widget_namespace = "scustomtkinter"
 widget_classname = "sCTkButtonPrimary"
 builder_namespace = "custom_widgets"
 section_name = "sCustomTkinter"
@@ -33,11 +28,12 @@ class sCTkButtonPrimaryBO(CTkButtonBO):
     class_ = sCTkButtonPrimary
 
     def code_imports(self):
-        # should return an iterable of (module, classname/function) to import
-        # or None
+        # HARDCODE your installed package directory here for Pygubu's code exporter!
+        # This forces the generated code to use your library, even though
+        # Pygubu itself is loading this file locally.
         imports = [(widget_namespace, widget_classname)]
-        imports.extend(self.code_extra_imports())
         return imports
+
 
 
 builder_id = f"{builder_namespace}.{widget_classname}"

@@ -9,7 +9,7 @@ from scustomtkinter import sCTkFrame, sCTkButtonPrimary, sCTkLabelPrimary, sCTk,
 if __name__ == "__main__":
     root = sCTk()
     root.title("sCTkTableview Full Validation & State Showcase")
-    root.geometry("640x540")
+    root.geometry("400x300")
     root.configure(fg_color=("#F1F5F9", "#1C1C1C"))
 
     # 2. Mount custom master container using framework primitives

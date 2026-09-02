@@ -1,135 +1,131 @@
 ## sCTkSelector
 
+(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
+
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Convenience Functions](#convenience-functions)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Methods](#methods)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
 
 ---
 
-An advanced theme-compliant option list selector widget. It pairs an optional high-contrast string prefix search lane with a dynamic checklist scrollback chassis to safely manage multi-state checkbox row configurations natively.
+### Overview
 
+`sCTkSelector` is a theme-compliant, scrollable multi-select (or single-select) list of checkboxes, with an optional live-filtering search field. It's built by composing a themed frame, an `sCTkScrollableFrame` for the checkbox list, and one `sCTkCheckBox` per item — not by subclassing a single native CustomTkinter widget.
 
-![sCTkSelector_Dark.png](images/sCTkSelector_Dark.png)
-![sCTkSelector_Light.png](images/sCTkSelector_Light.png)
+  ![sCTkSelector in dark mode](images/sCTkSelector_Dark.png)&emsp; &emsp; &emsp; &emsp;
+ ![sCTkSelector in light mode](images/sCTkSelector_Light.png)
 
-
-### API Property Reference
-
-| Property / Feature | Standard CustomTkinter | Your `sCustomTkinter` Setup |
-| :--- | :--- | :--- |
-| **Instantiation** | *Not Available Natively* | `sCTkSelector(master)` *(Scrollable Options Selector)* |
-| **File Mapping** | Array elements bundle manually without centralized theme hooks. | Separated safely across `sCTkSelector.py` and `ThemeableWidget.py`. |
-| **State Lock** | *Not Supported Natively* | `theSelector.state("disabled")`<br>**OR**<br>`theSelector.configure(state="disabled")`<br><br>**Polymorphic State Controller:** Simultaneously locks the top search bar entry field and paralyzes all child selection checkbox tracks natively using a low-level event intercept matrix. |
-| `searchBox` | *Not Supported Natively* | `Property -> bool`. Controls visibility of the dynamic search bar lane. |
+This widget inherits `sCTkFrame` directly (rather than raw `ctk.CTkFrame`) — a composition pattern that previously carried a real risk of `ThemeableWidget.__init__` running twice per instance and silently corrupting this widget's own resolved theme data. That risk is now fully closed: `ThemeableWidget` has a run-once guard preventing the double-init, and `sCTkFrame` itself filters its inbound kwargs down to only what native `CTkFrame` actually accepts before its own constructor call. Neither fix required any change to this widget.
 
 ---
 
 ### Constructor
 
-Initialize a custom themed selector option array tree layout.
+```python
+sCTkSelector(master, items=None, multiple_choices=True, searchBox=True, **kwargs)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | — | Parent container. |
+| `items` | `list[str]` | `None` | Initial list of checkbox labels. Must not contain duplicates — raises `ValueError` if it does. |
+| `multiple_choices` | `bool` | `True` | If `False`, selecting one item automatically deselects any other currently-selected item. |
+| `searchBox` | `bool` | `True` | Whether the live-filtering search field is shown above the checkbox list. |
+| `**kwargs` | — | — | Any native `CTkFrame` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
-items = ["vw", "porsche", "roadster", "tesla", "ferrari", "mclaren"]
-
-# Instantiate with multi-selection active but search functionality turned off
-theSelector = sCTkSelector(
-    master=root, 
-    items=items, 
-    multiple_choices=True, 
-    searchBox=False
-)
-
-# Render the widget inside your container panel
-theSelector.pack(expand=True, fill="both", padx=15, pady=15)
+channel_selector = sCTkSelector(control_panel, items=["Ch 1", "Ch 2", "Ch 3"], multiple_choices=False)
+channel_selector.pack(expand=True, fill="both", padx=20, pady=20)
 ```
 
 ---
 
-### Convenience Functions
-```python
-# Unpack current active choices dynamically
-active_items = theSelector.get_selections()  # Returns list of strings e.g. ['porsche', 'tesla']
+### Methods
 
-# Return all mapped string names managed by the element index
-all_options = theSelector.get_all_items()     # Returns list of all items
+| Method | Returns | Description |
+|---|---|---|
+| `get_all_items()` | `list[str]` | Every checkbox's label text, regardless of current search filter or selection state. |
+| `state(mode=None)` | `str` | Gets or sets the widget's visual state. `"disabled"` locks and dims every checkbox and the search field (routed to the search field's own `"readonly"`, not `"disabled"` — see Known Limitations); anything in `("normal", "enabled", "active")` re-enables both. |
+| `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus `items`, `multiple_choices`, `searchBox`, `pack_propagate`, `grid_propagate`, and `state` are all handled as first-class properties, matching the constructor. Calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `multiple_choices`, `searchBox`, `items`, `pack_propagate`, `grid_propagate`, and `fg_color`/`border_color`/`text_color`. |
 
-# Wipe selection arrays clean uniformly
-theSelector.clear_selections()
+---
 
-# Adjust layout properties or component visibilities on the fly
-theSelector.configure(searchBox=True)        # Dynamically mounts and renders search bar lane
-```
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
+
+- **Applied once, at construction** — `fg_color` and `corner_radius` control the outer frame; the checkbox-related keys and `border_color` are validated and applied once at construction time (not repeatedly on every state change).
+- **Re-applied on every `state()` change** — the checkbox colors below are recomputed from normal values or `disabled_map` every time you call `state()`.
+
 ```json
 {
     "sCTkSelector": {
-        "fg_color": ["#FAFAFA", "#11141A"],
-        "border_color": ["#CBD5E1", "#222933"],
-        "text_color": ["#1F2937", "#FFFFFF"],
+        "fg_color": "transparent",
+        "corner_radius": 6,
+        "text_color": ["#1F2937", "#F9FAFB"],
+        "checkbox_fg_color": ["#1A4375", "#1F6AA5"],
+        "checkbox_hover_color": ["#112A4B", "#1A5885"],
+        "border_color": ["#94A3B8", "#4B5563"],
+        "checkmark_color": ["#FFFFFF", "#FFFFFF"],
         "disabled_map": {
-            "fg_color": ["#F1F5F9", "#0A0D14"],
-            "border_color": ["#E2E8F0", "#171C24"]
+            "text_color": ["#808080", "#666666"],
+            "checkbox_fg_color": ["#CBD5E1", "#475569"],
+            "border_color": ["#CBD5E1", "#334155"],
+            "checkmark_color": ["#F1F5F9", "#94A3B8"]
         }
     }
 }
 ```
 
+**`checkbox_fg_color`/`checkbox_hover_color` are dedicated keys, not reused from `fg_color`.** An earlier version derived each checkbox's accent color from this widget's own `fg_color` — the same key that controls the outer frame's background — falling back to a hardcoded generic blue whenever `fg_color` was `"transparent"` (a common, legitimate choice for a frame, not a theme gap). Reusing one key for two different visual purposes didn't work well; dedicated keys fix that cleanly. All five top-level keys (`text_color`, `checkbox_fg_color`, `checkbox_hover_color`, `border_color`, `checkmark_color`) and four `disabled_map` keys (all but `checkbox_hover_color` — disabled checkboxes reuse `checkbox_fg_color` for hover too, since hover can't meaningfully trigger while disabled) are required; missing any raises immediately at construction.
+
+**`border_color` is also shared with this widget's two internal sub-widgets** (the search field and the checkbox-list frame), passed in once at construction so their *normal*-state border visually matches this widget's own border — confirmed by direct testing that these two sub-widgets' own independent default themes can otherwise visibly mismatch, especially in dark mode. This only establishes the shared normal-state value; each sub-widget's own state-driven color changes (the search field's readonly/disabled coloring in particular) are left completely untouched afterward.
+
+Every color is passed through as a raw `(light, dark)` tuple, letting CustomTkinter's native appearance-mode tracking handle repaints automatically, consistent with the approach used throughout this project.
+
 ---
 
-### Other Notes
-* **Crash-Shield Transparency Interceptor:** Native checkboxes throw a fatal `ValueError` if their indicator fills map to `transparent`. If the selector's master frame layout returns a transparent background, the visual router automatically overrides the checkbox container tracks with solid high-contrast corporate hex codes on boot.
-* **Light Mode Contrast Guard:** To bypass CustomTkinter's native washed-out white checkmark bug on locked elements, the repaint engine manually forces a dark gray checkmark selection overlay inside Light Mode, keeping checked rows perfectly legible.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization sequence, the constructor fires `self._finalize_themeable_lifecycle()` to safely pass instance registration hooks straight back up to Pygubu layout trees.
-
----
-
-### Implementation Example & Test Harness
-
-Below is a complete, self-contained testing suite containing interactive buttons to safely evaluate option configurations, state locks, and real-time global look preference shifts.
+### Example
 
 ```python
-#!/usr/bin/python3
-# =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Selector
-# =====================================================================
-
-import customtkinter as ctk
-from scustomtkinter import sCTkButtonPrimary, sCTk, sCTkSelector
-
+from scustomtkinter import sCTk, sCTkFrame, sCTkSelector, sCTkButtonPrimary, sCTkLabelPrimary
 
 if __name__ == "__main__":
-    def on_confirm(): print(f"Active Selection Telemetry Array: {theSelector.get_selections()}")
-
     root = sCTk()
-    root.geometry("250x420")
-    root.title("sCTkSelector Validation Bench")
+    root.geometry("400x420")
+    root.title("Selector Example")
 
-    items = ["vw", "porsche", "roadster", "tesla", "ferrari", "mclaren"]
-    theSelector = sCTkSelector(root, items=items, multiple_choices=True)
-    theSelector.pack(expand=True, fill="both", padx=15, pady=15)
+    base = sCTkFrame(root)
+    base.pack(expand=True, fill="both", padx=20, pady=20)
 
-    def toggle_selector_lock():
-        target = "disabled" if theSelector.get_state() == "normal" else "normal"
-        theSelector.configure(state=target)
-        btn_lock.configure(text="Lock Selector Deck" if target == "normal" else "Unlock Selector Deck")
+    selector = sCTkSelector(base, items=[f"Item {i}" for i in range(1, 21)])
+    selector.pack(expand=True, fill="both", pady=10)
 
-    def toggle_skin_mode():
-        current_skin = ctk.get_appearance_mode()
-        ctk.set_appearance_mode("Light" if current_skin == "Dark" else "Dark")
+    status = sCTkLabelPrimary(base, text=f"state: {selector.get_state()}")
+    status.pack(pady=5)
 
-    confirm_btn = sCTkButtonPrimary(root, text="Confirm Selections", command=on_confirm)
-    confirm_btn.pack(pady=5)
-    btn_lock = sCTkButtonPrimary(root, text="Lock Selector Deck", command=toggle_selector_lock)
-    btn_lock.pack(pady=5)
-    btn_theme = sCTkButtonPrimary(root, text="Simulate Global Theme Shift", command=toggle_skin_mode)
-    btn_theme.pack(pady=(5, 15))
+    def toggle_disabled():
+        target = "disabled" if selector.get_state() == "normal" else "normal"
+        selector.state(target)
+        status.configure(text=f"state: {selector.get_state()}")
+        toggle_btn.configure(text="Enable" if target == "disabled" else "Disable")
+
+    toggle_btn = sCTkButtonPrimary(base, text="Disable", command=toggle_disabled)
+    toggle_btn.pack(pady=10)
 
     root.mainloop()
-
 ```
+
+---
+
+### Known Limitations
+
+- **Disabling this widget routes the search field to `"readonly"`, not `"disabled"`** — deliberate, so its text remains selectable/copyable, but worth knowing if you expected a uniform `"disabled"` state across every sub-component.
+- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **`.config()` previously bypassed this widget entirely.** Tkinter binds `.config` to `.configure` as a separate class attribute rather than tracking a subclass's override, and this class had no `config = configure` line — so `.config(...)` skipped the `items`/`searchBox`/`multiple_choices`/`state` handling and landed on `sCTkFrame`'s `configure()` instead. Fixed. Note this widget uses the older `(self, cnf=None, **kwargs)` signature rather than `*args`; that's correct here and is *not* the shape that caused the tuple-comparison bugs found elsewhere in the library, since `cnf` is a real parameter holding the value itself.
+- `items` must not contain duplicate labels — `configure(items=[...])` raises `ValueError` if it does, since selection tracking is index-based and duplicate labels would make search filtering ambiguous.
 
 [Return to Table of Contents](#contents)

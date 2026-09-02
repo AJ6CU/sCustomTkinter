@@ -4,8 +4,8 @@ from PIL import Image
 # ==========================================
 # CONFIGURATION
 # ==========================================
-MAX_SIZE = 300  # Change this value to adjust the maximum allowed dimension
-TARGET_DIRECTORY = "."  # Folder to process ('.' means current directory)
+MAX_SIZE = 325  # Change this value to adjust the maximum allowed dimension
+TARGET_DIRECTORY = "../Docs/src/images/"  # Folder to process ('.' means current directory)
 # ==========================================
 
 
@@ -25,7 +25,7 @@ def resize_png_images(directory, max_dimension):
                     width, height = img.size
 
                     # Check if either dimension is larger than the max allowed size
-                    if width > max_dimension or height > max_dimension:
+                    if width > max_dimension :
                         # Calculate new dimensions while maintaining aspect ratio
                         if width > height:
                             new_width = max_dimension
