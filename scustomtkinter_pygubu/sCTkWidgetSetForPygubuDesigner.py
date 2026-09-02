@@ -35,7 +35,6 @@ import scustomtkinter_pygubu.sCTkFramebo
 import scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo
 import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
 
-import scustomtkinter_pygubu.sCTkFrameOutlinedbo
 
 import scustomtkinter_pygubu.sCTkLabelPrimarybo
 import scustomtkinter_pygubu.sCTkLabelSecondarybo
