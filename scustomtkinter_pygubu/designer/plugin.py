@@ -19,17 +19,19 @@ from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFr
 
 from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
 from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
-
-
-from scustomtkinter.sctk_optionmenu_primary import sCTkOptionMenuPrimary
-from scustomtkinter_pygubu.sCTkOptionMenuPrimarybo import (sCTkOptionMenuPrimaryBO, builder_id as sCTkOptionMenuPrimary_builder_id)
+import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
 
 from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
-from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id
 
+# FIXME: missing sCTkOptionMenuSecondaryBO class
+# from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
+sCTkOptionMenuSecondary_builder_id = None
 
 from scustomtkinter.sctk_path_chooser import sCTkPathChooser
 from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
+
+from scustomtkinter.sctk_separator import sCTkSeparator
+from scustomtkinter_pygubu.sCTkSeparatorbo import (sCTkSeparatorBuilder, builder_id as sCTkSeparator_builder_id)
 
 from scustomtkinter.sctk_selector import sCTkSelector
 from scustomtkinter.sctk_checkbox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
@@ -80,9 +82,63 @@ from scustomtkinter_pygubu.sCTkToplevelbo import builder_id as sCTkToplevel_buil
 # =====================================================================
 
 
+# =====================================================================
+# TRANSPARENT BACKGROUNDS IN THE DESIGN VIEW
+#
+# A theme block may legitimately set a colour key to "transparent", meaning
+# "show whatever is behind me". At runtime that always resolves against a
+# themed parent, so it follows light/dark correctly. The Designer canvas does
+# NOT participate in appearance mode -- it is a fixed light grey -- so a
+# transparent widget rendered on it keeps a light background while its TEXT
+# still follows the appearance mode. In dark mode that leaves dark-on-grey
+# text, or a bright band where a separator should be.
+#
+# Confirmed against sCTkSelector and sCTkSeparator; ten theme blocks currently
+# use "transparent" and any of them can show it, given text or a visible fill.
+#
+# preview_opaque() stamps a concrete background onto a preview subclass so the
+# design view stays legible in both modes. This affects the DESIGNER ONLY --
+# the real widget keeps its transparent background and its runtime appearance
+# is unchanged.
+#
+# Written as one decorator rather than a hand-written __init__ per widget:
+# this is the third widget to hit it and there will be more, so the per-widget
+# version would keep growing.
+PREVIEW_OPAQUE_BG = ("#FFFFFF", "#111827")
+
+
+def preview_opaque(colour_key="fg_color", colour=PREVIEW_OPAQUE_BG):
+    """
+    Class decorator giving a preview subclass a concrete background.
+
+    Args:
+        colour_key: The theme key carrying the background. "fg_color" for
+            most widgets; sCTkSeparator and sCTkTreeview use "bg_color".
+        colour: The (light, dark) pair to substitute. Defaults to the pair
+            used by sCTkScrollableFrame, so a stamped widget matches the
+            containers it would normally sit inside.
+
+    Returns:
+        The class, with __init__ wrapped to supply the background.
+    """
+    def decorate(cls):
+        original_init = cls.__init__
+
+        def __init__(self, master=None, **kwargs):
+            # setdefault, not assignment: an explicit value set in the
+            # Designer inspector must still win.
+            kwargs.setdefault(colour_key, colour)
+            original_init(self, master, **kwargs)
+
+        cls.__init__ = __init__
+        return cls
+    return decorate
+
+
 #
 # Preview class for sCTkFrame
 #
+@preview_opaque()
 class sCTkFrameForPreview(sCTkFrame):
     _THEME_BLOCK_NAME = "sCTkFrame"
 
@@ -125,15 +181,20 @@ class sCTkTableviewForPreview(sCTkTableview):
         return clist
 
 
+# sCTkSeparator carries its transparency on bg_color rather than fg_color, so
+# the decorator is told which key to stamp. Its _draw() calls
+# _detect_color_of_master() and falls back to the CTk theme's own fg_color when
+# that returns transparent, which on the Designer canvas produces a bright band
+# in dark mode -- more conspicuous than the Selector's low-contrast text,
+# because the band is the full canvas height rather than a few glyphs.
+@preview_opaque(colour_key="bg_color")
+class sCTkSeparatorForPreview(sCTkSeparator):
+    _THEME_BLOCK_NAME = "sCTkSeparator"
+
+
+@preview_opaque()
 class sCTkSelectorForPreview(sCTkSelector):
     _THEME_BLOCK_NAME = "sCTkSelector"
-
-    def __init__(self, master=None, **kwargs):
-        # Designer-only: the canvas behind the preview is a fixed light grey
-        # that ignores appearance mode, so a transparent background leaves
-        # dark-mode text unreadable. Runtime is unaffected.
-        kwargs.setdefault("fg_color", ("#FFFFFF", "#111827"))
-        super().__init__(master, **kwargs)
 
     def winfo_children(self):
         internal = [
@@ -151,20 +212,7 @@ class sCTkSelectorForPreview(sCTkSelector):
                     clist.append(cwidget._canvas)
         return clist
 
-# class sCTkOptionMenuPrimaryForPreview(sCTkOptionMenuPrimary):
-#     _THEME_BLOCK_NAME = "sCTkOptionMenuPrimary"
-#
-#     def winfo_children(self):
-#         internal = [
-#             self._menu,
-#         ]
-#         clist = []
-#         for widget in internal:
-#             for cwidget in widget.winfo_children():
-#                 clist.append(cwidget)
-#         return clist
-#
-#
+
 class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
     _THEME_BLOCK_NAME = "sCTkOptionMenuSecondary"
 
@@ -216,11 +264,13 @@ class sCTkSelectorForPreviewBO(sCTkSelectorBO):
     class_ = sCTkSelectorForPreview
 
 
-# class sCTkOptionMenuPrimaryForPreviewBO(sCTkOptionMenuPrimaryBO):
-#     class_ = sCTkOptionMenuPrimaryForPreview
-#
-class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
-    class_ = sCTkOptionMenuSecondaryForPreview
+class sCTkSeparatorForPreviewBO(sCTkSeparatorBuilder):
+    class_ = sCTkSeparatorForPreview
+
+
+# FIXME: Missing sCTkOptionMenuSecondaryBO
+# class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
+#     class_ = sCTkOptionMenuSecondaryForPreview
 
 
 class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
@@ -382,14 +432,14 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkTableviewForPreviewBO
         elif builder_uid == sCTkSelector_builder_id:
             return sCTkSelectorForPreviewBO
+        elif builder_uid == sCTkSeparator_builder_id:
+            return sCTkSeparatorForPreviewBO
         # FIXME: re-enable once sCTkOptionMenuSecondaryBO exists. The branch is
         # commented out rather than left in place because the BO it returns
         # does not exist yet -- reaching it would raise NameError. The builder
         # id is None above so no uid can match it accidentally.
-        # elif builder_uid == sCTkOptionMenuPrimary_builder_id:
-        #     return sCTkOptionMenuPrimaryForPreviewBO
-        elif builder_uid == sCTkOptionMenuSecondary_builder_id:
-            return sCTkOptionMenuSecondaryForPreviewBO
+        # elif builder_uid == sCTkOptionMenuSecondary_builder_id:
+        #     return sCTkOptionMenuSecondaryForPreviewBO
         elif builder_uid == sCTkSpinbox_builder_id:
             return sCTkSpinboxForPreviewBO
         elif builder_uid == sCTkToplevel_builder_id:
