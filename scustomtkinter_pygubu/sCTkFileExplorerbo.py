@@ -13,6 +13,7 @@ from pygubu.api.v1 import (
 
 # Import the native custom class
 from scustomtkinter.sctk_file_explorer import sCTkFileExplorer
+from pygubu.plugins.customtkinter.widgets import CTkFrameBO
 
 # Builder UI placement definitions
 widget_namespace = "scustomtkinter.sctk_file_explorer"
@@ -31,7 +32,7 @@ class sCTkFileExplorerBO(BuilderObject):
     )
 
     # Merge custom extensions cleanly on top of core container frame attributes
-    properties = BuilderObject.properties + OPTIONS_CUSTOM
+    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
     command_properties = ("command", "double_click_command")
 
     def _process_property_value(self, pname, value):

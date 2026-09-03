@@ -10,6 +10,7 @@ from pygubu.api.v1 import (
 )
 from scustomtkinter.sctk_selector import sCTkSelector
 from scustomtkinter.themeable_widget import parse_list_property
+from pygubu.plugins.customtkinter.widgets import CTkFrameBO
 
 widget_namespace = "scustomtkinter.sctk_selector"
 widget_classname = "sCTkSelector"
@@ -20,10 +21,10 @@ section_name = "sCustomTkinter"
 class sCTkSelectorBO(BuilderObject):
     class_ = sCTkSelector
 
-    OPTIONS_STANDARD = ('height', 'width')
+    # OPTIONS_STANDARD = ('height', 'width')
     # 1. Append 'state' to your custom options tuple array
     OPTIONS_CUSTOM = ('items', 'multiple_choices', 'pack_propagate', 'grid_propagate', 'state')
-    properties = BuilderObject.properties + OPTIONS_CUSTOM + OPTIONS_STANDARD
+    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
 
     OPTIONS_CUSTOM_DEFAULTS = {
         'multiple_choices': 'True',

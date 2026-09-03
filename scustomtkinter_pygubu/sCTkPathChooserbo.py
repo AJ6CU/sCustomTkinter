@@ -14,6 +14,7 @@ from pygubu.api.v1 import (
 
 # Import the native custom class
 from scustomtkinter.sctk_path_chooser import sCTkPathChooser
+from pygubu.plugins.customtkinter.widgets import CTkFrameBO
 
 #
 # Builder definition section
@@ -29,7 +30,7 @@ class sCTkPathChooserBO(BuilderObject):
 
     # Expose custom compound parameters alongside theme state configurations
     OPTIONS_CUSTOM = ("width", "height", "type", "title", "initialdir", "initialfile", "filetypes", "state", "command", "btn_width", "btn_height", "btn_text", "entry_height", "browser_width", "browser_height", "justify")
-    properties = OPTIONS_CUSTOM
+    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
 
     command_properties = ("command",)
 
