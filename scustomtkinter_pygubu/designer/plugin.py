@@ -443,7 +443,7 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         if not builder_uid.startswith(namespace_prefix):
             return
 
-        crop_widget(widget, recursive=True)
+        # crop_widget(widget, recursive=True)
 
         canvas = _preview_canvas(widget)
 
