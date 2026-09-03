@@ -19,13 +19,14 @@ from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFr
 
 from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
 from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
-import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
+
+
+from scustomtkinter.sctk_optionmenu_primary import sCTkOptionMenuPrimary
+from scustomtkinter_pygubu.sCTkOptionMenuPrimarybo import (sCTkOptionMenuPrimaryBO, builder_id as sCTkOptionMenuPrimary_builder_id)
 
 from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
+from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id
 
-# FIXME: missing sCTkOptionMenuSecondaryBO class
-# from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
-sCTkOptionMenuSecondary_builder_id = None
 
 from scustomtkinter.sctk_path_chooser import sCTkPathChooser
 from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
@@ -195,9 +196,11 @@ class sCTkSelectorForPreviewBO(sCTkSelectorBO):
     class_ = sCTkSelectorForPreview
 
 
-# FIXME: Missing sCTkOptionMenuSecondaryBO
-# class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
-#     class_ = sCTkOptionMenuSecondaryForPreview
+class sCTkOptionMenuPrimaryForPreviewBO(sCTkOptionMenuPrimaryBO):
+    class_ = sCTkOptionMenuPrimaryForPreview
+
+class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
+    class_ = sCTkOptionMenuSecondaryForPreview
 
 
 class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
@@ -363,8 +366,10 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         # commented out rather than left in place because the BO it returns
         # does not exist yet -- reaching it would raise NameError. The builder
         # id is None above so no uid can match it accidentally.
-        # elif builder_uid == sCTkOptionMenuSecondary_builder_id:
-        #     return sCTkOptionMenuSecondaryForPreviewBO
+        elif builder_uid == sCTkOptionMenuPrimary_builder_id:
+            return sCTkOptionMenuPrimaryForPreviewBO
+        elif builder_uid == sCTkOptionMenuSecondary_builder_id:
+            return sCTkOptionMenuSecondaryForPreviewBO
         elif builder_uid == sCTkSpinbox_builder_id:
             return sCTkSpinboxForPreviewBO
         elif builder_uid == sCTkToplevel_builder_id:
