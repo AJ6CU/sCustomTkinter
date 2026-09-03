@@ -23,43 +23,70 @@ from pygubu.plugins.customtkinter.widgets import (
 from pygubu.plugins.customtkinter.tabview import CTkTabviewBO
 from pygubu.plugins.customtkinter.scrollableframe import CTkScrollableFrameBO
 
+#
+#   Imports  for the sCTK Widgets
+#
+
 from scustomtkinter_pygubu.sCTkCorebo import (sCTkBO, builder_id as sCTk_builder_id)
 from scustomtkinter_pygubu.sCTkToplevelbo import (sCTkToplevelBO, builder_id as sCTkToplevel_builder_id)
+
 from scustomtkinter_pygubu.sCTkButtonPrimarybo import (sCTkButtonPrimaryBO, builder_id as sCTkButtonPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkButtonSecondarybo import (sCTkButtonSecondaryBO, builder_id as sCTkButtonSecondary_builder_id)
 from scustomtkinter_pygubu.sCTkButtonTertiarybo import (sCTkButtonTertiaryBO, builder_id as sCTkButtonTertiary_builder_id)
+
 from scustomtkinter_pygubu.sCTkCheckBoxbo import (sCTkCheckBoxBO, builder_id as sCTkCheckBox_builder_id)
 from scustomtkinter_pygubu.sCTkComboBoxbo import (sCTkComboBoxBO, builder_id as sCTkComboBox_builder_id)
-# from scustomtkinter_pygubu.sCTkDialbo import (sCTkDialbo, builder_id as sCTkDial_builder_id)
+
+# from scustomtkinter_pygubu.sCTkDialbo import (sCTkDialBO, builder_id as sCTkDial_builder_id)
 # from scustomtkinter_pygubu.sCTkDialogCorebo import (sCTkDialogCoreBO, builder_id as sCTkDialogCore_builder_id)
+
 from scustomtkinter_pygubu.sCTkEntryPrimarybo import (sCTkEntryPrimaryBO, builder_id as sCTkEntryPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkEntrySecondarybo import (sCTkEntrySecondaryBO, builder_id as sCTkEntrySecondary_builder_id)
-#from sCTkFileExplorerbo # missing bo file
+
+# from sCTkFileExplorerbo # missing bo file
+from scustomtkinter_pygubu.sCTkFileExplorerbo import (sCTkFileExplorerBO, builder_id as sCTkFileExplorer_builder_id)
 
 from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFrame_builder_id)
 from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
-# from scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo import (x, builder_id as y_builder_id)
+# from scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo import (sCTkFrameLabeledSecondaryBO, builder_id as sCTkFrameLabeledSecondary_builder_id)
+
 from scustomtkinter_pygubu.sCTkLabelPrimarybo import (sCTkLabelPrimaryBO, builder_id as sCTkLabelPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkLabelSecondarybo import (sCTkLabelSecondaryBO, builder_id as sCTkLabelSecondary_builder_id)
 from scustomtkinter_pygubu.sCTkLabelTertiarybo import (sCTkLabelTertiaryBO, builder_id as sCTkLabelTertiary_builder_id)
+
 from scustomtkinter_pygubu.sCTkOptionMenuPrimarybo import (sCTkOptionMenuPrimaryBO, builder_id as sCTkOptionMenuPrimary_builder_id)
-# from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondarybo, builder_id as sCTkOptionMenuSecondary_builder_id)
-# from scustomtkinter_pygubu.sCTkPathChooserbo import (x, builder_id as y_builder_id)
+from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
+
+from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
+
 from scustomtkinter_pygubu.sCTkProgressBarbo import (sCTkProgressBarBO, builder_id as sCTkProgressBar_builder_id)
 from scustomtkinter_pygubu.sCTkRadioButtonbo import (sCTkRadioButtonBO, builder_id as sCTkRadioButton_builder_id)
-# from scustomtkinter_pygubu.sCTkScrollableFramebo import (x, builder_id as y_builder_id)
+
+# from scustomtkinter_pygubu.sCTkScrollableFramebo import (sCTkScrollableFrameBO, builder_id as sCTkScrollableFrame_builder_id)
 from scustomtkinter_pygubu.sCTkScrollbarbo import (sCTkScrollbarBO, builder_id as sCTkScrollbar_builder_id)
-# from scustomtkinter_pygubu.sCTkSegmentedButtonbo import (x, builder_id as y_builder_id)
+
+# from scustomtkinter_pygubu.sCTkSegmentedButtonbo import (sCTkSegmentedButtonBO, builder_id as sCTkSegmentedButton_builder_id)
+
+# from scustomtkinter_pygubu.sCTkSegmentedButtonbo import (sCTkSegmentedButtonBO, builder_id as sCTkSegmentedButton_builder_id)
 # from sCTkSegmentedButtonbo from (sCTkSegmentedButtonBO, builder_id as sCTkSegmentedButton_builder_id )
-# from scustomtkinter_pygubu.sCTkSelectorbo import (x, builder_id as y_builder_id)
-# from scustomtkinter_pygubu.sCTkSeparatorbo import (x, builder_id as y_builder_id)
+
+# from scustomtkinter_pygubu.sCTkSelectorbo import (sCTkSelectorBO, builder_id as sCTkSelector_builder_id)
+
+# from scustomtkinter_pygubu.sCTkSeparatorbo import (sCTkSeparatorBO, builder_id as sCTkSeparator_builder_id)
+
 from scustomtkinter_pygubu.sCTkSliderbo import (sCTkSliderBO, builder_id as sCTkSlider_builder_id)
-# from scustomtkinter_pygubu.sCTkSMeterbo import (x, builder_id as y_builder_id)
-# from scustomtkinter_pygubu.sCTkSMeterBarbo import (x, builder_id as y_builder_id)
-# from scustomtkinter_pygubu.sCTkSpinboxbo import (x, builder_id as y_builder_id)
+
+# from scustomtkinter_pygubu.sCTkSMeterbo import (sCTkSMeterBO, builder_id as sCTkSMeter_builder_id)
+# from scustomtkinter_pygubu.sCTkSMeterBarbo import (sCTkSMeterBarBO, builder_id as sCTkSMeterBar_builder_id)
+
+# from scustomtkinter_pygubu.sCTkSpinboxbo import (sCTkSpinboxBO, builder_id as sCTkSpinbox_builder_id)
+
 from scustomtkinter_pygubu.sCTkSwitchbo import (sCTkSwitchBO, builder_id as sCTkSwitch_builder_id)
+
 from scustomtkinter_pygubu.sCTkTabviewbo import (sCTkTabviewBO, builder_id as sCTkTabview_builder_id)
-# from scustomtkinter_pygubu.sCTkTableviewbo import (x, builder_id as y_builder_id)
+
+# from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id as sCTkTableview_builder_id)
+
 from scustomtkinter_pygubu.sCTkTextboxPrimarybo import (sCTkTextboxPrimaryBO, builder_id as sCTkTextboxPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkTextboxSecondarybo import (sCTkTextboxSecondaryBO, builder_id as sCTkTextboxSecondary_builder_id)
 
@@ -106,6 +133,7 @@ for pname in CTkLabelBO.properties:
 
 for pname in CTkOptionMenuBO.properties:
     copy_custom_property(nsctk.CTkOptionMenu, pname, sCTkOptionMenuPrimary_builder_id)
+    copy_custom_property(nsctk.CTkOptionMenu, pname, sCTkOptionMenuSecondary_builder_id)
 
 for pname in CTkProgressBarBO.properties:
     try:
@@ -147,6 +175,12 @@ for pname in CTkTextboxBO.properties:
 for pname in CTkBO.properties:
     try:
         copy_custom_property(nsctk.CTk, pname, sCTk_builder_id)
+    except RuntimeError:
+        pass
+
+for pname in CTkToplevelBO.properties:
+    try:
+        copy_custom_property(nsctk.CTkToplevel, pname, sCTkToplevel_builder_id)
     except RuntimeError:
         pass
 

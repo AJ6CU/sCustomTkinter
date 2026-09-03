@@ -15,6 +15,7 @@ from customtkinter import (CTkScrollableFrame)
 
 import scustomtkinter_pygubu.sCTkCorebo
 import scustomtkinter_pygubu.sCTkToplevelbo
+
 import scustomtkinter_pygubu.sCTkButtonPrimarybo
 import scustomtkinter_pygubu.sCTkButtonSecondarybo
 import scustomtkinter_pygubu.sCTkButtonTertiarybo
@@ -42,8 +43,7 @@ import scustomtkinter_pygubu.sCTkLabelSecondarybo
 import scustomtkinter_pygubu.sCTkLabelTertiarybo
 
 import scustomtkinter_pygubu.sCTkOptionMenuPrimarybo
-
-# import scustomtkinter_pygubu.sCTkOptionMenuSecondarybo # FIXME: missing files?
+import scustomtkinter_pygubu.sCTkOptionMenuSecondarybo 
 
 import scustomtkinter_pygubu.sCTkPathChooserbo
 
