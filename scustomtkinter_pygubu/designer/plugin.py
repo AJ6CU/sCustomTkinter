@@ -144,32 +144,32 @@ class sCTkSelectorForPreview(sCTkSelector):
                     clist.append(cwidget._canvas)
         return clist
 
-class sCTkOptionMenuPrimaryForPreview(sCTkOptionMenuPrimary):
-    _THEME_BLOCK_NAME = "sCTkOptionMenuPrimary"
-
-    def winfo_children(self):
-        internal = [
-            self._menu,
-        ]
-        clist = []
-        for widget in internal:
-            for cwidget in widget.winfo_children():
-                clist.append(cwidget)
-        return clist
-
-
-class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
-    _THEME_BLOCK_NAME = "sCTkOptionMenuSecondary"
-
-    def winfo_children(self):
-        internal = [
-            self._menu,
-        ]
-        clist = []
-        for widget in internal:
-            for cwidget in widget.winfo_children():
-                clist.append(cwidget)
-        return clist
+# class sCTkOptionMenuPrimaryForPreview(sCTkOptionMenuPrimary):
+#     _THEME_BLOCK_NAME = "sCTkOptionMenuPrimary"
+#
+#     def winfo_children(self):
+#         internal = [
+#             self._menu,
+#         ]
+#         clist = []
+#         for widget in internal:
+#             for cwidget in widget.winfo_children():
+#                 clist.append(cwidget)
+#         return clist
+#
+#
+# class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
+#     _THEME_BLOCK_NAME = "sCTkOptionMenuSecondary"
+#
+#     def winfo_children(self):
+#         internal = [
+#             self._menu,
+#         ]
+#         clist = []
+#         for widget in internal:
+#             for cwidget in widget.winfo_children():
+#                 clist.append(cwidget)
+#         return clist
 
 
 class sCTkSpinboxForPreview(sCTkSpinbox):
@@ -209,11 +209,11 @@ class sCTkSelectorForPreviewBO(sCTkSelectorBO):
     class_ = sCTkSelectorForPreview
 
 
-class sCTkOptionMenuPrimaryForPreviewBO(sCTkOptionMenuPrimaryBO):
-    class_ = sCTkOptionMenuPrimaryForPreview
-
-class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
-    class_ = sCTkOptionMenuSecondaryForPreview
+# class sCTkOptionMenuPrimaryForPreviewBO(sCTkOptionMenuPrimaryBO):
+#     class_ = sCTkOptionMenuPrimaryForPreview
+#
+# class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
+#     class_ = sCTkOptionMenuSecondaryForPreview
 
 
 class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
@@ -379,10 +379,10 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         # commented out rather than left in place because the BO it returns
         # does not exist yet -- reaching it would raise NameError. The builder
         # id is None above so no uid can match it accidentally.
-        elif builder_uid == sCTkOptionMenuPrimary_builder_id:
-            return sCTkOptionMenuPrimaryForPreviewBO
-        elif builder_uid == sCTkOptionMenuSecondary_builder_id:
-            return sCTkOptionMenuSecondaryForPreviewBO
+        # elif builder_uid == sCTkOptionMenuPrimary_builder_id:
+        #     return sCTkOptionMenuPrimaryForPreviewBO
+        # elif builder_uid == sCTkOptionMenuSecondary_builder_id:
+        #     return sCTkOptionMenuSecondaryForPreviewBO
         elif builder_uid == sCTkSpinbox_builder_id:
             return sCTkSpinboxForPreviewBO
         elif builder_uid == sCTkToplevel_builder_id:

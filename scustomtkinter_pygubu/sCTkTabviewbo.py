@@ -18,6 +18,7 @@ from pygubu.api.v1 import (
 from pygubu.plugins.customtkinter import nsctk
 from pygubu.plugins.customtkinter.tabview import CTkTabviewBO, CTkTabviewTabBO
 from scustomtkinter.sctk_tabview import sCTkTabview
+from scustomtkinter.sctk_frame import sCTkFrame
 
 
 #
@@ -48,6 +49,7 @@ register_widget(
 # Allow CTkTabviewTab to be child of MyCtkTabview
 #
 sCTkTabviewBO.add_allowed_child(nsctk.CTkTabviewTab)
+sCTkTabviewBO.add_allowed_child(sCTkFrame)
 
 #
 # Allow CTkTabviewTAb to have new parent MyCtkTabview
