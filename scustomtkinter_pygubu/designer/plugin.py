@@ -158,18 +158,18 @@ class sCTkSelectorForPreview(sCTkSelector):
 #         return clist
 #
 #
-# class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
-#     _THEME_BLOCK_NAME = "sCTkOptionMenuSecondary"
-#
-#     def winfo_children(self):
-#         internal = [
-#             self._menu,
-#         ]
-#         clist = []
-#         for widget in internal:
-#             for cwidget in widget.winfo_children():
-#                 clist.append(cwidget)
-#         return clist
+class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
+    _THEME_BLOCK_NAME = "sCTkOptionMenuSecondary"
+
+    def winfo_children(self):
+        internal = [
+            self._menu,
+        ]
+        clist = []
+        for widget in internal:
+            for cwidget in widget.winfo_children():
+                clist.append(cwidget)
+        return clist
 
 
 class sCTkSpinboxForPreview(sCTkSpinbox):
@@ -212,8 +212,8 @@ class sCTkSelectorForPreviewBO(sCTkSelectorBO):
 # class sCTkOptionMenuPrimaryForPreviewBO(sCTkOptionMenuPrimaryBO):
 #     class_ = sCTkOptionMenuPrimaryForPreview
 #
-# class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
-#     class_ = sCTkOptionMenuSecondaryForPreview
+class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
+    class_ = sCTkOptionMenuSecondaryForPreview
 
 
 class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
@@ -381,8 +381,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         # id is None above so no uid can match it accidentally.
         # elif builder_uid == sCTkOptionMenuPrimary_builder_id:
         #     return sCTkOptionMenuPrimaryForPreviewBO
-        # elif builder_uid == sCTkOptionMenuSecondary_builder_id:
-        #     return sCTkOptionMenuSecondaryForPreviewBO
+        elif builder_uid == sCTkOptionMenuSecondary_builder_id:
+            return sCTkOptionMenuSecondaryForPreviewBO
         elif builder_uid == sCTkSpinbox_builder_id:
             return sCTkSpinboxForPreviewBO
         elif builder_uid == sCTkToplevel_builder_id:
