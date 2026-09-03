@@ -15,6 +15,7 @@ from pygubu.api.v1 import (
 
 # Import the native custom classes directly out of your single-file source module
 from scustomtkinter.sctk_dial import sCTkDialContinuous, sCTkDialRange, sCTkDialSelector
+from scustomtkinter.themeable_widget import parse_list_property
 
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
@@ -94,7 +95,12 @@ class sCTkDialSelectorBO(BuilderObject):
 
     def _process_property_value(self, name, value):
         if name == 'labels':
-            return value.split(",")
+            # FIX: was value.split(","), which did not strip whitespace -- so
+            # "AM, FM, LSB" produced ["AM", " FM", " LSB"] and the dial drew
+            # labels with leading spaces. The shared parser also accepts the
+            # Python-literal form, so this property now behaves identically to
+            # sCTkTableview's `columns` and sCTkSelector's `items`.
+            return parse_list_property(value)
         return value
 
     def realize(self, parent, *args, **kwargs):
@@ -124,6 +130,12 @@ class sCTkDialSelectorBO(BuilderObject):
 # --- 1. CONTINUOUS VFO ENCODER MATRIX REGISTRY ---
 id_continuous = f"{builder_namespace}.sCTkDialContinuous"
 register_widget(id_continuous, sCTkDialContinuousBO, "sCTkDialContinuous", ("ttk", section_name))
+# `state` appears in OPTIONS_STANDARD for all three dials but was
+# registered for none of them, so Pygubu supplied its own definition --
+# which is why the Selector and Range dials offered a third value that
+# the Continuous dial did not. Registering it explicitly makes all
+# three agree and matches the widget's real two-state model.
+register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_continuous, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_continuous, "height", "naturalnumber", help="Height in pixels.")
 register_custom_property(id_continuous, "divisions", "naturalnumber", default_value=24, help="Flywheel detents per 360 turn.")
@@ -131,11 +143,16 @@ register_custom_property(id_continuous, "diameter", "naturalnumber", default_val
 register_custom_property(id_continuous, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_continuous, "left_click_callback", "commandentry", help="Callback for left mouse click.")
 register_custom_property(id_continuous, "right_click_callback", "commandentry", help="Callback for right mouse click.")
-register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"))
 
 # --- 2. RANGED POTENTIOMETER MATRIX REGISTRY ---
 id_range = f"{builder_namespace}.sCTkDialRange"
 register_widget(id_range, sCTkDialRangeBO, "sCTkDialRange", ("ttk", section_name))
+# `state` appears in OPTIONS_STANDARD for all three dials but was
+# registered for none of them, so Pygubu supplied its own definition --
+# which is why the Selector and Range dials offered a third value that
+# the Continuous dial did not. Registering it explicitly makes all
+# three agree and matches the widget's real two-state model.
+register_custom_property(id_range, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_range, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_range, "height", "naturalnumber", help="Height in pixels.")
 register_custom_property(id_range, "from_", "integernumber", default_value=0, help="Absolute minimum boundary limit.")
@@ -146,11 +163,16 @@ register_custom_property(id_range, "arc_angle", "naturalnumber", default_value=2
 register_custom_property(id_range, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_range, "left_click_callback", "commandentry", help="Callback for left mouse click.")
 register_custom_property(id_range, "right_click_callback", "commandentry", help="Callback for right mouse click.")
-register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"))
 
 # --- 3. MODE SELECTOR MATRIX REGISTRY ---
 id_selector = f"{builder_namespace}.sCTkDialSelector"
 register_widget(id_selector, sCTkDialSelectorBO, "sCTkDialSelector", ("ttk", section_name))
+# `state` appears in OPTIONS_STANDARD for all three dials but was
+# registered for none of them, so Pygubu supplied its own definition --
+# which is why the Selector and Range dials offered a third value that
+# the Continuous dial did not. Registering it explicitly makes all
+# three agree and matches the widget's real two-state model.
+register_custom_property(id_selector, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_selector, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_selector, "height", "naturalnumber", help="Height in pixels.")
 register_custom_property(id_selector, "diameter", "naturalnumber", default_value=120, help="Knob circle size.")
@@ -158,5 +180,5 @@ register_custom_property(id_selector, "arc_angle", "naturalnumber", default_valu
 register_custom_property(id_selector, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_selector, "left_click_callback", "commandentry", help="Callback for left mouse click.")
 register_custom_property(id_selector, "right_click_callback", "commandentry", help="Callback for right mouse click.")
-register_custom_property(id_selector, "labels", "entry", help="Labels for dial in format label1, label2, label3... ")
-register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"))
+register_custom_property(id_selector, "labels", "entry", help='Preferred: ["A", "B", "C"]. Bare comma-separated (A, B, C) also works, but cannot contain a comma inside a value.')
+

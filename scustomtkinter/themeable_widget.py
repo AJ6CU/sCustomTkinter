@@ -98,6 +98,84 @@ def default_image_loader(master, image_name: str, size=None):
         return None
 
 
+def parse_list_property(value, default=None):
+    """
+    Parse a list-valued widget property from any of the formats this library
+    and Pygubu Designer produce, returning a clean list of stripped strings.
+
+    WHY THIS EXISTS. Before this function, seven widgets each parsed their own
+    list property and no two agreed:
+
+        sCTkTableview.columns     comma split, stripped
+        sCTkSelector.items        ast.literal_eval only
+        sCTkDialSelector.labels   literal_eval in __init__, but a plain
+                                  comma split with NO quote stripping in
+                                  configure() -- so the same value parsed
+                                  differently depending on when it was set
+        sCTkFileExplorer.filetypes   three different implementations, in one file
+        sCTkPathChooser.filetypes    literal_eval
+        sCTkSpinbox.values           shlex.split when no comma is present
+
+    The user-visible consequence was that every widget wanted a different
+    format for the same kind of property, and the Designer's inspector gave no
+    hint which. Entering "AM, FM, LSB" into a dial produced labels with leading
+    spaces; the same string in a Tableview worked correctly.
+
+    Accepts, in order of preference:
+      - an actual list or tuple, returned with each element stripped
+      - a Python literal: "['A', 'B']" or "('A', 'B')"
+      - a bare comma-separated string: "A, B, C"
+
+    Empty input returns `default` (or an empty list), never None, so callers
+    can iterate the result unconditionally.
+
+    Deliberately does NOT accept space separation. sCTkSpinbox alone supported
+    it via shlex, which means "Meat Loaf" was two values there and one value
+    everywhere else -- surprising enough to be worth dropping rather than
+    spreading. Quote a value containing a comma if you need one.
+
+    Args:
+        value: The raw property value, in any of the forms above.
+        default: Returned when value is empty or unparseable. Defaults to [].
+
+    Returns:
+        A list of stripped strings.
+    """
+    if default is None:
+        default = []
+
+    if value is None:
+        return list(default)
+
+    if isinstance(value, (list, tuple)):
+        cleaned = [str(item).strip() for item in value]
+        return [item for item in cleaned if item] or list(default)
+
+    text = str(value).strip()
+    if not text:
+        return list(default)
+
+    # Python literal form, as written by older .ui files and by the Selector's
+    # own inspector default of "['Item 1', 'Item 2']".
+    if text[0] in "[(":
+        try:
+            import ast
+            parsed = ast.literal_eval(text)
+            if isinstance(parsed, (list, tuple)):
+                cleaned = [str(item).strip() for item in parsed]
+                return [item for item in cleaned if item] or list(default)
+        except (ValueError, SyntaxError):
+            # Malformed literal -- fall through to the comma split below, which
+            # handles "[A, B]" (unquoted, not valid Python) correctly.
+            pass
+
+    # Bare comma-separated form. Brackets and quotes are stripped so a
+    # half-formed literal still parses the way the user obviously intended.
+    text = text.strip("[]()")
+    return [item.strip().strip("\"'") for item in text.split(",")
+            if item.strip().strip("\"'")] or list(default)
+
+
 class ThemeableWidget:
     def __init__(self, kwargs: dict):
         """
@@ -139,7 +217,7 @@ class ThemeableWidget:
         self.image_loader = kwargs.pop("image_loader", default_image_loader)
         self.data_pool = kwargs.pop("data_pool", None)
 
-        class_name = getattr(self, "_THEME_BLOCK_NAME", None) or self.__class__.__name__
+        class_name = self.__class__.__name__
         theme_defaults = GLOBAL_THEME_REGISTRY.get(class_name) or {}
 
         if not isinstance(theme_defaults, dict):

@@ -102,7 +102,7 @@ register_custom_property(
     builder_id,
     "filetypes",
     "entry",
-    help="Filter by file extension lists. Format explicitly as a bracketed array: ['.py', '.txt']"
+    help='Filter by file extension. Preferred: [".py", ".txt"]. Bare comma-separated (.py, .txt) also works, but cannot contain a comma inside a value.'
 )
 
 register_custom_property(

@@ -50,7 +50,7 @@ from scustomtkinter_pygubu.sCTkComboBoxbo import (sCTkComboBoxBO, builder_id as 
 from scustomtkinter_pygubu.sCTkEntryPrimarybo import (sCTkEntryPrimaryBO, builder_id as sCTkEntryPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkEntrySecondarybo import (sCTkEntrySecondaryBO, builder_id as sCTkEntrySecondary_builder_id)
 
-# from scustomtkinter_pygubu.sCTkFileExplorerbo import (sCTkFileExplorerBO, builder_id as sCTkFileExplorer_builder_id)
+from scustomtkinter_pygubu.sCTkFileExplorerbo import (sCTkFileExplorerBO, builder_id as sCTkFileExplorer_builder_id)
 
 from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFrame_builder_id)
 from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
@@ -63,7 +63,7 @@ from scustomtkinter_pygubu.sCTkLabelTertiarybo import (sCTkLabelTertiaryBO, buil
 from scustomtkinter_pygubu.sCTkOptionMenuPrimarybo import (sCTkOptionMenuPrimaryBO, builder_id as sCTkOptionMenuPrimary_builder_id)
 from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
 
-# from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
+from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
 
 from scustomtkinter_pygubu.sCTkProgressBarbo import (sCTkProgressBarBO, builder_id as sCTkProgressBar_builder_id)
 from scustomtkinter_pygubu.sCTkRadioButtonbo import (sCTkRadioButtonBO, builder_id as sCTkRadioButton_builder_id)
@@ -211,6 +211,8 @@ for pname in CTkFrameBO.properties:
         copy_custom_property(nsctk.CTkFrame, pname, sCTkFrame_builder_id)
         copy_custom_property(nsctk.CTkFrame, pname, sCTkSelector_builder_id)
         copy_custom_property(nsctk.CTkFrame, pname, sCTkSpinbox_builder_id)
+        copy_custom_property(nsctk.CTkFrame, pname, sCTkFileExplorer_builder_id)
+        copy_custom_property(nsctk.CTkFrame, pname, sCTkPathChooser_builder_id)
         copy_custom_property(nsctk.CTkFrame, pname, sCTkDialRange_builder_id)
         copy_custom_property(nsctk.CTkFrame, pname, sCTkDialSelector_builder_id)
         copy_custom_property(nsctk.CTkFrame, pname, sCTkDialContinuous_builder_id)

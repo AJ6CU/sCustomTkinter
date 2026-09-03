@@ -2,7 +2,6 @@
 """
 sCTkSelector Builder Object
 """
-import ast
 import pygubu
 from pygubu.api.v1 import (
     BuilderObject,
@@ -10,7 +9,7 @@ from pygubu.api.v1 import (
     register_custom_property
 )
 from scustomtkinter.sctk_selector import sCTkSelector
-from pygubu.plugins.customtkinter.widgets import CTkFrameBO
+from scustomtkinter.themeable_widget import parse_list_property
 
 widget_namespace = "scustomtkinter.sctk_selector"
 widget_classname = "sCTkSelector"
@@ -21,21 +20,26 @@ section_name = "sCustomTkinter"
 class sCTkSelectorBO(BuilderObject):
     class_ = sCTkSelector
 
-    # OPTIONS_STANDARD = ('height', 'width')
-    # # 1. Append 'state' to your custom options tuple array
+    OPTIONS_STANDARD = ('height', 'width')
+    # 1. Append 'state' to your custom options tuple array
     OPTIONS_CUSTOM = ('items', 'multiple_choices', 'pack_propagate', 'grid_propagate', 'state')
-    # CTkFrameBO.properties already includes width and height, so the old
-    # OPTIONS_STANDARD tuple listing them separately is redundant.
-    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
+    properties = BuilderObject.properties + OPTIONS_CUSTOM + OPTIONS_STANDARD
 
     OPTIONS_CUSTOM_DEFAULTS = {
         'multiple_choices': 'True',
-        'items': "['Item 1', 'Item 2']",
+        'items': '["Item 1", "Item 2"]',
         'pack_propagate': 'True',
         'grid_propagate': 'True',
         'state': 'normal'
     }
 
+    # NOT a container. sCTkSelector builds and manages its own checkbox list
+    # from the `items` property, laying them out inside its internal
+    # checkboxes_frame. A child dropped in from the Designer would land in an
+    # unmanaged position and be destroyed by the next rebuild -- which happens
+    # whenever `items` changes. It inherits sCTkFrame and composes an
+    # sCTkScrollableFrame internally, which is what made it LOOK like a
+    # container to the Designer.
     container = False
     container_layout = False
 
@@ -43,9 +47,13 @@ class sCTkSelectorBO(BuilderObject):
         if extra_init_args is None:
             extra_init_args = {}
 
-        items_val = self.wmeta.properties.get('items', "['Item 1', 'Item 2']")
-        try: items_arg = ast.literal_eval(items_val)
-        except Exception: items_arg = ["Item 1", "Item 2"]
+        # Shared parser: accepts the quoted-list form, a bare comma-separated
+        # string, or a real list -- see parse_list_property(). The inspector
+        # default is the quoted-list form, which is what Pygubu Designer users
+        # expect and is the only one of the two text forms that can express a
+        # value containing a comma.
+        items_val = self.wmeta.properties.get('items', '["Item 1", "Item 2"]')
+        items_arg = parse_list_property(items_val, default=["Item 1", "Item 2"])
 
         mult_choice = self.wmeta.properties.get('multiple_choices', 'True')
         mult_choice_arg = str(mult_choice).lower() in ['true', '1', 'yes']
@@ -106,7 +114,7 @@ register_custom_property(
     builder_id,
     'items',
     'entry',
-    help="Python list format: ['A', 'B', 'C']"
+    help='Preferred: ["A", "B", "C"]. Bare comma-separated (A, B, C) also works, but cannot contain a comma inside a value.'
 )
 
 register_custom_property(builder_id, 'multiple_choices', 'choice', values=('True', 'False'))

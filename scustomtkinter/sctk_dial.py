@@ -8,10 +8,9 @@ Coordinates 3D knob geometry structures, vector math layers, and hardware delta 
 import sys
 import math
 import time
-import ast
 import customtkinter as ctk
 from . import themeable_widget as _tw
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, parse_list_property
 class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     """Abstract Base Class for theme-adaptive mechanical rotary encoder widgets."""
 
@@ -639,8 +638,11 @@ class sCTkDialSelector(sCTKDialBase):
     """
     def __init__(self, master=None, labels=None, arc_angle=270, command=None, left_click_callback=None, right_click_callback=None, diameter=120, **kw):
         if isinstance(labels, str) and labels.strip():
-            try: labels = ast.literal_eval(labels.strip())
-            except Exception: labels = [x.strip().strip("'\"") for x in labels.strip()[1:-1].split(",")]
+            # Shared parser -- see parse_list_property(). This site used
+            # literal_eval with a manual fallback; the configure() site
+            # below used a bare split that did NOT strip quotes, so the
+            # same value parsed differently depending on when it was set.
+            labels = parse_list_property(labels)
         self._default_labels = ["POS 1", "POS 2", "POS 3"]
         self._labels = labels if labels is not None else list(self._default_labels)
         self._arc_angle = float(arc_angle)
@@ -663,7 +665,7 @@ class sCTkDialSelector(sCTKDialBase):
             lbls = kwargs.pop("labels")
             if isinstance(lbls, str):
                 s = lbls.strip().strip("[]\"'")
-                lbls = [x.strip() for x in s.split(",")] if s else list(self._default_labels)
+                lbls = parse_list_property(s, default=list(self._default_labels))
             self._labels = list(self._default_labels) if not lbls else lbls
             self._divisions = len(self._labels)
         if "arc_angle" in kwargs: self._arc_angle = float(kwargs.pop("arc_angle"))

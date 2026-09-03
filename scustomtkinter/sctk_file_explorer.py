@@ -4,18 +4,14 @@ sCTkFileExplorer
 
 A theme-compliant, highly configurable custom file explorer wrapper component.
 Inherits cleanly and directly from ctk.CTkFrame to preserve native features.
-
-Derived from FileExplorer class by Fastattack, 2024.
-https://github.com/fastattackv/MoreCustomTkinterWidgets
 """
 import os
 import time
-import ast
 import tkinter as tk
 import tkinter.ttk as ttk
 
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, parse_list_property
 from .sctk_scroll_mixin import ScrollBindingMixin
 
 from typing import Literal, Optional, Union, Tuple
@@ -87,7 +83,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                 cleaned_str = filetypes.strip()
                 if not (cleaned_str.startswith("[") and cleaned_str.endswith("]")):
                     raise ValueError(f"Malformed filetypes sequence parsed: '{filetypes}'.")
-                try: processed_types = ast.literal_eval(cleaned_str)
+                try: processed_types = parse_list_property(cleaned_str)
                 except Exception as err: raise ValueError(f"Malformed syntax evaluating filetypes configuration: {err}")
             else: processed_types = filetypes
 
@@ -440,7 +436,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         if "filetypes" in kwargs:
             ft_val = kwargs.pop("filetypes")
             if ft_val:
-                raw_types = ast.literal_eval(ft_val.strip()) if isinstance(ft_val, str) else ft_val
+                raw_types = parse_list_property(ft_val)
                 self.filetypes = []
                 for f in raw_types:
                     clean_f = str(f).lower().replace("*", "").strip()
@@ -528,7 +524,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             return
         if isinstance(filetypes_data, str):
             s = filetypes_data.strip().strip("[]\"'")
-            raw_types = [x.strip() for x in s.split(",") if x.strip()] if s else []
+            raw_types = parse_list_property(s)
         else: raw_types = filetypes_data
 
         self.filetypes = []

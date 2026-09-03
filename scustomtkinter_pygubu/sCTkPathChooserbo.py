@@ -4,7 +4,6 @@ sCTkPathChooser
 
 Pygubu Builder Object for the compound sCTkPathChooser entry widget row.
 """
-import ast
 import pygubu
 
 from pygubu.api.v1 import (
@@ -113,7 +112,7 @@ register_custom_property(
     builder_id,
     "filetypes",
     "entry",
-    help="Filter by file extension - formats list array format: ['.py', '.txt']"
+    help='Filter by file extension. Preferred: [".py", ".txt"]. Bare comma-separated (.py, .txt) also works, but cannot contain a comma inside a value.'
 )
 
 register_custom_property(

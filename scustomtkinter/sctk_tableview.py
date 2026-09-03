@@ -7,7 +7,7 @@ Inherits cleanly from sCTkScrollableFrame and ThemeableWidget to manage
 dense telemetry spreadsheets safely with full live theme repaint loops.
 """
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, parse_list_property
 
 from typing import List, Optional, Callable, Any, Literal
 
@@ -135,8 +135,7 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         self._data_matrix, self._cell_widgets, self._header_widgets = [], [], []
 
         if isinstance(columns, str):
-            clean_str = columns.replace("'", "").replace('"', "").strip()
-            columns = [c.strip() for c in clean_str.split(',') if c.strip()]
+            columns = parse_list_property(columns)
         self.columns_list = list(columns) if (columns and isinstance(columns, list)) else [""] * self._num_columns
 
         # FIX: an earlier version temporarily overwrote self.__class__.__name__
@@ -342,10 +341,8 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
                     # Accepts a comma-separated string as well as a list, since
                     # __init__ does and Pygubu's property editor supplies a
                     # string.
-                    if isinstance(v, str):
-                        clean_str = v.replace("'", "").replace('"', "").strip()
-                        v = [c.strip() for c in clean_str.split(',') if c.strip()]
-                    self.columns_list = list(v) if v else [""] * self._num_columns
+                    parsed = parse_list_property(v)
+                    self.columns_list = parsed if parsed else [""] * self._num_columns
                     # Column count follows the labels, matching how the Designer
                     # BO derives num_columns from the columns string.
                     self._num_columns = len(self.columns_list)

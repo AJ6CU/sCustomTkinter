@@ -19,10 +19,9 @@ cascade had done). Readonly routes through sCTkEntryPrimary's own three-state
 _update_current_visual_state(), which is where the actual readonly colors and
 required-key validation live -- see that widget for the full detail.
 """
-import shlex
 
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, parse_list_property
 
 from .sctk_entry_primary import sCTkEntryPrimary
 
@@ -122,11 +121,22 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         self._finalize_themeable_lifecycle()
 
     def _parse_string_list(self, input_data) -> list:
-        if isinstance(input_data, (list, tuple)): return [str(x).strip() for x in input_data]
-        raw_str = str(input_data).strip()
-        if not raw_str: return []
-        try: return shlex.split(raw_str) if "," not in raw_str else [item.strip().strip('"').strip("'") for item in raw_str.split(',') if item.strip()]
-        except Exception: return [item.strip() for item in raw_str.split() if item.strip()]
+        """
+        Parses this widget's `values` property.
+
+        Delegates to the library-wide parse_list_property() so `values`
+        behaves identically to sCTkTableview's `columns`, sCTkSelector's
+        `items` and sCTkDialSelector's `labels`. Retained as a method rather
+        than replaced at each call site because set_values() and configure()
+        both use it.
+
+        FIX: this previously used shlex.split() whenever the input contained
+        no comma, making SPACE a value separator here and nowhere else in the
+        library -- so "Meat Loaf" was two values in a spinbox and one value in
+        every other widget. Space separation is deliberately dropped rather
+        than propagated; a value containing a comma should be quoted.
+        """
+        return parse_list_property(input_data)
 
     def set_values(self, list_of_strings):
         self._values = self._parse_string_list(list_of_strings)
