@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkSeparator
+sCTkSeparator - Piece 1 of 2
 
 An advanced Separator widget supporting custom section header text,
 dashed line patterns, corner roundness, and responsive orientation modes.
@@ -209,6 +209,43 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
         if "state" in kwargs: self.state(kwargs.pop("state"))
         if "text" in kwargs: self._text = str(kwargs.pop("text"))
         if "dash" in kwargs: self._dash = kwargs.pop("dash")
+
+        # FIX: orientation was accepted by __init__ and registered as a Pygubu
+        # property, but configure() never popped it -- so changing it at
+        # runtime fell through to native CTkBaseClass.configure(), whose
+        # check_kwargs_empty() raised "['orientation'] are not supported
+        # arguments". Construction worked; reconfiguration did not, which is
+        # exactly what the Designer does when the dropdown is changed.
+        #
+        # Unlike the other properties here, orientation has a GEOMETRIC
+        # consequence: __init__ assigns height=length for a vertical
+        # separator and width=length for a horizontal one. Switching
+        # orientation therefore has to swap the two dimensions, or a vertical
+        # separator turned horizontal stays tall and thin.
+        if "orientation" in kwargs:
+            new_orientation = str(kwargs.pop("orientation")).lower()
+            if new_orientation not in ("vertical", "horizontal"):
+                raise ValueError(
+                    f'The value for orientation is incorrect: "{new_orientation}". '
+                    f'Should be "vertical" or "horizontal"'
+                )
+            if new_orientation != self._orientation:
+                self._orientation = new_orientation
+                # Swap, rather than recompute from length/width: those were
+                # consumed at construction and aren't retained, and the current
+                # dimensions already reflect any resizing since.
+                kwargs.setdefault("width", self._current_height)
+                kwargs.setdefault("height", self._current_width)
+
+        # length is a construction-time alias for whichever dimension the
+        # orientation makes the long one. Translated here so the Designer can
+        # edit it after the fact.
+        if "length" in kwargs:
+            new_length = int(kwargs.pop("length"))
+            if self._orientation == "vertical":
+                kwargs["height"] = new_length
+            else:
+                kwargs["width"] = new_length
 
         for k, v in list(kwargs.items()):
             if v == "": kwargs.pop(k)

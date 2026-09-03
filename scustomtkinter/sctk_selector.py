@@ -1,292 +1,403 @@
 #!/usr/bin/python3
 """
-sCTkSeparator 
+sCTkSelector
 
-An advanced Separator widget supporting custom section header text,
-dashed line patterns, corner roundness, and responsive orientation modes.
-Inherits cleanly and directly from ctk.CTkBaseClass to preserve native canvas draw engines.
+An advanced theme-compliant, scrollable option tree selector widget.
+Pairs an optional high-contrast search field lane with a dynamic listing frame card
+to manage multi-state checkbox row configurations natively.
 
 Derived from Selector class by Fastattack, 2024.
-https://github.com
+https://github.com/fastattackv/MoreCustomTkinterWidgets
 """
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
 
+import ast
+from typing import Optional, Union, Tuple
 
-class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
-    """Advanced Separator supporting headers, dashed lines, and themes.json matrices."""
+from .sctk_frame import sCTkFrame
+from .sctk_checkbox import sCTkCheckBox
+from .sctk_entry_primary import sCTkEntryPrimary
+from .sctk_scrollable_frame import sCTkScrollableFrame
 
-    # Required at the TOP LEVEL of the theme block. Structural parameters
-    # (orientation, length, width, text, dash) are deliberately absent: they
-    # are constructor arguments with sensible defaults, and although the theme
-    # CAN supply them, requiring them would force layout decisions into the
-    # stylesheet.
-    _REQUIRED_THEME_KEYS = ("fg_color", "text_color", "font", "corner_radius")
+class sCTkSelector(sCTkFrame, ThemeableWidget):
+    def __init__(self, master, items: Optional[list[str]] = None, multiple_choices=True, searchBox=True, **kwargs):
+        # 1. SANITIZE RUNTIME ARGUMENTS: Strip unmanaged properties out immediately
+        state_init = kwargs.pop("state", "normal")
+        pack_prop_init = kwargs.pop("pack_propagate", None)
+        grid_prop_init = kwargs.pop("grid_propagate", None)
 
-    # Required inside disabled_map.
-    _REQUIRED_DISABLED_KEYS = ("fg_color", "text_color")
-
-    def __init__(self, master=None, **kwargs):
-        # 1. Fire our shared theme logic first. It automatically finds "sCTkSeparator" in themes.json
+        # 2. ENFORCE SYSTEM REGISTRY INTERACTION:
         ThemeableWidget.__init__(self, kwargs)
 
-        # 2. 🛠️ THE MUTATION SAFEGUARD DEEP COPY SHIELD:
+        # 🛠️ THE MUTATION SAFEGUARD DEEP COPY SHIELD:
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
-        self._validate_theme_keys()
 
-        # Extract structural parameters safely out of the resolved theme dictionary
-        self._orientation = str(self.final_kw.pop("orientation", "vertical")).lower()
-        length = int(self.final_kw.pop("length", 100))
-        width = float(self.final_kw.pop("width", 4))
+        # FIX: required-key validation moved here, to construction time,
+        # rather than living inside _update_current_visual_state() (called
+        # only later, and repeatedly on every state change). Moved so that
+        # border_color -- now also passed to both sub-widget constructors
+        # below, to keep their normal-state border visually consistent with
+        # this widget's own theme -- is guaranteed to exist before anything
+        # tries to use it, rather than risking a confusing native error at
+        # construction if a key were missing.
+        for required_key in ("text_color", "checkbox_fg_color", "checkbox_hover_color", "border_color", "checkmark_color"):
+            if self._local_defaults.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"at the top level of sCTkThemes.json."
+                )
+        for required_key in ("text_color", "checkbox_fg_color", "border_color", "checkmark_color"):
+            if self._custom_disabled_map.get(required_key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                )
 
-        self._text = str(self.final_kw.pop("text", ""))
-        self._dash = self.final_kw.pop("dash", None)
-        # No fallback: validated above.
-        self._font = self.final_kw.pop("font")
+        fg_color = self._local_defaults.get("fg_color", "transparent")
+        # FIX: an earlier version never coordinated border_color between this
+        # widget and its two internal sub-widgets (search_bar,
+        # checkboxes_frame) -- each independently used its own standalone
+        # theme's border_color, which could visibly mismatch (confirmed by
+        # direct testing: sCTkEntryPrimary and sCTkScrollableFrame's own
+        # default border colors differ in dark mode). Passed here, once, at
+        # construction, rather than forced on every _update_current_visual_state()
+        # call -- that would fight with sCTkEntryPrimary's own correct
+        # readonly/disabled border-color changes, undoing the whole point of
+        # its three-state model. This only establishes the shared NORMAL-state
+        # border; each sub-widget's own state-driven color changes afterward
+        # are left completely alone.
+        selector_border_color = self._local_defaults.get("border_color")
 
-        # 🔑 VERTICAL HOUSING REMAP: Programmatically upscale horizontal bounds to fit text
-        if self._text and width <= 4:
-            width = 28
+        # 3. Call the parent sCTkFrame constructor safely
+        super().__init__(master, **self.final_kw)
 
-        if self._orientation == "vertical":
-            height = length
-        elif self._orientation == "horizontal":
-            height = width
-            width = length
-        else:
-            raise ValueError(
-                f"The value for orientation is incorrect: \"{self._orientation}\". Should be \"vertical\" or \"horizontal\"")
+        self._state = "normal"
+        self.search_var = ctk.StringVar(self)
+        self.search_var.trace_add("write", self._search_modified)
 
-        # 3. Initialize CustomTkinter's base structure using finalized parameters
-        ctk.CTkBaseClass.__init__(
-            self,
-            master=master,
-            width=width,
-            height=height,
-            bg_color=self.final_kw.get("bg_color", "transparent")
+        self.search_bar = None
+        self._search_box_visible = bool(searchBox)
+
+        self.checkboxes_frame = sCTkScrollableFrame(self, fg_color=fg_color, border_color=selector_border_color)
+        self.checkboxes_frame.pack(expand=True, fill="both", side="bottom")
+
+        if hasattr(self.checkboxes_frame, "_parent_frame") and self.checkboxes_frame._parent_frame is not None:
+            self.checkboxes_frame._parent_frame.pack_propagate(False)
+            self.checkboxes_frame._parent_frame.grid_propagate(False)
+
+        self.checkboxes = []
+        self.selected_indexes = []
+        self.multiple_choices = multiple_choices
+
+        if items is None:
+            items = []
+
+        # 4. Route variables into the configure parser loop for execution mapping
+        self.configure(
+            items=items,
+            multiple_choices=multiple_choices,
+            searchBox=self._search_box_visible,
+            pack_propagate=pack_prop_init,
+            grid_propagate=grid_prop_init,
+            state=state_init
         )
 
-        self._custom_current_state = "normal"
-        self._corner_radius = self.final_kw.get("corner_radius")
-        self._fg_color = self._check_color_type(self.final_kw.get("fg_color"))
-
-        # Map text color vectors safely out of the extracted dictionary layout layers
-        # No CTkLabel fallback: text_color is validated above, so borrowing another
-        # widget class's colour would only mask a theme gap.
-        self._text_color = self._check_color_type(self.final_kw.get("text_color"))
-
-        # 4. Canvas and render configurations
-        self._canvas = ctk.CTkCanvas(self, highlightthickness=0)
-        self._canvas.place(x=0, y=0, relwidth=1, relheight=1)
-        self._draw_engine = ctk.DrawEngine(self._canvas)
-
-        # 5. Bind layout adjustments to bypass CTkBaseClass strict bind filters safely
-        super(ctk.CTkBaseClass, self).bind("<Configure>", lambda e: self._draw(), add="+")
-
-        # 6. Trigger the initial render loop pass
-        self._draw(no_color_updates=True)
-
-        # 🔑 7. REGISTER LIFECYCLE HANDSHAKE HOOK: Pushes notifications up to Pygubu systems cleanly.
+        # 🔑 REGISTER LIFECYCLE HANDSHAKE HOOK: Pushes notifications up to Pygubu systems cleanly.
         self._finalize_themeable_lifecycle()
 
-    def _validate_theme_keys(self) -> None:
-        """
-        Hard-fails at construction on an incomplete theme block, naming the
-        missing key and where it belongs.
+    def _selection(self, index: int):
+        if index in self.selected_indexes:
+            self.selected_indexes.remove(index)
+        else:
+            if self.multiple_choices:
+                self.selected_indexes.append(index)
+            else:
+                if self.selected_indexes:
+                    for i in self.selected_indexes:
+                        if i < len(self.checkboxes):
+                            self.checkboxes[i].deselect()
+                    self.selected_indexes.clear()
+                    self.selected_indexes.append(index)
+                else:
+                    self.selected_indexes.append(index)
 
-        Raises:
-            KeyError: naming the first missing key found.
-        """
-        name = self.__class__.__name__
-        for key in self._REQUIRED_THEME_KEYS:
-            if self._local_defaults.get(key) is None:
-                raise KeyError(
-                    f"'{name}' theme block is missing '{key}' at the top level "
-                    f"of sCTkThemes.json."
-                )
-        for key in self._REQUIRED_DISABLED_KEYS:
-            if self._custom_disabled_map.get(key) is None:
-                raise KeyError(
-                    f"'{name}' theme block is missing '{key}' in disabled_map."
-                )
+    def _reset_scroll(self):
+        if hasattr(self.checkboxes_frame, "_parent_canvas") and self.checkboxes_frame._parent_canvas is not None:
+            self.checkboxes_frame._parent_canvas.yview_moveto(0)
+
+    def _search_modified(self, *args):
+        value = self.search_var.get()
+        row = 0
+        for x in range(len(self.checkboxes)):
+            if self.checkboxes[x].cget("text").startswith(value):
+                self.checkboxes[x].grid(row=row, column=0, padx=3, pady=3, sticky="w")
+                row += 1
+            else:
+                self.checkboxes[x].grid_forget()
+        self._reset_scroll()
+
+    def get_all_items(self) -> list:
+        return [checkbox.cget("text") for checkbox in self.checkboxes]
+    def configure(self, cnf=None, **kwargs):
+        if cnf is not None and not kwargs and isinstance(cnf, str):
+            pname = cnf
+            if pname == "state": return ("state", "state", "state", "normal", str(self.state()))
+            if pname == "multiple_choices": return ("multiple_choices", "multiple_choices", "multiple_choices", "True", str(self.multiple_choices))
+            if pname == "searchBox": return ("searchBox", "searchBox", "searchBox", "True", str(self._search_box_visible))
+            if pname == "items":
+                current_items = [cb.cget("text") for cb in self.checkboxes] if hasattr(self, "checkboxes") else []
+                return ("items", "items", "items", "[]", str(current_items))
+            if pname in ["pack_propagate", "grid_propagate"]: return (pname, pname, pname, "None", str(getattr(self, f"_{pname}_val", None)))
+            if pname in ["fg_color", "border_color", "text_color"]:
+                current_state = str(self.state()).lower()
+                val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
+                return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
+            return super().configure(cnf)
+
+        if isinstance(cnf, dict): kwargs = cnf | kwargs
+
+        if "items" in kwargs:
+            items_val = kwargs.pop("items")
+            if items_val == "" or items_val is None: items_val = []
+            elif isinstance(items_val, str):
+                try: items_val = ast.literal_eval(items_val)
+                except Exception: items_val = []
+            if items_val is not None:
+                if len(set(items_val)) == len(items_val):
+                    for checkbox in self.checkboxes: checkbox.destroy()
+                    self.checkboxes.clear()
+                    self.selected_indexes.clear()
+                    for index in range(len(items_val)):
+                        self.checkboxes.append(sCTkCheckBox(self.checkboxes_frame, text=items_val[index], command=lambda a=index: self._selection(a)))
+                    self._search_modified()
+                else: raise ValueError("There is two times or more the same item in the given items list")
+
+        if "searchBox" in kwargs:
+            sb_val = kwargs.pop("searchBox")
+            if sb_val == "" or sb_val is None: sb_val = True
+            elif isinstance(sb_val, str): sb_val = str(sb_val).lower() in ['true', '1', 'yes']
+            self._search_box_visible = sb_val
+            if self._search_box_visible:
+                # FIX: search_bar's border_color now aligned with this
+                # widget's own theme at creation time, matching the same
+                # fix applied to checkboxes_frame in __init__ -- see that
+                # constructor call's comment for the full reasoning.
+                if not hasattr(self, "search_bar") or self.search_bar is None: self.search_bar = sCTkEntryPrimary(self, textvariable=self.search_var, border_color=self._local_defaults.get("border_color"))
+                self.search_bar.pack(anchor="n", fill="x")
+                if hasattr(self, "checkboxes_frame") and self.checkboxes_frame is not None:
+                    self.checkboxes_frame.pack_forget()
+                    self.checkboxes_frame.pack(expand=True, fill="both", side="bottom")
+                if self._state == "disabled" and self.search_bar is not None: self.search_bar.configure(state="readonly")
+            else:
+                if hasattr(self, "search_bar") and self.search_bar is not None: self.search_bar.pack_forget()
+
+        if "multiple_choices" in kwargs:
+            mult_val = kwargs.pop("multiple_choices")
+            if mult_val == "" or mult_val is None: mult_val = True
+            elif isinstance(mult_val, str): mult_val = str(mult_val).lower() in ['true', '1', 'yes']
+            self.multiple_choices = mult_val
+
+        if "state" in kwargs: self.state(kwargs.pop("state"))
+
+        pack_prop_val = kwargs.pop("pack_propagate", None)
+        grid_prop_val = kwargs.pop("grid_propagate", None)
+        if pack_prop_val is not None and pack_prop_val != "": setattr(self, "_pack_propagate_val", str(pack_prop_val).lower() in ['true', '1', 'yes'])
+        if grid_prop_val is not None and grid_prop_val != "": setattr(self, "_grid_propagate_val", str(grid_prop_val).lower() in ['true', '1', 'yes'])
+
+        for k, v in list(kwargs.items()):
+            if k in self._local_defaults: self.final_kw[k] = kwargs.pop(k)
+
+        if "fg_color" in self.final_kw:
+            new_fg = self.final_kw.get("fg_color")
+            if hasattr(self, "checkboxes_frame"): self.checkboxes_frame.configure(fg_color=new_fg)
+
+        w_val = int(self.final_kw.get("width", 0))
+        h_val = int(self.final_kw.get("height", 0))
+        if w_val > 0 or h_val > 0:
+            use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", False)
+            use_grid_p = grid_prop_val if grid_prop_val is not None else getattr(self, "_grid_propagate_val", False)
+        else:
+            self.final_kw["width"] = 200
+            self.final_kw["height"] = 150
+            use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", True)
+            use_grid_p = grid_prop_val if grid_prop_val is not None else getattr(self, "_grid_propagate_val", True)
+
+        if isinstance(use_pack_p, str): use_pack_p = use_pack_p.lower() in ['true', '1', 'yes']
+        if isinstance(use_grid_p, str): use_grid_p = use_grid_p.lower() in ['true', '1', 'yes']
+        if use_pack_p is not None: self.pack_propagate(use_pack_p)
+        if use_grid_p is not None: self.grid_propagate(use_grid_p)
+
+        if hasattr(self, "checkboxes_frame") and hasattr(self.checkboxes_frame, "_parent_frame"):
+            if use_pack_p is not None: self.checkboxes_frame._parent_frame.pack_propagate(use_pack_p)
+            if use_grid_p is not None: self.checkboxes_frame._parent_frame.grid_propagate(use_grid_p)
+
+        self.final_kw.pop("pack_propagate", None)
+        self.final_kw.pop("grid_propagate", None)
+        self.final_kw.pop("state", None)
+
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
+        if kwargs: return super().configure(**kwargs)
+        return None
+
+    # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
+    # attribute -- it does not automatically track whichever configure() a
+    # subclass defines. Without this line, calling .config(...) silently skips
+    # this entire override and lands on sCTkFrame's configure() instead,
+    # bypassing the items/searchBox/multiple_choices/state handling above.
+    # Confirmed as a critical bug on sCTkSegmentedButton earlier in this
+    # project's audit; this was the last widget in the library still missing
+    # the alias.
+    #
+    # Note this class uses the older Tkinter `(self, cnf=None, **kwargs)`
+    # signature rather than `*args`. That's correct here and not the source of
+    # the tuple-comparison bugs found elsewhere: cnf is a real parameter
+    # holding the value itself, so `isinstance(cnf, dict)` and `pname = cnf`
+    # both behave as intended.
+    config = configure
 
     def _set_appearance_mode(self, mode_string: str):
-        """Native look catcher ensuring active or disabled tracks repaint fluidly on theme shifts."""
         if hasattr(super(), "_set_appearance_mode"):
             try:
                 super()._set_appearance_mode(mode_string)
             except Exception:
                 pass
         self._update_current_visual_state()
-    def _update_current_visual_state(self):
-        """Forwards global theme preference swipes directly to our core draw layout routine."""
-        self._draw()
 
-    def _draw(self, no_color_updates=False):
-        if hasattr(super(), "_draw"):
-            try: super()._draw(no_color_updates)
-            except Exception: pass
-        current_w = self.winfo_width() if self.winfo_width() > 1 else self._current_width
-        current_h = self.winfo_height() if self.winfo_height() > 1 else self._current_height
-        self._canvas.delete("all")
+    def get_state(self) -> str:
+        return self.state()
 
-        detected_bg = self._detect_color_of_master()
-        if detected_bg == "transparent" or detected_bg is None:
-            detected_bg = ctk.ThemeManager.theme["CTk"]["fg_color"]
-
-        is_disabled = getattr(self, "_custom_current_state", "normal") == "disabled"
-        # FIX: these previously carried hardcoded fallbacks, and since this
-        # widget's theme block had no disabled_map at all, the fallbacks were
-        # ALWAYS taken -- a disabled separator never used the configured
-        # theme. disabled_map is now required, so no fallback is needed. (The
-        # old text fallback also used the Tk colour name "gray50" rather than
-        # a hex pair, the only such value in the library.)
-        target_fg = self._custom_disabled_map.get("fg_color") if is_disabled else self._fg_color
-        target_txt = self._custom_disabled_map.get("text_color") if is_disabled else self._text_color
-
-        fg_rendered = self._apply_appearance_mode(self._check_color_type(target_fg))
-        txt_rendered = self._apply_appearance_mode(self._check_color_type(target_txt))
-        self._canvas.configure(bg=self._apply_appearance_mode(detected_bg))
-
-        if self._orientation == "horizontal":
-            line_thickness = self._current_height if self._current_height < current_h else 4
-            if line_thickness > 10: line_thickness = 4
-        else:
-            line_thickness = self._current_width if self._current_width < current_w else 4
-            if line_thickness > 10: line_thickness = 4
-
-        if self._text:
-            t_id = self._canvas.create_text(current_w / 2, current_h / 2, text=self._text, font=self._font, fill=txt_rendered)
-            bbox = self._canvas.bbox(t_id)
-            if bbox:
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
-                tw, th = text_width + 16, text_height + 8
-                x1 = (current_w / 2) - (tw / 2)
-                x2 = (current_w / 2) + (tw / 2)
-
-                if self._orientation == "horizontal":
-                    y1, y2 = 1, current_h - 1
-                    self._canvas.create_line(x1, y1, x1, y2, fill=fg_rendered, width=2)
-                    self._canvas.create_line(x2, y1, x2, y2, fill=fg_rendered, width=2)
-                    mid_y = current_h / 2
-                    self._canvas.create_line(0, mid_y, x1, mid_y, fill=fg_rendered, width=line_thickness, dash=self._dash)
-                    self._canvas.create_line(x2, mid_y, current_w, mid_y, fill=fg_rendered, width=line_thickness, dash=self._dash)
-                else:
-                    x1_v, x2_v = 1, current_w - 1
-                    y1 = (current_h / 2) - (th / 2)
-                    y2 = (current_h / 2) + (th / 2)
-                    self._canvas.create_line(x1_v, y1, x2_v, y1, fill=fg_rendered, width=2)
-                    self._canvas.create_line(x1_v, y2, x2_v, y2, fill=fg_rendered, width=2)
-                    mid_x = current_w / 2
-                    self._canvas.create_line(mid_x, 0, mid_x, y1, fill=fg_rendered, width=line_thickness, dash=self._dash)
-                    self._canvas.create_line(mid_x, y2, mid_x, current_h, fill=fg_rendered, width=line_thickness, dash=self._dash)
-        else:
-            if self._dash:
-                if self._orientation == "horizontal":
-                    self._canvas.create_line(0, current_h / 2, current_w, current_h / 2, fill=fg_rendered, width=line_thickness, dash=self._dash)
-                else:
-                    self._canvas.create_line(current_w / 2, 0, current_w / 2, current_h, fill=fg_rendered, width=line_thickness, dash=self._dash)
-            else:
-                self._draw_engine.draw_rounded_rect_with_border(current_w, current_h, self._apply_widget_scaling(self._corner_radius), 0)
-                self._canvas.itemconfig("inner_parts", outline=fg_rendered, fill=fg_rendered)
-
-    def configure(self, *args, **kwargs):
-        """Processes Pygubu designer workspace queries and manages theme state updates cleanly."""
-        if args and len(args) == 1:
-            pname = args[0]
-            if pname == "state": return ("state", "state", "state", "normal", self.get_state())
-            if pname in ["fg_color", "text_color"]:
-                val = self._custom_disabled_map.get(pname) if self.get_state() == "disabled" else self._local_defaults.get(pname)
-                return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
-            return super().configure(pname)
-
-        # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
-        # tuple, so this never fired and the dict form of configure() was
-        # dead code. Same tautology fixed across the batch-one widgets.
-        if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
-        if "state" in kwargs: self.state(kwargs.pop("state"))
-        if "text" in kwargs: self._text = str(kwargs.pop("text"))
-        if "dash" in kwargs: self._dash = kwargs.pop("dash")
-
-        # FIX: orientation was accepted by __init__ and registered as a Pygubu
-        # property, but configure() never popped it -- so changing it at
-        # runtime fell through to native CTkBaseClass.configure(), whose
-        # check_kwargs_empty() raised "['orientation'] are not supported
-        # arguments". Construction worked; reconfiguration did not, which is
-        # exactly what the Designer does when the dropdown is changed.
-        #
-        # Unlike the other properties here, orientation has a GEOMETRIC
-        # consequence: __init__ assigns height=length for a vertical
-        # separator and width=length for a horizontal one. Switching
-        # orientation therefore has to swap the two dimensions, or a vertical
-        # separator turned horizontal stays tall and thin.
-        if "orientation" in kwargs:
-            new_orientation = str(kwargs.pop("orientation")).lower()
-            if new_orientation not in ("vertical", "horizontal"):
-                raise ValueError(
-                    f'The value for orientation is incorrect: "{new_orientation}". '
-                    f'Should be "vertical" or "horizontal"'
-                )
-            if new_orientation != self._orientation:
-                self._orientation = new_orientation
-                # Swap, rather than recompute from length/width: those were
-                # consumed at construction and aren't retained, and the current
-                # dimensions already reflect any resizing since.
-                kwargs.setdefault("width", self._current_height)
-                kwargs.setdefault("height", self._current_width)
-
-        # length is a construction-time alias for whichever dimension the
-        # orientation makes the long one. Translated here so the Designer can
-        # edit it after the fact.
-        if "length" in kwargs:
-            new_length = int(kwargs.pop("length"))
-            if self._orientation == "vertical":
-                kwargs["height"] = new_length
-            else:
-                kwargs["width"] = new_length
-
-        for k, v in list(kwargs.items()):
-            if v == "": kwargs.pop(k)
-        if kwargs: super().configure(**kwargs)
-        self._draw()
-
-    config = configure
-    def get_state(self) -> str: return str(getattr(self, "_custom_current_state", "normal")).lower()
     def state(self, mode: str = None) -> str:
-        if mode is None: return self.get_state()
-        self._custom_current_state = mode.lower()
-        self._draw()
-        return self._custom_current_state
+        """Dedicated state manager controlling human inputs programmatically via canvas intercept shields."""
+        if mode is None: return str(getattr(self, "_state", "normal")).lower()
+        mode = mode.lower()
+        if mode in ("normal", "enabled", "active"):
+            self._state = "normal"
+            if hasattr(self, "search_bar") and self.search_bar is not None:
+                self.search_bar.configure(state="normal")
+            if hasattr(self, "checkboxes"):
+                for cb in self.checkboxes:
+                    cb.configure(state="normal")
+                    if hasattr(cb, "_create_bindings"):
+                        try:
+                            cb._create_bindings()
+                        except Exception:
+                            pass
+        elif mode == "disabled":
+            self._state = "disabled"
+            if hasattr(self, "search_bar") and self.search_bar is not None:
+                self.search_bar.configure(state="readonly")
+            if hasattr(self, "checkboxes"):
+                for cb in self.checkboxes:
+                    # 🔑 HARD INTERCEPT UNBIND MATRIX: Paralyzes mouse clicking tracks completely
+                    try:
+                        if hasattr(cb, "_canvas") and cb._canvas:
+                            cb._canvas.unbind("<Enter>")
+                            cb._canvas.unbind("<Leave>")
+                            cb._canvas.unbind("<Button-1>")
+                            cb._canvas.unbind("<ButtonRelease>")
+                        if hasattr(cb, "_text_label") and cb._text_label:
+                            cb._text_label.unbind("<Enter>")
+                            cb._text_label.unbind("<Leave>")
+                            cb._text_label.unbind("<Button-1>")
+                            cb._text_label.unbind("<ButtonRelease>")
+                    except Exception:
+                        pass
+        self._update_current_visual_state()
+        return self._state
 
-    def cget(self, attribute_name: str):
-        if attribute_name == "height": raise ValueError("Use length and width arguments instead.")
-        if attribute_name == "state": return self.get_state()
-        mapping = {"corner_radius": self._corner_radius, "fg_color": self._fg_color, "orientation": self._orientation, "text": self._text, "dash": self._dash}
-        return mapping.get(attribute_name, super().cget(attribute_name))
-
-    def bind(self, sequence=None, command=None, add=True):
+    def _update_current_visual_state(self):
         """
-        Routes bindings to the internal canvas, which is what actually
-        receives events -- CTkBaseClass filters direct binds on the widget.
+        Applies checkbox and search-bar colors based on the current state.
 
-        FIX: the `add` argument was previously accepted and then ignored,
-        with add=True hardcoded in the forwarded call. A caller passing
-        add=False expecting to REPLACE existing bindings would silently
-        accumulate them instead.
-        """
-        self._canvas.bind(sequence, command, add=add)
+        Required-key validation for the theme keys this method (and
+        __init__'s sub-widget construction) depends on happens once, in
+        __init__ -- not repeated here on every call.
 
-    def unbind(self, sequence=None, funcid=None):
-        """
-        Removes a binding from the internal canvas.
+        FIX: an earlier version's disabled branch used 100% hardcoded
+        literals -- self._custom_disabled_map was set up in __init__ but
+        never actually consulted here, meaning a correctly-populated
+        disabled_map in sCTkThemes.json had zero effect on what users
+        actually saw. Now reads from self._custom_disabled_map like every
+        other widget in this project, with hard-fail validation for
+        required keys.
 
-        FIX: funcid was previously accepted and then discarded, so this always
-        removed EVERY binding for the sequence rather than the single one the
-        caller identified. That is the same destructive behaviour that made
-        unbind() unusable for blocking scrollbar drags in
-        sCTkScrollableFrame -- Tk's unbind() with no funcid wipes bindings
-        this widget never installed, with no way to restore them.
+        FIX: an earlier version derived the checkbox's fill/hover color from
+        this widget's OWN fg_color/hover_color theme keys -- the same keys
+        that control the surrounding frame's own background -- falling back
+        to a hardcoded accent color pair whenever fg_color was "transparent"
+        (a common, legitimate choice for frame-type widgets, not a theme
+        gap). Reusing fg_color for two different purposes doesn't work when
+        the frame is meant to be transparent. Now uses dedicated
+        "checkbox_fg_color"/"checkbox_hover_color" theme keys instead, with
+        hard-fail validation, rather than overloading fg_color or silently
+        substituting a hardcoded guess.
+
+        FIX: an earlier version also wrote cb._inner_fg_color and cb._hover
+        directly onto each checkbox instance, in both branches -- confirmed
+        against sctk_checkbox.py's actual source that neither attribute is
+        ever read by CheckBox's own code anywhere. These were writes to
+        private attributes CheckBox never defined, with no effect. Removed
+        entirely, along with the now-unused color computation that only ever
+        fed into the dead cb._inner_fg_color write (which itself included a
+        cross-widget reach into the checkbox's own private _local_defaults
+        for a theme key, "inner_fg_color", that isn't part of CheckBox's
+        documented theme key set at all).
+
+        Passes raw (light, dark) tuples straight through to each checkbox's
+        configure() instead of resolving to a single color first, matching
+        the tuple-based approach validated elsewhere in this project. An
+        earlier version resolved everything to a single string first, which
+        still worked correctly here specifically because _set_appearance_mode
+        already manually re-triggers this whole method on every light/dark
+        switch -- but that's inconsistent with the more robust pattern used
+        elsewhere, which doesn't depend on a manual re-trigger at all.
         """
-        self._canvas.unbind(sequence, funcid)
+        is_disabled = getattr(self, "_state", "normal") == "disabled"
+
+        if hasattr(self, "search_bar") and self.search_bar is not None:
+            self.search_bar._update_current_visual_state()
+
+        if not hasattr(self, "checkboxes"):
+            return
+
+        for cb in self.checkboxes:
+            if is_disabled:
+                cb.configure(state="disabled")
+                d_map = self._custom_disabled_map
+                # FIX: an earlier version never referenced self._custom_disabled_map
+                # here at all -- these four lines were 100% hardcoded literals
+                # with zero theme connection. hover_color intentionally reuses
+                # checkbox_fg_color, not a separate disabled hover key -- hover
+                # can't meaningfully trigger while disabled anyway, matching the
+                # same "no distinct disabled hover" convention used elsewhere
+                # in this project (e.g. sCTkSlider).
+                cb.configure(
+                    text_color=d_map.get("text_color"),
+                    fg_color=d_map.get("checkbox_fg_color"),
+                    border_color=d_map.get("border_color"),
+                    hover_color=d_map.get("checkbox_fg_color"),
+                    checkmark_color=d_map.get("checkmark_color"),
+                )
+            else:
+                cb.configure(state="normal")
+                m = self._local_defaults
+                # FIX: an earlier version read fg_color/hover_color here --
+                # the SAME keys that control the surrounding frame's own
+                # background -- with a hardcoded accent-color fallback for
+                # whenever fg_color was "transparent" (the frame's own
+                # default). Now uses dedicated checkbox_fg_color/
+                # checkbox_hover_color keys instead, so the checkbox's accent
+                # color no longer depends on what the frame's background
+                # happens to be set to.
+                cb.configure(
+                    text_color=m.get("text_color"),
+                    fg_color=m.get("checkbox_fg_color"),
+                    border_color=m.get("border_color"),
+                    hover_color=m.get("checkbox_hover_color"),
+                    checkmark_color=m.get("checkmark_color"),
+                )
+
+            # Force an explicit redrawing pass on the inner elements safely
+            if hasattr(cb, "_draw"): cb._draw()
