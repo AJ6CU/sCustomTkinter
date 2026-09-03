@@ -23,7 +23,7 @@ class sCTkSelectorBO(BuilderObject):
     OPTIONS_STANDARD = ('height', 'width')
     # 1. Append 'state' to your custom options tuple array
     OPTIONS_CUSTOM = ('items', 'multiple_choices', 'pack_propagate', 'grid_propagate', 'state')
-    properties = BuilderObject.properties + OPTIONS_CUSTOM + OPTIONS_STANDARD
+    properties = OPTIONS_CUSTOM + OPTIONS_STANDARD
 
     OPTIONS_CUSTOM_DEFAULTS = {
         'multiple_choices': 'True',

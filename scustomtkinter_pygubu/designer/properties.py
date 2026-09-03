@@ -24,10 +24,15 @@ from pygubu.plugins.customtkinter.widgets import (
 from pygubu.plugins.customtkinter.tabview import CTkTabviewBO
 from pygubu.plugins.customtkinter.scrollableframe import CTkScrollableFrameBO
 
-
+# from scustomtkinter import sCTkDialRange, sCTkDialSelector, sCTkDialContinuous
 #
 #   Imports  for the sCTK Widgets
 #
+from scustomtkinter_pygubu.sCTkDialbo import (
+    sCTkDialContinuousBO, id_continuous as sCTkDialContinuous_builder_id,
+    sCTkDialRangeBO,      id_range      as sCTkDialRange_builder_id,
+    sCTkDialSelectorBO,   id_selector   as sCTkDialSelector_builder_id,
+)
 
 from scustomtkinter_pygubu.sCTkCorebo import (sCTkBO, builder_id as sCTk_builder_id)
 from scustomtkinter_pygubu.sCTkToplevelbo import (sCTkToplevelBO, builder_id as sCTkToplevel_builder_id)
@@ -206,6 +211,9 @@ for pname in CTkFrameBO.properties:
         copy_custom_property(nsctk.CTkFrame, pname, sCTkFrame_builder_id)
         copy_custom_property(nsctk.CTkFrame, pname, sCTkSelector_builder_id)
         copy_custom_property(nsctk.CTkFrame, pname, sCTkSpinbox_builder_id)
+        copy_custom_property(nsctk.CTkFrame, pname, sCTkDialRange_builder_id)
+        copy_custom_property(nsctk.CTkFrame, pname, sCTkDialSelector_builder_id)
+        copy_custom_property(nsctk.CTkFrame, pname, sCTkDialContinuous_builder_id)
     except RuntimeError:
         pass  # unconfigured property
 

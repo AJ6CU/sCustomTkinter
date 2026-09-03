@@ -131,6 +131,7 @@ register_custom_property(id_continuous, "diameter", "naturalnumber", default_val
 register_custom_property(id_continuous, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_continuous, "left_click_callback", "commandentry", help="Callback for left mouse click.")
 register_custom_property(id_continuous, "right_click_callback", "commandentry", help="Callback for right mouse click.")
+register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"))
 
 # --- 2. RANGED POTENTIOMETER MATRIX REGISTRY ---
 id_range = f"{builder_namespace}.sCTkDialRange"
@@ -145,6 +146,7 @@ register_custom_property(id_range, "arc_angle", "naturalnumber", default_value=2
 register_custom_property(id_range, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_range, "left_click_callback", "commandentry", help="Callback for left mouse click.")
 register_custom_property(id_range, "right_click_callback", "commandentry", help="Callback for right mouse click.")
+register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"))
 
 # --- 3. MODE SELECTOR MATRIX REGISTRY ---
 id_selector = f"{builder_namespace}.sCTkDialSelector"
@@ -157,4 +159,4 @@ register_custom_property(id_selector, "command", "commandentry", help="Callback 
 register_custom_property(id_selector, "left_click_callback", "commandentry", help="Callback for left mouse click.")
 register_custom_property(id_selector, "right_click_callback", "commandentry", help="Callback for right mouse click.")
 register_custom_property(id_selector, "labels", "entry", help="Labels for dial in format label1, label2, label3... ")
-
+register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"))
