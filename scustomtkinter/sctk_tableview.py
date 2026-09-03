@@ -301,7 +301,7 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         rebuild_layout = False
 
         for k in ["cell_bg_color", "cell_alt_bg_color", "num_columns", "num_rows", "header_line_width", "grid_mode",
-                  "show_headers", "outline_width", "outline_radius"]:
+                  "show_headers", "outline_width", "outline_radius", "columns"]:
             if k in kwargs:
                 v = kwargs.pop(k)
                 if k == "cell_bg_color":
@@ -323,6 +323,26 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
                 elif k == "outline_radius":
                     self._outline_radius = int(v); self.table_outline_frame.configure(
                         corner_radius=self._outline_radius)
+                elif k == "columns":
+                    # FIX: `columns` was accepted by __init__ and registered as
+                    # a Pygubu Designer property, but configure() never popped
+                    # it -- so editing the column list at runtime fell straight
+                    # through to native CTkScrollableFrame.configure(), whose
+                    # check_kwargs_empty() raised
+                    # "['columns'] are not supported arguments". Construction
+                    # worked; reconfiguration did not, which is exactly what
+                    # the Designer does when the field is edited.
+                    #
+                    # Accepts a comma-separated string as well as a list, since
+                    # __init__ does and Pygubu's property editor supplies a
+                    # string.
+                    if isinstance(v, str):
+                        clean_str = v.replace("'", "").replace('"', "").strip()
+                        v = [c.strip() for c in clean_str.split(',') if c.strip()]
+                    self.columns_list = list(v) if v else [""] * self._num_columns
+                    # Column count follows the labels, matching how the Designer
+                    # BO derives num_columns from the columns string.
+                    self._num_columns = len(self.columns_list)
                 rebuild_layout = True
 
         if rebuild_layout:
