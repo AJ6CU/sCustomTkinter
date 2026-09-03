@@ -128,6 +128,13 @@ class sCTkTableviewForPreview(sCTkTableview):
 class sCTkSelectorForPreview(sCTkSelector):
     _THEME_BLOCK_NAME = "sCTkSelector"
 
+    def __init__(self, master=None, **kwargs):
+        # Designer-only: the canvas behind the preview is a fixed light grey
+        # that ignores appearance mode, so a transparent background leaves
+        # dark-mode text unreadable. Runtime is unaffected.
+        kwargs.setdefault("fg_color", ("#FFFFFF", "#111827"))
+        super().__init__(master, **kwargs)
+
     def winfo_children(self):
         internal = [
             self.search_bar,
@@ -443,7 +450,7 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         if not builder_uid.startswith(namespace_prefix):
             return
 
-        # crop_widget(widget, recursive=True)
+        crop_widget(widget, recursive=True)
 
         canvas = _preview_canvas(widget)
 
