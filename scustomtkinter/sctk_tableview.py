@@ -295,6 +295,12 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
                                                                                            str(getattr(self,
                                                                                                        f"_{require_redraw}",
                                                                                                        0)))
+            # Falls through to sCTkScrollableFrame.configure()'s own
+            # single-argument branch, which returns a Tkinter-style 5-tuple for
+            # any name it doesn't recognise rather than forwarding the string to
+            # native CTkScrollableFrame.configure() -- that signature takes no
+            # positional argument and would raise TypeError. Reached from Pygubu
+            # when a property is blanked in the inspector.
             return super().configure(require_redraw)
 
         if isinstance(require_redraw, dict): kwargs.update(require_redraw); require_redraw = False

@@ -525,7 +525,27 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableW
                     return (pname, pname, pname,
                             str(self._local_defaults.get("scroll_enabled", True)),
                             str(self._scroll_enabled))
-                return super().configure(pname)
+                # FIX: do NOT forward pname to native configure(). Unlike
+                # CTkFrame -- whose signature is configure(require_redraw=False,
+                # **kwargs) and so silently swallows a positional --
+                # CTkScrollableFrame.configure() is declared configure(self,
+                # **kwargs) and accepts NO positional argument at all. Passing
+                # one raised "CTkScrollableFrame.configure() takes 1 positional
+                # argument but 2 were given".
+                #
+                # This surfaced through Pygubu Designer: blanking a property in
+                # the inspector makes it call widget.configure(pname) to
+                # discover that property's default value, which reaches this
+                # branch for any name not handled above.
+                #
+                # A Tkinter-style 5-tuple is returned instead, built from
+                # cget() so the reported value is real. Returning None is not an
+                # option -- callers index into the tuple.
+                try:
+                    current = self.cget(pname)
+                except Exception:
+                    current = None
+                return (pname, pname, pname, current, current)
 
         # scroll_enabled is this library's own property, not a native CTk one.
         # It MUST be popped before the super() call below: CTkScrollableFrame
