@@ -26,7 +26,7 @@ class sCTkTableviewBO(BuilderObject):
     properties = OPTIONS_CUSTOM
 
     container = True
-    allowed_parents = ('root', 'frame', 'toplevel', 'panedwindow', 'notebook', 'scrollableframe')
+    # allowed_parents = ('root', 'frame', 'toplevel', 'panedwindow', 'notebook', 'scrollableframe')
 
     @classmethod
     def setup_properties(cls):

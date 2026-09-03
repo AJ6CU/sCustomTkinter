@@ -139,7 +139,7 @@ class ThemeableWidget:
         self.image_loader = kwargs.pop("image_loader", default_image_loader)
         self.data_pool = kwargs.pop("data_pool", None)
 
-        class_name = self.__class__.__name__
+        class_name = getattr(self, "_THEME_BLOCK_NAME", None) or self.__class__.__name__
         theme_defaults = GLOBAL_THEME_REGISTRY.get(class_name) or {}
 
         if not isinstance(theme_defaults, dict):
