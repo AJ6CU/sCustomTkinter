@@ -33,7 +33,7 @@ class sCTkSelectorBO(BuilderObject):
         'state': 'normal'
     }
 
-    container = True
+    container = False
     container_layout = False
 
     def realize(self, parent, extra_init_args: dict = None):

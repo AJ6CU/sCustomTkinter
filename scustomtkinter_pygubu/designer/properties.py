@@ -204,7 +204,7 @@ for pname in CTkScrollableFrameBO.properties:
 for pname in CTkFrameBO.properties:
     try:
         copy_custom_property(nsctk.CTkFrame, pname, sCTkFrame_builder_id)
-        # copy_custom_property(nsctk.CTkFrame, pname, sCTkSelector_builder_id)
+        copy_custom_property(nsctk.CTkFrame, pname, sCTkSelector_builder_id)
         copy_custom_property(nsctk.CTkFrame, pname, sCTkSpinbox_builder_id)
     except RuntimeError:
         pass  # unconfigured property
@@ -212,7 +212,6 @@ for pname in CTkFrameBO.properties:
 for pname in CTkSegmentedButtonBO.properties:
     try:
         for pname in CTkSegmentedButtonBO.properties:
-            for pname in CTkSegmentedButtonBO.properties:
-                copy_custom_property(nsctk.CTkSegmentedButton, pname, sCTkSegmentedButton_builder_id)
+            copy_custom_property(nsctk.CTkSegmentedButton, pname, sCTkSegmentedButton_builder_id)
     except RuntimeError:
         pass  # unconfigured property
