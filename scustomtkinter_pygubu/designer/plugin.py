@@ -144,6 +144,19 @@ class sCTkSelectorForPreview(sCTkSelector):
                     clist.append(cwidget._canvas)
         return clist
 
+class sCTkOptionMenuPrimaryForPreview(sCTkOptionMenuPrimary):
+    _THEME_BLOCK_NAME = "sCTkOptionMenuPrimary"
+
+    def winfo_children(self):
+        internal = [
+            self._menu,
+        ]
+        clist = []
+        for widget in internal:
+            for cwidget in widget.winfo_children():
+                clist.append(cwidget)
+        return clist
+
 
 class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
     _THEME_BLOCK_NAME = "sCTkOptionMenuSecondary"
