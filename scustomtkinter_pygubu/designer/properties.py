@@ -23,6 +23,7 @@ from pygubu.plugins.customtkinter.widgets import (
 from pygubu.plugins.customtkinter.tabview import CTkTabviewBO
 from pygubu.plugins.customtkinter.scrollableframe import CTkScrollableFrameBO
 
+
 #
 #   Imports  for the sCTK Widgets
 #
@@ -62,8 +63,8 @@ from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_
 from scustomtkinter_pygubu.sCTkProgressBarbo import (sCTkProgressBarBO, builder_id as sCTkProgressBar_builder_id)
 from scustomtkinter_pygubu.sCTkRadioButtonbo import (sCTkRadioButtonBO, builder_id as sCTkRadioButton_builder_id)
 
-# from scustomtkinter_pygubu.sCTkScrollableFramebo import (sCTkScrollableFrameBO, builder_id as sCTkScrollableFrame_builder_id)
 from scustomtkinter_pygubu.sCTkScrollbarbo import (sCTkScrollbarBO, builder_id as sCTkScrollbar_builder_id)
+from scustomtkinter_pygubu.sCTkScrollableFramebo import (sCTkScrollableFrameBO, builder_id as sCTkScrollableFrame_builder_id)
 
 # from scustomtkinter_pygubu.sCTkSegmentedButtonbo import (sCTkSegmentedButtonBO, builder_id as sCTkSegmentedButton_builder_id)
 
@@ -184,8 +185,20 @@ for pname in CTkToplevelBO.properties:
     except RuntimeError:
         pass
 
-for pname in CTkToplevelBO.properties:
+# FIX: this block previously referenced CTkScrollableFrame_builder_id -- a name
+# that is defined NOWHERE in this file (note the missing leading "s"). Every
+# iteration raised NameError, and the bare `except:` swallowed all of them, so
+# no property definition was ever copied to sCTkScrollableFrame. The designer
+# therefore knew the property NAMES, inherited from CTkScrollableFrameBO's own
+# properties tuple, but had no registered definition for any of them -- no type,
+# no permitted values, no default. The visible symptom was `orientation`
+# displaying as "horizontal" in the inspector when the widget's real default is
+# "vertical".
+#
+# The bare except is narrowed to RuntimeError, matching every other block here.
+# A bare except would hide this class of typo again.
+for pname in CTkScrollableFrameBO.properties:
     try:
-        copy_custom_property(nsctk.CTkToplevel, pname, sCTkToplevel_builder_id)
+        copy_custom_property(nsctk.CTkScrollableFrame, pname, sCTkScrollableFrame_builder_id)
     except RuntimeError:
-        pass
+        pass  # unconfigured property

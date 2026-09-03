@@ -49,8 +49,13 @@ register_widget(
 #
 # nsctk is the customtkinter plugin namespace
 # nsctk.CTkScrollableFrame is the registered name for CTkScrollableFrameBO builder.
+# The bare `except:` here is narrowed to RuntimeError, matching the other
+# builder-object modules. A bare except also catches NameError, which is how a
+# missing "s" in a builder-id variable stayed hidden in designer/properties.py
+# -- the copy silently never happened and the symptom surfaced much later as a
+# wrong default in the inspector.
 for pname in CTkFrameBO.properties:
     try:
         copy_custom_property(nsctk.CTkFrame, pname, builder_id)
-    except:
-        pass
+    except RuntimeError:
+        pass  # unconfigured property

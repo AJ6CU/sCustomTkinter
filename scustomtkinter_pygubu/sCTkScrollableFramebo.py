@@ -59,16 +59,6 @@ register_widget(
 )
 
 
-# Copy properties before we define our own properties.
-#
-# nsctk is the customtkinter plugin namespace
-# nsctk.CTkScrollableFrame is the registered name for CTkScrollableFrameBO builder.
-for pname in CTkScrollableFrameBO.properties:
-    try:
-        copy_custom_property(nsctk.CTkScrollableFrame, pname, builder_id)
-    except:
-        pass
-
 # -----------------------------------------------------------------
 # EXPOSE CUSTOM 'STATE' CHANNELS INSIDE PYGUBU DESIGNER PANEL
 # -----------------------------------------------------------------

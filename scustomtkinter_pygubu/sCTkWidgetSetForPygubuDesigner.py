@@ -43,7 +43,7 @@ import scustomtkinter_pygubu.sCTkLabelSecondarybo
 import scustomtkinter_pygubu.sCTkLabelTertiarybo
 
 import scustomtkinter_pygubu.sCTkOptionMenuPrimarybo
-import scustomtkinter_pygubu.sCTkOptionMenuSecondarybo 
+import scustomtkinter_pygubu.sCTkOptionMenuSecondarybo
 
 import scustomtkinter_pygubu.sCTkPathChooserbo
 
