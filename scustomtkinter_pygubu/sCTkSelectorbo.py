@@ -10,6 +10,7 @@ from pygubu.api.v1 import (
     register_custom_property
 )
 from scustomtkinter.sctk_selector import sCTkSelector
+from pygubu.plugins.customtkinter.widgets import CTkFrameBO
 
 widget_namespace = "scustomtkinter.sctk_selector"
 widget_classname = "sCTkSelector"
@@ -20,10 +21,12 @@ section_name = "sCustomTkinter"
 class sCTkSelectorBO(BuilderObject):
     class_ = sCTkSelector
 
-    OPTIONS_STANDARD = ('height', 'width')
-    # 1. Append 'state' to your custom options tuple array
+    # OPTIONS_STANDARD = ('height', 'width')
+    # # 1. Append 'state' to your custom options tuple array
     OPTIONS_CUSTOM = ('items', 'multiple_choices', 'pack_propagate', 'grid_propagate', 'state')
-    properties = OPTIONS_CUSTOM + OPTIONS_STANDARD
+    # CTkFrameBO.properties already includes width and height, so the old
+    # OPTIONS_STANDARD tuple listing them separately is redundant.
+    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
 
     OPTIONS_CUSTOM_DEFAULTS = {
         'multiple_choices': 'True',
