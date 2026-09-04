@@ -112,26 +112,6 @@
             </layout>
           </object>
         </child>
-        <child>
-          <object class="customtkinter.CTkComboBox" id="comboBox2" named="True">
-            <property name="command" type="command" cbtype="simple">CTkcomboBox_CB</property>
-            <property name="values">["Apple","Pear","Orange"]</property>
-            <property name="variable">string:CTkcomboBox_VAR</property>
-            <layout manager="pack">
-              <property name="side">top</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="ttk.Combobox" id="comboBox3" named="True">
-            <property name="textvariable">string:ttkComboBox_VAR</property>
-            <property name="values">Apple  Pear Orange</property>
-            <bind sequence="&lt;&lt;ComboboxSelected&gt;&gt;" handler="ttkComboBox_CB" add="" />
-            <layout manager="pack">
-              <property name="side">top</property>
-            </layout>
-          </object>
-        </child>
       </object>
     </child>
     <child>
@@ -140,6 +120,22 @@
           <property name="column">2</property>
           <property name="row">0</property>
         </layout>
+        <child>
+          <object class="scustomtkinter.sCTkEntryPrimary" id="sctkentryprimary1">
+            <property name="placeholder_text">primary entry</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkEntrySecondary" id="sctkentrysecondary1">
+            <property name="placeholder_text">secondary entry</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
     <child>

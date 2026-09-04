@@ -35,18 +35,8 @@ class testWidgets1(baseui.testWidgets1UI):
 
     def comboBox_CB(self, value):
         print("ComboBox=", self.comboBox_VAR.get(), "*", value, self.comboBox1.get())
-        print("var interp:   ", self.comboBox_VAR._root)
-        print("widget interp:", self.comboBox1.winfo_toplevel())
-        print("same tk:      ", self.comboBox_VAR._tk is self.comboBox1.tk)
-
-    def CTkcomboBox_CB(self, value):
-        print("CTkcomboBox=", self.CTkcomboBox_VAR.get(),"*", value, self.comboBox2.get())
-
-    def ttkComboBox_CB(self, event=None):
-        print("ttkComboBox=", self.ttkComboBox_VAR.get(),"*", event, self.comboBox3.get())
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = testWidgets1(root)
+    app = testWidgets1()
     app.run()

@@ -347,10 +347,43 @@ class sCTkPreviewBO(sCTkToplevelPreviewBO):
     ro_properties = ToplevelPreviewBaseBO.ro_properties + ("fg_color",)
 
     def _set_property(self, target_widget, pname, value):
+        """
+        Applies a property to the preview.
+
+        appearance_mode and color_theme are global CustomTkinter settings
+        rather than widget options, so they are routed to the module-level
+        setters instead of reaching the widget.
+
+        FIX: both setters are guarded against an empty value. Blanking a
+        property in the Designer inspector makes pygubu call
+        unset_property(), which resolves the property's default -- None here,
+        since these have no widget-level default to read back -- and passes
+        it straight through. CustomTkinter's set_appearance_mode() then does
+        mode_string.lower() and raises AttributeError on NoneType, taking out
+        the whole preview update. CustomTkinter's own CTkPreviewBO has the
+        same unguarded code and the same crash.
+
+        The two are guarded DIFFERENTLY, on purpose.
+
+        appearance_mode falls back to "System", which is a real state --
+        CustomTkinter's own default, meaning "follow the OS". A user who
+        picks Dark, then Light, then wants the system to decide again needs a
+        way back, and clearing the field is that way. Ignoring the call would
+        strand them on the last explicit mode, which is precisely what they
+        are trying to escape. This package registers "System" as an explicit
+        choice as well, so it is reachable without clearing anything --
+        CustomTkinter's own property offers only blank, Light and Dark.
+
+        color_theme has no equivalent "unset" state: CustomTkinter always
+        needs some theme loaded, and reverting to "blue" would be a guess
+        rather than a reversion. Blank is therefore ignored, leaving the
+        current theme in place.
+        """
         if pname == "appearance_mode":
-            ctk.set_appearance_mode(value)
+            ctk.set_appearance_mode(value or "System")
         elif pname == "color_theme":
-            ctk.set_default_color_theme(value)
+            if value:
+                ctk.set_default_color_theme(value)
         else:
             return super()._set_property(target_widget, pname, value)
 
@@ -438,17 +471,20 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             app = MyApp(root)
 
         sCTk creates its own Tcl interpreter, so that produced a SECOND one.
-        The consequence was subtle and nasty: a tk.StringVar built without an
-        explicit master attaches to whichever root Tkinter considers default,
-        so a variable bound to a widget in one interpreter was read from the
-        other. The widget worked, the callback fired with the right value, and
-        the variable came back empty forever. Every variable-bound widget in
-        generated code was affected -- combo boxes, radio buttons, switches,
-        check boxes.
+        The consequence was nothing like the cause: a tk.StringVar built
+        without an explicit master attaches to whichever root Tkinter
+        considers default, so a variable bound to a widget in one interpreter
+        was read from the other. The widget worked, the command callback fired
+        with the right value, and variable.get() returned empty forever. Every
+        variable-bound widget in generated code was affected -- combo boxes,
+        radio buttons, switches, check boxes.
 
         The `or` clause above is the supported fix. pygubu's own source carries
         a FIXME beside that tuple asking plugins to implement this method
-        instead of the tuple being extended.
+        rather than the tuple being extended.
+
+        Note that group=GROOT on register_widget() is a DIFFERENT thing --
+        palette placement only. It does not affect code generation.
 
         Args:
             builder_uid: The registered id being tested.

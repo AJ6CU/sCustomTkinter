@@ -1,14 +1,13 @@
 #!/usr/bin/python3
 """
-test
+toplevelTest
 
-ignore
+toplevelTest
 
-UI source file: tesstGTOOT.ui
+UI source file: toplevelTest.ui
 """
-import tkinter as tk
 from scustomtkinter.sctk_combobox import sCTkComboBox
-from scustomtkinter.sctk_core import sCTk
+from scustomtkinter.sctk_toplevel import sCTkToplevel
 
 
 def safe_i18n_translator(value):
@@ -31,7 +30,7 @@ def safe_image_loader(master, image_name: str):
     return img
 
 
-class testGROOTUI:
+class toplevelTestUI:
     def __init__(
         self,
         master=None,
@@ -49,21 +48,21 @@ class testGROOTUI:
         if on_first_object_cb is None:
             on_first_object_cb = safe_fo_callback
         # build ui
-        sctk1 = sCTk(None)
+        sctktoplevel1 = sCTkToplevel(master)
         # First object created
-        on_first_object_cb(sctk1)
+        on_first_object_cb(sctktoplevel1)
 
-        sctkcombobox1 = sCTkComboBox(sctk1)
+        sctkcombobox1 = sCTkComboBox(sctktoplevel1)
+        sctkcombobox1.configure(values=["apple", "orange", "pear"])
         sctkcombobox1.pack(side="top")
 
         # Main widget
-        self.mainwindow = sctk1
+        self.mainwindow = sctktoplevel1
 
     def run(self):
         self.mainwindow.mainloop()
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = testGROOTUI(root)
+    app = toplevelTestUI()
     app.run()

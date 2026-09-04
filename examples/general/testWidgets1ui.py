@@ -7,14 +7,14 @@ A test of sCustomTkinter widgets and code generatgion
 UI source file: testWidgets1.ui
 """
 import tkinter as tk
-import tkinter.ttk as ttk
-from customtkinter import CTkComboBox
 from scustomtkinter.sctk_button_primary import sCTkButtonPrimary
 from scustomtkinter.sctk_button_secondary import sCTkButtonSecondary
 from scustomtkinter.sctk_button_tertiary import sCTkButtonTertiary
 from scustomtkinter.sctk_checkbox import sCTkCheckBox
 from scustomtkinter.sctk_combobox import sCTkComboBox
 from scustomtkinter.sctk_core import sCTk
+from scustomtkinter.sctk_entry_primary import sCTkEntryPrimary
+from scustomtkinter.sctk_entry_secondary import sCTkEntrySecondary
 from scustomtkinter.sctk_frame import sCTkFrame
 from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
 
@@ -101,28 +101,14 @@ class testWidgets1UI:
             variable=self.comboBox_VAR)
         self.comboBox1.pack(pady=10, side="top")
         self.comboBox1.configure(command=self.comboBox_CB)
-        self.comboBox2 = CTkComboBox(sctkframe2)
-        self.CTkcomboBox_VAR = tk.StringVar()
-        self.comboBox2.configure(
-            values=[
-                "Apple",
-                "Pear",
-                "Orange"],
-            variable=self.CTkcomboBox_VAR)
-        self.comboBox2.pack(side="top")
-        self.comboBox2.configure(command=self.CTkcomboBox_CB)
-        self.comboBox3 = ttk.Combobox(sctkframe2, name="combobox3")
-        self.ttkComboBox_VAR = tk.StringVar()
-        self.comboBox3.configure(
-            textvariable=self.ttkComboBox_VAR,
-            values='Apple  Pear Orange')
-        self.comboBox3.pack(side="top")
-        self.comboBox3.bind(
-            "<<ComboboxSelected>>",
-            self.ttkComboBox_CB,
-            add="")
         sctkframe2.grid(column=1, row=0)
         sctkframe3 = sCTkFrame(sctk1)
+        sctkentryprimary1 = sCTkEntryPrimary(sctkframe3)
+        sctkentryprimary1.configure(placeholder_text="primary entry")
+        sctkentryprimary1.pack(side="top")
+        sctkentrysecondary1 = sCTkEntrySecondary(sctkframe3)
+        sctkentrysecondary1.configure(placeholder_text="secondary entry")
+        sctkentrysecondary1.pack(side="top")
         sctkframe3.grid(column=2, row=0)
         sctkframelabeledprimary1 = sCTkFrameLabeledPrimary(sctk1)
         sctkframelabeledprimary1.grid(column=0, row=1)
@@ -158,14 +144,7 @@ class testWidgets1UI:
     def comboBox_CB(self, value):
         pass
 
-    def CTkcomboBox_CB(self, value):
-        pass
-
-    def ttkComboBox_CB(self, event=None):
-        pass
-
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = testWidgets1UI(root)
+    app = testWidgets1UI()
     app.run()
