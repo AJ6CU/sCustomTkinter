@@ -70,6 +70,42 @@ class sCTkTabviewTabBO(CTkTabviewTabBO):
     # add() method.
     allowed_parents = (builder_id,)
 
+    def realize(self, parent, extra_init_args: dict = None):
+        """
+        Creates the tab, renaming it if that name is already taken.
+
+        Native CTkTabview.add() raises ValueError on a duplicate name. Inside
+        the Designer that exception surfaces only on the console, where nobody
+        is looking -- the tab silently fails to appear and the tree and the
+        preview disagree about what exists.
+
+        A unique suffix is appended instead, and written back into the widget
+        metadata so the inspector's `label` field updates too. Typing "mark"
+        for a second tab therefore produces a visible "mark_2" rather than an
+        invisible error. That is feedback the user actually receives.
+
+        Deliberately NOT done in sCTkTabview itself: the widget keeps raising,
+        so application code that creates a duplicate tab still fails loudly
+        rather than quietly getting a renamed one. This leniency is a
+        design-time affordance, not a change to the widget's contract.
+        """
+        view = parent.get_child_master()
+        name = self._get_tab_name()
+
+        # _name_list is CTkTabview's own record of tab names, in order.
+        existing = list(getattr(view, "_name_list", []))
+        if name in existing:
+            suffix = 2
+            while f"{name}_{suffix}" in existing:
+                suffix += 1
+            name = f"{name}_{suffix}"
+            # Write it back so the inspector and the generated code agree with
+            # what is actually on screen.
+            self.wmeta.properties["label"] = name
+
+        self.widget = view.add(name)
+        return self.widget
+
     def code_realize(self, boparent, code_identifier=None):
         """
         Emits the tab creation line.
