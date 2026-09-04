@@ -104,12 +104,19 @@ class sCTkTabviewTabBO(CTkTabviewTabBO):
             self.wmeta.properties["label"] = name
 
         self.widget = view.add(name)
-        # Remembered for configure() below, which needs both to rename a tab.
-        # BuilderObject keeps no reference to its parent, and the name may
-        # differ from the label if it was uniquified above.
-        self._view = view
-        self._tab_name = name
         return self.widget
+
+    @staticmethod
+    def _find_tabview(widget):
+        """Walk up from a page wrapper to the sCTkTabview that owns it."""
+        node = widget
+        for _ in range(6):          # page -> native tab frame -> tabview
+            if node is None:
+                return None
+            if isinstance(node, sCTkTabview):
+                return node
+            node = getattr(node, "master", None)
+        return None
 
     def configure(self, target=None):
         """
@@ -117,22 +124,42 @@ class sCTkTabviewTabBO(CTkTabviewTabBO):
 
         CTkTabviewTabBO.configure() is a no-op -- `pass` -- so editing the
         label in the inspector updated the metadata but never touched the
-        widget. The design area kept the old name while the preview, which
-        rebuilds from scratch, showed the new one. Renaming here makes the two
-        agree immediately.
+        widget: the design area kept the old name while the preview, which
+        rebuilds from scratch, showed the new one.
 
-        Duplicate names are suffixed on the same rules realize() uses, so
-        renaming a tab onto an existing name is as visible and as harmless as
-        creating one with a taken name.
+        EVERYTHING IS DERIVED FROM self.widget, deliberately. An earlier
+        version stashed the parent view and the created name on the builder
+        object during realize() and read them back here -- which failed,
+        because Pygubu calls configure() on a builder object whose realize()
+        never ran. Tracing showed those instances arriving with the new label
+        correctly set but no instance state at all:
+
+            [TabBO.configure] view=False old=None new='sue'
+
+        The page wrapper is the only reliable anchor: walk up from it to find
+        the tabview, then find the wrapper in that tabview's page registry to
+        learn the name it is currently filed under.
         """
-        print(f"[TabBO.configure] view={getattr(self,'_view',None) is not None} "
-              f"old={getattr(self,'_tab_name',None)!r} new={self._get_tab_name()!r}")
+        widget = getattr(self, "widget", None)
+        if widget is None:
+            return
 
-        view = getattr(self, "_view", None)
-        old_name = getattr(self, "_tab_name", None)
+        view = self._find_tabview(widget)
+        if view is None:
+            return
+
+        # The name this page is currently registered under, found by identity
+        # rather than by trusting any stored value.
+        old_name = None
+        for name, page in getattr(view, "_sctk_pages", {}).items():
+            if page is widget:
+                old_name = name
+                break
+        if old_name is None:
+            return
+
         new_name = self._get_tab_name()
-
-        if view is None or old_name is None or new_name == old_name:
+        if new_name == old_name:
             return
 
         existing = [n for n in getattr(view, "_name_list", []) if n != old_name]
@@ -148,13 +175,8 @@ class sCTkTabviewTabBO(CTkTabviewTabBO):
         except Exception:
             # Widget torn down mid-edit, or a native rename this build of
             # CustomTkinter doesn't support. The preview rebuild still shows
-            # the new label, so this is a degraded case rather than a broken one.
+            # the new label, so this degrades rather than breaks.
             return
-        self._tab_name = new_name
-
-    def _set_property(self, target_widget, pname, value):
-        print(f"[TabBO._set_property] {pname!r} = {value!r}")
-        return super()._set_property(target_widget, pname, value)
 
     def code_realize(self, boparent, code_identifier=None):
         """
