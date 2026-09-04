@@ -3,8 +3,8 @@
 sCTkTabview
 
 A theme-compliant custom multi-page tab container layout.
-Inherits from sCTkTabviewUI and ThemeableWidget to manage dense cockpit dashboard
-panels safely with full live theme repaint loops out of themes.json.
+Inherits from ctk.CTkTabview and ThemeableWidget to manage dense cockpit dashboard
+panels safely with full live theme repaint loops out of sCTkThemes.json.
 """
 import tkinter as tk
 
@@ -371,4 +371,3 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
             try: super()._set_appearance_mode(mode_string)
             except Exception: pass
         self._apply_custom_theme_colors()
-
