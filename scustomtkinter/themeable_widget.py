@@ -217,7 +217,18 @@ class ThemeableWidget:
         self.image_loader = kwargs.pop("image_loader", default_image_loader)
         self.data_pool = kwargs.pop("data_pool", None)
 
-        class_name = self.__class__.__name__
+        # _THEME_BLOCK_NAME lets a subclass declare which theme block it reads,
+        # instead of the lookup always using its own class name.
+        #
+        # Needed by the Pygubu Designer preview subclasses: sCTkTableviewForPreview,
+        # sCTkSelectorForPreview and friends exist only to expose internals so the
+        # Designer can select them, but their class names have no theme block --
+        # so the lookup found nothing, final_kw came back empty, and any widget
+        # with fail-loud key validation raised KeyError instead of rendering.
+        #
+        # Also useful outside the Designer: a subclass of sCTkButtonPrimary can
+        # now inherit its parent's theme rather than silently losing it.
+        class_name = getattr(self, "_THEME_BLOCK_NAME", None) or self.__class__.__name__
         theme_defaults = GLOBAL_THEME_REGISTRY.get(class_name) or {}
 
         if not isinstance(theme_defaults, dict):
