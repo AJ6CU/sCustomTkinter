@@ -5,6 +5,7 @@ from pygubu.api.v1 import (
     register_custom_property
 )
 from scustomtkinter.sctk_spinbox import sCTkSpinbox
+from pygubu.plugins.customtkinter.widgets import CTkFrameBO
 
 widget_namespace = "scustomtkinter.sctk_spinbox"
 widget_classname = "sCTkSpinbox"
@@ -23,7 +24,7 @@ class sCTkSpinboxBO(BuilderObject):
                       'arrow_down_char', 'arrow_right_char', 'arrow_left_char',
                       'state', 'justify', 'placeholder_text', 'values', 'wrap')
 
-    properties = OPTIONS_CUSTOM
+    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
     command_properties = ("command",)
 
     container = False

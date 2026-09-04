@@ -196,32 +196,45 @@ for pname in CTkToplevelBO.properties:
 #
 # The bare except is narrowed to RuntimeError, matching every other block here.
 # A bare except would hide this class of typo again.
+# Each copy gets its OWN try. Grouping several under one try means the first
+# property that fails for one widget silently skips every widget listed after
+# it in that same iteration -- so widgets near the end of the list receive
+# fewer property definitions than those near the start, with no error. Same
+# loop-scope bug found in sCTkSegmentedButtonbo.py, at a different granularity.
+#
+# Adding a widget is one line in the target tuple.
+_scrollableframe_targets = (
+    sCTkScrollableFrame_builder_id,
+    sCTkFrameLabeledPrimary_builder_id,
+    sCTkFrameLabeledSecondary_builder_id,
+    sCTkTableview_builder_id,
+)
 for pname in CTkScrollableFrameBO.properties:
-    try:
-        copy_custom_property(nsctk.CTkScrollableFrame, pname, sCTkScrollableFrame_builder_id)
-        copy_custom_property(nsctk.CTkScrollableFrame, pname, sCTkFrameLabeledPrimary_builder_id)
-        copy_custom_property(nsctk.CTkScrollableFrame, pname, sCTkFrameLabeledSecondary_builder_id)
-        copy_custom_property(nsctk.CTkScrollableFrame, pname, sCTkTableview_builder_id)
+    for target in _scrollableframe_targets:
+        try:
+            copy_custom_property(nsctk.CTkScrollableFrame, pname, target)
+        except RuntimeError:
+            pass  # unconfigured property
 
-    except RuntimeError:
-        pass  # unconfigured property
-
+_frame_targets = (
+    sCTkFrame_builder_id,
+    sCTkSelector_builder_id,
+    sCTkSpinbox_builder_id,
+    sCTkFileExplorer_builder_id,
+    sCTkPathChooser_builder_id,
+    sCTkDialContinuous_builder_id,
+    sCTkDialRange_builder_id,
+    sCTkDialSelector_builder_id,
+)
 for pname in CTkFrameBO.properties:
-    try:
-        copy_custom_property(nsctk.CTkFrame, pname, sCTkFrame_builder_id)
-        copy_custom_property(nsctk.CTkFrame, pname, sCTkSelector_builder_id)
-        copy_custom_property(nsctk.CTkFrame, pname, sCTkSpinbox_builder_id)
-        copy_custom_property(nsctk.CTkFrame, pname, sCTkFileExplorer_builder_id)
-        copy_custom_property(nsctk.CTkFrame, pname, sCTkPathChooser_builder_id)
-        copy_custom_property(nsctk.CTkFrame, pname, sCTkDialRange_builder_id)
-        copy_custom_property(nsctk.CTkFrame, pname, sCTkDialSelector_builder_id)
-        copy_custom_property(nsctk.CTkFrame, pname, sCTkDialContinuous_builder_id)
-    except RuntimeError:
-        pass  # unconfigured property
+    for target in _frame_targets:
+        try:
+            copy_custom_property(nsctk.CTkFrame, pname, target)
+        except RuntimeError:
+            pass  # unconfigured property
 
 for pname in CTkSegmentedButtonBO.properties:
     try:
-        for pname in CTkSegmentedButtonBO.properties:
-            copy_custom_property(nsctk.CTkSegmentedButton, pname, sCTkSegmentedButton_builder_id)
+        copy_custom_property(nsctk.CTkSegmentedButton, pname, sCTkSegmentedButton_builder_id)
     except RuntimeError:
         pass  # unconfigured property
