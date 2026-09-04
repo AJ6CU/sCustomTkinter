@@ -14,6 +14,8 @@ from pygubu.plugins.customtkinter.windows import CTkToplevelBO
 from pygubu.api.v1 import copy_custom_property
 
 from scustomtkinter.sctk_toplevel import sCTkToplevel
+from pygubu.plugins.customtkinter._config import GROOT
+
 
 
 #
@@ -37,6 +39,6 @@ class sCTkToplevelBO(CTkToplevelBO):
 
 builder_id = f"{builder_namespace}.{widget_classname}"
 register_widget(
-    builder_id, sCTkToplevelBO, widget_classname, ("ttk", section_name)
+    builder_id, sCTkToplevelBO, widget_classname, ("ttk", section_name), group=GROOT
 )
 

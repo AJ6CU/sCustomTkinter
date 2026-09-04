@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.5" author="PygubuDesigner 0.41.4">
+  <project>
+    <settings>
+      <setting id="name">testWidgetsCTK</setting>
+      <setting id="description">A test of sCustomTkinter widgets and code generatgion</setting>
+      <setting id="template">codescript</setting>
+      <setting id="main_widget">ctk1</setting>
+      <setting id="module_namespace" />
+      <setting id="module_name">testWidgetsCTK</setting>
+      <setting id="main_classname">testWidgetsCTK</setting>
+      <setting id="output_dir">.</setting>
+      <setting id="builder_namespace">custom_widgets</setting>
+      <setting id="output_dir2" />
+      <setting id="generate_code_onsave">False</setting>
+      <setting id="use_i18n">False</setting>
+      <setting id="all_ids_attributes">False</setting>
+      <setting id="import_tkvariables">False</setting>
+      <setting id="use_ttk_styledefinition_file">False</setting>
+      <setting id="use_window_centering_code">False</setting>
+      <setting id="ttk_style_definition_file" />
+    </settings>
+    <customwidgets />
+    <resources />
+  </project>
+  <object class="customtkinter.CTk" id="ctk1">
+    <child>
+      <object class="customtkinter.CTkFrame" id="ctkframe1">
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="customtkinter.CTkComboBox" id="CTkComboBox" named="True">
+            <property name="command" type="command" cbtype="simple">CTkComboBox_CB</property>
+            <property name="values">["Apple","Pear","Orange"]</property>
+            <property name="variable">string:CTkComboBox_VAR</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>

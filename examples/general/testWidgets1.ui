@@ -1,0 +1,170 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.5" author="PygubuDesigner 0.41.4">
+  <project>
+    <settings>
+      <setting id="name">testWidgets1</setting>
+      <setting id="description">A test of sCustomTkinter widgets and code generatgion</setting>
+      <setting id="template">codescript</setting>
+      <setting id="main_widget">sctk1</setting>
+      <setting id="module_namespace" />
+      <setting id="module_name">testWidgets1</setting>
+      <setting id="main_classname">testWidgets1</setting>
+      <setting id="output_dir">.</setting>
+      <setting id="builder_namespace">custom_widgets</setting>
+      <setting id="output_dir2" />
+      <setting id="generate_code_onsave">False</setting>
+      <setting id="use_i18n">False</setting>
+      <setting id="all_ids_attributes">False</setting>
+      <setting id="import_tkvariables">False</setting>
+      <setting id="use_ttk_styledefinition_file">False</setting>
+      <setting id="use_window_centering_code">False</setting>
+      <setting id="ttk_style_definition_file" />
+    </settings>
+    <customwidgets />
+    <resources />
+  </project>
+  <object class="scustomtkinter.sCTk" id="sctk1">
+    <child>
+      <object class="scustomtkinter.sCTkFrame" id="sctkframe1">
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">0</property>
+        </layout>
+        <child>
+          <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary1">
+            <property name="command" type="command" cbtype="simple">primaryButton_CB</property>
+            <property name="text" translatable="yes">Primary Button</property>
+            <layout manager="pack">
+              <property name="pady">10</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary1">
+            <property name="command" type="command" cbtype="simple">secondaryButton_CB</property>
+            <property name="text" translatable="yes">Secondary Button</property>
+            <layout manager="pack">
+              <property name="pady">0 10</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkButtonTertiary" id="sctkbuttontertiary1">
+            <property name="command" type="command" cbtype="simple">tertiaryButton_CB</property>
+            <property name="text" translatable="yes">Tertiary Button</property>
+            <layout manager="pack">
+              <property name="pady">0 10</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkFrame" id="sctkframe2">
+        <layout manager="grid">
+          <property name="column">1</property>
+          <property name="row">0</property>
+        </layout>
+        <child>
+          <object class="scustomtkinter.sCTkCheckBox" id="sctkcheckbox1">
+            <property name="command" type="command" cbtype="simple">check1_CB</property>
+            <property name="text" translatable="yes">Check 1</property>
+            <property name="variable">string:check1_VAR</property>
+            <layout manager="pack">
+              <property name="pady">10</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkCheckBox" id="sctkcheckbox2">
+            <property name="command" type="command" cbtype="simple">check2_CB</property>
+            <property name="text" translatable="yes">Check 2</property>
+            <property name="variable">string:check2_VAR</property>
+            <layout manager="pack">
+              <property name="pady">0 10</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkCheckBox" id="sctkcheckbox3">
+            <property name="command" type="command" cbtype="simple">check3_CB</property>
+            <property name="text" translatable="yes">Check 3</property>
+            <property name="variable">string:check3_VAR</property>
+            <layout manager="pack">
+              <property name="pady">0 10</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkComboBox" id="comboBox1" named="True">
+            <property name="command" type="command" cbtype="simple">comboBox_CB</property>
+            <property name="values">["Apple","Pear","Orange"]</property>
+            <property name="variable">string:comboBox_VAR</property>
+            <layout manager="pack">
+              <property name="pady">10</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="customtkinter.CTkComboBox" id="comboBox2" named="True">
+            <property name="command" type="command" cbtype="simple">CTkcomboBox_CB</property>
+            <property name="values">["Apple","Pear","Orange"]</property>
+            <property name="variable">string:CTkcomboBox_VAR</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="ttk.Combobox" id="comboBox3" named="True">
+            <property name="textvariable">string:ttkComboBox_VAR</property>
+            <property name="values">Apple  Pear Orange</property>
+            <bind sequence="&lt;&lt;ComboboxSelected&gt;&gt;" handler="ttkComboBox_CB" add="" />
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkFrame" id="sctkframe3">
+        <layout manager="grid">
+          <property name="column">2</property>
+          <property name="row">0</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkFrameLabeledPrimary" id="sctkframelabeledprimary1">
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">1</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkFrameLabeledPrimary" id="sctkframelabeledprimary2">
+        <layout manager="grid">
+          <property name="column">1</property>
+          <property name="row">1</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkFrameLabeledPrimary" id="sctkframelabeledprimary3">
+        <layout manager="grid">
+          <property name="column">2</property>
+          <property name="row">1</property>
+        </layout>
+      </object>
+    </child>
+  </object>
+</interface>
