@@ -111,10 +111,10 @@ builder_id = f"{builder_namespace}.{widget_classname}"
 register_widget(
     builder_id, sCTkBO, widget_classname, ("ttk", section_name), group=GROOT
 )
-register_custom_property(
-    builder_id, "appearance_mode", "choice",
-    values=("System", "Light", "Dark"),
-    state="readonly",
-    help="System follows the OS setting. This is CustomTkinter's own default."
-)
+# register_custom_property(
+#     builder_id, "appearance_mode", "choice",
+#     values=("System", "Light", "Dark"),
+#     state="readonly",
+#     help="System follows the OS setting. This is CustomTkinter's own default."
+# )
 

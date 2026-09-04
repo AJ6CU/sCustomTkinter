@@ -1,6 +1,7 @@
-from pygubu.api.v1 import copy_custom_property
+from pygubu.api.v1 import copy_custom_property, register_custom_property
 
 from pygubu.plugins.customtkinter import nsctk
+from pygubu.api.v1 import copy_custom_property
 from pygubu.plugins.customtkinter.windows import (
     CTkBO,
     CTkToplevelBO
@@ -177,6 +178,12 @@ for pname in CTkBO.properties:
         copy_custom_property(nsctk.CTk, pname, sCTk_builder_id)
     except RuntimeError:
         pass
+register_custom_property(
+    sCTk_builder_id, "appearance_mode", "choice",
+    values=("System", "Light", "Dark"),
+    state="readonly",
+    help="System follows the OS setting. This is CustomTkinter's own default."
+)
 
 for pname in CTkToplevelBO.properties:
     try:
