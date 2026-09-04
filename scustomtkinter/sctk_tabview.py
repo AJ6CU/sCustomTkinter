@@ -258,16 +258,6 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
             return str(getattr(self, "_custom_current_state", "normal"))
         return super().cget(attribute_name)
 
-    # Class used for each tab's content page. A class attribute rather than a
-    # hardcoded name so a subclass can substitute one -- specifically, the
-    # Pygubu Designer plugin swaps in sCTkFrameForPreview, whose
-    # winfo_children() override exposes the internals the Designer needs in
-    # order to hit-test a click on a tab page.
-    #
-    # Inert at runtime: nothing outside the Designer overrides it, so a shipped
-    # application gets exactly the same sCTkFrame it always did.
-    _PAGE_CLASS = sCTkFrame
-
     def _ensure_sctk_page(self, name: str) -> sCTkFrame:
         """
         Returns the sCTkFrame page wrapper for a tab, creating it on first use.
@@ -308,7 +298,7 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
             self._sctk_pages.pop(name, None)
 
         native_tab = super().tab(name)
-        page = self._PAGE_CLASS(native_tab, fg_color="transparent", border_width=0)
+        page = sCTkFrame(native_tab, fg_color="transparent", border_width=0)
         page.pack(fill="both", expand=True)
         self._sctk_pages[name] = page
         return page
