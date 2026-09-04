@@ -46,6 +46,7 @@ import json
 import tkinter as tk
 import customtkinter as ctk
 
+
 # GLOBAL THEME REGISTRY POOL
 GLOBAL_THEME_REGISTRY = {}
 

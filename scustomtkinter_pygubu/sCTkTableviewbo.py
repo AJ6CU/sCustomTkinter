@@ -5,6 +5,8 @@ from pygubu.api.v1 import (
     register_custom_property
 )
 from scustomtkinter.sctk_tableview import sCTkTableview
+from scustomtkinter.sctk_tableview import sCTkTableview
+from scustomtkinter.themeable_widget import parse_list_property
 
 widget_namespace = "scustomtkinter.sctk_tableview"
 widget_classname = "sCTkTableview"
@@ -50,8 +52,12 @@ class sCTkTableviewBO(BuilderObject):
 
     def _process_property_value(self, name, value):
         if name == 'columns':
-            if not value or not str(value).strip(): return []
-            return [col.strip() for col in str(value).split(',') if col.strip()]
+            # Shared parser: accepts ["A", "B"], "A, B" or a real list, so this
+            # property behaves identically to sCTkSelector's items and
+            # sCTkDialSelector's labels. The previous comma-only split turned
+            # the quoted-list form into garbage -- ['["A"', '"B"]'].
+            return parse_list_property(value)
+
         if value is None or str(value).strip() == "":
             return None
         if name in ('num_columns', 'num_rows', 'header_line_width', 'outline_radius'):
