@@ -144,6 +144,6 @@ register_custom_property(builder_id, 'cell_bg_color', 'entry')
 register_custom_property(builder_id, 'cell_alt_bg_color', 'entry')
 
 # 👑 Columns text registration placed dead last!
-register_custom_property(builder_id, 'columns', 'entry', "","Enter comma separated set of names - no quotes")
+register_custom_property(builder_id, 'columns', 'entry', "","Enter list of columns e.g., ['One','Two','Three']")
 
 register_widget(builder_id, sCTkTableviewBO, 'sCTkTableview', ("ttk", section_name))

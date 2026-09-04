@@ -12,6 +12,7 @@ from pygubu.api.v1 import (
     register_widget,
     register_custom_property
 )
+from pygubu.plugins.customtkinter.widgets import CTkFrameBO
 
 # Import the native custom classes directly out of your single-file source module
 from scustomtkinter.sctk_dial import sCTkDialContinuous, sCTkDialRange, sCTkDialSelector
@@ -30,9 +31,14 @@ class sCTkDialContinuousBO(BuilderObject):
     _code_classname = "sCTkDialContinuous"
     container = False
 
-    OPTIONS_STANDARD = ("width", "height", "state")
+    # width and height come from CTkFrameBO.properties below, so only `state`
+    # is listed here. `properties` decides what the inspector SHOWS; the
+    # copy_custom_property() calls in designer/properties.py supply the editor
+    # definition for each name. Both are required -- copying alone leaves a
+    # property invisible, listing alone leaves it with no editor.
+    OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("divisions", "diameter", "command", "left_click_callback", "right_click_callback")
-    properties = OPTIONS_STANDARD + OPTIONS_CUSTOM
+    properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
     def realize(self, parent, *args, **kwargs):
@@ -59,9 +65,14 @@ class sCTkDialRangeBO(BuilderObject):
     _code_classname = "sCTkDialRange"
     container = False
 
-    OPTIONS_STANDARD = ("width", "height", "state")
+    # width and height come from CTkFrameBO.properties below, so only `state`
+    # is listed here. `properties` decides what the inspector SHOWS; the
+    # copy_custom_property() calls in designer/properties.py supply the editor
+    # definition for each name. Both are required -- copying alone leaves a
+    # property invisible, listing alone leaves it with no editor.
+    OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("from_", "to", "divisions", "diameter", "arc_angle","command", "left_click_callback", "right_click_callback")
-    properties = OPTIONS_STANDARD + OPTIONS_CUSTOM
+    properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
     def realize(self, parent, *args, **kwargs):
@@ -88,9 +99,14 @@ class sCTkDialSelectorBO(BuilderObject):
     _code_classname = "sCTkDialSelector"
     container = False
 
-    OPTIONS_STANDARD = ("width", "height", "state")
+    # width and height come from CTkFrameBO.properties below, so only `state`
+    # is listed here. `properties` decides what the inspector SHOWS; the
+    # copy_custom_property() calls in designer/properties.py supply the editor
+    # definition for each name. Both are required -- copying alone leaves a
+    # property invisible, listing alone leaves it with no editor.
+    OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels" ) #  # Note: Labels handles lists, which are usually initialized in code
-    properties = OPTIONS_STANDARD + OPTIONS_CUSTOM
+    properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
     def _process_property_value(self, name, value):

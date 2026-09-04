@@ -23,9 +23,8 @@ import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
 
 from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
 
-# FIXME: missing sCTkOptionMenuSecondaryBO class
-# from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
-sCTkOptionMenuSecondary_builder_id = None
+
+from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
 
 from scustomtkinter.sctk_path_chooser import sCTkPathChooser
 from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
@@ -268,9 +267,8 @@ class sCTkSeparatorForPreviewBO(sCTkSeparatorBuilder):
     class_ = sCTkSeparatorForPreview
 
 
-# FIXME: Missing sCTkOptionMenuSecondaryBO
-# class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
-#     class_ = sCTkOptionMenuSecondaryForPreview
+class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
+    class_ = sCTkOptionMenuSecondaryForPreview
 
 
 class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
@@ -434,12 +432,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkSelectorForPreviewBO
         elif builder_uid == sCTkSeparator_builder_id:
             return sCTkSeparatorForPreviewBO
-        # FIXME: re-enable once sCTkOptionMenuSecondaryBO exists. The branch is
-        # commented out rather than left in place because the BO it returns
-        # does not exist yet -- reaching it would raise NameError. The builder
-        # id is None above so no uid can match it accidentally.
-        # elif builder_uid == sCTkOptionMenuSecondary_builder_id:
-        #     return sCTkOptionMenuSecondaryForPreviewBO
+        elif builder_uid == sCTkOptionMenuSecondary_builder_id:
+            return sCTkOptionMenuSecondaryForPreviewBO
         elif builder_uid == sCTkSpinbox_builder_id:
             return sCTkSpinboxForPreviewBO
         elif builder_uid == sCTkToplevel_builder_id:

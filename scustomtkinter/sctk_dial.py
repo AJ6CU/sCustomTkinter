@@ -14,6 +14,15 @@ from .themeable_widget import ThemeableWidget, parse_list_property
 class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     """Abstract Base Class for theme-adaptive mechanical rotary encoder widgets."""
 
+    # Stops ScrollBindingMixin's descendant walk here, so an enclosing
+    # scrollable frame does not bind this widget's canvas to its own handler.
+    #
+    # FIX: without it, a dial placed inside an sCTkScrollableFrame scrolled the
+    # LIST when the pointer was over the knob -- the enclosing frame binds every
+    # descendant it finds with add="+", and its handler fires first. Pointing at
+    # a VFO knob and turning the wheel should turn the knob.
+    _CONSUMES_SCROLL = True
+
     def __init__(self, master=None, divisions=24, state="normal", width=120, height=120, **kw):
         ThemeableWidget.__init__(self, kw)
         # THEME SOURCE -- read the RAW block, not final_kw.

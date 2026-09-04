@@ -1,5 +1,6 @@
 ../docs/src/Theming.md
 ../docs/src/Scrolling.md
+../docs/src/ListProperties.md
 ../docs/src/containers.md
 ../docs/src/sCTk.md
 ../docs/src/sCTkToplevel.md

@@ -284,6 +284,20 @@ class ScrollBindingMixin:
         """
         if widget is not self and isinstance(widget, ctk.CTkScrollableFrame):
             return
+
+        # Widgets that consume scroll input themselves also end the walk.
+        #
+        # FIX: a dial inside an sCTkScrollableFrame was being bound to the
+        # FRAME's handler as well as its own. The frame's binding is installed
+        # on the dial's canvas with add="+" and fires first, so pointing at a
+        # VFO knob and turning the wheel scrolled the LIST instead of the knob.
+        # Confirmed at runtime, not only in the Designer.
+        #
+        # The CTkScrollableFrame check above cannot cover this: a dial is not a
+        # scrollable frame, it simply has its own claim on the wheel. Any widget
+        # with that property can set _CONSUMES_SCROLL = True to opt out.
+        if widget is not self and getattr(widget, "_CONSUMES_SCROLL", False):
+            return
         if widget not in collected:
             collected.append(widget)
         try:
