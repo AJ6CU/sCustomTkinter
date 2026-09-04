@@ -322,6 +322,24 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
         """
         return self._ensure_sctk_page(name)
 
+    def rename(self, old_name: str, new_name: str):
+        """
+        Renames a tab, keeping the page registry in step.
+
+        Native CTkTabview.rename() updates its own _name_list and _tab_dict,
+        but knows nothing about this class's _sctk_pages. Without re-keying,
+        the wrapper would still be filed under the OLD name -- so tab() and
+        delete() would miss it, and _ensure_sctk_page() would build a second
+        wrapper inside the same native tab frame.
+
+        Args:
+            old_name: The tab's current name.
+            new_name: The name to give it.
+        """
+        super().rename(old_name, new_name)
+        if old_name in self._sctk_pages:
+            self._sctk_pages[new_name] = self._sctk_pages.pop(old_name)
+
     def delete(self, name: str):
         """
         Deletes a tab, tearing down its sCTkFrame wrapper first so no stale
@@ -371,3 +389,4 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
             try: super()._set_appearance_mode(mode_string)
             except Exception: pass
         self._apply_custom_theme_colors()
+

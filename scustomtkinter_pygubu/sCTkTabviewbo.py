@@ -104,7 +104,50 @@ class sCTkTabviewTabBO(CTkTabviewTabBO):
             self.wmeta.properties["label"] = name
 
         self.widget = view.add(name)
+        # Remembered for configure() below, which needs both to rename a tab.
+        # BuilderObject keeps no reference to its parent, and the name may
+        # differ from the label if it was uniquified above.
+        self._view = view
+        self._tab_name = name
         return self.widget
+
+    def configure(self, target=None):
+        """
+        Applies a changed `label` by renaming the live tab.
+
+        CTkTabviewTabBO.configure() is a no-op -- `pass` -- so editing the
+        label in the inspector updated the metadata but never touched the
+        widget. The design area kept the old name while the preview, which
+        rebuilds from scratch, showed the new one. Renaming here makes the two
+        agree immediately.
+
+        Duplicate names are suffixed on the same rules realize() uses, so
+        renaming a tab onto an existing name is as visible and as harmless as
+        creating one with a taken name.
+        """
+        view = getattr(self, "_view", None)
+        old_name = getattr(self, "_tab_name", None)
+        new_name = self._get_tab_name()
+
+        if view is None or old_name is None or new_name == old_name:
+            return
+
+        existing = [n for n in getattr(view, "_name_list", []) if n != old_name]
+        if new_name in existing:
+            suffix = 2
+            while f"{new_name}_{suffix}" in existing:
+                suffix += 1
+            new_name = f"{new_name}_{suffix}"
+            self.wmeta.properties["label"] = new_name
+
+        try:
+            view.rename(old_name, new_name)
+        except Exception:
+            # Widget torn down mid-edit, or a native rename this build of
+            # CustomTkinter doesn't support. The preview rebuild still shows
+            # the new label, so this is a degraded case rather than a broken one.
+            return
+        self._tab_name = new_name
 
     def code_realize(self, boparent, code_identifier=None):
         """
