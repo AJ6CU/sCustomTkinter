@@ -154,7 +154,7 @@ class sCTkTabviewTabBO(CTkTabviewTabBO):
 
     def _set_property(self, target_widget, pname, value):
         print(f"[TabBO._set_property] {pname!r} = {value!r}")
-        return super()._set_property(target_widget, pname, value
+        return super()._set_property(target_widget, pname, value)
 
     def code_realize(self, boparent, code_identifier=None):
         """
