@@ -119,7 +119,8 @@ register_custom_property(builder_id, 'format', 'entry',
 register_custom_property(builder_id, 'from_', 'entry')
 register_custom_property(builder_id, 'to', 'entry')
 register_custom_property(builder_id, 'step_size', 'entry')
-register_custom_property(builder_id, 'values', 'entry')
+register_custom_property(builder_id, 'values', 'entry',
+                         help='Preferred: ["A", "B", "C"]. Bare comma-separated (A, B, C) also works, but cannot contain a comma inside a value.')
 register_custom_property(builder_id, 'wrap', 'choice', values=('True', 'False'))
 register_custom_property(builder_id, 'button_width', 'naturalnumber')
 register_custom_property(builder_id, 'button_height', 'naturalnumber')
