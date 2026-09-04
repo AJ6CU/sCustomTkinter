@@ -10,7 +10,7 @@ This page is the reference for how scrolling works. The individual widget pages 
 * [Tuning constants](#tuning-constants)
 * [Activation and rebinding](#activation-and-rebinding)
 * [Disabling scroll](#disabling-scroll)
-* [Nested scrollable frames](#nested-scrollable-frames)
+* [Nested scroll regions](#nested-scrollable-frames)
 * [Host contract](#host-contract)
 
 ---
@@ -118,7 +118,7 @@ The tag name embeds `id(self)`, so disabling one host has no effect on any other
 ---
 
 <a name="nested-scrollable-frames"></a>
-### Nested scrollable frames
+### Nested scroll regions
 
 The descendant walk stops at any nested `CTkScrollableFrame` boundary — covering `sCTkScrollableFrame` and anything built on it, such as `sCTkSelector` and `sCTkTableview`. Without this, an inner scrollable frame placed inside an outer one would have its canvas, scrollbar, and entire content tree bound to the *outer* host's handler as well as its own, and since bindings use `add="+"`, both fire on the same event and scroll both at once. Native CustomTkinter guards the same boundary in its own `_check_if_valid_scroll`.
 
@@ -126,7 +126,20 @@ The guard applies to descendants only, so a scrollable host still binds its own 
 
 **Not yet live-tested.** The logic mirrors CustomTkinter's own guard and is straightforward, but an actual nested case hasn't been exercised against it.
 
-A separate scrolling region built directly on a plain `Canvas` is **not** guarded — the check keys on `CTkScrollableFrame` specifically. Guarding that would need an explicit opt-out convention, since a plain `Canvas` has no way to declare itself an independent scroll region.
+#### Widgets that consume scroll themselves
+
+A widget doesn't have to be a scrollable frame to have its own claim on the wheel. Setting `_CONSUMES_SCROLL = True` on a class ends the descendant walk there, exactly as the boundary check above does:
+
+```python
+class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
+    _CONSUMES_SCROLL = True
+```
+
+The dial family declares it. Without it, a dial placed inside an `sCTkScrollableFrame` had its canvas bound to the *frame's* handler as well as its own — and since the frame's binding is installed with `add="+"` and fires first, pointing at a VFO knob and turning the wheel scrolled the list instead of the knob. Confirmed at runtime, not only in the Designer.
+
+The trade is deliberate: a dial becomes a dead zone for scrolling the container behind it. Pointing at a control and turning the wheel should operate that control, the way it does on a physical panel — and the alternative left the dial with no wheel gesture at all while it sat in a scrolling container.
+
+A separate scrolling region built directly on a plain `Canvas` is still **not** guarded automatically — the `isinstance` check keys on `CTkScrollableFrame` specifically — but such a widget can now opt out for itself with `_CONSUMES_SCROLL`.
 
 ---
 
@@ -141,6 +154,8 @@ A host class must implement two methods and may override two more:
 | `_scroll_layers()` | yes | The ordered, deduplicated list of widgets to bind |
 | `_scroll_permitted()` | no | `False` to install blocking handlers instead of scroll handlers. Default `True` |
 | `_scroll_drag_targets()` | no | Widgets whose click-drag should also be blocked when not permitted. Default none |
+
+A host may also set the class attribute `_CONSUMES_SCROLL = True` to stop an enclosing scroll region binding its descendants — see [Nested scroll regions](#nested-scrollable-frames).
 
 Hosts call two setup methods from `__init__`:
 

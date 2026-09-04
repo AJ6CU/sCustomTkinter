@@ -5,6 +5,7 @@
 ### Table of Contents
 * [System Architecture Overview](#system-architecture-overview)
 * [API Property Reference](#api-property-reference)
+* [Changing properties at runtime](#runtime-changes)
 * [State](#state)
 * [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
 * [Layout Manager Integration](#layout-manager-integration)
@@ -45,6 +46,19 @@ The visual update matrix implements two important enhancements:
 | `font` | `tuple` or `CTkFont` | `("Arial", 11, "bold")` | Text font profile style parameters for the embedded header tag. |
 | `text_color` | `str` or `Tuple[str, str]` | Central theme default | Font hex palette token string mapping. Supports appearance mode tuples. |
 | `dash` | `tuple` or `None` | `None` | Integer stroke sequence array tuple mapping out dashed/dotted rendering rules (e.g., `(5, 5)`). |
+
+---
+
+<a name="runtime-changes"></a>
+### Changing properties at runtime
+
+`orientation`, `length`, `text`, `dash` and `state` can all be changed after construction through `configure()`.
+
+**`orientation` swaps the widget's width and height.** A vertical separator is built with `height = length`, a horizontal one with `width = length`, so flipping the orientation without swapping the dimensions would leave a horizontal separator tall and thin. `configure()` handles that.
+
+`length` is a construction-time alias for whichever dimension the current orientation makes the long one, and is translated the same way.
+
+Both previously fell straight through to native `CTkBaseClass.configure()`, which raised `ValueError: ['orientation'] are not supported arguments` — so they worked at construction and failed the moment you tried to change them, which is exactly what Pygubu Designer does when you edit the dropdown.
 
 ---
 

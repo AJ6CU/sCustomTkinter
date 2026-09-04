@@ -58,14 +58,24 @@ inner_panel.pack(expand=True, fill="both", padx=10, pady=10)
 <a name="pygubu-designer"></a>
 ### Pygubu Designer Tab Insertion
 
-Nesting children within the Pygubu Designer layout pane requires adherence to CustomTkinter's native tab allocation slots.
+This library registers its own **`sCTkTabview.Tab`** under the sCustomTkinter palette section. Use that rather than CustomTkinter's `CTkTabview.Tab`.
 
-1. **Chassis placement:** Locate the custom widget container on your workbench tree panel and place an instance of `sCTkTabview` into your frame layout.
-2. **Tab component selection:** In the Pygubu Designer widget selector tree, expand the CustomTkinter widget set and locate the native element named **`CTkTabview.Tab`**.
-3. **Parent nesting assignment:** Drop the **`CTkTabview.Tab`** element directly onto the parent `sCTkTabview` widget slot in your inspector tree layout.
-4. **Repeat allocation:** Repeat for each additional page slot. Tabs can then be named individually using the workspace property sidebars.
+1. Place an `sCTkTabview` into your layout.
+2. In the widget palette, under **sCustomTkinter**, select **`sCTkTabview.Tab`**.
+3. Drop it onto the `sCTkTabview` in the tree. It won't be offered anywhere else — a tab has nowhere else to live.
+4. Repeat for each page. Set each tab's `label` in the properties panel.
 
-Note that tabs created this way are native `CTkTabview.Tab` slots. Calling `widget.tab(name)` on one still returns a wrapped `sCTkFrame`, since wrapping happens lazily on first access.
+A tab is not a widget you construct: it is created *by* its tabview, through `add()`. So the builder object has no widget class of its own, and the generated code reads:
+
+```python
+tab1 = tabview1.add("Settings")
+```
+
+Children you drop onto a tab are parented to the `sCTkFrame` page that `add()` returns.
+
+**Duplicate names are renamed, not rejected.** Native `CTkTabview.add()` raises `ValueError` on a name already in use, and inside the Designer that exception surfaces only on the console where nobody sees it — the tab silently fails to appear and the tree and preview disagree. A numeric suffix is appended instead, so a second tab labelled `mark` becomes `mark_2`, visibly, in both the tab strip and the property field. The widget itself still raises, so application code creating a duplicate tab fails loudly; the leniency is a design-time affordance only.
+
+**CustomTkinter's `CTkTabview.Tab` is still accepted** as a child, so existing `.ui` files keep loading. Calling `widget.tab(name)` on one still returns a wrapped `sCTkFrame`, since wrapping happens lazily on first access.
 
 ---
 
@@ -77,6 +87,7 @@ Note that tabs created this way are native `CTkTabview.Tab` slots. Calling `widg
 | `add(name)` | `sCTkFrame` | Creates a tab and returns its content page. Return type differs from native `CTkTabview.add()`. |
 | `tab(name)` | `sCTkFrame` | Returns a tab's content page, creating the wrapper on first use. Stable across calls. |
 | `delete(name)` | — | Deletes a tab, tearing down its page wrapper first so no stale entry is left behind. |
+| `rename(old_name, new_name)` | — | Renames a tab. Overrides the native method to re-key the internal page registry as well — without that the wrapper would stay filed under the old name, so `tab()` and `delete()` would miss it and a second wrapper would be built inside the same native tab frame. |
 | `state()` / `state(mode)` | `str` | Getter with no argument; setter with `"normal"` or `"disabled"`. Dims text, flattens the tab bar, and locks tab selection. |
 | `get_state()` | `str` | Equivalent to `state()` with no argument. |
 | `configure(**kwargs)` / `config(**kwargs)` | `None` | Standard configuration. Accepts `state` alongside any native option. |
@@ -207,6 +218,7 @@ if __name__ == "__main__":
   Making the strip actually taller would mean writing `CTkTabview`'s private `_top_spacing` / `_top_button_overhang` attributes and re-running its `_configure_grid()` — a dependency on CustomTkinter internals that could break on any upstream release. Deliberately not done.
 
   Note this is a `CTkTabview` layout constraint, **not** a limitation of the segmented button: a standalone `sCTkSegmentedButton` honors `height` normally.
+- **Tabs are selected from the widget tree, not the design canvas.** Clicking a tab page in Pygubu Designer does not select that tab. `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed to the page you aimed at — an attempt at this produced a highlight on one tab while the tree showed another, which is worse than not working. CustomTkinter's own tabs have the same limitation; their designer plugin contains a commented-out attempt at the same fix. Select the tab in the tree to edit its `label`.
 - **Disabling does not cascade to children.** It dims the tab bar and locks tab selection, but widgets placed inside a page are unaffected — disabling them is the caller's responsibility.
 - **`add()` and `tab()` return a different type than the native widget.** Code doing an `isinstance` check against `ctk.CTkFrame`, or reaching for CTkFrame-specific internals on a tab page, would notice. `ctk.CTkTabview.tab(widget, name)` still reaches the native shell.
 - **The internal segmented button is a native `CTkSegmentedButton`**, not `sCTkSegmentedButton`. It is created inside `CTkTabview.__init__` and re-themed afterwards by pushing colors onto it. Replacing it with the themed variant would let it theme itself and remove most of that code, but the swap hasn't been made.

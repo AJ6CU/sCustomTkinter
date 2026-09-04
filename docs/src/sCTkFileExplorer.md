@@ -1,5 +1,5 @@
 ## sCTkFileExplorer
-(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
+(Derived from FileExplorer class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
 * [Overview](#overview)
@@ -18,11 +18,11 @@
   ![sCTkFileExplorer in dark mode](images/sCTkFileExplorer_Dark.png)&emsp; &emsp; &emsp; &emsp;
  ![sCTkFileExplorer in light mode](images/sCTkFileExplorer_Light.png)
 
-**Scroll handling comes from `ScrollBindingMixin`,** the library's single shared implementation, also used by `sCTkScrollableFrame`. This widget supplies two hooks — `_scroll_target()` returns its own internal canvas (no `winfo_parent()` lookup needed, unlike `sCTkScrollableFrame`), and `_scroll_layers()` assembles the widget, canvas, scrollbar, and full row tree.
+**Scroll handling comes from [`ScrollBindingMixin`](ScrollBindingMixin.md),** the library's single shared implementation. This widget supplies two hooks: `_scroll_target()` returns its own internal canvas — no `winfo_parent()` lookup needed, unlike `sCTkScrollableFrame` — and `_scroll_layers()` assembles the widget, canvas, scrollbar and full row tree. It passes `explorer_frame` as the mixin's `content_widget`, since rows are added there rather than to the widget itself.
 
-Three earlier problems are fixed as a result. A global `bind_all("<MouseWheel>", ...)` once affected the entire application rather than this widget, and handled only macOS plus a generic Windows-style delta with no Linux support. A scoped copy of `sCTkScrollableFrame`'s logic then replaced it — but that copy drifted: it walked only *one level* into the row frame, so a row's label or icon was never bound and the wheel did nothing over them, and it had no trackpad accumulator, scrolling on every raw event instead of gating on an accumulated threshold. Consolidating on the mixin fixes both, and trackpad scrolling now matches the rest of the library rather than being noticeably faster and coarser.
+Bindings are automatic and self-maintaining: navigating to a new folder replaces every row widget, and the debounced `<Configure>` rebind picks them up with no explicit call. The mixin page covers the platform models, the activation mechanisms and the tuning constants.
 
-**Bindings maintain themselves.** Activation happens via `after_idle()` and `<Map>`, and a debounced `<Configure>` on the row frame rebinds whenever content changes — so navigating to a new folder, which replaces every row widget, is picked up automatically with no explicit call.
+Consolidating on the mixin fixed three problems specific to this widget. A global `bind_all("<MouseWheel>", ...)` once affected the entire application rather than just this widget. The scoped copy that replaced it walked only *one level* into the row frame, so a row's label or icon was never bound and the wheel did nothing over them. And it had no trackpad accumulator, scrolling on every raw event — trackpad scrolling here was markedly faster and coarser than everywhere else in the library, and now matches.
 
 ---
 

@@ -33,7 +33,7 @@ sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra",
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `master` | widget | — | Parent container. |
-| `columns` | `list[str]` or comma-separated `str` | `None` | Column header labels. |
+| `columns` | `list[str]` or `str` | `None` | Column header labels. Accepts `["Time", "Freq"]`, a bare comma-separated string, or a real list — see [List Properties](ListProperties.md). Setting this also sets `num_columns` to match. |
 | `width` / `height` | `int` | `500` / `300` | Overall widget dimensions in pixels. |
 | `grid_mode` | `"zebra"` / `"grid"` / `"none"` | `"zebra"` | Row background styling. |
 | `header_line_width` | `int` | `2` | Header row's bottom border thickness. |
@@ -56,7 +56,7 @@ readings_table.pack(expand=True, fill="both", padx=20, pady=20)
 | Method | Returns | Description |
 |---|---|---|
 | `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`. |
-| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus `state=...` triggers a full color/font re-application across every header and cell. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus `state=...` triggers a full color/font re-application across every header and cell. `columns=...` rebuilds the header row and resizes the grid to match. |
 
 ---
 
@@ -127,6 +127,8 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
+- **Changing `columns` clears the table.** The rebuild reloads with empty rows, the same as changing `num_columns`. Expected at design time; reload your data afterwards at runtime.
+- **The edit callback fires only when a value actually changes.** Retyping the same value, or leaving an editor without altering anything, is silent — as is an edit the validation callback rejects. An earlier version compared the cell against the value it had just written to that same cell, a condition that was always true, so the callback fired on every save regardless.
 - Missing a required theme key raises `KeyError` at construction, naming exactly which key and whether it's needed at the top level or in `disabled_map` — check the exact message if construction fails after a theme file change.
 - Calling `configure("propname")` for most single-argument property queries falls through to the native widget's `configure()`, which doesn't support arbitrary single-argument queries — the same known gap as elsewhere in this project's Pygubu-query investigation.
 

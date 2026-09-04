@@ -60,7 +60,7 @@ freq_spinbox.pack(pady=10)
 |---|---|---|
 | `get()` | `str` | Current entry text. |
 | `set(value)` | `None` | Sets the displayed value (a number, or a string matching one of `values` in discrete mode), and calls `command` if one was given. Temporarily re-enables the entry to update its text if it isn't currently `"normal"`, then restores whatever state it was actually in — including `"readonly"`, not just `"normal"`/`"disabled"`. |
-| `set_values(list_of_strings)` | `None` | Switches to discrete-value mode with the given list, or back to numeric mode if given an empty list. |
+| `set_values(list_of_strings)` | `None` | Switches to discrete-value mode with the given list, or back to numeric mode if given an empty list. Accepts any of the forms described in [List Properties](ListProperties.md). |
 | `state(mode=None)` | `str` | Gets or sets the widget's normal/readonly/disabled state. The entry receives the full three-way state (routed through its own `state()`); the up/down buttons only ever receive `"normal"` or `"disabled"`. |
 | `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
 | `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus all the constructor's custom keywords (`button_width`, `orientation`, `format`, `values`, etc.) can be changed at runtime the same way. |
@@ -104,6 +104,20 @@ freq_spinbox.pack(pady=10)
 
 `entry_color`/`border_color`/`text_color` override the internal entry's own colors for all three states, a deliberate design choice: this widget controls its entry's look via its own theme keys rather than the entry's independent defaults. `readonly_map` requires `entry_color`, `border_color`, and `text_color` whenever readonly is actually requested — missing any raises immediately. No readonly-specific `button_color` exists or is needed, since buttons always use normal `button_color`/`button_hover_color` whenever they aren't disabled — they're meant to look completely ordinary in readonly mode.
 
+**`values` accepts the library's standard list formats** — `["Porsche", "VW", "Tesla"]`, a bare comma-separated string, or a real Python list. See [List Properties](ListProperties.md).
+
+Note that **space is no longer a separator**. An earlier version used `shlex.split()` whenever the input contained no comma, which made `Meat Loaf` two values here and one value in every other widget. Quote a value if it needs to contain a comma.
+
+**`format`** accepts three forms, all equivalent:
+
+| Written as | Meaning |
+|---|---|
+| `:.2f` | Shorthand — braces are added for you |
+| `{:.2f}` | Full Python brace form |
+| `%.2f` | printf style |
+
+Leave it blank for no formatting, in which case the decimal places follow `step_size`.
+
 `arrow_font` is read in full — family, size, and weight — and applied to both increment/decrement buttons. It can also be overridden at runtime via `configure(arrow_font=(...))`, or `configure(arrow_font_size=...)` to change just the size without respecifying the full tuple.
 
 ---
@@ -144,6 +158,7 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
+- **Setting `placeholder_text` after construction only clears the field if it still holds the initial value.** That is intentional — a placeholder must not wipe a value the user has typed. An earlier version compared the entry text against `str(from_)` while the entry actually held the *formatted* initial value, so with a `format` set the two never matched and the placeholder never appeared.
 - **The disable/enable-cycle cursor-position fix is not independently confirmed for readonly transitions** — the underlying entry inherits this caveat from `sCTkEntryPrimary`; see that widget's docs for the full explanation.
 - **`readonly` mode's placeholder behavior follows `sCTkEntryPrimary`'s** — a readonly field showing placeholder text never clears it on focus, since native CustomTkinter deliberately never deactivates a placeholder while `state` is `"readonly"`.
 - Calling `configure("propname")` for most single-argument property queries returns a Tkinter-style tuple whose `current` value may be `str()` of a `(light, dark)` color tuple rather than a single resolved color — the same known gap as elsewhere in this project's Pygubu-query investigation.

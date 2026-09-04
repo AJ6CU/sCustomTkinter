@@ -1,6 +1,6 @@
 ## sCTkSelector
 
-(Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
+(Derived from Selector class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
 * [Overview](#overview)
@@ -32,7 +32,7 @@ sCTkSelector(master, items=None, multiple_choices=True, searchBox=True, **kwargs
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `master` | widget | — | Parent container. |
-| `items` | `list[str]` | `None` | Initial list of checkbox labels. Must not contain duplicates — raises `ValueError` if it does. |
+| `items` | `list[str]` or `str` | `None` | Initial list of checkbox labels. Accepts `["A", "B"]`, a bare comma-separated string, or a real list — see [List Properties](ListProperties.md). Must not contain duplicates — raises `ValueError` if it does. |
 | `multiple_choices` | `bool` | `True` | If `False`, selecting one item automatically deselects any other currently-selected item. |
 | `searchBox` | `bool` | `True` | Whether the live-filtering search field is shown above the checkbox list. |
 | `**kwargs` | — | — | Any native `CTkFrame` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
