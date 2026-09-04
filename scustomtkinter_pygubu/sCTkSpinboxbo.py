@@ -111,7 +111,11 @@ class sCTkSpinboxBO(BuilderObject):
 # Ensure this section sits firmly flush against the left wall margin!
 builder_id = f"{builder_namespace}.{widget_classname}"
 
-register_custom_property(builder_id, 'format', 'entry')
+register_custom_property(builder_id, 'format', 'entry',
+                         help='Number format. Accepts "{:.2f}" (full brace form), ":.2f" '
+                              '(braces added for you), or "%.2f" (printf style). '
+                              'Leave blank for no formatting.'
+                         )
 register_custom_property(builder_id, 'from_', 'entry')
 register_custom_property(builder_id, 'to', 'entry')
 register_custom_property(builder_id, 'step_size', 'entry')

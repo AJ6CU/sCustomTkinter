@@ -233,7 +233,18 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         if "placeholder_text" in kwargs:
             self._placeholder_text = kwargs["placeholder_text"]
             if self._placeholder_text and str(self._placeholder_text).strip() != "" and hasattr(self, "entry") and self.entry.winfo_exists():
-                if str(self.entry.get()).strip() in ("", "0", "0.0", str(getattr(self, "_from", 0.0))):
+                # FIX: this compared the entry text against str(self._from) --
+                # "0.0" -- but __init__ inserts self._format_value(self._from),
+                # which with a format string produces something like "0.00".
+                # The strings never matched, so setting placeholder_text at
+                # runtime left the initial value in place and the placeholder
+                # never showed. The formatted form is now compared too.
+                _auto_initial = {"", "0", "0.0", str(getattr(self, "_from", 0.0))}
+                try:
+                    _auto_initial.add(self._format_value(self._from))
+                except Exception:
+                    pass
+                if str(self.entry.get()).strip() in _auto_initial:
                     old = self.entry.cget("state"); self.entry.configure(state="normal"); self.entry.delete(0, "end"); self.entry.configure(state=old)
 
         for entry_attr in ["justify", "show", "placeholder_text", "exportselection"]:
@@ -532,4 +543,3 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
                     text_color_disabled=d_b_text,
                     state=button_state
                 )
-
