@@ -22,7 +22,14 @@ from pygubu.plugins.customtkinter._config import GROOT
 # Builder definition section
 #
 widget_namespace = "scustomtkinter.sctk_toplevel"
-widget_classname = "sCTkTopLevel"
+# NOTE the capitalisation: sCTkToplevel, lowercase "l", matching the class in
+# sctk_toplevel.py and CustomTkinter's own CTkToplevel. This was previously
+# "sCTkTopLevel", which fed straight into code_imports() below and generated
+#     from scustomtkinter.sctk_toplevel import sCTkTopLevel
+# -- a name that does not exist, so every generated file using this widget
+# failed at import. It also made the builder id and the palette entry disagree
+# with the rest of the library.
+widget_classname = "sCTkToplevel"
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
 
@@ -35,6 +42,10 @@ class sCTkToplevelBO(CTkToplevelBO):
         # should return an iterable of (module, classname/function) to import
         # or None
         return [(widget_namespace, widget_classname)]
+
+    # NOTE: unlike sCTkBO, CTkToplevelBO's own code_imports() has no
+    # conditional appearance_mode / color_theme handling -- those are CTk-only
+    # properties -- so overriding it here loses nothing.
 
 
 builder_id = f"{builder_namespace}.{widget_classname}"

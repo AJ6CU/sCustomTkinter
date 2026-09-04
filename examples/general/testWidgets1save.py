@@ -34,16 +34,17 @@ class testWidgets1(baseui.testWidgets1UI):
         print("Check3=", self.check3_VAR.get())
 
     def comboBox_CB(self, value):
-        print("ComboBox=", self.comboBox_VAR.get(), "*", value, self.comboBox1.get())
+        print("ComboBox=", self.comboBox_VAR.get(), value, self.comboBox1.get())
         print("var interp:   ", self.comboBox_VAR._root)
         print("widget interp:", self.comboBox1.winfo_toplevel())
         print("same tk:      ", self.comboBox_VAR._tk is self.comboBox1.tk)
 
     def CTkcomboBox_CB(self, value):
-        print("CTkcomboBox=", self.CTkcomboBox_VAR.get(),"*", value, self.comboBox2.get())
+        print("CTkcomboBox=", self.CTkcomboBox_VAR.get(), value, self.comboBox2.get())
 
     def ttkComboBox_CB(self, event=None):
-        print("ttkComboBox=", self.ttkComboBox_VAR.get(),"*", event, self.comboBox3.get())
+        print("ttkComboBox=", self.ttkComboBox_VAR.get(), event, self.comboBox3.get())
+
 
 
 if __name__ == "__main__":

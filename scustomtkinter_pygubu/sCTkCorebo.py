@@ -31,9 +31,27 @@ class sCTkBO(CTkBO):
     container = True
 
     def code_imports(self):
-        # should return an iterable of (module, classname/function) to import
-        # or None
-        return [(widget_namespace, widget_classname)]
+        """
+        Imports needed by generated code for this widget.
+
+        FIX: this previously returned only the sCTk import, dropping the
+        conditional part of CTkBO.code_imports(). CTkBO adds
+        set_appearance_mode and set_default_color_theme when those properties
+        are set, because _code_set_property() generates bare calls to them:
+
+            set_appearance_mode("dark")
+
+        Without the matching import, setting appearance_mode or color_theme in
+        the Designer produced a generated file that raised NameError the
+        moment it ran. Those two functions come from customtkinter itself, not
+        from this library, so they are imported from there.
+        """
+        imports = [(widget_namespace, widget_classname)]
+        if "appearance_mode" in self.wmeta.properties:
+            imports.append(("customtkinter", "set_appearance_mode"))
+        if "color_theme" in self.wmeta.properties:
+            imports.append(("customtkinter", "set_default_color_theme"))
+        return imports
 
 
 builder_id = f"{builder_namespace}.{widget_classname}"

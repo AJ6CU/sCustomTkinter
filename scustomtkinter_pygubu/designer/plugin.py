@@ -416,6 +416,48 @@ _DIAL_EXTRA = ("<Button-2>", "<Button-3>",
 #
 class sCTkDesignerPlugin(IDesignerPlugin):
 
+    def is_toplevel_widget(self, builder_uid: str) -> bool:
+        """
+        Declares which builder ids are application ROOTS rather than ordinary
+        widgets. Consulted by the Designer's script generator.
+
+        WHAT BREAKS WITHOUT THIS. pygubudesigner/codegen/scriptgenerator.py
+        decides which Mako template to use from:
+
+            toplevel_uids = ("tk.Tk", "tk.Toplevel", "customtkinter.CTk",
+                             "customtkinter.CTkToplevel",
+                             "tkmt.ThemedTKinterFrame")
+            if target_class in toplevel_uids or \
+               PluginManager.is_toplevel_widget(target_class):
+                main_widget_is_toplevel = True
+
+        That tuple is hardcoded and does not include this package's ids, so
+        sCTk fell to the WIDGET template, whose __main__ block reads:
+
+            root = tk.Tk()
+            app = MyApp(root)
+
+        sCTk creates its own Tcl interpreter, so that produced a SECOND one.
+        The consequence was subtle and nasty: a tk.StringVar built without an
+        explicit master attaches to whichever root Tkinter considers default,
+        so a variable bound to a widget in one interpreter was read from the
+        other. The widget worked, the callback fired with the right value, and
+        the variable came back empty forever. Every variable-bound widget in
+        generated code was affected -- combo boxes, radio buttons, switches,
+        check boxes.
+
+        The `or` clause above is the supported fix. pygubu's own source carries
+        a FIXME beside that tuple asking plugins to implement this method
+        instead of the tuple being extended.
+
+        Args:
+            builder_uid: The registered id being tested.
+
+        Returns:
+            True if that id names an application root.
+        """
+        return builder_uid in (sCTk_builder_id, sCTkToplevel_builder_id)
+
     def get_preview_builder(self, builder_uid: str):
         """Return a BuilderObject subclass used to build a preview
         for the target builder_uid"""
