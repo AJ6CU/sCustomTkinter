@@ -125,6 +125,9 @@ class sCTkTabviewTabBO(CTkTabviewTabBO):
         renaming a tab onto an existing name is as visible and as harmless as
         creating one with a taken name.
         """
+        print(f"[TabBO.configure] view={getattr(self,'_view',None) is not None} "
+              f"old={getattr(self,'_tab_name',None)!r} new={self._get_tab_name()!r}")
+
         view = getattr(self, "_view", None)
         old_name = getattr(self, "_tab_name", None)
         new_name = self._get_tab_name()
@@ -148,6 +151,10 @@ class sCTkTabviewTabBO(CTkTabviewTabBO):
             # the new label, so this is a degraded case rather than a broken one.
             return
         self._tab_name = new_name
+
+    def _set_property(self, target_widget, pname, value):
+        print(f"[TabBO._set_property] {pname!r} = {value!r}")
+        return super()._set_property(target_widget, pname, value
 
     def code_realize(self, boparent, code_identifier=None):
         """
