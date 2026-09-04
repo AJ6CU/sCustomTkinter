@@ -110,7 +110,11 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         self.down_button = ctk.CTkButton(self, text="▼" if self._orientation == "vertical" else "◀", width=self._button_width, height=self._button_height, corner_radius=2, command=self._decrement_callback)
 
         if not self._placeholder_text or str(self._placeholder_text).strip() == "":
-            self.entry.insert(0, str(self._values) if self._values else self._format_value(self._from))
+            # FIX: was str(self._values) -- the whole LIST, so the entry showed
+            # "['Porsche', 'VW', 'Tesla']" instead of the first value. In list
+            # mode a spinbox displays one value at a time; _current_index tracks
+            # which. Same mistake at both set_values() and configure() below.
+            self.entry.insert(0, str(self._values[0]) if self._values else self._format_value(self._from))
 
         self.entry.bind("<FocusOut>", lambda e: self._validate_and_sanitize_input())
         self.entry.bind("<Return>", lambda e: self._validate_and_sanitize_input())
@@ -141,7 +145,9 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
     def set_values(self, list_of_strings):
         self._values = self._parse_string_list(list_of_strings)
         self._current_index = 0 if self._values else -1
-        self.set(self._values if self._values else getattr(self, "_from", 0.0))
+        # set() takes a SINGLE value; in list mode it renders str(value)
+        # directly, so passing the list here printed its repr into the entry.
+        self.set(self._values[0] if self._values else getattr(self, "_from", 0.0))
 
     def _rebuild_grid_layout(self):
         if not hasattr(self, "entry") or not self.entry.winfo_exists(): return
@@ -197,7 +203,7 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         if "values" in kwargs:
             self._values = self._parse_string_list(kwargs.pop("values"))
             self._current_index = 0 if self._values else -1
-            if self._values: self.set(self._values)
+            if self._values: self.set(self._values[0])
 
         for key in ["from_", "to", "step_size"]:
             if key in kwargs: setattr(self, f"_{key}", float(kwargs.pop(key) or (0.0 if key == 'from_' else 100.0 if key == 'to' else 1.0)))
