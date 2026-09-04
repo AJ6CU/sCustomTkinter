@@ -39,6 +39,18 @@
             </layout>
           </object>
         </child>
+        <child>
+          <object class="customtkinter.CTkEntry" id="ctkentry1">
+            <property name="invalidcommand" type="command" cbtype="entry_validate" args="%d">testCTkinvalid</property>
+            <property name="text" translatable="yes">ctkentry1</property>
+            <property name="validate">focus</property>
+            <property name="validatecommand" type="command" cbtype="entry_validate" args="%d">testCTkValidate_CB</property>
+            <property name="xscrollcommand" type="command" cbtype="scroll">testCTkXScroll_CB</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
   </object>

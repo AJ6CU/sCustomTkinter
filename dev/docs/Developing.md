@@ -249,6 +249,39 @@ properties = CTkFrameBO.properties + OPTIONS_CUSTOM
 
 and add the builder id to the matching copy loop in `designer/properties.py`.
 
+### Registration order matters
+
+`copy_custom_property()` **overwrites** whatever definition is already registered for that name. So a deliberate override in a builder-object module is silently undone if a copy loop runs afterwards.
+
+This bit us on `appearance_mode`. `sCTkCorebo.py` registered it as a three-value choice including `System`:
+
+```python
+register_custom_property(
+    builder_id, "appearance_mode", "choice",
+    values=("System", "Light", "Dark"), state="readonly",
+)
+```
+
+but `designer/properties.py` then copied `CTkBO.properties` onto the same id, replacing it with CustomTkinter's own definition — blank, Light, Dark, no `System`. The inspector showed two values and no error was raised anywhere.
+
+An intentional override has to be registered **after** the copy loop, which in practice means putting it in `designer/properties.py` rather than in the builder-object module:
+
+```python
+for pname in CTkBO.properties:
+    try:
+        copy_custom_property(nsctk.CTk, pname, sCTk_builder_id)
+    except RuntimeError:
+        pass
+
+# AFTER the copy above, which would otherwise overwrite it.
+register_custom_property(
+    sCTk_builder_id, "appearance_mode", "choice",
+    values=("System", "Light", "Dark"), state="readonly",
+)
+```
+
+If a property in the inspector does not match what you registered, this is the first thing to check.
+
 ### `add_allowed_child()` takes a builder id string
 
 Not a class. Passing a class silently matches nothing.

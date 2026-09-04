@@ -30,6 +30,40 @@ section_name = "sCustomTkinter"
 class sCTkEntrySecondaryBO(CTkEntryBO):
     class_ = sCTkEntrySecondary
 
+    # --- Workarounds for CTkEntryBO, both reported upstream -----------------
+    #
+    # 1. invalidcommand is REMOVED from the inspector. CTkEntry does not accept
+    #    it -- the name is absent from the widget's own attribute whitelist, so
+    #    configure() raises:
+    #
+    #        ['invalidcommand'] are not supported arguments.
+    #
+    #    CTkEntryBO offers it anyway. Since sCTkEntry{Primary,Secondary} pass
+    #    keywords straight through to native CTkEntry, the property could never
+    #    work at any layer. Better not to offer it than to offer a field that
+    #    errors when used.
+    #
+    #    Subtracted from the inherited tuple rather than restated, so any
+    #    property CustomTkinter adds later is picked up automatically.
+    properties = tuple(p for p in CTkEntryBO.properties if p != "invalidcommand")
+
+    # 2. validatecommand and xscrollcommand ARE accepted by CTkEntry, but
+    #    CTkEntryBO never declares them as command properties -- so pygubu does
+    #    not route them through its callback handling and instead stringifies
+    #    the raw property metadata into the generated code:
+    #
+    #        validatecommand="{"name": "validatecommand", "type": "command", ...}"
+    #
+    #    Note the unescaped inner quotes: that is not merely wrong, it is a
+    #    syntax error, and the whole generated module fails to import.
+    #
+    #    invalidcommand is deliberately NOT listed here even though it is a
+    #    command property, because the widget rejects it -- see above.
+    command_properties = tuple(getattr(CTkEntryBO, "command_properties", ())) + (
+        "validatecommand",
+        "xscrollcommand",
+    )
+
     def code_imports(self):
         # should return an iterable of (module, classname/function) to import
         # or None

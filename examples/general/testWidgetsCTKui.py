@@ -6,7 +6,8 @@ A test of sCustomTkinter widgets and code generatgion
 
 UI source file: testWidgetsCTK.ui
 """
-from customtkinter import (CTk, CTkLabel)
+import tkinter as tk
+from customtkinter import (CTk, CTkComboBox, CTkEntry, CTkFrame)
 
 
 def safe_i18n_translator(value):
@@ -51,15 +52,32 @@ class testWidgetsCTKUI:
         # First object created
         on_first_object_cb(ctk1)
 
-        ctklabel1 = CTkLabel(ctk1)
-        ctklabel1.configure(text='ctklabel1')
-        ctklabel1.pack(side="top")
+        ctkframe1 = CTkFrame(ctk1)
+        self.CTkComboBox = CTkComboBox(ctkframe1)
+        self.CTkComboBox_VAR = tk.StringVar()
+        self.CTkComboBox.configure(
+            values=[
+                "Apple",
+                "Pear",
+                "Orange"],
+            variable=self.CTkComboBox_VAR)
+        self.CTkComboBox.pack(side="top")
+        self.CTkComboBox.configure(command=self.CTkComboBox_CB)
+        ctkentry1 = CTkEntry(ctkframe1)
+        ctkentry1.configure(invalidcommand="{"name": "invalidcommand", "type": "command", "cbtype": "entry_validate", "args": " % d", "value": "testCTkinvalid"}", validate="focus", validatecommand="{"name": "validatecommand", "type": "command", "cbtype": "entry_validate", "args": " % d", "value": "testCTkValidate_CB"}", xscrollcommand="{"name": "xscrollcommand", "type": "command", "cbtype": "scroll", "value": "testCTkXScroll_CB"}")
+        ctkentry1.delete(0, "end")
+        ctkentry1.insert(0, 'ctkentry1')
+        ctkentry1.pack(side="top")
+        ctkframe1.pack(side="top")
 
         # Main widget
         self.mainwindow = ctk1
 
     def run(self):
         self.mainwindow.mainloop()
+
+    def CTkComboBox_CB(self, value):
+        pass
 
 
 if __name__ == "__main__":

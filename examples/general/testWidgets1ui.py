@@ -7,6 +7,7 @@ A test of sCustomTkinter widgets and code generatgion
 UI source file: testWidgets1.ui
 """
 import tkinter as tk
+from customtkinter import set_appearance_mode
 from scustomtkinter.sctk_button_primary import sCTkButtonPrimary
 from scustomtkinter.sctk_button_secondary import sCTkButtonSecondary
 from scustomtkinter.sctk_button_tertiary import sCTkButtonTertiary
@@ -58,6 +59,7 @@ class testWidgets1UI:
             on_first_object_cb = safe_fo_callback
         # build ui
         sctk1 = sCTk(None)
+        set_appearance_mode("System")
         # First object created
         on_first_object_cb(sctk1)
 
@@ -103,14 +105,17 @@ class testWidgets1UI:
         self.comboBox1.configure(command=self.comboBox_CB)
         sctkframe2.grid(column=1, row=0)
         sctkframe3 = sCTkFrame(sctk1)
-        sctkentryprimary1 = sCTkEntryPrimary(sctkframe3)
-        sctkentryprimary1.configure(placeholder_text="primary entry")
-        sctkentryprimary1.pack(side="top")
-        sctkentrysecondary1 = sCTkEntrySecondary(sctkframe3)
-        sctkentrysecondary1.configure(placeholder_text="secondary entry")
-        sctkentrysecondary1.pack(side="top")
+        self.primaryEntry = sCTkEntryPrimary(sctkframe3)
+        self.primaryEntry_VAR = tk.StringVar()
+        self.primaryEntry.configure(placeholder_text="primary entry", textvariable=self.primaryEntry_VAR, validatecommand="{"name": "validatecommand", "type": "command", "cbtype": "entry_validate", "args": "", "value": "primaryEntryValidate_CB"}", xscrollcommand="{"name": "xscrollcommand", "type": "command", "cbtype": "scroll", "value": "primaryEntryxscroll_CB"}")
+        self.primaryEntry.pack(side="top")
+        self.secondaryEntry = sCTkEntrySecondary(sctkframe3)
+        self.secondaryEntry_VAR = tk.StringVar()
+        self.secondaryEntry.configure(placeholder_text="secondary entry", textvariable=self.secondaryEntry_VAR, validatecommand="{"name": "validatecommand", "type": "command", "cbtype": "entry_validate", "args": "", "value": "secondaryEntry_CB"}")
+        self.secondaryEntry.pack(side="top")
         sctkframe3.grid(column=2, row=0)
         sctkframelabeledprimary1 = sCTkFrameLabeledPrimary(sctk1)
+        sctkframelabeledprimary1.configure(label_text="Radio Buttons")
         sctkframelabeledprimary1.grid(column=0, row=1)
         sctkframelabeledprimary2 = sCTkFrameLabeledPrimary(sctk1)
         sctkframelabeledprimary2.grid(column=1, row=1)

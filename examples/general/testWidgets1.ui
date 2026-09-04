@@ -24,6 +24,7 @@
     <resources />
   </project>
   <object class="scustomtkinter.sCTk" id="sctk1">
+    <property name="appearance_mode">System</property>
     <child>
       <object class="scustomtkinter.sCTkFrame" id="sctkframe1">
         <layout manager="grid">
@@ -121,16 +122,21 @@
           <property name="row">0</property>
         </layout>
         <child>
-          <object class="scustomtkinter.sCTkEntryPrimary" id="sctkentryprimary1">
+          <object class="scustomtkinter.sCTkEntryPrimary" id="primaryEntry" named="True">
             <property name="placeholder_text">primary entry</property>
+            <property name="textvariable">string:primaryEntry_VAR</property>
+            <property name="validatecommand" type="command" cbtype="entry_validate" args="">primaryEntryValidate_CB</property>
+            <property name="xscrollcommand" type="command" cbtype="scroll">primaryEntryxscroll_CB</property>
             <layout manager="pack">
               <property name="side">top</property>
             </layout>
           </object>
         </child>
         <child>
-          <object class="scustomtkinter.sCTkEntrySecondary" id="sctkentrysecondary1">
+          <object class="scustomtkinter.sCTkEntrySecondary" id="secondaryEntry" named="True">
             <property name="placeholder_text">secondary entry</property>
+            <property name="textvariable">string:secondaryEntry_VAR</property>
+            <property name="validatecommand" type="command" cbtype="entry_validate" args="">secondaryEntry_CB</property>
             <layout manager="pack">
               <property name="side">top</property>
             </layout>
@@ -140,6 +146,7 @@
     </child>
     <child>
       <object class="scustomtkinter.sCTkFrameLabeledPrimary" id="sctkframelabeledprimary1">
+        <property name="label_text">Radio Buttons</property>
         <layout manager="grid">
           <property name="column">0</property>
           <property name="row">1</property>
