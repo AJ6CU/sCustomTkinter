@@ -32,6 +32,9 @@ from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_
 from scustomtkinter.sctk_separator import sCTkSeparator
 from scustomtkinter_pygubu.sCTkSeparatorbo import (sCTkSeparatorBuilder, builder_id as sCTkSeparator_builder_id)
 
+from scustomtkinter.sctk_tabview import sCTkTabview
+from scustomtkinter_pygubu.sCTkTabviewbo import (sCTkTabviewBO, builder_id as sCTkTabview_builder_id)
+
 from scustomtkinter.sctk_selector import sCTkSelector
 from scustomtkinter.sctk_checkbox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
                                             # to search to find the clickable master frame
@@ -240,6 +243,38 @@ class sCTkSpinboxForPreview(sCTkSpinbox):
         return clist
 
 
+class sCTkTabviewForPreview(sCTkTabview):
+    """
+    Designer preview for sCTkTabview.
+
+    Two overrides, for two different reasons.
+
+    _PAGE_CLASS: each tab's content page is normally a plain sCTkFrame, whose
+    winfo_children() hides the internal canvas CTkFrame creates. The Designer
+    hit-tests a click by walking that tree, so a click on a tab page found
+    nothing and the tab could only be selected from the widget tree.
+    sCTkFrameForPreview exposes those internals.
+
+    bind(): CTkTabview.bind() raises NotImplementedError, so it is routed to
+    tkinter.Frame's implementation -- the same thing CustomTkinter's own
+    CTkTabviewForPreview does, and the same thing sCTkTabview already does for
+    its own reasons.
+
+    NOTE: CustomTkinter tried a winfo_children() override on their tabview
+    preview and left it COMMENTED OUT in their source, so this may not be
+    sufficient on its own. There are two frame layers here -- the native tab
+    frame CTkTabview creates, and this library's page wrapper inside it. This
+    fixes the wrapper. If the native tab frame above it still swallows the
+    click, tab selection stays a tree-only operation, which is where
+    CustomTkinter's own tabs are today.
+    """
+    _THEME_BLOCK_NAME = "sCTkTabview"
+    _PAGE_CLASS = sCTkFrameForPreview
+
+    def bind(self, sequence=None, func=None, add=None):
+        return super(tk.Frame, self).bind(sequence, func, add)
+
+
 #
 # Builder for Preview
 #
@@ -257,6 +292,10 @@ class sCTkPathChooserForPreviewBO(sCTkPathChooserBO):
 
 class sCTkTableviewForPreviewBO(sCTkTableviewBO):
     class_ = sCTkTableviewForPreview
+
+
+class sCTkTabviewForPreviewBO(sCTkTabviewBO):
+    class_ = sCTkTabviewForPreview
 
 
 class sCTkSelectorForPreviewBO(sCTkSelectorBO):
@@ -428,6 +467,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkPathChooserForPreviewBO
         elif builder_uid == sCTkTableview_builder_id:
             return sCTkTableviewForPreviewBO
+        elif builder_uid == sCTkTabview_builder_id:
+            return sCTkTabviewForPreviewBO
         elif builder_uid == sCTkSelector_builder_id:
             return sCTkSelectorForPreviewBO
         elif builder_uid == sCTkSeparator_builder_id:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scustomtkinter"
-version = "0.1.1.99"
+version = "0.1.1.101"
 authors = [
     { name = "aj6cu" }
 ]
