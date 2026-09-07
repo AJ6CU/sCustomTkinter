@@ -126,32 +126,89 @@ class sCTkDialogBO(BuilderObject):
 
         return [f"{self.code_identifier()} = {self._code_class_name()}({', '.join(bag)})"]
 
+    # Property name -> the widget setter that applies a button command.
+    _COMMAND_TARGETS = {
+        "apply_command": "set_apply_button",
+        "cancel_command": "set_cancel_button",
+        "reset_command": "set_reset_button",
+    }
+
+    # Properties that can be applied to a LIVE widget. Everything else in
+    # OPTIONS_CUSTOM affects the window or the set of buttons, and can only be
+    # honoured by rebuilding -- the Designer does that on its own when the
+    # design is redrawn.
+    _LIVE_TEXT = {"apply_text": "applyText_VAR",
+                  "cancel_text": "cancelText_VAR",
+                  "reset_text": "resetText_VAR"}
+
     def _set_property(self, target_widget, pname, value):
         """
-        Routes the button command properties to the widget's own setters.
+        Applies a property to the live preview.
 
-        These are not configure() options -- sCTkDialog exposes them as
-        constructor arguments and through set_apply_button() and friends -- so
-        without this they would reach sCTkFrame.configure() and raise.
+        None of this widget's own properties are configure() options --
+        sCTkDialog takes them as constructor arguments -- so letting any of
+        them reach sCTkFrame.configure() would raise. They are handled here or
+        deliberately ignored.
 
-        A command aimed at a button this dialog does not have is ignored
-        rather than raising: reducing `buttons` while a command is still set
-        on a removed button is an ordinary thing to do in the inspector.
+        Button labels ARE applied live, by setting the StringVar the button
+        reads. Without this, editing a label in the inspector changed nothing
+        on the canvas until the design was redrawn for some other reason.
         """
-        command_targets = {
-            "apply_command": "set_apply_button",
-            "cancel_command": "set_cancel_button",
-            "reset_command": "set_reset_button",
-        }
-        if pname in command_targets:
+        if pname in self._LIVE_TEXT:
+            var = getattr(target_widget, self._LIVE_TEXT[pname], None)
+            if var is not None:
+                var.set(value if value else "")
+            return None
+
+        if pname == "title":
+            target_widget.set_title(value or "")
+            return None
+
+        if pname in self._COMMAND_TARGETS:
+            # A command aimed at a button this dialog does not have is ignored
+            # rather than raising: reducing `buttons` while a command is still
+            # set on a removed button is an ordinary inspector edit.
             if value:
-                getattr(target_widget, command_targets[pname])(
+                getattr(target_widget, self._COMMAND_TARGETS[pname])(
                     button_command=value)
             return None
+
         if pname in self.OPTIONS_CUSTOM:
-            # Applied at construction by realize(); nothing to do here.
+            # Window size, placement, modality and the button count are all
+            # construction-time. realize() passes them; nothing to do here.
             return None
+
         return super()._set_property(target_widget, pname, value)
+
+    def _code_set_property(self, targetid, pname, value, code_bag):
+        """
+        Keeps this widget's own properties OUT of the generated configure()
+        call.
+
+        FIX: without this they were emitted as configure() arguments --
+
+            sctkdialog1.configure(apply_text=""Apply it"", buttons=3, ...)
+
+        which is wrong twice over. The doubled quotes are a syntax error, and
+        even correctly quoted the call would raise at runtime, because
+        sCTkFrame.configure() does not accept these names. They belong in the
+        constructor, and code_realize() already puts them there.
+
+        The button commands are emitted as their own statements instead, since
+        they are applied through setter methods rather than configure().
+        """
+        if pname in self._COMMAND_TARGETS:
+            if value:
+                method = self._COMMAND_TARGETS[pname]
+                code_bag[pname] = (
+                    f"{targetid}.{method}(button_command={value})",
+                )
+            return None
+
+        if pname in self.OPTIONS_CUSTOM:
+            return None
+
+        return super()._code_set_property(targetid, pname, value, code_bag)
 
     def code_imports(self):
         # should return an iterable of (module, classname/function) to import

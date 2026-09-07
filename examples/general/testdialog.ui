@@ -24,6 +24,13 @@
     <resources />
   </project>
   <object class="scustomtkinter.sCTkDialog" id="sctkdialog1">
+    <property name="apply_command" type="command" cbtype="simple">apply_cb</property>
+    <property name="apply_text">"Applye it"</property>
+    <property name="buttons">3</property>
+    <property name="cancel_command" type="command" cbtype="simple">cancel_cb</property>
+    <property name="cancel_text">"cancel it"</property>
+    <property name="reset_command" type="command" cbtype="simple">reset_cb</property>
+    <property name="reset_text">"reset it"</property>
     <layout manager="grid">
       <property name="column">0</property>
       <property name="row">0</property>

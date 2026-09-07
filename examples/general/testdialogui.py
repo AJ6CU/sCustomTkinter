@@ -51,7 +51,13 @@ class testdialogUI:
         if on_first_object_cb is None:
             on_first_object_cb = safe_fo_callback
         # build ui
-        sctkdialog1 = sCTkDialog(master)
+        sctkdialog1 = sCTkDialog(
+            master,
+            buttons=3,
+            apply_text='"Applye it"',
+            cancel_text='"cancel it"',
+            reset_text='"reset it"')
+        sctkdialog1.configure(apply_text=""Applye it"", buttons=3, cancel_text=""cancel it"", reset_text=""reset it"")
         # First object created
         on_first_object_cb(sctkdialog1)
 
@@ -63,12 +69,24 @@ class testdialogUI:
         sctklabeltertiary1.configure(text='sctklabeltertiary1')
         sctklabeltertiary1.grid(column=2, row=0)
         sctkdialog1.grid(column=0, row=0)
+        sctkdialog1.configure(apply_command=self.apply_cb)
+        sctkdialog1.configure(cancel_command=self.cancel_cb)
+        sctkdialog1.configure(reset_command=self.reset_cb)
 
         # Main widget
         self.mainwindow = sctkdialog1
 
     def run(self):
         self.mainwindow.mainloop()
+
+    def apply_cb(self):
+        pass
+
+    def cancel_cb(self):
+        pass
+
+    def reset_cb(self):
+        pass
 
 
 if __name__ == "__main__":
