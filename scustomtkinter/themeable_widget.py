@@ -385,4 +385,34 @@ class ThemeableWidget:
         except Exception:
             current = None
         default = (defaults or {}).get(pname, current)
-        return (pname, pname, pname, default, current)
+
+        # A (light, dark) pair has to be resolved to ONE colour here.
+        #
+        # Everything in this library stores colours as pairs so CustomTkinter's
+        # appearance tracking can follow the mode. But pygubu takes whatever
+        # this returns and hands it back to configure(), where Tk sees the
+        # stringified tuple as a colour name:
+        #
+        #   unknown color name "('#1A4375', '#2471A3')"
+        #
+        # _resolve_color() picks the half matching the current appearance mode,
+        # which is the value actually on screen -- and so the right answer to
+        # "what is this property now".
+        return (pname, pname, pname,
+                self._query_value(default), self._query_value(current))
+
+    def _query_value(self, value):
+        """
+        Renders one property value in a form a configure() call can accept.
+
+        Colour pairs are resolved to the half in use; everything else is passed
+        through untouched. Deliberately NOT str() -- a number must stay a
+        number, or the widget receives "10" where it expects 10.
+        """
+        if isinstance(value, (tuple, list)) and len(value) == 2 \
+                and all(isinstance(v, str) for v in value):
+            try:
+                return self._resolve_color(value)
+            except Exception:
+                return value[0]
+        return value
