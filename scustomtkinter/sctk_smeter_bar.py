@@ -161,7 +161,7 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             if pname in ["width", "height", "swr_max_value"]:
                 fallback = self._default_width if pname == "width" else (self._default_height if pname == "height" else self._default_swr_max_value)
                 current = super().cget("width") if pname == "width" else (super().cget("height") if pname == "height" else self.swr_max_value)
-                return (pname, pname, pname, str(fallback), str(current))
+                return (pname, pname, pname, self._query_value(fallback), self._query_value(current))
             return super().configure(*args, **kwargs)
 
         # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a

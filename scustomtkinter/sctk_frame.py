@@ -143,7 +143,7 @@ class sCTkFrame(ctk.CTkFrame, ThemeableWidget):
                     return ("state", "state", "state", "normal", str(self.state()))
                 if pname in ["fg_color", "border_color"]:
                     val = self._local_defaults.get(pname)
-                    return (pname, pname, pname, str(val), str(val))
+                    return (pname, pname, pname, self._query_value(val), self._query_value(val))
 
                 # FIX: this used to be `return super().configure(pname)`.
                 #

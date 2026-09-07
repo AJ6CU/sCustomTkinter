@@ -145,7 +145,7 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
                         val = self._custom_readonly_map.get(pname)
                     else:
                         val = self._local_defaults.get(pname)
-                    return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
+                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
 

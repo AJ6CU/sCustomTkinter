@@ -512,7 +512,7 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableW
             else:
                 pname = args[0]
                 if pname in ["fg_color", "label_fg_color", "scrollbar_button_color", "border_color"]:
-                    return (pname, pname, pname, str(self._local_defaults.get(pname)), str(self._local_defaults.get(pname)))
+                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(self._local_defaults.get(pname)))
                 if pname == "state":
                     return (pname, pname, pname,
                             str(self._local_defaults.get("state", "normal")),

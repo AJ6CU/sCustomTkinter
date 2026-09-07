@@ -143,7 +143,7 @@ class sCTkCheckBox(ctk.CTkCheckBox, ThemeableWidget):
                 if pname in ["fg_color", "border_color", "text_color", "hover_color", "checkmark_color"]:
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                    return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
+                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
 

@@ -199,7 +199,7 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
             if pname == "state": return ("state", "state", "state", "normal", self.get_state())
             if pname in ["fg_color", "text_color"]:
                 val = self._custom_disabled_map.get(pname) if self.get_state() == "disabled" else self._local_defaults.get(pname)
-                return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
+                return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
             return self._configure_query(pname)
 
         # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
