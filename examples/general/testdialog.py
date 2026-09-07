@@ -26,6 +26,5 @@ class testdialog(baseui.testdialogUI):
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = testdialog(root)
+    app = testdialog()
     app.run()

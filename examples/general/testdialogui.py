@@ -6,7 +6,6 @@ testdialog
 
 UI source file: testdialog.ui
 """
-import tkinter as tk
 from scustomtkinter.sctk_combobox import sCTkComboBox
 from scustomtkinter.sctk_dial import sCTkDialContinuous
 from scustomtkinter.sctk_dialog import sCTkDialog
@@ -56,7 +55,7 @@ class testdialogUI:
             transient=False,
             heading='I am Mark',
             heading_anchor='center',
-            buttons=2)
+            buttons=3)
         # First object created
         on_first_object_cb(sctkdialog1)
 
@@ -89,6 +88,5 @@ class testdialogUI:
 
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = testdialogUI(root)
+    app = testdialogUI()
     app.run()
