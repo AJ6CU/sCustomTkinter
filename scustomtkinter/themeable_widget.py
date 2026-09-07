@@ -349,3 +349,40 @@ class ThemeableWidget:
             mode_idx = 1 if current_mode == "dark" else 0
             return color_value[mode_idx]
         return color_value
+
+    def _configure_query(self, pname, defaults=None):
+        """
+        Tkinter-style property query for a name this widget doesn't handle
+        itself.
+
+        Pygubu calls configure(name) to read a property's default whenever a
+        field is blanked in the Designer inspector, and expects a five-element
+        tuple: (name, database_name, database_class, default, current).
+
+        Forwarding the name to a native configure() does NOT produce that.
+        CustomTkinter declares configure(self, require_redraw=False, **kwargs),
+        so the property NAME arrives as require_redraw and the call returns
+        None -- which pygubu then hands straight to _set_property():
+
+            Failed to set property 'height' ... float() argument must be a
+            string or a real number, not 'NoneType'
+
+        Args:
+            pname: The property being queried.
+            defaults: Optional {name: default} for properties whose native
+                default is known from THIS widget's own constructor. Anything
+                absent reports its current value as its default, which makes
+                blanking that field a no-op.
+
+                Only state a default you can point at. A guessed default is
+                worse than none, because the guess gets applied.
+
+        Returns:
+            A Tkinter-style five-tuple.
+        """
+        try:
+            current = self.cget(pname)
+        except Exception:
+            current = None
+        default = (defaults or {}).get(pname, current)
+        return (pname, pname, pname, default, current)
