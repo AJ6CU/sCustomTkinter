@@ -316,6 +316,18 @@ class sCTkDialog(sCTkFrame):
         "apply_command", "cancel_command", "reset_command",
     })
 
+    # Constructor defaults for this widget's own properties, so a
+    # single-argument query can report one. Pygubu calls configure(name) to
+    # discover a default when a field is cleared in the inspector, then applies
+    # what it gets back -- so an accurate default here is what makes clearing a
+    # label restore "Cancel" rather than leaving it blank.
+    _PROPERTY_DEFAULTS = {
+        "title": "", "heading": "Heading Title", "heading_anchor": "center",
+        "heading_font": "", "heading_color": "", "buttons": 3,
+        "apply_text": "Apply", "cancel_text": "Cancel", "reset_text": "Reset",
+        "apply_command": "", "cancel_command": "", "reset_command": "",
+    }
+
     def configure(self, cnf=None, **kwargs):
         """
         Standard configuration, extended to accept this widget's own
@@ -339,6 +351,19 @@ class sCTkDialog(sCTkFrame):
         Returns:
             Whatever the native configure() returns for the remaining options.
         """
+        # FIX: a single positional STRING is a query, not a dict of options.
+        # Pygubu calls configure(name) to read a property's default when the
+        # field is cleared in the inspector, and this method previously did
+        # {**cnf}, which raises TypeError on a string -- so clearing a label
+        # blew up the unset path and the label stayed as it was.
+        if isinstance(cnf, str):
+            name = cnf
+            if name in self._OWN_PROPERTIES:
+                default = self._PROPERTY_DEFAULTS.get(name, "")
+                current = self.cget(name)
+                return (name, name, name, default, current)
+            return super().cget(name)
+
         if cnf:
             kwargs = {**cnf, **kwargs}
 
@@ -350,7 +375,9 @@ class sCTkDialog(sCTkFrame):
             if key == "title":
                 self.set_title(value or "")
             elif key == "heading":
-                self.set_heading(heading=value)
+                self.set_heading(
+                    heading=value if value else
+                    self._PROPERTY_DEFAULTS["heading"])
             elif key == "heading_anchor":
                 self.set_heading(anchor=value)
             elif key == "heading_font":
@@ -360,7 +387,12 @@ class sCTkDialog(sCTkFrame):
             elif key == "buttons":
                 self.set_buttons(value)
             elif key.endswith("_text"):
-                self.set_button_text(key[:-len("_text")], value)
+                # An empty value means "use the default", matching what the
+                # generated code does -- the property is omitted and the
+                # constructor default applies.
+                self.set_button_text(
+                    key[:-len("_text")],
+                    value if value else self._PROPERTY_DEFAULTS[key])
             elif key.endswith("_command"):
                 name = key[:-len("_command")]
                 # Recorded as well as applied, so it survives the rebuild that
@@ -388,6 +420,15 @@ class sCTkDialog(sCTkFrame):
             return self.heading_VAR.get()
         if key == "heading_anchor":
             return self._heading_anchor
+        if key == "heading_font":
+            return (self._heading_font_override
+                    or self.final_kw.get("heading_font"))
+        if key == "heading_color":
+            return (self._heading_color_override
+                    or self.final_kw.get("text_color"))
+        if key == "title":
+            return (self.dialog_toplevel.title()
+                    if self.dialog_toplevel is not None else "")
         return super().cget(key)
 
     # ------------------------------------------------------------------

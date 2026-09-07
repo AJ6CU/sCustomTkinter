@@ -241,10 +241,11 @@ class sCTkDialogBO(BuilderObject):
             # means "use the default", which is what the generated code does --
             # the property is omitted and the constructor default applies. The
             # design view now agrees with it.
-            text = value if value else self._TEXT_DEFAULTS[pname]
-            # set_button_text() records the label as well as displaying it, so
-            # it survives the rebuild that a `buttons` change triggers.
-            target_widget.set_button_text(pname.split("_")[0], text)
+            # The widget restores its own default when given an empty value,
+            # and knows what that default is -- see sCTkDialog.configure() and
+            # _PROPERTY_DEFAULTS. Keeping a second copy of the same defaults
+            # here would be a place for them to drift apart.
+            target_widget.configure(**{pname: value})
             return None
 
         if pname == "heading_font":
@@ -269,8 +270,7 @@ class sCTkDialogBO(BuilderObject):
             return None
 
         if pname == "heading":
-            target_widget.set_heading(
-                heading=value if value else self._TEXT_DEFAULTS["heading"])
+            target_widget.configure(heading=value)
             return None
 
         if pname == "heading_anchor":
