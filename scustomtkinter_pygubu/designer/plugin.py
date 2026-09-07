@@ -338,18 +338,33 @@ class sCTkDialogForPreview(sCTkDialog):
                 pass
             return "break"
 
+        # contentFrame is included, but only its CANVAS gets bound below --
+        # the frame itself stays visible to the Designer's own binding pass so
+        # that widgets the user drops inside it still select themselves. In
+        # practice a user drops a frame in here to hold their own layout, and
+        # clicking that frame should select it, not the dialog; clicking the
+        # bare content area around it should reach the dialog, since there is
+        # nothing else there to select.
         parts = [getattr(self, "heading_Label", None),
                  getattr(self, "titleFrame", None),
-                 getattr(self, "actionFrame", None)]
+                 getattr(self, "actionFrame", None),
+                 getattr(self, "contentFrame", None)]
         for name in ("apply", "cancel", "reset"):
             parts.append(getattr(self, f"{name}_Button", None))
 
+        content = getattr(self, "contentFrame", None)
         for part in parts:
             if part is None:
                 continue
-            for target in (part,
+            if part is content:
+                # Canvas only. Binding the frame itself would intercept clicks
+                # meant for the user's own widgets inside it.
+                targets = (getattr(part, "_canvas", None),)
+            else:
+                targets = (part,
                            getattr(part, "_canvas", None),
-                           getattr(part, "_text_label", None)):
+                           getattr(part, "_text_label", None))
+            for target in targets:
                 if target is None:
                     continue
                 try:
@@ -374,9 +389,9 @@ class sCTkDialogForPreview(sCTkDialog):
 
         Returning only the content area means pygubu binds the dialog itself
         and whatever the user put inside it. The dialog's own parts are bound
-        separately, in configure_for_preview(), to forward their clicks here --
-        and because they are not in this list, pygubu's pass does not overwrite
-        those bindings.
+        separately, in _bind_own_parts_to_self() -- and because they are not in
+        this list, pygubu's pass does not visit them and cannot overwrite those
+        bindings.
         """
         children = super(tk.Frame, self).winfo_children()
         content = getattr(self, "contentFrame", None)
