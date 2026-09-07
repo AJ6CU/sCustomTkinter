@@ -255,6 +255,8 @@ Every constructor property above is in the inspector. Three behaviours worth kno
 
 **Changing `buttons` redraws immediately,** so the canvas matches the preview and the generated code.
 
+**`width` and `height` are not reflected on the design canvas.** They size the *window*, and the canvas has no window — the dialog is drawn as a frame standing in for one. An empty dialog therefore sits at its natural size inside the space the canvas allotted it, and the surplus shows as pygubu's light-green preview background. The gap closes as soon as you add content, and both the preview and the generated code use the real size.
+
 **Clicking any part of the dialog selects the dialog.** The heading, the buttons, the strips around them and the bare content area all select it in the widget tree. Clicking a widget you placed inside selects that widget instead — so a frame you drop into the content area to hold your own layout behaves normally.
 
 **Labels for buttons you don't have are not generated.** With `buttons=2`, a `reset_text` value is kept in the design but left out of the generated file, where it would read as a label for a button that doesn't exist. Commands are *not* filtered this way — each one generates a callback stub in your file, and losing that stub because you briefly reduced the button count would be worse than the noise.
