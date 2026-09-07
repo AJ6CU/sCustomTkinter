@@ -553,5 +553,10 @@
             "text_color": ["#94A3B8", "#64748B"],
             "button_color": ["#CBD5E1", "#334155"]
         }
+    },
+    "sCTkDialog": {
+        "fg_color": ["#F1F5F9", "#1C1C1C"],
+        "heading_font": ["Arial", 18, "bold"],
+        "heading_text_color": ["#1F2937", "#F9FAFB"]
     }
 }

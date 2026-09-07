@@ -601,14 +601,36 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         Mirrors CustomTkinter's own designer plugin.
         """
         toplevel_uids = (sCTk_builder_id, sCTkToplevel_builder_id)
-        if builder_uid not in toplevel_uids:
-            return None
 
         def on_root_created(root):
             builder.image_cache = StockImageCache(root, StockImage.registry)
 
-        builder.on_first_object = on_root_created
-        return builder.get_object(widget_id)
+        if builder_uid in toplevel_uids:
+            builder.on_first_object = on_root_created
+            return builder.get_object(widget_id)
+
+        # sCTkDialog is not a toplevel, but it BUILDS one -- it always creates
+        # its own sCTkDialogToplevel and packs itself into it.
+        #
+        # Returning None here let pygubu fall back to creating a host window of
+        # its own, and that fallback constructs through the ordinary builder
+        # object rather than the preview one -- so _MAKE_WINDOW = False never
+        # applied, the real widget built its own window, and the result was TWO
+        # windows: an empty host, and the dialog beside it.
+        #
+        # Handing back the dialog's own window instead means no host is created
+        # and you preview the real thing, correctly sized and placed.
+        if builder_uid == sCTkDialog_builder_id:
+            builder.on_first_object = on_root_created
+            widget = builder.get_object(widget_id)
+            window = getattr(widget, "dialog_toplevel", None)
+            if window is not None:
+                return window
+            # _MAKE_WINDOW was False, so there is no window of its own; fall
+            # back to whatever it was built inside.
+            return widget.winfo_toplevel()
+
+        return None
 
     def configure_for_preview(self, builder_uid: str, widget):
         """Make a widget display with minimal functionality in the designer.

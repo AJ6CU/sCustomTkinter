@@ -46,12 +46,19 @@ class sCTkDialog(sCTkFrame):
     # and leave the Designer unusable.
     _MAKE_WINDOW = True
 
+    # Required in the "sCTkDialog" block of sCTkThemes.json. fg_color is a
+    # native frame option and reaches CTkFrame on its own; the two heading keys
+    # are this widget's alone and are read in _build_layout().
+    _REQUIRED_THEME_KEYS = ("fg_color", "heading_font", "heading_text_color")
+
     # How many buttons each setting shows, in order. Apply is always present:
     # a dialog with no way to accept is a message box, not a dialog.
     _BUTTON_ORDER = ("apply", "cancel", "reset")
 
     def __init__(self, master=None, *, title=None, width=None, height=None,
                  locate_over=None, offset_x=40, offset_y=40, modal=False,
+                 transient=True, heading="Heading Title",
+                 heading_anchor="center",
                  buttons=3, apply_text="Apply", cancel_text="Cancel",
                  reset_text="Reset", apply_command=None, cancel_command=None,
                  reset_command=None, toplevel=None, **kw):
@@ -70,6 +77,12 @@ class sCTkDialog(sCTkFrame):
             modal: True to block interaction with the rest of the application
                 while the dialog is open. run_and_wait() additionally blocks
                 the calling code until it closes.
+            transient: True to tie the window to its parent -- it stays above
+                that window, minimises with it, and usually keeps out of the
+                taskbar. False gives an independent window, which is what a
+                long-lived tool panel wants.
+            heading: Text shown above the content area.
+            heading_anchor: "w", "e" or "center".
             buttons: How many action buttons to show -- 3 (Apply, Cancel,
                 Reset), 2 (Apply, Cancel) or 1 (Apply). Apply is always
                 present: a dialog with no way to accept is a message box.
@@ -86,6 +99,8 @@ class sCTkDialog(sCTkFrame):
             **kw: Any native sCTkFrame argument.
         """
         self.dialog_parent = master
+        self._heading_text = heading
+        self._heading_anchor = heading_anchor
 
         try:
             self._button_count = max(1, min(3, int(buttons)))
@@ -106,7 +121,7 @@ class sCTkDialog(sCTkFrame):
                 toplevel = sCTkDialogToplevel(
                     master, title=title, width=width, height=height,
                     locate_over=locate_over, offset_x=offset_x,
-                    offset_y=offset_y, modal=modal,
+                    offset_y=offset_y, modal=modal, transient=transient,
                 )
             self.dialog_toplevel = toplevel
             self.dialog_toplevel.protocol(
@@ -119,7 +134,29 @@ class sCTkDialog(sCTkFrame):
             self.dialog_toplevel = None
             super().__init__(master, **kw)
 
+        self._validate_theme_keys()
         self._build_layout()
+
+    # ------------------------------------------------------------------
+    # Theme
+    # ------------------------------------------------------------------
+    def _validate_theme_keys(self):
+        """
+        Hard-fails on an incomplete theme block, naming the missing key.
+
+        Follows the library-wide fail-loud rule: substituting a plausible
+        default hides a broken block behind output that merely looks slightly
+        wrong.
+
+        Raises:
+            KeyError: naming the first missing key.
+        """
+        for key in self._REQUIRED_THEME_KEYS:
+            if self.final_kw.get(key) is None:
+                raise KeyError(
+                    f"'{self.__class__.__name__}' theme block is missing "
+                    f"'{key}' at the top level of sCTkThemes.json."
+                )
 
     # ------------------------------------------------------------------
     # Layout
@@ -136,10 +173,17 @@ class sCTkDialog(sCTkFrame):
         """
         # --- heading -------------------------------------------------------
         self.titleFrame = sCTkFrame(self)
-        self.heading_VAR = tk.StringVar(master=self, value="Heading Title")
+        self.heading_VAR = tk.StringVar(master=self, value=self._heading_text)
         self.heading_Label = sCTkLabelPrimary(self.titleFrame)
+        # font and text_color come from THIS widget's theme block, not from
+        # sCTkLabelPrimary's. A dialog heading is a distinct role and should be
+        # restyleable without moving every primary label in the application.
         self.heading_Label.configure(
-            anchor="center", textvariable=self.heading_VAR)
+            anchor=self._heading_anchor,
+            textvariable=self.heading_VAR,
+            font=self.final_kw.get("heading_font"),
+            text_color=self.final_kw.get("heading_text_color"),
+        )
         self.heading_Label.pack(expand=True, fill="x", side="top")
         self.titleFrame.pack(anchor="n", expand=True, fill="x",
                              padx=10, pady="20 10", side="top")
@@ -245,7 +289,16 @@ class sCTkDialog(sCTkFrame):
         if heading is not None:
             self.heading_VAR.set(heading)
         if anchor is not None and str(anchor).lower() in ("w", "e", "center"):
-            self.heading_Label.configure(anchor=str(anchor).lower())
+            self._heading_anchor = str(anchor).lower()
+            self.heading_Label.configure(anchor=self._heading_anchor)
+
+    def set_heading_font(self, font):
+        """Overrides the heading font for this instance."""
+        self.heading_Label.configure(font=font)
+
+    def set_heading_color(self, text_color):
+        """Overrides the heading text colour for this instance."""
+        self.heading_Label.configure(text_color=text_color)
 
     def has_button(self, name):
         """

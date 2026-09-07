@@ -29,7 +29,7 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
 
     def __init__(self, master=None, *, title=None, width=None, height=None,
                  locate_over=None, offset_x=40, offset_y=40, modal=False,
-                 **kw):
+                 transient=True, **kw):
         """
         Args:
             master: The Tk parent. Required for the window to belong to the
@@ -49,6 +49,11 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
             modal: True to grab input and block interaction with the rest of
                 the application. See _apply_modal() for the ordering this
                 requires.
+            transient: True to tie the window to locate_over -- it stays above
+                that window, minimises with it, and usually keeps out of the
+                taskbar. False gives an independent window, which is what a
+                long-lived tool panel wants. Placement is unaffected either
+                way; only the window-manager relationship changes.
             **kw: Any native CTkToplevel argument.
         """
         # FIX: an extra blank window appeared when master was None.
@@ -95,7 +100,7 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
         # transient() ties the dialog to its parent for the window manager:
         # it stays above that window and usually skips the taskbar. Done
         # before placement so the WM has the relationship when the window maps.
-        if self._locate_over is not None:
+        if transient and self._locate_over is not None:
             try:
                 self.transient(self._locate_over)
             except Exception:

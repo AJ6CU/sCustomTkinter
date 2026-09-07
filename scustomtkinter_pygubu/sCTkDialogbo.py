@@ -38,9 +38,9 @@ class sCTkDialogBO(BuilderObject):
     # widget, not configure() options, so realize() and code_realize() below
     # pass them at construction rather than leaving BuilderObject to apply
     # them afterwards.
-    OPTIONS_CUSTOM = ("title", "width", "height", "modal",
-                      "offset_x", "offset_y", "buttons",
-                      "apply_text", "cancel_text", "reset_text")
+    OPTIONS_CUSTOM = ("title", "width", "height", "modal", "transient",
+                      "offset_x", "offset_y", "heading", "heading_anchor",
+                      "buttons", "apply_text", "cancel_text", "reset_text")
     properties = OPTIONS_CUSTOM + ("apply_command", "cancel_command",
                                    "reset_command")
 
@@ -84,9 +84,15 @@ class sCTkDialogBO(BuilderObject):
                 except (TypeError, ValueError):
                     pass
 
-        modal = props.get("modal")
-        if modal not in (None, ""):
-            args["modal"] = str(modal).lower() in ("true", "1", "yes")
+        for flag in ("modal", "transient"):
+            raw = props.get(flag)
+            if raw not in (None, ""):
+                args[flag] = str(raw).lower() in ("true", "1", "yes")
+
+        for prop in ("heading", "heading_anchor"):
+            value = props.get(prop)
+            if value:
+                args[prop] = str(value)
 
         buttons = props.get("buttons")
         if buttons not in (None, ""):
@@ -141,6 +147,13 @@ class sCTkDialogBO(BuilderObject):
                   "cancel_text": "cancelText_VAR",
                   "reset_text": "resetText_VAR"}
 
+    # The widget's own defaults. Clearing a field in the inspector must restore
+    # these, not blank the button: an empty label looks like a broken widget,
+    # and the generated code correctly falls back to them because the property
+    # is simply omitted from the constructor call.
+    _TEXT_DEFAULTS = {"apply_text": "Apply", "cancel_text": "Cancel",
+                      "reset_text": "Reset", "heading": "Heading Title"}
+
     def _set_property(self, target_widget, pname, value):
         """
         Applies a property to the live preview.
@@ -157,7 +170,20 @@ class sCTkDialogBO(BuilderObject):
         if pname in self._LIVE_TEXT:
             var = getattr(target_widget, self._LIVE_TEXT[pname], None)
             if var is not None:
-                var.set(value if value else "")
+                # FIX: an empty value used to blank the button. Clearing a
+                # field means "use the default", which is what the generated
+                # code does -- the property is omitted and the constructor
+                # default applies. The design view now agrees with it.
+                var.set(value if value else self._TEXT_DEFAULTS[pname])
+            return None
+
+        if pname == "heading":
+            target_widget.set_heading(
+                heading=value if value else self._TEXT_DEFAULTS["heading"])
+            return None
+
+        if pname == "heading_anchor":
+            target_widget.set_heading(anchor=value or "center")
             return None
 
         if pname == "title":
@@ -179,6 +205,40 @@ class sCTkDialogBO(BuilderObject):
             return None
 
         return super()._set_property(target_widget, pname, value)
+
+    # Properties that change the widget's STRUCTURE and so cannot be applied
+    # to a live instance: the button row is built once, in _build_layout().
+    # Editing these rebuilds the widget instead.
+    _REBUILD_PROPERTIES = ("buttons",)
+
+    def set_property(self, name, value):
+        """
+        Records a property change and rebuilds when the change is structural.
+
+        Button labels, the heading and the title are applied live by
+        _set_property(). `buttons` cannot be: the row is created once at
+        construction, so adding or removing a button means building the widget
+        again. Without this, reducing 3 to 2 left the Reset button on the
+        canvas while the preview and the generated code both showed two --
+        the design view disagreeing with the result.
+
+        Same approach sCTkTableviewBO uses for its own structural properties.
+        """
+        if hasattr(self, "wmeta") and hasattr(self.wmeta, "properties"):
+            self.wmeta.properties[name] = value
+
+        if hasattr(self, "widget") and self.widget:
+            self._set_property(self.widget, name, value)
+
+        if name in self._REBUILD_PROPERTIES:
+            builder = getattr(self, "builder", None)
+            if builder is not None and hasattr(builder, "recreate_widget"):
+                try:
+                    builder.recreate_widget(self)
+                except Exception:
+                    # Designer will redraw on its own soon enough; a failed
+                    # rebuild must not take the property edit down with it.
+                    pass
 
     def _code_set_property(self, targetid, pname, value, code_bag):
         """
@@ -246,6 +306,21 @@ register_custom_property(
 register_custom_property(
     builder_id, "offset_y", "integernumber",
     help="Pixels below the parent window's top-left corner. Default 40."
+)
+register_custom_property(
+    builder_id, "transient", "choice", values=("True", "False"),
+    state="readonly",
+    help="True ties the window to its parent -- above it, minimises with it, "
+         "usually not in the taskbar. False gives an independent window."
+)
+register_custom_property(
+    builder_id, "heading", "entry",
+    help="Text shown above the content area. Clear to restore the default."
+)
+register_custom_property(
+    builder_id, "heading_anchor", "choice",
+    values=("center", "w", "e"), state="readonly",
+    help="Heading alignment."
 )
 register_custom_property(
     builder_id, "buttons", "choice", values=("3", "2", "1"), state="readonly",
