@@ -36,6 +36,18 @@ class testWidgets1(baseui.testWidgets1UI):
     def comboBox_CB(self, value):
         print("ComboBox=", self.comboBox_VAR.get(), "*", value, self.comboBox1.get())
 
+    def primaryEntryValidate_CB(self, p_entry_value):
+        print("PrimaryEntryValidate=", self.primaryEntry_VAR.get(), p_entry_value, self.primaryEntry.get())
+
+    def primaryEntryxscroll_CB(self, mode=None, value=None, units=None):
+        pass
+
+    def secondaryEntryValidate_CB(self, i_index, p_entry_value):
+        print("SecondaryEntryValidate=", self.secondaryEntry_VAR.get(), p_entry_value)
+
+    def secondaryEntryxscroll_CB(self, mode=None, value=None, units=None):
+        pass
+
 
 if __name__ == "__main__":
     app = testWidgets1()

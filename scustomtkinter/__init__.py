@@ -25,9 +25,7 @@ from .sctk_combobox import sCTkComboBox
 from .sctk_dial import sCTkDialContinuous
 from .sctk_dial import sCTkDialSelector
 from .sctk_dial import sCTkDialRange
-# from .sctk_dialog_core import sCTkDialogCore
-# from .sctk_dialog_mixin import sCTkDialogMixin
-# from .sctk_dialog_toplevel import sCTkDialogToplevel
+from .sctk_dialog import sCTkDialog
 from .sctk_entry_primary import sCTkEntryPrimary
 from .sctk_entry_secondary import sCTkEntrySecondary
 from .sctk_file_explorer import sCTkFileExplorer

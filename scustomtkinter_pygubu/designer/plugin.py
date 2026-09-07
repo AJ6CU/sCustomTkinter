@@ -32,6 +32,9 @@ from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_
 from scustomtkinter.sctk_separator import sCTkSeparator
 from scustomtkinter_pygubu.sCTkSeparatorbo import (sCTkSeparatorBuilder, builder_id as sCTkSeparator_builder_id)
 
+from scustomtkinter.sctk_dialog import sCTkDialog
+from scustomtkinter_pygubu.sCTkDialogbo import (sCTkDialogBO, builder_id as sCTkDialog_builder_id)
+
 from scustomtkinter.sctk_selector import sCTkSelector
 from scustomtkinter.sctk_checkbox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
                                             # to search to find the clickable master frame
@@ -259,12 +262,62 @@ class sCTkTableviewForPreviewBO(sCTkTableviewBO):
     class_ = sCTkTableviewForPreview
 
 
+class sCTkDialogForPreview(sCTkDialog):
+    """
+    Designer preview for sCTkDialog.
+
+    _MAKE_WINDOW = False is the whole point. At runtime this widget builds its
+    own sCTkDialogToplevel and packs itself into it -- a dialog is always its
+    own window. In the Designer that would spawn a real, separate, possibly
+    MODAL window on every redraw, and a redraw happens on every property edit.
+    A modal one would seize input and leave the Designer unusable.
+
+    With the flag off, sCTkDialog.__init__ takes its early return and
+    behaves as an ordinary frame, so the dialog renders inline on the canvas
+    where it can be laid out.
+
+    The window properties -- title, width, height, modal, offset_x, offset_y --
+    remain editable in the inspector and still reach generated code. They
+    simply have no effect on the preview, because there is no window for them
+    to act on.
+
+    There is no "sCTkDialog" block in sCTkThemes.json: the dialog takes its
+    appearance from sCTkFrame via its generated UI base class, so
+    _THEME_BLOCK_NAME points there. Naming a block that does not exist would
+    resolve to an empty theme.
+    """
+    _THEME_BLOCK_NAME = "sCTkFrame"
+    _MAKE_WINDOW = False
+
+    def winfo_children(self):
+        # Same hack as the other composite previews: CTkFrame hides its
+        # internal canvas, and the Designer needs to see it to hit-test a click.
+        return super(tk.Frame, self).winfo_children()
+
+
 class sCTkSelectorForPreviewBO(sCTkSelectorBO):
     class_ = sCTkSelectorForPreview
 
 
 class sCTkSeparatorForPreviewBO(sCTkSeparatorBuilder):
     class_ = sCTkSeparatorForPreview
+
+
+class sCTkDialogForPreviewBO(sCTkDialogBO):
+    class_ = sCTkDialogForPreview
+
+    def realize(self, parent, extra_init_args: dict = None):
+        """
+        Builds the preview WITHOUT the window properties.
+
+        sCTkDialogBO.realize() passes title/width/height/modal and the
+        offsets to the constructor. With _MAKE_WINDOW False there is no
+        toplevel to receive them, and modal=True in particular must not reach
+        anything -- so they are dropped rather than passed and ignored.
+        """
+        master = parent.get_child_master() if hasattr(parent, "get_child_master") else parent
+        self.widget = self.class_(master)
+        return self.widget
 
 
 class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
@@ -510,6 +563,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkSelectorForPreviewBO
         elif builder_uid == sCTkSeparator_builder_id:
             return sCTkSeparatorForPreviewBO
+        elif builder_uid == sCTkDialog_builder_id:
+            return sCTkDialogForPreviewBO
         elif builder_uid == sCTkOptionMenuSecondary_builder_id:
             return sCTkOptionMenuSecondaryForPreviewBO
         elif builder_uid == sCTkSpinbox_builder_id:

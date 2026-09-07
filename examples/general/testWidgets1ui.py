@@ -107,12 +107,28 @@ class testWidgets1UI:
         sctkframe3 = sCTkFrame(sctk1)
         self.primaryEntry = sCTkEntryPrimary(sctkframe3)
         self.primaryEntry_VAR = tk.StringVar()
-        self.primaryEntry.configure(placeholder_text="primary entry", textvariable=self.primaryEntry_VAR, validatecommand="{"name": "validatecommand", "type": "command", "cbtype": "entry_validate", "args": "", "value": "primaryEntryValidate_CB"}", xscrollcommand="{"name": "xscrollcommand", "type": "command", "cbtype": "scroll", "value": "primaryEntryxscroll_CB"}")
+        self.primaryEntry.configure(
+            placeholder_text="primary entry",
+            textvariable=self.primaryEntry_VAR,
+            validate="focusout")
         self.primaryEntry.pack(side="top")
+        _validatecmd = (
+            self.primaryEntry.register(
+                self.primaryEntryValidate_CB), "%P")
+        self.primaryEntry.configure(validatecommand=_validatecmd)
+        self.primaryEntry.configure(xscrollcommand=self.primaryEntryxscroll_CB)
         self.secondaryEntry = sCTkEntrySecondary(sctkframe3)
         self.secondaryEntry_VAR = tk.StringVar()
-        self.secondaryEntry.configure(placeholder_text="secondary entry", textvariable=self.secondaryEntry_VAR, validatecommand="{"name": "validatecommand", "type": "command", "cbtype": "entry_validate", "args": "", "value": "secondaryEntry_CB"}")
+        self.secondaryEntry.configure(
+            placeholder_text="secondary entry",
+            textvariable=self.secondaryEntry_VAR,
+            validate="focusout")
         self.secondaryEntry.pack(side="top")
+        _validatecmd = (self.secondaryEntry.register(
+            self.secondaryEntryValidate_CB), "%i", "%P")
+        self.secondaryEntry.configure(validatecommand=_validatecmd)
+        self.secondaryEntry.configure(
+            xscrollcommand=self.secondaryEntryxscroll_CB)
         sctkframe3.grid(column=2, row=0)
         sctkframelabeledprimary1 = sCTkFrameLabeledPrimary(sctk1)
         sctkframelabeledprimary1.configure(label_text="Radio Buttons")
@@ -147,6 +163,18 @@ class testWidgets1UI:
         pass
 
     def comboBox_CB(self, value):
+        pass
+
+    def primaryEntryValidate_CB(self, p_entry_value):
+        pass
+
+    def primaryEntryxscroll_CB(self, mode=None, value=None, units=None):
+        pass
+
+    def secondaryEntryValidate_CB(self, i_index, p_entry_value):
+        pass
+
+    def secondaryEntryxscroll_CB(self, mode=None, value=None, units=None):
         pass
 
 
