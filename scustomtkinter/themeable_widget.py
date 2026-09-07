@@ -415,4 +415,36 @@ class ThemeableWidget:
                 return self._resolve_color(value)
             except Exception:
                 return value[0]
+
+        # A live CTkFont is not something a font property can be set FROM.
+        # cget("font") hands one back, and pygubu's font editor expects a Tk
+        # font specification it can parse:
+        #
+        #   expected string or bytes-like object, got 'CTkFont'
+        #
+        # It is rendered as "{Family} size style" -- the same form the editor
+        # produces, so a value read out and written back round-trips.
+        if value is not None and type(value).__name__ == "CTkFont":
+            try:
+                family = value.cget("family")
+                size = value.cget("size")
+                parts = [f"{{{family}}}" if " " in str(family) else str(family),
+                         str(size)]
+                for style in ("weight", "slant"):
+                    try:
+                        setting = value.cget(style)
+                    except Exception:
+                        continue
+                    if setting and setting not in ("normal", "roman"):
+                        parts.append(str(setting))
+                for style in ("underline", "overstrike"):
+                    try:
+                        if value.cget(style):
+                            parts.append(style)
+                    except Exception:
+                        continue
+                return " ".join(parts)
+            except Exception:
+                return None
+
         return value
