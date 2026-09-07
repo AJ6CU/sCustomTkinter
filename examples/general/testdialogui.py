@@ -58,8 +58,7 @@ class testdialogUI:
             heading='Maybe a Settings Dialog?',
             heading_anchor='center',
             buttons=2,
-            cancel_text='NO Cancel',
-            reset_text='Please')
+            cancel_text='NO Cancel')
         # First object created
         on_first_object_cb(sctkdialog1)
 

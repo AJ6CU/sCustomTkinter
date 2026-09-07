@@ -27,9 +27,11 @@
     <property name="apply_command" type="command" cbtype="simple">apply_cb</property>
     <property name="buttons">3</property>
     <property name="cancel_command" type="command" cbtype="simple">cancel_cb</property>
+    <property name="cancel_text">NO Cancel</property>
     <property name="heading">Maybe a Settings Dialog?</property>
     <property name="heading_anchor">center</property>
     <property name="reset_command" type="command" cbtype="simple">reset_cb</property>
+    <property name="reset_text">Please</property>
     <property name="title" translatable="yes">Your Window Title</property>
     <property name="transient">False</property>
     <layout manager="grid">

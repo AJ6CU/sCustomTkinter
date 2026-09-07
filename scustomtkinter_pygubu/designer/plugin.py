@@ -306,10 +306,21 @@ class sCTkDialogForPreview(sCTkDialog):
         and because they are not in this list, pygubu's pass does not overwrite
         those bindings.
         """
+        children = super(tk.Frame, self).winfo_children()
         content = getattr(self, "contentFrame", None)
         if content is None:
-            return super(tk.Frame, self).winfo_children()
-        return [content]
+            return children
+
+        # Keep the internal canvas: it IS the dialog's visible background, so
+        # dropping it stopped a click on empty space selecting anything.
+        # Everything else the dialog builds for itself is excluded.
+        own_parts = {getattr(self, name, None) for name in (
+            "titleFrame", "actionFrame", "heading_Label",
+            "apply_Button", "cancel_Button", "reset_Button")}
+        keep = [w for w in children if w not in own_parts]
+        if content not in keep:
+            keep.append(content)
+        return keep
 
 
 class sCTkSelectorForPreviewBO(sCTkSelectorBO):
