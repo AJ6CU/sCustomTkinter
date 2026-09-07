@@ -306,6 +306,91 @@ class sCTkDialog(sCTkFrame):
         return True
 
     # ------------------------------------------------------------------
+    # Configuration
+    # ------------------------------------------------------------------
+    # Properties this widget owns. None of them are native CTkFrame options,
+    # so each is consumed by configure() below before the rest is forwarded.
+    _OWN_PROPERTIES = frozenset({
+        "title", "heading", "heading_anchor", "heading_font", "heading_color",
+        "buttons", "apply_text", "cancel_text", "reset_text",
+        "apply_command", "cancel_command", "reset_command",
+    })
+
+    def configure(self, cnf=None, **kwargs):
+        """
+        Standard configuration, extended to accept this widget's own
+        properties.
+
+        FIX: without this, generated code raised
+
+            ValueError: ['apply_command'] are not supported arguments.
+
+        Pygubu emits command properties as configure() arguments through its
+        own code path, so intercepting them in the builder object was not
+        enough -- they still reached CTkFrame.configure(), which rejects any
+        keyword it does not recognise. Handling them here works whichever path
+        supplies them, and gives callers a runtime API that matches the
+        Designer's inspector.
+
+        Args:
+            cnf: Optional dict of options, merged into kwargs.
+            **kwargs: Any native sCTkFrame option, or any of _OWN_PROPERTIES.
+
+        Returns:
+            Whatever the native configure() returns for the remaining options.
+        """
+        if cnf:
+            kwargs = {**cnf, **kwargs}
+
+        for key in list(kwargs):
+            if key not in self._OWN_PROPERTIES:
+                continue
+            value = kwargs.pop(key)
+
+            if key == "title":
+                self.set_title(value or "")
+            elif key == "heading":
+                self.set_heading(heading=value)
+            elif key == "heading_anchor":
+                self.set_heading(anchor=value)
+            elif key == "heading_font":
+                self.set_heading_font(value)
+            elif key == "heading_color":
+                self.set_heading_color(value)
+            elif key == "buttons":
+                self.set_buttons(value)
+            elif key.endswith("_text"):
+                self.set_button_text(key[:-len("_text")], value)
+            elif key.endswith("_command"):
+                name = key[:-len("_command")]
+                # Recorded as well as applied, so it survives the rebuild that
+                # a `buttons` change triggers.
+                self._button_command[name] = value
+                button = getattr(self, f"{name}_Button", None)
+                if button is not None and value:
+                    button.configure(command=value)
+
+        if kwargs:
+            return super().configure(**kwargs)
+        return None
+
+    config = configure
+
+    def cget(self, key):
+        """Extends native cget() to this widget's own properties."""
+        if key == "buttons":
+            return self._button_count
+        if key in ("apply_text", "cancel_text", "reset_text"):
+            return self._button_text[key[:-len("_text")]]
+        if key in ("apply_command", "cancel_command", "reset_command"):
+            return self._button_command[key[:-len("_command")]]
+        if key == "heading":
+            return self.heading_VAR.get()
+        if key == "heading_anchor":
+            return self._heading_anchor
+        return super().cget(key)
+
+    # ------------------------------------------------------------------
     # Button callbacks -- override in a subclass
     # ------------------------------------------------------------------
     def apply_CB(self):

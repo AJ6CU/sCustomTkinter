@@ -303,15 +303,17 @@ class sCTkDialogBO(BuilderObject):
         The button commands are emitted as their own statements instead, since
         they are applied through setter methods rather than configure().
         """
-        if pname in self._COMMAND_TARGETS:
-            if value:
-                method = self._COMMAND_TARGETS[pname]
-                code_bag[pname] = (
-                    f"{targetid}.{method}(button_command={value})",
-                )
-            return None
-
+        # The button commands are deliberately NOT intercepted here. Pygubu
+        # emits command properties through its own code path, which this
+        # override is not consulted for -- the earlier attempt to redirect them
+        # produced generated code that still called
+        # configure(apply_command=...) and raised ValueError at the widget.
+        #
+        # sCTkDialog.configure() now accepts them instead, so the ordinary
+        # emission works and there is nothing to redirect.
         if pname in self.OPTIONS_CUSTOM:
+            # Passed at construction by code_realize(); keeping them out of the
+            # configure() call avoids setting the same thing twice.
             return None
 
         return super()._code_set_property(targetid, pname, value, code_bag)
