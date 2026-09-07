@@ -6,10 +6,11 @@ testdialog
 
 UI source file: testdialog.ui
 """
-from scustomtkinter.sctk_combobox import sCTkComboBox
-from scustomtkinter.sctk_dial import sCTkDialContinuous
+from scustomtkinter.sctk_button_secondary import sCTkButtonSecondary
 from scustomtkinter.sctk_dialog import sCTkDialog
-from scustomtkinter.sctk_label_tertiary import sCTkLabelTertiary
+from scustomtkinter.sctk_frame import sCTkFrame
+from scustomtkinter.sctk_label_primary import sCTkLabelPrimary
+from scustomtkinter.sctk_label_secondary import sCTkLabelSecondary
 
 
 def safe_i18n_translator(value):
@@ -52,20 +53,27 @@ class testdialogUI:
         # build ui
         sctkdialog1 = sCTkDialog(
             master,
+            title='Your Window Title',
             transient=False,
-            heading='I am Mark',
+            heading='Maybe a Settings Dialog?',
             heading_anchor='center',
-            buttons=3)
+            buttons=2,
+            cancel_text='NO Cancel',
+            reset_text='Please')
         # First object created
         on_first_object_cb(sctkdialog1)
 
-        sctkcombobox1 = sCTkComboBox(sctkdialog1.contentFrame)
-        sctkcombobox1.grid(column=0, row=0)
-        sctkdialcontinuous1 = sCTkDialContinuous(sctkdialog1.contentFrame)
-        sctkdialcontinuous1.grid(column=1, row=0)
-        sctklabeltertiary1 = sCTkLabelTertiary(sctkdialog1.contentFrame)
-        sctklabeltertiary1.configure(text='sctklabeltertiary1')
-        sctklabeltertiary1.grid(column=2, row=0)
+        sctkframe1 = sCTkFrame(sctkdialog1.contentFrame)
+        sctklabelprimary2 = sCTkLabelPrimary(sctkframe1)
+        sctklabelprimary2.configure(text='You can add widgets here')
+        sctklabelprimary2.pack(side="top")
+        sctklabelsecondary1 = sCTkLabelSecondary(sctkframe1)
+        sctklabelsecondary1.configure(text='Secondary Label')
+        sctklabelsecondary1.pack(side="top")
+        sctkbuttonsecondary1 = sCTkButtonSecondary(sctkframe1)
+        sctkbuttonsecondary1.configure(text='A Button')
+        sctkbuttonsecondary1.pack(side="top")
+        sctkframe1.pack(side="top")
         sctkdialog1.grid(column=0, row=0)
         sctkdialog1.configure(apply_command=self.apply_cb)
         sctkdialog1.configure(cancel_command=self.cancel_cb)

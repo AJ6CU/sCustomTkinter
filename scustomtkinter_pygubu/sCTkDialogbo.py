@@ -159,12 +159,23 @@ class sCTkDialogBO(BuilderObject):
             except (TypeError, ValueError):
                 pass
 
-        for prop, arg in (("apply_text", "apply_text"),
-                          ("cancel_text", "cancel_text"),
-                          ("reset_text", "reset_text")):
+        # Only labels for buttons this dialog actually has. With buttons=2 a
+        # reset_text argument is inert -- it lands in _button_text where
+        # nothing reads it -- but it is noise in the generated file, and noise
+        # that reads like a bug: a label for a button that does not exist.
+        #
+        # Reads args["buttons"], so this must stay AFTER the buttons parsing
+        # above.
+        #
+        # The COMMANDS are deliberately not filtered the same way. Pygubu emits
+        # those through its own path, and each one generates a callback stub in
+        # the user's file; dropping a command because the button count was
+        # temporarily reduced would take that stub with it.
+        count = args.get("buttons", 3)
+        for prop in ("apply_text", "cancel_text", "reset_text")[:count]:
             value = props.get(prop)
             if value:
-                args[arg] = str(value)
+                args[prop] = str(value)
 
         return args
 

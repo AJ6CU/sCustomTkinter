@@ -25,39 +25,46 @@
   </project>
   <object class="scustomtkinter.sCTkDialog" id="sctkdialog1">
     <property name="apply_command" type="command" cbtype="simple">apply_cb</property>
-    <property name="buttons">2</property>
+    <property name="buttons">3</property>
     <property name="cancel_command" type="command" cbtype="simple">cancel_cb</property>
-    <property name="heading">I am Mark</property>
+    <property name="heading">Maybe a Settings Dialog?</property>
     <property name="heading_anchor">center</property>
     <property name="reset_command" type="command" cbtype="simple">reset_cb</property>
+    <property name="title" translatable="yes">Your Window Title</property>
     <property name="transient">False</property>
     <layout manager="grid">
       <property name="column">0</property>
       <property name="row">0</property>
     </layout>
     <child>
-      <object class="scustomtkinter.sCTkComboBox" id="sctkcombobox1">
-        <layout manager="grid">
-          <property name="column">0</property>
-          <property name="row">0</property>
+      <object class="scustomtkinter.sCTkFrame" id="sctkframe1">
+        <layout manager="pack">
+          <property name="side">top</property>
         </layout>
-      </object>
-    </child>
-    <child>
-      <object class="scustomtkinter.sCTkDialContinuous" id="sctkdialcontinuous1">
-        <layout manager="grid">
-          <property name="column">1</property>
-          <property name="row">0</property>
-        </layout>
-      </object>
-    </child>
-    <child>
-      <object class="scustomtkinter.sCTkLabelTertiary" id="sctklabeltertiary1">
-        <property name="text" translatable="yes">sctklabeltertiary1</property>
-        <layout manager="grid">
-          <property name="column">2</property>
-          <property name="row">0</property>
-        </layout>
+        <child>
+          <object class="scustomtkinter.sCTkLabelPrimary" id="sctklabelprimary2">
+            <property name="text" translatable="yes">You can add widgets here</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkLabelSecondary" id="sctklabelsecondary1">
+            <property name="text" translatable="yes">Secondary Label</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary1">
+            <property name="text" translatable="yes">A Button</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
   </object>

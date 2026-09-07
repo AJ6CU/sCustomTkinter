@@ -291,9 +291,25 @@ class sCTkDialogForPreview(sCTkDialog):
     _MAKE_WINDOW = False
 
     def winfo_children(self):
-        # Same hack as the other composite previews: CTkFrame hides its
-        # internal canvas, and the Designer needs to see it to hit-test a click.
-        return super(tk.Frame, self).winfo_children()
+        """
+        Hides this widget's OWN parts from the Designer's binding pass.
+
+        pygubu walks winfo_children() binding a click handler to everything it
+        finds, and that handler resolves the clicked widget through
+        builder.get_widget_id(). The heading label and the three buttons are
+        built by the dialog, not by the builder, so they are not in its map:
+        clicking one resolved to None and selected nothing.
+
+        Returning only the content area means pygubu binds the dialog itself
+        and whatever the user put inside it. The dialog's own parts are bound
+        separately, in configure_for_preview(), to forward their clicks here --
+        and because they are not in this list, pygubu's pass does not overwrite
+        those bindings.
+        """
+        content = getattr(self, "contentFrame", None)
+        if content is None:
+            return super(tk.Frame, self).winfo_children()
+        return [content]
 
 
 class sCTkSelectorForPreviewBO(sCTkSelectorBO):
@@ -740,6 +756,43 @@ class sCTkDesignerPlugin(IDesignerPlugin):
                     _neutralize(row, ("<Button-1>", "<Double-Button-1>"))
             except Exception:
                 pass
+
+        elif builder_uid.endswith(".sCTkDialog"):
+            # Clicking the heading or a button selects the DIALOG.
+            #
+            # Those widgets belong to the dialog rather than to the builder, so
+            # pygubu's own handler resolves them to None and selects nothing.
+            # Forwarding the click to the dialog gives the Designer a widget it
+            # knows about, which is what the user meant by clicking a part of
+            # the dialog.
+            def _select_dialog(event, dialog=widget):
+                try:
+                    dialog.event_generate("<Button-1>", x=1, y=1)
+                except Exception:
+                    pass
+                return "break"
+
+            parts = [getattr(widget, "heading_Label", None),
+                     getattr(widget, "titleFrame", None),
+                     getattr(widget, "actionFrame", None)]
+            for name in ("apply", "cancel", "reset"):
+                parts.append(getattr(widget, f"{name}_Button", None))
+
+            for part in parts:
+                if part is None:
+                    continue
+                try:
+                    part.bind("<Button-1>", _select_dialog)
+                    # A CTk button draws on an internal canvas that swallows
+                    # the click before the widget-level binding sees it.
+                    inner = getattr(part, "_canvas", None)
+                    if inner is not None:
+                        inner.bind("<Button-1>", _select_dialog)
+                    label = getattr(part, "_text_label", None)
+                    if label is not None:
+                        label.bind("<Button-1>", _select_dialog)
+                except Exception:
+                    pass
 
         elif builder_uid.endswith(".sCTkPathChooser"):
             # Its browse button opens a MODAL file explorer -- clicking that
