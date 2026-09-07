@@ -318,16 +318,24 @@ class sCTkDialogForPreview(sCTkDialog):
         widget itself.
         """
         def select_dialog(event, dialog=self):
-            # TEMPORARY DIAGNOSTIC -- remove once selection works.
-            print("[preview] click forwarded from", event.widget)
+            # The event goes to the dialog's internal CANVAS, not to the
+            # dialog widget.
+            #
+            # CTkFrame.bind() redirects every binding to self._canvas rather
+            # than attaching it to the frame -- the same override that made
+            # scroll bindings silently vanish in sCTkScrollableFrame. So when
+            # the Designer bound its click handler to this dialog, the binding
+            # landed on the canvas. Generating the event on the dialog found
+            # nothing bound there and did nothing, which is why clicks were
+            # forwarded successfully and still selected nothing.
+            #
+            # It also explains why clicking the very edge always worked: the
+            # edge IS the canvas.
+            target = getattr(dialog, "_canvas", None) or dialog
             try:
-                # when="now" dispatches immediately. The default, "tail",
-                # queues the event, and a queued synthetic event can be
-                # dropped if the widget is rebuilt before it is processed.
-                dialog.event_generate("<Button-1>", x=1, y=1, when="now")
-                print("[preview] event_generate ok")
-            except Exception as exc:
-                print("[preview] event_generate failed:", exc)
+                target.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
             return "break"
 
         parts = [getattr(self, "heading_Label", None),
