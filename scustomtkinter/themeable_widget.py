@@ -384,7 +384,24 @@ class ThemeableWidget:
             current = self.cget(pname)
         except Exception:
             current = None
-        default = (defaults or {}).get(pname, current)
+        # Default resolution, in order:
+        #   1. an explicit default the caller declared
+        #   2. this widget's resolved THEME value
+        #   3. the current value
+        #
+        # Step 2 is what makes clearing a field in the Designer mean something.
+        # Without it the default was whatever the property already held, so
+        # blanking reported "the default is what you have" and nothing changed
+        # -- no error, but no revert either. For a themed widget the theme IS
+        # the default, and _local_defaults holds it already resolved.
+        #
+        # Step 3 remains for properties the theme says nothing about, where a
+        # no-op is still better than a guess.
+        if defaults and pname in defaults:
+            default = defaults[pname]
+        else:
+            theme_defaults = getattr(self, "_local_defaults", None) or {}
+            default = theme_defaults.get(pname, current)
 
         # A (light, dark) pair has to be resolved to ONE colour here.
         #
