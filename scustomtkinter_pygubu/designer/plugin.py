@@ -290,6 +290,64 @@ class sCTkDialogForPreview(sCTkDialog):
     _THEME_BLOCK_NAME = "sCTkDialog"
     _MAKE_WINDOW = False
 
+    def __init__(self, master=None, **kw):
+        super().__init__(master, **kw)
+        self._bind_own_parts_to_self()
+
+    def _bind_own_parts_to_self(self):
+        """
+        Makes a click on the heading or a button select the DIALOG.
+
+        The Designer resolves a clicked widget through
+        builder.get_widget_id(). The heading label and the three buttons are
+        built by the dialog rather than by the builder, so they are not in its
+        map: a click on one resolved to None and selected nothing. Only the
+        very edge of the dialog -- its own background canvas -- worked.
+
+        Forwarding the click to the dialog gives the Designer a widget it knows
+        about, which is what the user meant.
+
+        Done HERE, in the preview class's own __init__, rather than in
+        configure_for_preview(): that hook was not reaching this widget, and
+        this runs unconditionally at construction. It survives the Designer's
+        own binding pass because winfo_children() below excludes these parts,
+        so that pass never visits them.
+
+        CTk buttons draw on an internal canvas that receives the click before
+        the widget does, so _canvas and _text_label are bound as well as the
+        widget itself.
+        """
+        def select_dialog(event, dialog=self):
+            try:
+                dialog.event_generate("<Button-1>", x=1, y=1)
+            except Exception:
+                pass
+            return "break"
+
+        parts = [getattr(self, "heading_Label", None),
+                 getattr(self, "titleFrame", None),
+                 getattr(self, "actionFrame", None)]
+        for name in ("apply", "cancel", "reset"):
+            parts.append(getattr(self, f"{name}_Button", None))
+
+        for part in parts:
+            if part is None:
+                continue
+            for target in (part,
+                           getattr(part, "_canvas", None),
+                           getattr(part, "_text_label", None)):
+                if target is None:
+                    continue
+                try:
+                    target.bind("<Button-1>", select_dialog)
+                except Exception:
+                    pass
+
+    def set_buttons(self, count):
+        """Rebuilds the button row, then re-binds the new buttons."""
+        super().set_buttons(count)
+        self._bind_own_parts_to_self()
+
     def winfo_children(self):
         """
         Hides this widget's OWN parts from the Designer's binding pass.
@@ -767,43 +825,6 @@ class sCTkDesignerPlugin(IDesignerPlugin):
                     _neutralize(row, ("<Button-1>", "<Double-Button-1>"))
             except Exception:
                 pass
-
-        elif builder_uid.endswith(".sCTkDialog"):
-            # Clicking the heading or a button selects the DIALOG.
-            #
-            # Those widgets belong to the dialog rather than to the builder, so
-            # pygubu's own handler resolves them to None and selects nothing.
-            # Forwarding the click to the dialog gives the Designer a widget it
-            # knows about, which is what the user meant by clicking a part of
-            # the dialog.
-            def _select_dialog(event, dialog=widget):
-                try:
-                    dialog.event_generate("<Button-1>", x=1, y=1)
-                except Exception:
-                    pass
-                return "break"
-
-            parts = [getattr(widget, "heading_Label", None),
-                     getattr(widget, "titleFrame", None),
-                     getattr(widget, "actionFrame", None)]
-            for name in ("apply", "cancel", "reset"):
-                parts.append(getattr(widget, f"{name}_Button", None))
-
-            for part in parts:
-                if part is None:
-                    continue
-                try:
-                    part.bind("<Button-1>", _select_dialog)
-                    # A CTk button draws on an internal canvas that swallows
-                    # the click before the widget-level binding sees it.
-                    inner = getattr(part, "_canvas", None)
-                    if inner is not None:
-                        inner.bind("<Button-1>", _select_dialog)
-                    label = getattr(part, "_text_label", None)
-                    if label is not None:
-                        label.bind("<Button-1>", _select_dialog)
-                except Exception:
-                    pass
 
         elif builder_uid.endswith(".sCTkPathChooser"):
             # Its browse button opens a MODAL file explorer -- clicking that
