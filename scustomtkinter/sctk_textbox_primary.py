@@ -184,7 +184,7 @@ class sCTkTextboxPrimary(ctk.CTkTextbox, ThemeableWidget):
                     val = self._custom_disabled_map.get(pname) if self._custom_current_state == "disabled" else self._local_defaults.get(pname)
                     return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
 
-                return super().configure(pname)
+                return self._configure_query(pname)
 
         if "state" in kwargs:
             self._custom_current_state = str(kwargs.pop("state")).lower()

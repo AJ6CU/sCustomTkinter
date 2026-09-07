@@ -182,7 +182,7 @@ class sCTkOptionMenuSecondary(ctk.CTkFrame, ThemeableWidget):
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
                     return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
 
-                return super().configure(pname)
+                return self._configure_query(pname)
 
         if "values" in kwargs: self._menu.configure(values=kwargs.pop("values"))
         if "command" in kwargs: self._menu.configure(command=kwargs.pop("command"))

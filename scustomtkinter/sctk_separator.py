@@ -200,7 +200,7 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
             if pname in ["fg_color", "text_color"]:
                 val = self._custom_disabled_map.get(pname) if self.get_state() == "disabled" else self._local_defaults.get(pname)
                 return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
-            return super().configure(pname)
+            return self._configure_query(pname)
 
         # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
         # tuple, so this never fired and the dict form of configure() was

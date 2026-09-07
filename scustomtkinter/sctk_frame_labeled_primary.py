@@ -212,7 +212,7 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
                     return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
-                return super().configure(pname)
+                return self._configure_query(pname)
 
         if "state" in kwargs:
             target_state = kwargs.pop("state")

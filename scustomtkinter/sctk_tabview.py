@@ -227,7 +227,7 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
                 if pname == "state":
                     return ("state", "state", "state", "normal",
                             str(getattr(self, "_custom_current_state", "normal")))
-                return super().configure(pname)
+                return self._configure_query(pname)
 
         # state is this library's own property, not a native CTkTabview one,
         # and must be removed before the super() call below.

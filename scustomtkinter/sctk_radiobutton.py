@@ -191,7 +191,7 @@ class sCTkRadioButton(ctk.CTkRadioButton, ThemeableWidget):
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
                     return (pname, pname, pname, str(self._local_defaults.get(pname)), str(val))
 
-                return super().configure(pname)
+                return self._configure_query(pname)
 
         # CONFIRMED by direct testing: routing variable/value through
         # super().configure() (rather than writing directly to CTkRadioButton's

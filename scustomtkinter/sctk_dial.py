@@ -207,7 +207,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                          "right_click_callback"]:
                 return (pname, pname, pname, "", "")
             try:
-                return super().configure(pname)
+                return self._configure_query(pname)
             except Exception:
                 return (pname, pname, pname, "", "")
 

@@ -113,7 +113,7 @@ class sCTkScrollbar(ctk.CTkScrollbar, ThemeableWidget):
                 if pname in self._THEME_TRACKED_KEYS:
                     val = self._local_defaults.get(pname)
                     return (pname, pname, pname, str(val), str(val))
-                return super().configure(pname)
+                return self._configure_query(pname)
 
         # FIX: record theme overrides BEFORE the repaint below.
         #
