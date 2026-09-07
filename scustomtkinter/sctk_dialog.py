@@ -151,11 +151,18 @@ class sCTkDialog(sCTkFrame):
         Raises:
             KeyError: naming the first missing key.
         """
+        # FIX: this read self.__class__.__name__, which for a subclass is the
+        # SUBCLASS's name -- so the Designer preview class reported
+        # "'sCTkDialogForPreview' theme block is missing 'heading_font'" while
+        # the block it actually reads is named by _THEME_BLOCK_NAME. Validation
+        # must resolve the block the same way ThemeableWidget does, or it
+        # reports a block that was never consulted.
+        name = getattr(self, "_THEME_BLOCK_NAME", None) or self.__class__.__name__
         for key in self._REQUIRED_THEME_KEYS:
             if self.final_kw.get(key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing "
-                    f"'{key}' at the top level of sCTkThemes.json."
+                    f"'{name}' theme block is missing '{key}' at the top "
+                    f"level of sCTkThemes.json."
                 )
 
     # ------------------------------------------------------------------

@@ -41,13 +41,13 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         for required_key in ("text_color", "checkbox_fg_color", "checkbox_hover_color", "border_color", "checkmark_color"):
             if self._local_defaults.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' "
                     f"at the top level of sCTkThemes.json."
                 )
         for required_key in ("text_color", "checkbox_fg_color", "border_color", "checkmark_color"):
             if self._custom_disabled_map.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' in disabled_map."
                 )
 
         fg_color = self._local_defaults.get("fg_color", "transparent")

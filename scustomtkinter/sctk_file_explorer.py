@@ -212,9 +212,9 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         # principle established for sCTkSwitch, the label family, and
         # sCTkTableview elsewhere in this project.
         if theme.get("button_color") is None:
-            raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'button_color' at the top level.")
+            raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'button_color' at the top level.")
         if d_map.get("button_color") is None:
-            raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'button_color' in disabled_map.")
+            raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'button_color' in disabled_map.")
 
         if current_state == "disabled":
             btn_fg = d_map.get("btn_fg", theme.get("btn_fg"))
@@ -576,16 +576,16 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             # sCTkTableview elsewhere in this project.
             if current_state == "disabled":
                 if d_map.get("row_dimmed_text") is None:
-                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_dimmed_text' in disabled_map.")
+                    raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'row_dimmed_text' in disabled_map.")
                 txt_color, row_widget_state, btn_bg = self._resolve_color(d_map.get("row_dimmed_text")), "disabled", "transparent"
             elif is_valid_row:
                 if theme.get("row_active_text") is None:
-                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_active_text' at the top level.")
+                    raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'row_active_text' at the top level.")
                 txt_color, row_widget_state = self._resolve_color(theme.get("row_active_text")), "normal"
                 btn_bg = self._resolve_color(theme.get("btn_fg")) if is_currently_highlighted else "transparent"
             else:
                 if theme.get("row_dimmed_text") is None:
-                    raise KeyError(f"'{self.__class__.__name__}' theme block is missing 'row_dimmed_text' at the top level.")
+                    raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'row_dimmed_text' at the top level.")
                 txt_color, row_widget_state, btn_bg = self._resolve_color(theme.get("row_dimmed_text")), "disabled", "transparent"
 
             item_btn = sCTkButtonSecondary(self.explorer_frame, text=f"{icon}{item}", anchor="w", fg_color=btn_bg, text_color=txt_color, state=row_widget_state, hover_color=self._resolve_color(theme.get("btn_hover")), command=lambda p=full_path: self._on_item_clicked(p))

@@ -61,19 +61,19 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
                               "cell_text_color", "grid_line_color"):
             if self._switch_theme_profile.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' "
                     f"at the top level of sCTkThemes.json."
                 )
             if self._custom_disabled_map.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' in disabled_map."
                 )
 
         # Fonts only need to exist at the top level.
         for required_key in ("header_font", "cell_font"):
             if self._switch_theme_profile.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' "
                     f"at the top level of sCTkThemes.json."
                 )
 
@@ -86,11 +86,11 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         for ctor_key, ctor_val in (("cell_bg_color", cell_bg_color), ("cell_alt_bg_color", cell_alt_bg_color)):
             if ctor_val is None and self._switch_theme_profile.get(ctor_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}': '{ctor_key}' must be provided either as a "
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}': '{ctor_key}' must be provided either as a "
                     f"constructor argument or in the theme's top-level block."
                 )
             if self._custom_disabled_map.get(ctor_key) is None:
-                raise KeyError(f"'{self.__class__.__name__}' theme block is missing '{ctor_key}' in disabled_map.")
+                raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{ctor_key}' in disabled_map.")
 
         # 3. Extract theme-driven values -- safe to read directly via .get()
         # now, without a fallback, since the validation above guarantees each

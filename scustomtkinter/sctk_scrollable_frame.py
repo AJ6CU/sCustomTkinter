@@ -238,12 +238,12 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableW
                                  "scrollbar_button_hover_color"):
                 if self._local_defaults.get(required_key) is None:
                     raise KeyError(
-                        f"'{self.__class__.__name__}' theme block is missing "
+                        f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing "
                         f"'{required_key}' at the top level of sCTkThemes.json."
                     )
                 if self._custom_disabled_map.get(required_key) is None:
                     raise KeyError(
-                        f"'{self.__class__.__name__}' theme block is missing "
+                        f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing "
                         f"'{required_key}' in disabled_map."
                     )
 

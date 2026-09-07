@@ -484,13 +484,13 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         for required_key in ("entry_color", "border_color", "button_color", "button_hover_color", "text_color"):
             if self._local_defaults.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' "
                     f"at the top level of sCTkThemes.json."
                 )
         for required_key in ("entry_color", "border_color", "text_color", "button_color"):
             if self._custom_disabled_map.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' in disabled_map."
                 )
 
         if is_disabled:
@@ -500,7 +500,7 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             for required_key in ("entry_color", "border_color", "text_color"):
                 if m.get(required_key) is None:
                     raise KeyError(
-                        f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                        f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' "
                         f"in readonly_map -- required because state 'readonly' was requested."
                     )
         else:

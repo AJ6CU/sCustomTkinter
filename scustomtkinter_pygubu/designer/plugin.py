@@ -281,12 +281,13 @@ class sCTkDialogForPreview(sCTkDialog):
     simply have no effect on the preview, because there is no window for them
     to act on.
 
-    There is no "sCTkDialog" block in sCTkThemes.json: the dialog takes its
-    appearance from sCTkFrame via its generated UI base class, so
-    _THEME_BLOCK_NAME points there. Naming a block that does not exist would
-    resolve to an empty theme.
+    _THEME_BLOCK_NAME names the block this preview reads. It must be
+    "sCTkDialog", not "sCTkFrame": the dialog now has a block of its own
+    carrying heading_font and heading_text_color, and those keys are required.
+    Pointing at sCTkFrame's block resolved without them and construction failed
+    with a KeyError naming a block the widget never reads.
     """
-    _THEME_BLOCK_NAME = "sCTkFrame"
+    _THEME_BLOCK_NAME = "sCTkDialog"
     _MAKE_WINDOW = False
 
     def winfo_children(self):

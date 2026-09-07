@@ -163,7 +163,7 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
                               "btn_fg", "btn_border_color", "btn_text_color", "btn_hover", "btn_font"):
             if theme.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' "
+                    f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing '{required_key}' "
                     f"at the top level of sCTkThemes.json."
                 )
 
