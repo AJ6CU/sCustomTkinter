@@ -441,6 +441,25 @@ class ThemeableWidget:
         #
         # It is rendered as "{Family} size style" -- the same form the editor
         # produces, so a value read out and written back round-trips.
+        # A font TUPLE -- ("Arial", 13) or ("Arial", 13, "bold") -- is how this
+        # library's theme file stores fonts, and it is what comes back once the
+        # theme is used as a property's default. pygubu parses font properties
+        # with tkfontstr_to_dict(), which wants a Tk font STRING:
+        #
+        #   expected string or bytes-like object, got 'tuple'
+        #
+        # Distinguished from a colour pair above by its second element being a
+        # number rather than a string.
+        if (isinstance(value, (tuple, list)) and 2 <= len(value) <= 4
+                and isinstance(value[0], str)
+                and isinstance(value[1], (int, float))):
+            family = str(value[0])
+            parts = [f"{{{family}}}" if " " in family else family,
+                     str(int(value[1]))]
+            parts.extend(str(extra) for extra in value[2:]
+                         if extra and str(extra) not in ("normal", "roman"))
+            return " ".join(parts)
+
         if value is not None and type(value).__name__ == "CTkFont":
             try:
                 family = value.cget("family")
