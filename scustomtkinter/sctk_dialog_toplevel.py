@@ -51,6 +51,28 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
                 requires.
             **kw: Any native CTkToplevel argument.
         """
+        # FIX: an extra blank window appeared when master was None.
+        #
+        # tkinter creates a default root implicitly the first time any widget
+        # is made without one -- and that root is a real, visible, empty
+        # window. A dialog constructed with no master therefore produced TWO
+        # windows: the dialog, and a blank one behind it.
+        #
+        # If a root already exists we adopt it. If not, one is created and
+        # immediately withdrawn, so it services the Tcl interpreter without
+        # ever being seen. Withdrawing rather than avoiding it is necessary:
+        # Tk requires a root, and letting tkinter make one silently is exactly
+        # what caused the problem.
+        self._implicit_root = None
+        if master is None:
+            existing = getattr(tk, "_default_root", None)
+            if existing is None:
+                self._implicit_root = ctk.CTk()
+                self._implicit_root.withdraw()
+                master = self._implicit_root
+            else:
+                master = existing
+
         super().__init__(master, **kw)
 
         # locate_over defaults to whichever window owns master. winfo_toplevel()
@@ -157,6 +179,21 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
         except Exception:
             # Window destroyed between construction and this call.
             pass
+
+    def destroy(self):
+        """
+        Destroys the window, and the implicit root if this widget created one.
+
+        Without this, a dialog built with no master would leave the withdrawn
+        root alive after closing and the interpreter would never exit.
+        """
+        implicit = getattr(self, "_implicit_root", None)
+        super().destroy()
+        if implicit is not None:
+            try:
+                implicit.destroy()
+            except Exception:
+                pass
 
     def release_modal(self):
         """Releases the input grab, leaving the window open but non-blocking."""

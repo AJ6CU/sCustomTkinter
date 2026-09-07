@@ -46,9 +46,15 @@ class sCTkDialog(sCTkFrame):
     # and leave the Designer unusable.
     _MAKE_WINDOW = True
 
+    # How many buttons each setting shows, in order. Apply is always present:
+    # a dialog with no way to accept is a message box, not a dialog.
+    _BUTTON_ORDER = ("apply", "cancel", "reset")
+
     def __init__(self, master=None, *, title=None, width=None, height=None,
                  locate_over=None, offset_x=40, offset_y=40, modal=False,
-                 toplevel=None, **kw):
+                 buttons=3, apply_text="Apply", cancel_text="Cancel",
+                 reset_text="Reset", apply_command=None, cancel_command=None,
+                 reset_command=None, toplevel=None, **kw):
         """
         Args:
             master: Parent widget. Also the default for locate_over.
@@ -64,12 +70,32 @@ class sCTkDialog(sCTkFrame):
             modal: True to block interaction with the rest of the application
                 while the dialog is open. run_and_wait() additionally blocks
                 the calling code until it closes.
+            buttons: How many action buttons to show -- 3 (Apply, Cancel,
+                Reset), 2 (Apply, Cancel) or 1 (Apply). Apply is always
+                present: a dialog with no way to accept is a message box.
+                Buttons not shown are never created, so `reset_Button` does
+                not exist when buttons is 2 or 1 -- use has_button() to test.
+            apply_text / cancel_text / reset_text: Button labels.
+            apply_command / cancel_command / reset_command: Click callbacks.
+                A callback given here takes precedence over the corresponding
+                apply_CB / cancel_CB / reset_CB method, which remain available
+                to override in a subclass.
             toplevel: An existing window to use instead of creating one.
                 Rarely needed; present so a caller can supply a pre-configured
                 window.
             **kw: Any native sCTkFrame argument.
         """
         self.dialog_parent = master
+
+        try:
+            self._button_count = max(1, min(3, int(buttons)))
+        except (TypeError, ValueError):
+            self._button_count = 3
+        self._button_text = {"apply": apply_text, "cancel": cancel_text,
+                             "reset": reset_text}
+        self._button_command = {"apply": apply_command,
+                                "cancel": cancel_command,
+                                "reset": reset_command}
 
         if self._MAKE_WINDOW:
             if toplevel is None:
@@ -127,25 +153,30 @@ class sCTkDialog(sCTkFrame):
         self.contentFrame.pack(expand=True, fill="both", padx=5, side="top")
 
         # --- action row ----------------------------------------------------
+        # Only the requested buttons are created. Attributes for the others are
+        # set to None rather than left undefined, so `self.reset_Button` is
+        # always a valid expression -- code that reaches for a button that was
+        # not requested gets None instead of AttributeError.
         self.actionFrame = sCTkFrame(self)
 
-        self.applyText_VAR = tk.StringVar(master=self, value="Apply")
-        self.apply_Button = sCTkButtonPrimary(self.actionFrame)
-        self.apply_Button.configure(
-            textvariable=self.applyText_VAR, command=self.apply_CB)
-        self.apply_Button.grid(column=0, padx=10, row=0)
+        self.apply_Button = self.cancel_Button = self.reset_Button = None
+        self.applyText_VAR = self.cancelText_VAR = self.resetText_VAR = None
 
-        self.cancelText_VAR = tk.StringVar(master=self, value="Cancel")
-        self.cancel_Button = sCTkButtonSecondary(self.actionFrame)
-        self.cancel_Button.configure(
-            textvariable=self.cancelText_VAR, command=self.cancel_CB)
-        self.cancel_Button.grid(column=1, padx=10, row=0)
+        button_classes = {"apply": sCTkButtonPrimary,
+                          "cancel": sCTkButtonSecondary,
+                          "reset": sCTkButtonSecondary}
 
-        self.resetText_VAR = tk.StringVar(master=self, value="Reset")
-        self.reset_Button = sCTkButtonSecondary(self.actionFrame)
-        self.reset_Button.configure(
-            textvariable=self.resetText_VAR, command=self.reset_CB)
-        self.reset_Button.grid(column=2, padx=10, row=0)
+        for column, name in enumerate(self._BUTTON_ORDER[:self._button_count]):
+            var = tk.StringVar(master=self, value=self._button_text[name])
+            button = button_classes[name](self.actionFrame)
+            # A command passed to the constructor wins; otherwise the
+            # overridable method is used, so a subclass that only defines
+            # apply_CB() still works.
+            command = self._button_command[name] or getattr(self, f"{name}_CB")
+            button.configure(textvariable=var, command=command)
+            button.grid(column=column, padx=10, row=0)
+            setattr(self, f"{name}_Button", button)
+            setattr(self, f"{name}Text_VAR", var)
 
         self.actionFrame.pack(anchor="s", expand=True, fill="x",
                               padx=5, pady="10 20", side="top")
@@ -216,14 +247,35 @@ class sCTkDialog(sCTkFrame):
         if anchor is not None and str(anchor).lower() in ("w", "e", "center"):
             self.heading_Label.configure(anchor=str(anchor).lower())
 
+    def has_button(self, name):
+        """
+        Whether a given button exists on this dialog.
+
+        Args:
+            name: "apply", "cancel" or "reset".
+
+        Returns:
+            True if that button was created and still exists.
+        """
+        button = getattr(self, f"{name}_Button", None)
+        if button is None:
+            return False
+        try:
+            return bool(button.winfo_exists())
+        except Exception:
+            return False
+
     def set_two_button(self):
         """
         Reduces the action row to Apply and Cancel by removing Reset.
 
-        Irreversible -- the button is destroyed, not hidden. set_reset_button()
-        returns False afterwards rather than raising.
+        Retained from the original API. Prefer buttons=2 at construction --
+        this destroys a button that was built a moment earlier. Irreversible;
+        set_reset_button() returns False afterwards rather than raising.
         """
-        self.reset_Button.destroy()
+        if self.has_button("reset"):
+            self.reset_Button.destroy()
+        self._button_count = min(self._button_count, 2)
 
     def set_apply_button(self, button_name=None, button_command=None):
         """
@@ -234,8 +286,10 @@ class sCTkDialog(sCTkFrame):
             button_command: New callback. None leaves it unchanged.
 
         Returns:
-            True.
+            True, or False if the button does not exist on this dialog.
         """
+        if not self.has_button("apply"):
+            return False
         if button_name is not None:
             self.applyText_VAR.set(button_name)
         if button_command is not None:
@@ -244,6 +298,8 @@ class sCTkDialog(sCTkFrame):
 
     def set_cancel_button(self, button_name=None, button_command=None):
         """Sets the Cancel button's label and callback. See set_apply_button()."""
+        if not self.has_button("cancel"):
+            return False
         if button_name is not None:
             self.cancelText_VAR.set(button_name)
         if button_command is not None:
@@ -258,7 +314,7 @@ class sCTkDialog(sCTkFrame):
             False if the button has been removed by set_two_button(), in which
             case nothing is changed. True otherwise.
         """
-        if not self.reset_Button.winfo_exists():
+        if not self.has_button("reset"):
             return False
         if button_name is not None:
             self.resetText_VAR.set(button_name)

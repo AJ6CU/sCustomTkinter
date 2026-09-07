@@ -39,8 +39,14 @@ class sCTkDialogBO(BuilderObject):
     # pass them at construction rather than leaving BuilderObject to apply
     # them afterwards.
     OPTIONS_CUSTOM = ("title", "width", "height", "modal",
-                      "offset_x", "offset_y")
-    properties = OPTIONS_CUSTOM
+                      "offset_x", "offset_y", "buttons",
+                      "apply_text", "cancel_text", "reset_text")
+    properties = OPTIONS_CUSTOM + ("apply_command", "cancel_command",
+                                   "reset_command")
+
+    # Declared so pygubu routes these through its callback handling rather
+    # than stringifying the property metadata into the generated code.
+    command_properties = ("apply_command", "cancel_command", "reset_command")
 
     def get_child_master(self):
         """
@@ -82,6 +88,20 @@ class sCTkDialogBO(BuilderObject):
         if modal not in (None, ""):
             args["modal"] = str(modal).lower() in ("true", "1", "yes")
 
+        buttons = props.get("buttons")
+        if buttons not in (None, ""):
+            try:
+                args["buttons"] = int(buttons)
+            except (TypeError, ValueError):
+                pass
+
+        for prop, arg in (("apply_text", "apply_text"),
+                          ("cancel_text", "cancel_text"),
+                          ("reset_text", "reset_text")):
+            value = props.get(prop)
+            if value:
+                args[arg] = str(value)
+
         return args
 
     def realize(self, parent, extra_init_args: dict = None):
@@ -105,6 +125,33 @@ class sCTkDialogBO(BuilderObject):
             bag.append(f"{name}={value!r}")
 
         return [f"{self.code_identifier()} = {self._code_class_name()}({', '.join(bag)})"]
+
+    def _set_property(self, target_widget, pname, value):
+        """
+        Routes the button command properties to the widget's own setters.
+
+        These are not configure() options -- sCTkDialog exposes them as
+        constructor arguments and through set_apply_button() and friends -- so
+        without this they would reach sCTkFrame.configure() and raise.
+
+        A command aimed at a button this dialog does not have is ignored
+        rather than raising: reducing `buttons` while a command is still set
+        on a removed button is an ordinary thing to do in the inspector.
+        """
+        command_targets = {
+            "apply_command": "set_apply_button",
+            "cancel_command": "set_cancel_button",
+            "reset_command": "set_reset_button",
+        }
+        if pname in command_targets:
+            if value:
+                getattr(target_widget, command_targets[pname])(
+                    button_command=value)
+            return None
+        if pname in self.OPTIONS_CUSTOM:
+            # Applied at construction by realize(); nothing to do here.
+            return None
+        return super()._set_property(target_widget, pname, value)
 
     def code_imports(self):
         # should return an iterable of (module, classname/function) to import
@@ -142,4 +189,31 @@ register_custom_property(
 register_custom_property(
     builder_id, "offset_y", "integernumber",
     help="Pixels below the parent window's top-left corner. Default 40."
+)
+register_custom_property(
+    builder_id, "buttons", "choice", values=("3", "2", "1"), state="readonly",
+    help="3 = Apply, Cancel, Reset. 2 = Apply, Cancel. 1 = Apply only. "
+         "Apply is always present."
+)
+register_custom_property(
+    builder_id, "apply_text", "entry", help="Apply button label. Default 'Apply'."
+)
+register_custom_property(
+    builder_id, "cancel_text", "entry",
+    help="Cancel button label. Default 'Cancel'. Ignored when buttons is 1."
+)
+register_custom_property(
+    builder_id, "reset_text", "entry",
+    help="Reset button label. Default 'Reset'. Ignored unless buttons is 3."
+)
+register_custom_property(
+    builder_id, "apply_command", "commandentry", help="Called when Apply is clicked."
+)
+register_custom_property(
+    builder_id, "cancel_command", "commandentry",
+    help="Called when Cancel is clicked. Ignored when buttons is 1."
+)
+register_custom_property(
+    builder_id, "reset_command", "commandentry",
+    help="Called when Reset is clicked. Ignored unless buttons is 3."
 )
