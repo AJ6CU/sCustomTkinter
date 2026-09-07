@@ -34,6 +34,7 @@
 ../docs/src/sCTkDialContinuous.md
 ../docs/src/sCTkDialRange.md
 ../docs/src/sCTkDialSelector.md
+../docs/src/sCTkDialog.md
 ../docs/src/sCTkFileExplorer.md
 ../docs/src/sCTkFrameLabeledPrimary.md
 ../docs/src/sCTkFrameLabeledSecondary.md

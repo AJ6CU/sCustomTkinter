@@ -223,6 +223,16 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         except TypeError:
             self._user_command()
 
+    # Native constructor defaults, for the single-argument query below.
+    #
+    # Deliberately EMPTY. This widget declares no width or height of its own --
+    # it forwards both to native CTkSwitch -- so there is no default here that
+    # can be stated from this file's own source. Every property therefore
+    # reports its current value as its default, which makes blanking a field in
+    # a designer a no-op rather than a jump to a guessed value. Guessing would
+    # be worse than not answering: the guess gets applied.
+    _NATIVE_QUERY_DEFAULTS = {}
+
     def configure(self, require_redraw: Any = None, **kwargs: Any) -> Any:
         """
         Standard widget configuration, with Pygubu/positional-argument handling.
@@ -253,7 +263,30 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         if require_redraw is not None and not kwargs and isinstance(require_redraw, str):
             if require_redraw == "state":
                 return ('state', 'state', 'State', 'normal', str(getattr(self, "_custom_current_state", "normal")))
-            return super().configure(require_redraw)
+            # FIX: this used to be `return super().configure(require_redraw)`.
+            #
+            # The native configure() is declared
+            # configure(self, require_redraw=False, **kwargs), so the property
+            # NAME was passed as require_redraw and the call returned None.
+            # Pygubu's _get_default_value() expects a five-element tuple, got
+            # None, and handed that None back to _set_property() -- where
+            # CustomTkinter raised "float() argument must be a string or a real
+            # number, not 'NoneType'".
+            #
+            # Reached whenever a field is blanked in the Designer inspector,
+            # which calls configure(name) to read the property's default.
+            #
+            # A proper Tkinter-style tuple is returned instead, built from
+            # cget() so the reported current value is real. Properties with no
+            # known native default report their current value as the default,
+            # making a blank a no-op rather than a jump to a guessed value.
+            try:
+                _current = self.cget(require_redraw)
+            except Exception:
+                _current = None
+            _default = self._NATIVE_QUERY_DEFAULTS.get(require_redraw, _current)
+            return (require_redraw, require_redraw, require_redraw,
+                    _default, _current)
 
         if isinstance(require_redraw, dict):
             kwargs = require_redraw | kwargs

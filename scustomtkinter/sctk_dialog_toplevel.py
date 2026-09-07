@@ -27,6 +27,12 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
     application window.
     """
 
+    # Floor for a content-sized window. Explicit width/height below these are
+    # honoured -- a caller asking for 200x100 gets it; these only apply when
+    # the size is being derived from the content.
+    MIN_WIDTH = 320
+    MIN_HEIGHT = 180
+
     def __init__(self, master=None, *, title=None, width=None, height=None,
                  locate_over=None, offset_x=40, offset_y=40, modal=False,
                  transient=True, **kw):
@@ -35,8 +41,10 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
             master: The Tk parent. Required for the window to belong to the
                 right interpreter -- see the note below.
             title: Window title bar text.
-            width: Window width in pixels. Omit to size to content.
-            height: Window height in pixels. Omit to size to content.
+            width: Window width in pixels. Omit to size to content, subject
+                to MIN_WIDTH.
+            height: Window height in pixels. Omit to size to content, subject
+                to MIN_HEIGHT.
             locate_over: The window this dialog should appear over, and be
                 transient to. Defaults to master's own toplevel.
 
@@ -140,8 +148,18 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
         # freshly created window is 1x1 at 0,0.
         self.update_idletasks()
 
-        width = self._requested_width or self.winfo_reqwidth()
-        height = self._requested_height or self.winfo_reqheight()
+        # The minimum applies ONLY to a dimension being derived from content.
+        # An explicit size is honoured exactly: a caller asking for 200x100
+        # gets 200x100, because they had a reason to ask.
+        if self._requested_width:
+            width = self._requested_width
+        else:
+            width = max(self.winfo_reqwidth(), self.MIN_WIDTH)
+
+        if self._requested_height:
+            height = self._requested_height
+        else:
+            height = max(self.winfo_reqheight(), self.MIN_HEIGHT)
 
         ref = self._locate_over
         try:
@@ -164,10 +182,42 @@ class sCTkDialogToplevel(ctk.CTkToplevel):
         x = max(0, min(x, self.winfo_screenwidth() - width))
         y = max(0, min(y, self.winfo_screenheight() - height))
 
-        if self._requested_width or self._requested_height:
-            self.geometry(f"{width}x{height}+{x}+{y}")
-        else:
-            self.geometry(f"+{x}+{y}")
+        # Always set both dimensions. Setting only the position and letting Tk
+        # size the window works only while nothing has been requested; once a
+        # width is given, Tk keeps whatever height it last computed -- which
+        # was the empty-window height if this ran before the content existed.
+        self.geometry(f"{width}x{height}+{x}+{y}")
+
+    def set_size(self, width=None, height=None):
+        """
+        Changes the window size, keeping it where it is.
+
+        Args:
+            width: New width in pixels, or None to leave it. Pass 0 or an
+                empty value to go back to sizing to content.
+            height: Same, for height.
+        """
+        if width is not None:
+            self._requested_width = int(width) if width else None
+        if height is not None:
+            self._requested_height = int(height) if height else None
+        self.place_over()
+
+    def get_size(self):
+        """
+        Returns the window's (width, height).
+
+        Reports the REQUESTED size where one was given, and the actual size
+        otherwise -- so a dialog sized to its content reports what it really
+        is rather than None.
+        """
+        try:
+            self.update_idletasks()
+            actual_w, actual_h = self.winfo_width(), self.winfo_height()
+        except Exception:
+            actual_w = actual_h = 0
+        return (self._requested_width or actual_w,
+                self._requested_height or actual_h)
 
     def _apply_modal(self):
         """

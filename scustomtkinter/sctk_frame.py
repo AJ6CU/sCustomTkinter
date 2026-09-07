@@ -66,6 +66,12 @@ class sCTkFrame(ctk.CTkFrame, ThemeableWidget):
     #              overwrite_preferred_drawing_method=None, **kwargs)
     # "master" is excluded here since it's always passed positionally, never
     # part of the filtered kwargs dict.
+    # Native CTkFrame's own constructor defaults, for the single-argument
+    # query below. Taken from the signature quoted above: anything not listed
+    # reports its current value as its default, which makes blanking that
+    # field in a designer a no-op rather than a change to a guessed value.
+    _NATIVE_DEFAULTS = {"width": 200, "height": 200}
+
     _NATIVE_CTKFRAME_KWARGS = frozenset({
         "width", "height", "corner_radius", "border_width", "bg_color",
         "fg_color", "border_color", "background_corner_colors",
@@ -138,7 +144,31 @@ class sCTkFrame(ctk.CTkFrame, ThemeableWidget):
                 if pname in ["fg_color", "border_color"]:
                     val = self._local_defaults.get(pname)
                     return (pname, pname, pname, str(val), str(val))
-                return super().configure(pname)
+
+                # FIX: this used to be `return super().configure(pname)`.
+                #
+                # Native CTkFrame.configure() is declared
+                # configure(self, require_redraw=False, **kwargs) -- so the
+                # property NAME was passed as require_redraw and the call
+                # returned None. Pygubu's _get_default_value() expects a
+                # five-element tuple, found None, and handed that None straight
+                # back to _set_property(), where CustomTkinter did float(None):
+                #
+                #   Failed to set property 'height' ... float() argument must
+                #   be a string or a real number, not 'NoneType'
+                #
+                # Reached whenever a field is blanked in the Designer
+                # inspector, which calls configure(name) to discover the
+                # property's default.
+                #
+                # A proper Tkinter-style tuple is returned instead, built from
+                # cget() so the reported current value is real.
+                try:
+                    current = self.cget(pname)
+                except Exception:
+                    current = None
+                default = self._NATIVE_DEFAULTS.get(pname, current)
+                return (pname, pname, pname, default, current)
 
         # Absorbs "state" so generic test harnesses that call
         # configure(state=...) uniformly across widget types don't raise on a

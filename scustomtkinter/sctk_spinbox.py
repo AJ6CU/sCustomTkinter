@@ -177,6 +177,10 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             else:
                 self.entry.grid(row=0, column=0, rowspan=2, padx=(0, 2), sticky="nsew"); self.up_button.grid(row=0, column=1, padx=(1, 0), pady=(0, 1), sticky="nsew"); self.down_button.grid(row=1, column=1, padx=(1, 0), pady=(1, 0), sticky="nsew")
         self.update_idletasks()
+    # Native constructor defaults, for the single-argument query below.
+    # Anything not listed reports its current value as its default.
+    _NATIVE_QUERY_DEFAULTS = {"width": 140, "height": 32}
+
     def configure(self, require_redraw=None, **kwargs):
         """Standardized configuration handler supporting Pygubu workspace properties switches."""
         if require_redraw is not None and not kwargs and isinstance(require_redraw, str):
@@ -196,7 +200,30 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
                 "values": ("values", "values", "values", "", " ".join([f'"{v}"' if ' ' in v else v for v in getattr(self, "_values", [])]))
             }
             if require_redraw in mapping: return mapping[require_redraw]
-            return super().configure(require_redraw)
+            # FIX: this used to be `return super().configure(require_redraw)`.
+            #
+            # The native configure() is declared
+            # configure(self, require_redraw=False, **kwargs), so the property
+            # NAME was passed as require_redraw and the call returned None.
+            # Pygubu's _get_default_value() expects a five-element tuple, got
+            # None, and handed that None back to _set_property() -- where
+            # CustomTkinter raised "float() argument must be a string or a real
+            # number, not 'NoneType'".
+            #
+            # Reached whenever a field is blanked in the Designer inspector,
+            # which calls configure(name) to read the property's default.
+            #
+            # A proper Tkinter-style tuple is returned instead, built from
+            # cget() so the reported current value is real. Properties with no
+            # known native default report their current value as the default,
+            # making a blank a no-op rather than a jump to a guessed value.
+            try:
+                _current = self.cget(require_redraw)
+            except Exception:
+                _current = None
+            _default = self._NATIVE_QUERY_DEFAULTS.get(require_redraw, _current)
+            return (require_redraw, require_redraw, require_redraw,
+                    _default, _current)
 
         if isinstance(require_redraw, dict): kwargs.update(require_redraw)
         if "wrap" in kwargs: self._wrap = kwargs.pop("wrap") if isinstance(kwargs["wrap"], bool) else (str(kwargs.pop("wrap")).lower() in ("true", "1", "yes"))

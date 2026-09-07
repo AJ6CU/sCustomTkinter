@@ -62,6 +62,21 @@ Four things that matter:
 
 **Call `_finalize_themeable_lifecycle()` last.** It notifies Pygubu that construction finished.
 
+### A CTkFrame with an explicit size ignores its children
+
+`CTkFrame` defaults to 200x200, and a frame given an explicit width or height
+requests THAT size regardless of what is inside it. Setting one dimension and
+leaving the other at its default silently imposes 200px:
+
+```python
+self.contentFrame.configure(width=500)            # height still demands 200
+self.contentFrame.configure(width=500, height=1)  # collapses to its children
+```
+
+`sCTkDialog` carried an unexplained 120px of empty space above its button row
+for exactly this reason. If a container is meant to size to its contents,
+collapse the dimension you are not setting.
+
 ### Composing an sCTk widget as a base class
 
 If your widget inherits another sCTk widget rather than a native one — `sCTkTableview` inherits `sCTkScrollableFrame`, `sCTkSelector` inherits `sCTkFrame` — the parent's `__init__` runs with `self.final_kw` built from **your** theme block, not its own. `ThemeableWidget`'s run-once guard prevents it being rebuilt.
@@ -144,7 +159,9 @@ if kwargs:
 
 ### Subclasses and theme block names
 
-`ThemeableWidget` resolves a block by `self.__class__.__name__`, with `_THEME_BLOCK_NAME` as an override. A subclass whose name has no theme block gets an empty one — and any widget with fail-loud validation then raises. Preview subclasses in the Designer plugin all set it.
+`ThemeableWidget` resolves a block by `self.__class__.__name__`, with `_THEME_BLOCK_NAME` as an override. A subclass whose name has no theme block gets an empty one — and any widget with fail-loud validation then raises. Preview subclasses in the Designer plugin all set it, and so does any widget meant to be subclassed by users.
+
+Two failures follow from this, both under [Recurring bug patterns](#recurring-bug-patterns): a widget built for subclassing needs to declare the attribute, and validation messages must report the resolved block rather than the class.
 
 ---
 
@@ -192,6 +209,91 @@ except:
 ```
 
 Catches `NameError` too. A misspelled variable — `CTkScrollableFrame_builder_id` where `sCTkScrollableFrame_builder_id` was meant — became a silent no-op that surfaced days later as a wrong default in the Designer inspector. Use `except RuntimeError:` or whatever you actually expect.
+
+### `configure()` must handle the single-argument query form
+
+Four widgets failed the same way in one evening. Pygubu calls `configure(name)`
+to read a property's default whenever a field is blanked in the Designer
+inspector, and expects a Tkinter-style five-element tuple back:
+
+```python
+(name, name, name, default, current)
+```
+
+Forwarding the name to a native `configure()` does not do that. CustomTkinter
+declares `configure(self, require_redraw=False, **kwargs)`, so the property NAME
+arrives as `require_redraw` and the call returns `None`. Pygubu then hands that
+`None` straight to `_set_property()`:
+
+```
+Failed to set property 'height' ... float() argument must be a string or a
+real number, not 'NoneType'
+```
+
+Handle the query explicitly and build the tuple from `cget()`:
+
+```python
+try:
+    current = self.cget(pname)
+except Exception:
+    current = None
+default = self._NATIVE_QUERY_DEFAULTS.get(pname, current)
+return (pname, pname, pname, default, current)
+```
+
+**Only state a default you can point at.** `sCTkSpinbox` and `sCTkTableview`
+declare theirs from their own constructor signatures; `sCTkSwitch`'s table is
+empty because it forwards width and height to native `CTkSwitch` and has none of
+its own. A property with no stated default reports its current value, making a
+blank a no-op — guessing would be worse, because the guess gets applied.
+
+Note this is separate from the `*args` version of the same problem: a
+`configure(self, cnf=None, **kwargs)` signature receives the query as `cnf`, and
+`{**cnf}` raises `TypeError: 'str' object is not a mapping`. Both shapes need a
+query branch.
+
+### Theme errors must name the resolved block, not the class
+
+```python
+raise KeyError(f"'{self.__class__.__name__}' theme block is missing ...")
+```
+
+For a subclass that reports the SUBCLASS's name — which is not the block the
+widget reads when `_THEME_BLOCK_NAME` is set. The Designer showed:
+
+```
+KeyError: "'sCTkDialogForPreview' theme block is missing 'heading_font' ..."
+```
+
+There is no such block and there never was. The lookup was correct; only the
+message was wrong. But in a fail-loud design a misleading error costs more than
+a vague one, because naming the exact problem is the whole justification for
+raising instead of falling back. Resolve it the same way `ThemeableWidget` does:
+
+```python
+name = getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__
+```
+
+Twenty-one sites across seven widgets had this.
+
+### A widget meant to be subclassed needs `_THEME_BLOCK_NAME`
+
+Theme blocks resolve from the class name, which is right for widgets nobody
+subclasses. It is wrong for one that exists to be subclassed — `sCTkDialog`,
+where the Designer generates `class SettingsDialog(sCTkDialog)` and every user
+does the same. Validation demanded a `SettingsDialog` block nobody would think
+to write.
+
+Declare the block on the base class so subclasses inherit it:
+
+```python
+class sCTkDialog(sCTkFrame):
+    _THEME_BLOCK_NAME = "sCTkDialog"
+```
+
+A subclass wanting its own styling overrides it. A better general rule would be
+for `ThemeableWidget` to walk the MRO and use the first class name with a block,
+so any subclass inherits its parent's theme — not done, but worth considering.
 
 ### Native signatures differ
 
@@ -301,6 +403,23 @@ Set it `False` on widgets that build and manage their own contents — Selector,
 ### Transparent widgets look wrong in the design canvas
 
 The Designer canvas is a fixed light grey that ignores appearance mode, so a widget whose theme sets `"transparent"` renders light while its text follows the dark palette. Use the `preview_opaque()` decorator in `designer/plugin.py` to stamp a concrete background on the preview class only.
+
+### The Bindings tab is empty, deliberately
+
+CustomTkinter's plugin sets `allow_bindings = False` on twelve builder objects individually — not on a shared base class, so it is a considered decision per widget rather than a blanket policy. Our builder objects inherit theirs, so the tab is empty for sCTk widgets too.
+
+The reason is sound. Most CTk widgets are composites that draw on an internal canvas, and a binding attached to the *outer* widget frequently never fires — the canvas or a child receives the event instead. An enabled tab that silently produced dead bindings would be worse than no tab.
+
+**We keep them off.** A few of our widgets could probably support bindings — `sCTkSeparator` and `sCTkTabview` both override `bind()` to route events to something that actually receives them, and plain frames are likely fine — but enabling the flag is only worth doing per widget, after confirming that a binding attached in the Designer really fires in generated code. Setting `allow_bindings = True` in a builder object overrides the inherited `False` if you want to try.
+
+Binding in the derived class works regardless, and is the normal answer:
+
+```python
+class MyApp(baseui.MyAppUI):
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.my_entry.bind("<KeyRelease>", self.on_key)
+```
 
 ### What the Designer cannot do
 

@@ -12,6 +12,7 @@
 * [The content area](#content-area)
 * [Buttons](#buttons)
 * [Modality](#modality)
+* [Sizing](#sizing)
 * [Placement](#placement)
 * [Methods](#methods)
 * [Theming (sCTkThemes.json)](#theming)
@@ -54,7 +55,7 @@ sCTkDialog(master=None, *, title=None, width=None, height=None,
 | :--- | :--- | :--- | :--- |
 | `master` | widget | `None` | Parent widget. Also the default for `locate_over`. |
 | `title` | `str` | `None` | Window title bar text. |
-| `width` / `height` | `int` | `None` | Window size in pixels. Omit to size to content. |
+| `width` / `height` | `int` | `None` | WINDOW size in pixels. Omit to size to content, subject to a 320x180 floor. These size the window, not the frame — the frame fills its window, so its own dimensions would have no effect. `configure()` and `cget()` treat them the same way. |
 | `locate_over` | widget | `None` | The window to appear over. Defaults to `master`'s own toplevel — see [Placement](#placement). |
 | `offset_x` / `offset_y` | `int` | `40` | Pixels right of and below `locate_over`'s top-left corner. |
 | `modal` | `bool` | `False` | Block interaction with the rest of the application — see [Modality](#modality). |
@@ -147,6 +148,32 @@ Neither returns a value. Store the result on the dialog, or on `self`, from your
 
 ---
 
+<a name="sizing"></a>
+### Sizing
+
+**Omit `width` and `height` and the dialog sizes itself to its content.** That is usually what you want — a dialog should be as big as what it holds.
+
+```python
+sCTkDialog(self, title="Filters")              # sized to content
+sCTkDialog(self, title="Filters", width=640)   # fixed width, content height
+sCTkDialog(self, title="Filters", width=640, height=400)
+```
+
+An explicit size is honoured exactly, including below the floor: asking for 200x100 gets 200x100, because you had a reason to ask. The floor applies only to a dimension being derived from content — `MIN_WIDTH` 320, `MIN_HEIGHT` 180 on `sCTkDialogToplevel`, so a nearly-empty dialog still looks like a dialog rather than a sliver.
+
+**`CONTENT_WIDTH` sets the natural width.** It's a class attribute, default 500, and it's what a content-sized dialog comes out as. Override it on a subclass for consistently wider or narrower dialogs rather than passing `width` at every call site:
+
+```python
+class WideDialog(sCTkDialog):
+    CONTENT_WIDTH = 720
+```
+
+Height comes entirely from the content. The content area asks for no more room than its children need, so a dialog holding two entry fields is short and one holding a long form is tall.
+
+**`width` and `height` mean the window, not the frame.** `sCTkDialog` inherits `sCTkFrame`, which also has those names — but the dialog fills its own window, so the frame's dimensions have no effect. Constructor, `configure()` and `cget()` all treat them as the window's size, so the three agree.
+
+---
+
 <a name="placement"></a>
 ### Placement
 
@@ -228,6 +255,8 @@ Every constructor property above is in the inspector. Three behaviours worth kno
 
 **Changing `buttons` redraws immediately,** so the canvas matches the preview and the generated code.
 
+**Clicking any part of the dialog selects the dialog.** The heading, the buttons, the strips around them and the bare content area all select it in the widget tree. Clicking a widget you placed inside selects that widget instead — so a frame you drop into the content area to hold your own layout behaves normally.
+
 **Labels for buttons you don't have are not generated.** With `buttons=2`, a `reset_text` value is kept in the design but left out of the generated file, where it would read as a label for a button that doesn't exist. Commands are *not* filtered this way — each one generates a callback stub in your file, and losing that stub because you briefly reduced the button count would be worse than the noise.
 
 A dialog can be the main widget of a `.ui` file. Because it builds its own window, the generated `__main__` correctly creates no separate root.
@@ -284,7 +313,7 @@ if __name__ == "__main__":
     status.pack(pady=10)
 
     def open_settings():
-        dialog = SettingsDialog(base, width=380, modal=True)
+        dialog = SettingsDialog(base, modal=True)
         dialog.run_and_wait()
         if dialog.result:
             status.configure(text=f"{dialog.result[0]} / {dialog.result[1]}")
@@ -304,6 +333,7 @@ if __name__ == "__main__":
 - **A dialog is always a window.** There is no way to embed one in a frame. If you want the same heading/content/buttons arrangement inline, build it from `sCTkFrame` directly.
 - **`run_and_wait()` returns nothing.** Store the result on the dialog from your Apply callback, as the example does. A return value would mean deciding what "cancelled" looks like for every caller.
 - **`set_two_button()` is irreversible.** It destroys the Reset button. `set_buttons(3)` afterwards creates a fresh one, but any command set directly on the old widget rather than through `set_reset_button()` is lost.
+- **The content area collapses when empty.** Its height comes from its children, so a dialog with nothing in it falls back to the window's `MIN_HEIGHT`. Intentional — an empty content area reserving 200px was what made every dialog taller than it needed to be.
 - **The button row is fixed at three.** Apply, Cancel and Reset in that order, with those roles. A dialog needing different actions should rename them with the `*_text` properties rather than expecting more buttons.
 - **Commands for absent buttons still appear in generated code.** With `buttons=2`, a `reset_command` is emitted and does nothing. Deliberate — see [Pygubu Designer](#pygubu).
 

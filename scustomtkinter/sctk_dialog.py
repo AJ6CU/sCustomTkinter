@@ -55,6 +55,28 @@ class sCTkDialog(sCTkFrame):
     # read in _build_layout().
     _REQUIRED_THEME_KEYS = ("fg_color", "text_color", "heading_font")
 
+    # Subclasses read THIS block unless they say otherwise.
+    #
+    # ThemeableWidget resolves a theme block from the class name, which is
+    # right for widgets nobody subclasses. A dialog is the opposite case:
+    # subclassing is how it is meant to be used -- the Designer generates
+    # `class SettingsDialog(sCTkDialog)`, and the documented example does the
+    # same -- so resolving by class name demanded a "SettingsDialog" block that
+    # no one would think to write, and construction failed with
+    #
+    #   KeyError: "'SettingsDialog' theme block is missing 'fg_color' ..."
+    #
+    # naming a block that should not need to exist.
+    #
+    # A subclass that genuinely wants its own styling overrides this with its
+    # own block name.
+    _THEME_BLOCK_NAME = "sCTkDialog"
+
+    # Natural width of the content area, and so of the dialog when no explicit
+    # width is given. Override on a subclass for a consistently wider or
+    # narrower dialog.
+    CONTENT_WIDTH = 500
+
     # How many buttons each setting shows, in order. Apply is always present:
     # a dialog with no way to accept is a message box, not a dialog.
     _BUTTON_ORDER = ("apply", "cancel", "reset")
@@ -71,7 +93,10 @@ class sCTkDialog(sCTkFrame):
         Args:
             master: Parent widget. Also the default for locate_over.
             title: Window title bar text.
-            width / height: Window size in pixels. Omit to size to content.
+            width / height: WINDOW size in pixels. Omit to size to content.
+                Note these size the window, not the frame: the frame fills its
+                window, so its own width and height would have no effect.
+                configure() and cget() treat them the same way.
             locate_over: The window to appear over and be transient to.
                 Defaults to master's own toplevel. Kept separate from master
                 because a dialog is often parented to a frame or a controller
@@ -149,6 +174,20 @@ class sCTkDialog(sCTkFrame):
         self._validate_theme_keys()
         self._build_layout()
 
+        # Re-measure and re-place now that the content exists.
+        #
+        # sCTkDialogToplevel sizes itself in its own __init__, which runs
+        # BEFORE this widget builds anything into it -- so winfo_reqheight()
+        # was measuring an empty window. A dialog that omitted `height` (or
+        # gave only a width) came up too short, with the button row squashed
+        # to slivers at the bottom.
+        #
+        # Doing it here rather than moving the sizing out of the toplevel keeps
+        # that class usable on its own: it still sizes itself correctly when
+        # given explicit dimensions.
+        if self.dialog_toplevel is not None:
+            self.dialog_toplevel.place_over()
+
     # ------------------------------------------------------------------
     # Theme
     # ------------------------------------------------------------------
@@ -207,7 +246,11 @@ class sCTkDialog(sCTkFrame):
                         or self.final_kw.get("text_color")),
         )
         self.heading_Label.pack(expand=True, fill="x", side="top")
-        self.titleFrame.pack(anchor="n", expand=True, fill="x",
+        # expand=False: only the CONTENT area should take spare vertical
+        # space. With all three regions expanding, the extra height was shared
+        # between them and the dialog came up taller than its content, with a
+        # gap above the button row.
+        self.titleFrame.pack(anchor="n", expand=False, fill="x",
                              padx=10, pady="20 10", side="top")
 
         # --- content area --------------------------------------------------
@@ -215,11 +258,27 @@ class sCTkDialog(sCTkFrame):
         # from get_child_master(), so widgets dropped on the dialog land here
         # rather than beside the heading or the buttons.
         self.contentFrame = sCTkFrame(self)
-        self.contentFrame.configure(width=500)
-        self.contentFrame.pack(expand=True, fill="both", padx=5, side="top")
+        # Width sets the dialog's natural width; height is collapsed to 1 so
+        # the content area asks for no more room than its children need.
+        #
+        # CTkFrame defaults to 200x200, and a frame with an explicit height
+        # requests THAT height regardless of what is inside it -- so leaving
+        # the default in place made every dialog at least 200px of content
+        # area, with the surplus showing as a gap above the button row. Two
+        # entries need about 80.
+        #
+        # An empty content area collapsing to nothing is fine: the window has
+        # its own floor, sCTkDialogToplevel.MIN_HEIGHT.
+        self.contentFrame.configure(width=self.CONTENT_WIDTH, height=1)
 
         # --- action row ----------------------------------------------------
+        # Built BEFORE the content area is packed: it packs to the bottom, and
+        # pack processes side="bottom" claims in order, so the content area has
+        # to come afterwards to fill what is left rather than push the buttons
+        # off the edge.
         self._build_action_row()
+
+        self.contentFrame.pack(expand=True, fill="both", padx=5, side="top")
 
     def _build_action_row(self):
         """
@@ -252,8 +311,10 @@ class sCTkDialog(sCTkFrame):
             setattr(self, f"{name}_Button", button)
             setattr(self, f"{name}Text_VAR", var)
 
-        self.actionFrame.pack(anchor="s", expand=True, fill="x",
-                              padx=5, pady="10 20", side="top")
+        # expand=False, and packed to the BOTTOM so it stays against the edge
+        # while the content area grows into whatever is left.
+        self.actionFrame.pack(anchor="s", expand=False, fill="x",
+                              padx=5, pady="10 20", side="bottom")
         self.actionFrame.grid_anchor("s")
 
     def set_buttons(self, count):
@@ -286,6 +347,14 @@ class sCTkDialog(sCTkFrame):
             self.actionFrame.destroy()
         self._build_action_row()
 
+        # The new row packs to the bottom, which puts it BELOW the content area
+        # in pack order. Re-packing the content area restores the intended
+        # arrangement: heading, content, buttons.
+        content = getattr(self, "contentFrame", None)
+        if content is not None:
+            content.pack_forget()
+            content.pack(expand=True, fill="both", padx=5, side="top")
+
     def set_button_text(self, name, text):
         """
         Sets one button's label, remembering it across a rebuild.
@@ -310,7 +379,20 @@ class sCTkDialog(sCTkFrame):
     # ------------------------------------------------------------------
     # Properties this widget owns. None of them are native CTkFrame options,
     # so each is consumed by configure() below before the rest is forwarded.
+    # width and height are listed here deliberately.
+    #
+    # sCTkFrame, this widget's base, also has width and height -- meaning the
+    # FRAME's size. For a dialog that meaning is empty: the frame is packed
+    # with expand=True, fill="both", so the geometry manager overrides whatever
+    # size it is given and the value has no visible effect.
+    #
+    # Left alone, that produced three answers for one name: the constructor's
+    # width sized the window, configure(width=...) sized the frame and did
+    # nothing, and cget("width") reported the frame. Routing both to the window
+    # makes width and height mean the same thing everywhere -- the size of the
+    # dialog, which is what anyone asking for a dialog's width means.
     _OWN_PROPERTIES = frozenset({
+        "width", "height",
         "title", "heading", "heading_anchor", "heading_font", "heading_color",
         "buttons", "apply_text", "cancel_text", "reset_text",
         "apply_command", "cancel_command", "reset_command",
@@ -326,6 +408,7 @@ class sCTkDialog(sCTkFrame):
         "heading_font": "", "heading_color": "", "buttons": 3,
         "apply_text": "Apply", "cancel_text": "Cancel", "reset_text": "Reset",
         "apply_command": "", "cancel_command": "", "reset_command": "",
+        "width": "", "height": "",
     }
 
     def configure(self, cnf=None, **kwargs):
@@ -372,7 +455,15 @@ class sCTkDialog(sCTkFrame):
                 continue
             value = kwargs.pop(key)
 
-            if key == "title":
+            if key in ("width", "height"):
+                if self.dialog_toplevel is not None:
+                    self.dialog_toplevel.set_size(**{key: value})
+                else:
+                    # No window of its own -- the Designer preview. Fall back
+                    # to the frame's own size so the canvas shows something
+                    # that reflects the setting.
+                    super().configure(**{key: value})
+            elif key == "title":
                 self.set_title(value or "")
             elif key == "heading":
                 self.set_heading(
@@ -429,6 +520,11 @@ class sCTkDialog(sCTkFrame):
         if key == "title":
             return (self.dialog_toplevel.title()
                     if self.dialog_toplevel is not None else "")
+        if key in ("width", "height"):
+            if self.dialog_toplevel is None:
+                return super().cget(key)
+            size = self.dialog_toplevel.get_size()
+            return size[0] if key == "width" else size[1]
         return super().cget(key)
 
     # ------------------------------------------------------------------

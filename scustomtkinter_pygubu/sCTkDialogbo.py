@@ -290,9 +290,16 @@ class sCTkDialogBO(BuilderObject):
                     button_command=value)
             return None
 
+        if pname in ("width", "height"):
+            # Applied live: these size the WINDOW, and the widget routes them
+            # there. See sCTkDialog._OWN_PROPERTIES for why they are not the
+            # frame's own width and height.
+            target_widget.configure(**{pname: value})
+            return None
+
         if pname in self.OPTIONS_CUSTOM:
-            # Window size, placement, modality and the button count are all
-            # construction-time. realize() passes them; nothing to do here.
+            # Placement, modality and transient are construction-time.
+            # realize() passes them; nothing to do here.
             return None
 
         return super()._set_property(target_widget, pname, value)
