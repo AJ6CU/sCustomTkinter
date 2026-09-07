@@ -291,10 +291,8 @@ class sCTkDialogForPreview(sCTkDialog):
     _MAKE_WINDOW = False
 
     def __init__(self, master=None, **kw):
-        print("[preview] sCTkDialogForPreview constructed")
         super().__init__(master, **kw)
         self._bind_own_parts_to_self()
-        print("[preview] apply_Button is", getattr(self, "apply_Button", None))
 
     def _bind_own_parts_to_self(self):
         """
@@ -320,10 +318,16 @@ class sCTkDialogForPreview(sCTkDialog):
         widget itself.
         """
         def select_dialog(event, dialog=self):
+            # TEMPORARY DIAGNOSTIC -- remove once selection works.
+            print("[preview] click forwarded from", event.widget)
             try:
-                dialog.event_generate("<Button-1>", x=1, y=1)
-            except Exception:
-                pass
+                # when="now" dispatches immediately. The default, "tail",
+                # queues the event, and a queued synthetic event can be
+                # dropped if the widget is rebuilt before it is processed.
+                dialog.event_generate("<Button-1>", x=1, y=1, when="now")
+                print("[preview] event_generate ok")
+            except Exception as exc:
+                print("[preview] event_generate failed:", exc)
             return "break"
 
         parts = [getattr(self, "heading_Label", None),
