@@ -53,10 +53,10 @@ class testdialogUI:
         # build ui
         sctkdialog1 = sCTkDialog(
             master,
-            transient=True,
+            transient=False,
             heading='I am Mark',
             heading_anchor='center',
-            buttons=3)
+            buttons=2)
         # First object created
         on_first_object_cb(sctkdialog1)
 

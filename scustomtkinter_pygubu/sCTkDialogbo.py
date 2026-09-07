@@ -286,6 +286,26 @@ class sCTkDialogBO(BuilderObject):
 
         return super()._set_property(target_widget, pname, value)
 
+    def set_property(self, name, value):
+        """
+        Records a property change in the widget metadata, then applies it live.
+
+        FIX: without the metadata write, a change made in the inspector did not
+        reach code generation until the project was saved and reopened --
+        editing `buttons` from 3 to 2 updated the canvas but still generated
+        buttons=3. The live widget and the metadata had diverged.
+
+        An earlier version of this method also called
+        builder.recreate_widget(); that has been dropped. It never reached us,
+        and the widget rebuilds its own button row now -- see
+        sCTkDialog.set_buttons().
+        """
+        if hasattr(self, "wmeta") and hasattr(self.wmeta, "properties"):
+            self.wmeta.properties[name] = value
+
+        if getattr(self, "widget", None) is not None:
+            self._set_property(self.widget, name, value)
+
     def _code_set_property(self, targetid, pname, value, code_bag):
         """
         Keeps this widget's own properties OUT of the generated configure()

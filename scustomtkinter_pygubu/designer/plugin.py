@@ -537,6 +537,19 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         a FIXME beside that tuple asking plugins to implement this method
         rather than the tuple being extended.
 
+        sCTkDialog is included for the same reason even though it is not a
+        Toplevel subclass: it always BUILDS one. Without it the generated
+        __main__ read
+
+            root = tk.Tk()
+            app = MyDialog(root)
+
+        which put a small empty window on screen beside the dialog -- the
+        application root, with nothing in it, because everything the design
+        contains lives inside the dialog's own window. Setting `transient` made
+        no difference, since the two are separate roots rather than parent and
+        child.
+
         Note that group=GROOT on register_widget() is a DIFFERENT thing --
         palette placement only. It does not affect code generation.
 
@@ -546,7 +559,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         Returns:
             True if that id names an application root.
         """
-        return builder_uid in (sCTk_builder_id, sCTkToplevel_builder_id)
+        return builder_uid in (sCTk_builder_id, sCTkToplevel_builder_id,
+                               sCTkDialog_builder_id)
 
     def get_preview_builder(self, builder_uid: str):
         """Return a BuilderObject subclass used to build a preview
