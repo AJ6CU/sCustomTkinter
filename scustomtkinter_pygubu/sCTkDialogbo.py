@@ -40,7 +40,8 @@ class sCTkDialogBO(BuilderObject):
     # them afterwards.
     OPTIONS_CUSTOM = ("title", "width", "height", "modal", "transient",
                       "offset_x", "offset_y", "heading", "heading_anchor",
-                      "buttons", "apply_text", "cancel_text", "reset_text")
+                      "heading_font", "heading_color", "buttons",
+                      "apply_text", "cancel_text", "reset_text")
     properties = OPTIONS_CUSTOM + ("apply_command", "cancel_command",
                                    "reset_command")
 
@@ -60,6 +61,55 @@ class sCTkDialogBO(BuilderObject):
 
     def code_child_master(self):
         return f"{self.code_identifier()}.contentFrame"
+
+    @staticmethod
+    def _parse_font(value):
+        """
+        Converts Pygubu's font string into the tuple CustomTkinter expects.
+
+        The `fontentry` editor produces a Tk font specification -- a family,
+        optionally brace-wrapped when it contains spaces, then a size, then
+        zero or more styles:
+
+            {Comic Sans MS} 14 bold
+            Arial 12
+
+        CTkLabel accepts a tuple or a CTkFont, not that string, so it is parsed
+        here rather than passed through.
+
+        Returns:
+            A (family, size) or (family, size, style) tuple, or None if the
+            value is empty or unparseable -- in which case the theme's
+            heading_font applies, which is the right fallback.
+        """
+        if not value:
+            return None
+        if isinstance(value, (tuple, list)):
+            return tuple(value)
+
+        text = str(value).strip()
+        if not text:
+            return None
+
+        if text.startswith("{"):
+            end = text.find("}")
+            if end == -1:
+                return None
+            family = text[1:end]
+            rest = text[end + 1:].split()
+        else:
+            parts = text.split()
+            family, rest = parts[0], parts[1:]
+
+        if not rest:
+            return None
+        try:
+            size = int(rest[0])
+        except (TypeError, ValueError):
+            return None
+
+        styles = " ".join(rest[1:]).strip()
+        return (family, size, styles) if styles else (family, size)
 
     def _dialog_init_args(self):
         """
@@ -93,6 +143,14 @@ class sCTkDialogBO(BuilderObject):
             value = props.get(prop)
             if value:
                 args[prop] = str(value)
+
+        font = self._parse_font(props.get("heading_font"))
+        if font is not None:
+            args["heading_font"] = font
+
+        colour = props.get("heading_color")
+        if colour:
+            args["heading_color"] = str(colour)
 
         buttons = props.get("buttons")
         if buttons not in (None, ""):
@@ -168,13 +226,35 @@ class sCTkDialogBO(BuilderObject):
         on the canvas until the design was redrawn for some other reason.
         """
         if pname in self._LIVE_TEXT:
-            var = getattr(target_widget, self._LIVE_TEXT[pname], None)
-            if var is not None:
-                # FIX: an empty value used to blank the button. Clearing a
-                # field means "use the default", which is what the generated
-                # code does -- the property is omitted and the constructor
-                # default applies. The design view now agrees with it.
-                var.set(value if value else self._TEXT_DEFAULTS[pname])
+            # FIX: an empty value used to blank the button. Clearing a field
+            # means "use the default", which is what the generated code does --
+            # the property is omitted and the constructor default applies. The
+            # design view now agrees with it.
+            text = value if value else self._TEXT_DEFAULTS[pname]
+            # set_button_text() records the label as well as displaying it, so
+            # it survives the rebuild that a `buttons` change triggers.
+            target_widget.set_button_text(pname.split("_")[0], text)
+            return None
+
+        if pname == "heading_font":
+            target_widget.set_heading_font(
+                self._parse_font(value)
+                or target_widget.final_kw.get("heading_font"))
+            return None
+
+        if pname == "heading_color":
+            # Empty restores the theme's text_color, matching what the
+            # generated code does: the property is omitted and the theme
+            # applies.
+            target_widget.set_heading_color(value or None)
+            return None
+
+        if pname == "buttons":
+            # FIX: this used to rely on builder.recreate_widget(), which did
+            # not reach us -- the canvas kept the old button count while the
+            # preview and generated code showed the new one. The widget rebuilds
+            # its own button row instead, which depends on nothing outside it.
+            target_widget.set_buttons(value)
             return None
 
         if pname == "heading":
@@ -205,40 +285,6 @@ class sCTkDialogBO(BuilderObject):
             return None
 
         return super()._set_property(target_widget, pname, value)
-
-    # Properties that change the widget's STRUCTURE and so cannot be applied
-    # to a live instance: the button row is built once, in _build_layout().
-    # Editing these rebuilds the widget instead.
-    _REBUILD_PROPERTIES = ("buttons",)
-
-    def set_property(self, name, value):
-        """
-        Records a property change and rebuilds when the change is structural.
-
-        Button labels, the heading and the title are applied live by
-        _set_property(). `buttons` cannot be: the row is created once at
-        construction, so adding or removing a button means building the widget
-        again. Without this, reducing 3 to 2 left the Reset button on the
-        canvas while the preview and the generated code both showed two --
-        the design view disagreeing with the result.
-
-        Same approach sCTkTableviewBO uses for its own structural properties.
-        """
-        if hasattr(self, "wmeta") and hasattr(self.wmeta, "properties"):
-            self.wmeta.properties[name] = value
-
-        if hasattr(self, "widget") and self.widget:
-            self._set_property(self.widget, name, value)
-
-        if name in self._REBUILD_PROPERTIES:
-            builder = getattr(self, "builder", None)
-            if builder is not None and hasattr(builder, "recreate_widget"):
-                try:
-                    builder.recreate_widget(self)
-                except Exception:
-                    # Designer will redraw on its own soon enough; a failed
-                    # rebuild must not take the property edit down with it.
-                    pass
 
     def _code_set_property(self, targetid, pname, value, code_bag):
         """
@@ -321,6 +367,14 @@ register_custom_property(
     builder_id, "heading_anchor", "choice",
     values=("center", "w", "e"), state="readonly",
     help="Heading alignment."
+)
+register_custom_property(
+    builder_id, "heading_font", "fontentry",
+    help="Heading font. Leave blank to use the theme's heading_font."
+)
+register_custom_property(
+    builder_id, "heading_color", "colorentry",
+    help="Heading colour. Leave blank to use the theme's text_color."
 )
 register_custom_property(
     builder_id, "buttons", "choice", values=("3", "2", "1"), state="readonly",

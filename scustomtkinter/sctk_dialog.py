@@ -46,10 +46,14 @@ class sCTkDialog(sCTkFrame):
     # and leave the Designer unusable.
     _MAKE_WINDOW = True
 
-    # Required in the "sCTkDialog" block of sCTkThemes.json. fg_color is a
-    # native frame option and reaches CTkFrame on its own; the two heading keys
-    # are this widget's alone and are read in _build_layout().
-    _REQUIRED_THEME_KEYS = ("fg_color", "heading_font", "heading_text_color")
+    # Required in the "sCTkDialog" block of sCTkThemes.json.
+    #
+    # NOTE the CustomTkinter naming: fg_color is the BACKGROUND fill, not the
+    # text colour. It is a native frame option and reaches CTkFrame on its own.
+    # text_color is the dialog's foreground -- used for the heading, and
+    # available to caller content through cget("text_color"). heading_font is
+    # read in _build_layout().
+    _REQUIRED_THEME_KEYS = ("fg_color", "text_color", "heading_font")
 
     # How many buttons each setting shows, in order. Apply is always present:
     # a dialog with no way to accept is a message box, not a dialog.
@@ -58,7 +62,8 @@ class sCTkDialog(sCTkFrame):
     def __init__(self, master=None, *, title=None, width=None, height=None,
                  locate_over=None, offset_x=40, offset_y=40, modal=False,
                  transient=True, heading="Heading Title",
-                 heading_anchor="center",
+                 heading_anchor="center", heading_font=None,
+                 heading_color=None,
                  buttons=3, apply_text="Apply", cancel_text="Cancel",
                  reset_text="Reset", apply_command=None, cancel_command=None,
                  reset_command=None, toplevel=None, **kw):
@@ -83,6 +88,11 @@ class sCTkDialog(sCTkFrame):
                 long-lived tool panel wants.
             heading: Text shown above the content area.
             heading_anchor: "w", "e" or "center".
+            heading_font: Overrides the theme's heading_font for this instance.
+                A (family, size) or (family, size, style) tuple, or a CTkFont.
+                None uses the theme value.
+            heading_color: Overrides the theme's text_color for the heading on
+                this instance. None uses the theme value.
             buttons: How many action buttons to show -- 3 (Apply, Cancel,
                 Reset), 2 (Apply, Cancel) or 1 (Apply). Apply is always
                 present: a dialog with no way to accept is a message box.
@@ -101,6 +111,8 @@ class sCTkDialog(sCTkFrame):
         self.dialog_parent = master
         self._heading_text = heading
         self._heading_anchor = heading_anchor
+        self._heading_font_override = heading_font
+        self._heading_color_override = heading_color
 
         try:
             self._button_count = max(1, min(3, int(buttons)))
@@ -182,14 +194,17 @@ class sCTkDialog(sCTkFrame):
         self.titleFrame = sCTkFrame(self)
         self.heading_VAR = tk.StringVar(master=self, value=self._heading_text)
         self.heading_Label = sCTkLabelPrimary(self.titleFrame)
-        # font and text_color come from THIS widget's theme block, not from
+        # font and colour come from THIS widget's theme block, not from
         # sCTkLabelPrimary's. A dialog heading is a distinct role and should be
         # restyleable without moving every primary label in the application.
         self.heading_Label.configure(
             anchor=self._heading_anchor,
             textvariable=self.heading_VAR,
-            font=self.final_kw.get("heading_font"),
-            text_color=self.final_kw.get("heading_text_color"),
+            # A font passed to the constructor wins over the theme, so a
+            # single dialog can be restyled without touching the theme file.
+            font=self._heading_font_override or self.final_kw.get("heading_font"),
+            text_color=(self._heading_color_override
+                        or self.final_kw.get("text_color")),
         )
         self.heading_Label.pack(expand=True, fill="x", side="top")
         self.titleFrame.pack(anchor="n", expand=True, fill="x",
@@ -204,10 +219,18 @@ class sCTkDialog(sCTkFrame):
         self.contentFrame.pack(expand=True, fill="both", padx=5, side="top")
 
         # --- action row ----------------------------------------------------
-        # Only the requested buttons are created. Attributes for the others are
-        # set to None rather than left undefined, so `self.reset_Button` is
-        # always a valid expression -- code that reaches for a button that was
-        # not requested gets None instead of AttributeError.
+        self._build_action_row()
+
+    def _build_action_row(self):
+        """
+        Builds the button row from the current button count.
+
+        Separate from _build_layout() so set_buttons() can rebuild just this
+        part. Only the requested buttons are created; attributes for the others
+        are set to None rather than left undefined, so `self.reset_Button` is
+        always a valid expression -- code reaching for a button that was not
+        requested gets None instead of AttributeError.
+        """
         self.actionFrame = sCTkFrame(self)
 
         self.apply_Button = self.cancel_Button = self.reset_Button = None
@@ -232,6 +255,55 @@ class sCTkDialog(sCTkFrame):
         self.actionFrame.pack(anchor="s", expand=True, fill="x",
                               padx=5, pady="10 20", side="top")
         self.actionFrame.grid_anchor("s")
+
+    def set_buttons(self, count):
+        """
+        Changes how many action buttons the dialog shows, rebuilding the row.
+
+        The row is built once at construction, so changing the count means
+        destroying and rebuilding it -- there is no way to add a button that
+        was never created. Labels and commands set through the constructor are
+        preserved, since they live in _button_text and _button_command rather
+        than on the widgets.
+
+        Exists so the Pygubu Designer can honour a change to `buttons` on a
+        live widget. Relying on the Designer to rebuild the whole widget did
+        not work: the canvas kept showing the old count while the preview and
+        the generated code showed the new one.
+
+        Args:
+            count: 1, 2 or 3. Clamped into that range.
+        """
+        try:
+            count = max(1, min(3, int(count)))
+        except (TypeError, ValueError):
+            return
+        if count == self._button_count:
+            return
+
+        self._button_count = count
+        if getattr(self, "actionFrame", None) is not None:
+            self.actionFrame.destroy()
+        self._build_action_row()
+
+    def set_button_text(self, name, text):
+        """
+        Sets one button's label, remembering it across a rebuild.
+
+        set_buttons() recreates the buttons, so a label set only on the widget
+        would be lost. This records it too.
+
+        Args:
+            name: "apply", "cancel" or "reset".
+            text: The label.
+        """
+        if name not in self._button_text:
+            return False
+        self._button_text[name] = text
+        var = getattr(self, f"{name}Text_VAR", None)
+        if var is not None:
+            var.set(text)
+        return True
 
     # ------------------------------------------------------------------
     # Button callbacks -- override in a subclass
@@ -304,8 +376,13 @@ class sCTkDialog(sCTkFrame):
         self.heading_Label.configure(font=font)
 
     def set_heading_color(self, text_color):
-        """Overrides the heading text colour for this instance."""
-        self.heading_Label.configure(text_color=text_color)
+        """
+        Overrides the heading colour for this instance.
+
+        Passing None restores the theme's text_color.
+        """
+        self.heading_Label.configure(
+            text_color=text_color or self.final_kw.get("text_color"))
 
     def has_button(self, name):
         """
