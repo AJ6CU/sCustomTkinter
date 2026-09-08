@@ -460,6 +460,21 @@ class ThemeableWidget:
                          if extra and str(extra) not in ("normal", "roman"))
             return " ".join(parts)
 
+        # A Tcl_Obj is what cget() hands back for a variable property --
+        # textvariable, variable, listvariable. pygubu wants the variable's
+        # NAME, and str() on a Tcl_Obj gives exactly that ("PY_VAR0"). Passed
+        # through untouched it raised:
+        #
+        #   argument of type '_tkinter.Tcl_Obj' is not a container or iterable
+        if type(value).__name__ == "Tcl_Obj":
+            return str(value)
+
+        # A Tk variable object, for the same reason: its name is what a
+        # configure() call accepts, not the object.
+        if value is not None and hasattr(value, "_name") \
+                and hasattr(value, "get") and hasattr(value, "set"):
+            return str(value)
+
         if value is not None and type(value).__name__ == "CTkFont":
             try:
                 family = value.cget("family")
