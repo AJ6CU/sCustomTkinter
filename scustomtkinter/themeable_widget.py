@@ -177,6 +177,75 @@ def parse_list_property(value, default=None):
             if item.strip().strip("\"'")] or list(default)
 
 
+def parse_font_property(value, default=None):
+    """
+    Parse a font from any of the forms a designer or a theme file produces,
+    returning the tuple CustomTkinter and Tk canvas items expect.
+
+    WHY THIS EXISTS. Pygubu's `fontentry` editor emits a Tk font
+    specification, not a tuple: a family, brace-wrapped when it contains a
+    space, then a size, then zero or more styles.
+
+        {Comic Sans MS} 14 bold
+        Arial 9 bold
+
+    The trap is what it emits for NO style selected:
+
+        {American Typewriter} 12 {}
+
+    "{}" is Tk's empty-list literal. Passed through as a style, Tk rejects it
+    outright when the tuple reaches a canvas item:
+
+        _tkinter.TclError: unknown font style ""
+
+    Two builder objects had their own copy of this parser and both got it
+    wrong the same way, which is why it lives here now -- the same argument
+    that consolidated seven list parsers into parse_list_property().
+
+    Args:
+        value: The raw font value: a tuple, a Tk font string, or None.
+        default: Returned when value is empty or unparseable. A caller with a
+            theme value to fall back on should pass it here.
+
+    Returns:
+        A (family, size) or (family, size, style) tuple, or `default`.
+    """
+    if not value:
+        return default
+
+    if isinstance(value, (tuple, list)):
+        if len(value) < 2:
+            return default
+        family, size = value[0], value[1]
+        styles = [str(s) for s in value[2:]
+                  if s and str(s).strip() not in ("", "{}", "normal", "roman")]
+    else:
+        text = str(value).strip()
+        if not text:
+            return default
+        if text.startswith("{"):
+            end = text.find("}")
+            if end == -1:
+                return default
+            family, rest = text[1:end], text[end + 1:].split()
+        else:
+            parts = text.split()
+            family, rest = parts[0], parts[1:]
+        if not rest:
+            return default
+        size = rest[0]
+        styles = [s for s in rest[1:]
+                  if s and s not in ("{}", "normal", "roman")]
+
+    try:
+        size = int(size)
+    except (TypeError, ValueError):
+        return default
+
+    joined = " ".join(styles).strip()
+    return (str(family), size, joined) if joined else (str(family), size)
+
+
 class ThemeableWidget:
     def __init__(self, kwargs: dict):
         """

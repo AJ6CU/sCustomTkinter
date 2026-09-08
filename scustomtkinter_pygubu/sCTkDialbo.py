@@ -16,7 +16,7 @@ from pygubu.plugins.customtkinter.widgets import CTkFrameBO
 
 # Import the native custom classes directly out of your single-file source module
 from scustomtkinter.sctk_dial import sCTkDialContinuous, sCTkDialRange, sCTkDialSelector
-from scustomtkinter.themeable_widget import parse_list_property
+from scustomtkinter.themeable_widget import parse_list_property, parse_font_property
 
 builder_namespace = "scustomtkinter"
 section_name = "sCustomTkinter"
@@ -109,47 +109,11 @@ class sCTkDialSelectorBO(BuilderObject):
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
-    @staticmethod
-    def _parse_font(value):
-        """
-        Converts Pygubu's font string into the tuple a canvas item expects.
-
-        The `fontentry` editor produces a Tk font specification -- a family,
-        brace-wrapped when it contains spaces, then a size, then zero or more
-        styles: "{Comic Sans MS} 9 bold".
-
-        Returns:
-            A (family, size) or (family, size, style) tuple, or None when the
-            value is empty or unparseable -- in which case the theme's
-            label_font applies, which is the right fallback.
-        """
-        if not value:
-            return None
-        if isinstance(value, (tuple, list)):
-            return tuple(value)
-        text = str(value).strip()
-        if not text:
-            return None
-        if text.startswith("{"):
-            end = text.find("}")
-            if end == -1:
-                return None
-            family, rest = text[1:end], text[end + 1:].split()
-        else:
-            parts = text.split()
-            family, rest = parts[0], parts[1:]
-        if not rest:
-            return None
-        try:
-            size = int(rest[0])
-        except (TypeError, ValueError):
-            return None
-        styles = " ".join(rest[1:]).strip()
-        return (family, size, styles) if styles else (family, size)
-
     def _process_property_value(self, name, value):
         if name == 'label_font':
-            return self._parse_font(value)
+            # Shared parser: handles the "{}" Tk emits for "no style",
+            # which reaches a canvas item as unknown font style "".
+            return parse_font_property(value)
         if name == 'labels':
             # FIX: was value.split(","), which did not strip whitespace -- so
             # "AM, FM, LSB" produced ["AM", " FM", " LSB"] and the dial drew

@@ -18,6 +18,7 @@ from pygubu.api.v1 import (
     register_custom_property,
 )
 
+from scustomtkinter.themeable_widget import parse_font_property
 from scustomtkinter.sctk_dialog import sCTkDialog
 
 
@@ -62,55 +63,6 @@ class sCTkDialogBO(BuilderObject):
     def code_child_master(self):
         return f"{self.code_identifier()}.contentFrame"
 
-    @staticmethod
-    def _parse_font(value):
-        """
-        Converts Pygubu's font string into the tuple CustomTkinter expects.
-
-        The `fontentry` editor produces a Tk font specification -- a family,
-        optionally brace-wrapped when it contains spaces, then a size, then
-        zero or more styles:
-
-            {Comic Sans MS} 14 bold
-            Arial 12
-
-        CTkLabel accepts a tuple or a CTkFont, not that string, so it is parsed
-        here rather than passed through.
-
-        Returns:
-            A (family, size) or (family, size, style) tuple, or None if the
-            value is empty or unparseable -- in which case the theme's
-            heading_font applies, which is the right fallback.
-        """
-        if not value:
-            return None
-        if isinstance(value, (tuple, list)):
-            return tuple(value)
-
-        text = str(value).strip()
-        if not text:
-            return None
-
-        if text.startswith("{"):
-            end = text.find("}")
-            if end == -1:
-                return None
-            family = text[1:end]
-            rest = text[end + 1:].split()
-        else:
-            parts = text.split()
-            family, rest = parts[0], parts[1:]
-
-        if not rest:
-            return None
-        try:
-            size = int(rest[0])
-        except (TypeError, ValueError):
-            return None
-
-        styles = " ".join(rest[1:]).strip()
-        return (family, size, styles) if styles else (family, size)
-
     def _dialog_init_args(self):
         """
         Collects the window properties from the widget metadata, converted to
@@ -144,7 +96,7 @@ class sCTkDialogBO(BuilderObject):
             if value:
                 args[prop] = str(value)
 
-        font = self._parse_font(props.get("heading_font"))
+        font = parse_font_property(props.get("heading_font"))
         if font is not None:
             args["heading_font"] = font
 
@@ -250,7 +202,7 @@ class sCTkDialogBO(BuilderObject):
 
         if pname == "heading_font":
             target_widget.set_heading_font(
-                self._parse_font(value)
+                parse_font_property(value)
                 or target_widget.final_kw.get("heading_font"))
             return None
 

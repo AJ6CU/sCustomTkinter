@@ -128,10 +128,19 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         Returns:
             The tuple from the theme block.
         """
-        f = (getattr(self, "_label_font_override", None)
-             or self._local_defaults.get("label_font"))
-        print("[dial] label_font ->", repr(f))
-        return f
+        font = (getattr(self, "_label_font_override", None)
+                or self._local_defaults.get("label_font"))
+
+        # Drop an empty style before it reaches the canvas. Tk rejects one --
+        # unknown font style "" -- and the Designer's font editor produces
+        # exactly that for a family with no style selected, as the literal
+        # "{}". Guarded here as well as in the builder object because a font
+        # can arrive from application code too.
+        if isinstance(font, (tuple, list)) and len(font) >= 3:
+            styles = [s for s in font[2:]
+                      if s and str(s).strip() not in ("", "{}")]
+            font = (font[0], font[1], *styles) if styles else (font[0], font[1])
+        return font
 
     def _validate_theme_keys(self) -> None:
         """
