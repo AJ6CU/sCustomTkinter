@@ -12,12 +12,16 @@
 
 ### Overview
 
-`sCTkOptionMenuSecondary` is a themeable, composite bordered dropdown option-selection menu. Unlike every other widget in this library, it is **not** a direct subclass of the widget it wraps — it's a `customtkinter.CTkFrame` containing a plain, native `customtkinter.CTkOptionMenu` inside it, giving the dropdown a themed border the native widget has no way to draw on its own. See also `sCTkOptionMenuPrimary`, a simpler direct-subclass variant.
+`sCTkOptionMenuSecondary` is the quiet variant of the dropdown option-selection menu — a themeable subclass of `customtkinter.CTkOptionMenu`, with a border. See also [`sCTkOptionMenuPrimary`](sCTkOptionMenuPrimary.md), the emphasised variant.
+
+The two are now **architecturally identical**. They differ only in their theme blocks: this one has a border and an arrow that blends into the control, Primary has no border and an arrow with its own colour. Either look is reachable from either widget by changing the theme.
 
  ![sCTkOptionMenuSecondary in dark mode](images/sCTkOptionMenuSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
 	![sCTkOptionMenuSecondary in light mode](images/sCTkOptionMenuSecondary_Light.png)
 
-Because configuring the outer widget affects the frame (border, background, size) while the dropdown itself is a separate inner object, most of this widget's behavior comes from keeping those two pieces in sync — see [Theming](#theming-sctkthemesjson) for how that split works.
+**This widget used to be a composite** — a `CTkFrame` wrapping a plain `CTkOptionMenu`, because native `CTkOptionMenu` has no border option and this variant needs one. That structure cost more than it bought: `values`, `command` and `variable` lived on the inner menu, so `cget("values")` returned `None` here while returning a list on Primary; every option CustomTkinter added had to be forwarded by hand; and the frame's rounded rectangle did not line up with the menu's, leaving visibly broken corners.
+
+`sCTkOptionMenuBorderMixin` now supplies the border, so this is a plain subclass and `get()`, `set()`, `values`, `command` and `variable` are all native again. `self._menu` no longer exists.
 
 ---
 
@@ -30,9 +34,9 @@ sCTkOptionMenuSecondary(master=None, width=160, height=28, **kw)
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `master` | widget | `None` | Parent container. |
-| `width` | `int` | `160` | Frame width, used unless overridden by a kwarg or the theme. |
-| `height` | `int` | `28` | Frame height, used unless overridden by a kwarg or the theme. |
-| `**kw` | — | — | `values` (list[str]), `command` (callable), and `variable` (tkinter.StringVar) are forwarded to the inner dropdown. Theme keys that belong to the inner menu rather than the outer frame — `font`, `dropdown_font`, `text_color`, `dropdown_fg_color`, `dropdown_text_color`, `dropdown_hover_color`, `button_hover_color` — are automatically routed there; everything else applies to the outer frame. See [Theming](#theming-sctkthemesjson). |
+| `width` | `int` | `160` | Widget width, used unless overridden by a kwarg or the theme. |
+| `height` | `int` | `28` | Widget height, used unless overridden by a kwarg or the theme. |
+| `**kw` | — | — | `values` (list[str]), `command` (callable) and `variable` (tkinter.StringVar) are applied once the native widget exists. Everything else is a native `CTkOptionMenu` argument, `border_width`/`border_color`, or an override for one of the theme keys under [Theming](#theming-sctkthemesjson). |
 
 ```python
 band_menu = sCTkOptionMenuSecondary(
@@ -49,19 +53,19 @@ band_menu.pack(fill="x", padx=40, pady=10)
 
 | Method | Returns | Description |
 |---|---|---|
-| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it. Passes `state="disabled"` to the **inner dropdown**, not the outer frame (which has nothing interactive to lock), consistent with the other widgets in this library confirmed to correctly block interaction this way. |
+| `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"` or `"active"` all enable it. |
 | `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
-| `get()` | `str` | Delegates to the inner dropdown's `get()`. |
-| `set(value)` | `None` | Delegates to the inner dropdown's `set()`. |
-| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration for the **outer frame**, plus: `values`/`command`/`variable` are routed to the **inner dropdown**, not the frame; `state=...` routes through `state()`; calling `configure("propname")` with a single property name returns a Tkinter-style query tuple for `state`, `fg_color`, `border_color`, `text_color`, `width`, and `height`. Queries for any other property name fall through to the native `CTkFrame.configure`. |
-| `update_list(new_values, default_index=0)` | `None` | Replaces the inner dropdown's options and resets the visible selection. Empty list falls back to a blank option; out-of-range `default_index` falls back to `0`. |
+| `get()` / `set(value)` | — | Native `CTkOptionMenu` behaviour. |
+| `cget(name)` | varies | Native, extended to `border_width` and `border_color`. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus: `border_width`/`border_color`; `values`/`command`/`variable` routed individually; `state=...` through `state()`. `configure("propname")` returns a Tkinter-style query tuple for `state`, the border properties, and `fg_color`/`button_color`/`button_hover_color`/`text_color`; anything else gets a proper tuple from the shared query helper. |
+| `update_list(new_values, default_index=0)` | `None` | Replaces the options and resets the visible selection. Empty list falls back to a blank option; out-of-range `default_index` falls back to `0`. |
 
 ---
 
 ### Theming (`sCTkThemes.json`)
 
-- **Applied once, at construction** — every key in the widget's theme block is split between the outer frame and the inner dropdown (see the constructor table above for which keys go where), then applied when each is built.
-- **Re-applied on every `state()` change** — the outer frame's `border_color`, `fg_color`, `border_width`, and `corner_radius` are recomputed from the theme's normal values or `disabled_map`; the inner dropdown's `fg_color`, `button_color`, and `text_color` are recomputed the same way. `font`, `dropdown_font`, `dropdown_fg_color`, `dropdown_text_color`, `dropdown_hover_color`, and `button_hover_color` are **not** re-applied on state changes — they're static properties of the inner dropdown, set once and left alone.
+- **Applied once, at construction** — every key in the widget's theme block.
+- **Re-applied on every `state()` change** — `fg_color`, `text_color` and `border_color` are recomputed from the theme's normal values or its `disabled_map`. The font and dropdown keys are static and set once.
 
 ```json
 {
@@ -85,6 +89,10 @@ band_menu.pack(fill="x", padx=40, pady=10)
     }
 }
 ```
+
+**`button_color` is absent deliberately.** It is set from `fg_color` in code, so the arrow blends into the control rather than standing out — that is what makes this the quiet variant. Adding the key would be misleading: the value would be read and then overwritten. Primary gives the arrow its own colour.
+
+**The border comes from `sCTkOptionMenuBorderMixin`,** which both variants share. Native `CTkOptionMenu` has no border option; the mixin supplies one. Primary carries the same keys with `border_width` at 0.
 
 `fg_color` and `text_color` are required to be present in whichever map is active — if either is missing, the widget raises immediately rather than substituting a hardcoded color, per this project's design of failing hard on incomplete theme data (see `sCTkLabelPrimary`/`Secondary`/`Tertiary` for the precedent). An earlier version of this widget used hardcoded hex fallbacks for both, and separately had a real bug where the theme's actual `button_hover_color` was computed correctly and then immediately overwritten with `fg_color` — both are fixed as of this project's audit.
 
@@ -129,6 +137,7 @@ if __name__ == "__main__":
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value matches neither branch, though colors are still harmlessly re-applied.
 - Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
-- Because this widget wraps rather than subclasses its inner control, `configure()` on the outer widget and `configure()` on `self._menu` (the inner dropdown) are genuinely different calls affecting different objects — code that expects a single unified `configure()` surface (as every other widget in this library provides) needs to be aware of this split.
+- **The border depends on a CustomTkinter internal.** `sCTkOptionMenuBorderMixin` replaces the widget's private `_draw()` and calls the private draw engine, because native `CTkOptionMenu` passes a hardcoded `0` where the border width belongs. If an upstream release changes that method, the border disappears — a visual regression, not a crash.
+- **`self._menu` is gone.** Code written against the previous composite structure, which reached the inner dropdown directly, needs updating: this widget *is* the dropdown now.
 
 [Return to Table of Contents](#contents)

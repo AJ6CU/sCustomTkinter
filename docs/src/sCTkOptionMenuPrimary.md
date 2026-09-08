@@ -12,7 +12,7 @@
 
 ### Overview
 
-`sCTkOptionMenuPrimary` is a themeable subclass of `customtkinter.CTkOptionMenu` — a dropdown option-selection button. It adds automatic light/dark theme resolution from `sCTkThemes.json` and a distinct enabled/disabled visual state. See also `sCTkOptionMenuSecondary`, a composite bordered variant with a different internal architecture.
+`sCTkOptionMenuPrimary` is a themeable subclass of `customtkinter.CTkOptionMenu` — a dropdown option-selection button. It adds automatic light/dark theme resolution from `sCTkThemes.json`, a distinct enabled/disabled visual state, and border support. See also [`sCTkOptionMenuSecondary`](sCTkOptionMenuSecondary.md), the quiet variant, which has the same architecture and differs only in its theme.
 
  ![sCTkOptionMenuPrimary in dark mode](images/sCTkOptionMenuPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
  ![sCTkOptionMenuPrimary in light mode](images/sCTkOptionMenuPrimary_Light.png)
@@ -31,7 +31,7 @@ sCTkOptionMenuPrimary(master=None, values=None, command=None, variable=None, **k
 | `values` | `list[str]` | native default | The dropdown options. |
 | `command` | `callable` | `None` | Called with the selected value when the user picks an item. |
 | `variable` | `tkinter.StringVar` | `None` | Optional variable bound to the current selection. |
-| `**kw` | — | — | Any native `CTkOptionMenu` argument, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
+| `**kw` | — | — | Any native `CTkOptionMenu` argument, `border_width`/`border_color`, or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
 mode_menu = sCTkOptionMenuPrimary(
@@ -70,17 +70,24 @@ mode_menu.pack(fill="x", padx=40, pady=10)
         "button_hover_color": ["#0D1F38", "#1A5276"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
         "corner_radius": 6,
+        "border_width": 0,
+        "border_color": ["#112A4B", "#1F618D"],
         "dropdown_fg_color": ["#FFFFFF", "#1F2937"],
         "dropdown_text_color": ["#1F2937", "#F9FAFB"],
         "dropdown_hover_color": ["#E5E7EB", "#374151"],
         "disabled_map": {
             "fg_color": ["#CBD5E1", "#374151"],
             "button_color": ["#CBD5E1", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"]
+            "text_color": ["#94A3B8", "#64748B"],
+            "border_color": ["#CBD5E1", "#374151"]
         }
     }
 }
 ```
+
+**`border_width` is 0, so this variant has no border** — that is the difference between the two option menus, along with `button_color` giving the arrow its own colour. The keys are present rather than omitted so the choice is visible and reversible: raise the width and Primary gets an outline, exactly as `sCTkOptionMenuSecondary` has one.
+
+Native `CTkOptionMenu` has no border option at all. It comes from `sCTkOptionMenuBorderMixin`, which both variants share — see that module for what it depends on.
 
 `disabled_map` doesn't cover `button_hover_color`, `dropdown_fg_color`, `dropdown_text_color`, or `dropdown_hover_color` — consistent with every other themed widget in this library: once natively disabled, hover and dropdown-open interactions can't fire in the first place, so there's nothing for a disabled-state color on those properties to ever visibly apply to.
 
@@ -123,7 +130,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value matches neither branch, though colors are still harmlessly re-applied.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **The border depends on a CustomTkinter internal.** `sCTkOptionMenuBorderMixin` replaces the widget's private `_draw()` and calls the private draw engine, because native `CTkOptionMenu` passes a hardcoded `0` where the border width belongs. If an upstream release changes that method, the border disappears — a visual regression, not a crash.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

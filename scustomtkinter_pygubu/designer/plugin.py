@@ -35,6 +35,9 @@ from scustomtkinter_pygubu.sCTkSeparatorbo import (sCTkSeparatorBuilder, builder
 from scustomtkinter.sctk_dialog import sCTkDialog
 from scustomtkinter_pygubu.sCTkDialogbo import (sCTkDialogBO, builder_id as sCTkDialog_builder_id)
 
+from scustomtkinter.sctk_segmentedbutton import sCTkSegmentedButton
+from scustomtkinter_pygubu.sCTkSegmentedButtonbo import (sCTkSegmentedButtonBO, builder_id as sCTkSegmentedButton_builder_id)
+
 from scustomtkinter.sctk_selector import sCTkSelector
 from scustomtkinter.sctk_checkbox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
                                             # to search to find the clickable master frame
@@ -195,6 +198,40 @@ class sCTkSeparatorForPreview(sCTkSeparator):
 
 
 @preview_opaque()
+class sCTkSegmentedButtonForPreview(sCTkSegmentedButton):
+    """
+    Designer preview for sCTkSegmentedButton.
+
+    WITHOUT THIS THE DESIGNER CRASHES ON DROP. CTkSegmentedButton.bind() raises
+    NotImplementedError unconditionally, and pygubu's bind_preview_widget()
+    calls bind() on every widget it walks:
+
+        File ".../ctk_segmented_button.py", line 471, in bind
+            raise NotImplementedError
+        NotImplementedError
+
+    Forwarding to the children instead lets the walk complete. CustomTkinter's
+    own designer plugin does exactly this for its CTkSegmentedButton, with the
+    note that selection still does not work -- their comment reads "I can't
+    select a segmented button in preview". So this makes the widget usable in
+    the Designer without making it selectable on the canvas; select it from the
+    widget tree.
+
+    A crash on drop is much worse than a widget selected from the tree, which
+    is why this is worth having even though it only solves half the problem.
+    """
+    _THEME_BLOCK_NAME = "sCTkSegmentedButton"
+
+    def bind(self, sequence=None, func=None, add=None):
+        for child in self.winfo_children():
+            try:
+                child.bind(sequence, func, True)
+            except Exception:
+                # A child that refuses the binding must not take the whole
+                # walk down with it -- that is the failure being fixed here.
+                pass
+
+
 class sCTkSelectorForPreview(sCTkSelector):
     _THEME_BLOCK_NAME = "sCTkSelector"
 
@@ -416,6 +453,10 @@ class sCTkDialogForPreview(sCTkDialog):
         if content not in keep:
             keep.append(content)
         return keep
+
+
+class sCTkSegmentedButtonForPreviewBO(sCTkSegmentedButtonBO):
+    class_ = sCTkSegmentedButtonForPreview
 
 
 class sCTkSelectorForPreviewBO(sCTkSelectorBO):
@@ -696,6 +737,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkPathChooserForPreviewBO
         elif builder_uid == sCTkTableview_builder_id:
             return sCTkTableviewForPreviewBO
+        elif builder_uid == sCTkSegmentedButton_builder_id:
+            return sCTkSegmentedButtonForPreviewBO
         elif builder_uid == sCTkSelector_builder_id:
             return sCTkSelectorForPreviewBO
         elif builder_uid == sCTkSeparator_builder_id:
