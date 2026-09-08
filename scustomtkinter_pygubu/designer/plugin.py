@@ -219,14 +219,22 @@ class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
     _THEME_BLOCK_NAME = "sCTkOptionMenuSecondary"
 
     def winfo_children(self):
-        internal = [
-            self._menu,
-        ]
-        clist = []
-        for widget in internal:
-            for cwidget in widget.winfo_children():
-                clist.append(cwidget)
-        return clist
+        """
+        FIX: this used to walk self._menu, an inner CTkOptionMenu, because the
+        widget was a COMPOSITE -- a frame wrapping a menu, which was how it got
+        a border that native CTkOptionMenu cannot draw. It is now a plain
+        CTkOptionMenu subclass like Primary, with the border supplied by
+        sCTkOptionMenuBorderMixin, so that attribute is gone and the walk
+        raised:
+
+            AttributeError: 'sCTkOptionMenuSecondaryForPreview' object has no
+            attribute '_menu'
+
+        The ordinary hack applies instead: CTkFrame hides its internal canvas
+        from winfo_children(), and the Designer needs to see it to hit-test a
+        click.
+        """
+        return super(tk.Frame, self).winfo_children()
 
 
 class sCTkSpinboxForPreview(sCTkSpinbox):
