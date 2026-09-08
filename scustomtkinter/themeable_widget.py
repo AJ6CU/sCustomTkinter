@@ -416,9 +416,18 @@ class ThemeableWidget:
         # which is the value actually on screen -- and so the right answer to
         # "what is this property now".
         return (pname, pname, pname,
-                self._query_value(default), self._query_value(current))
+                self._query_value(default, pname),
+                self._query_value(current, pname))
 
-    def _query_value(self, value):
+    # Properties whose value is a LIST, not a colour pair. Both arrive as two
+    # strings when there are two options, and no test on the value can tell
+    # ["Apple", "Pear"] from ("white", "black") -- bare colour names look
+    # exactly like ordinary option text. The property NAME is the only
+    # reliable signal, so it is passed in rather than inferred.
+    _LIST_PROPERTIES = frozenset({"values", "labels", "columns", "items",
+                                  "filetypes"})
+
+    def _query_value(self, value, pname=None):
         """
         Renders one property value in a form a configure() call can accept.
 
@@ -426,8 +435,19 @@ class ThemeableWidget:
         through untouched. Deliberately NOT str() -- a number must stay a
         number, or the widget receives "10" where it expects 10.
         """
-        if isinstance(value, (tuple, list)) and len(value) == 2 \
-                and all(isinstance(v, str) for v in value):
+        # A list property is JSON, whatever its length. Checked FIRST, because
+        # a two-option list is indistinguishable from a colour pair by
+        # inspection alone.
+        if pname in self._LIST_PROPERTIES:
+            try:
+                import json
+                return json.dumps(list(value))
+            except (TypeError, ValueError):
+                return value
+
+        # A (light, dark) colour pair.
+        if (isinstance(value, (tuple, list)) and len(value) == 2
+                and all(isinstance(v, str) for v in value)):
             try:
                 return self._resolve_color(value)
             except Exception:
@@ -460,20 +480,11 @@ class ThemeableWidget:
                          if extra and str(extra) not in ("normal", "roman"))
             return " ".join(parts)
 
-        # A LIST -- values on a combo box, option menu or segmented button.
-        #
-        # pygubu parses those with ListDTO.transform(), which is a strict
-        # json.loads() and only catches JSONDecodeError. Handing it a Python
-        # list therefore raises TypeError rather than being rejected cleanly:
-        #
-        #   the JSON object must be str, bytes or bytearray, not list
-        #
-        # json.dumps() is the exact inverse, and produces the same form the
-        # user types into the field -- ["Apple", "Pear"] -- so a value read out
-        # and written back round-trips.
-        #
-        # Checked AFTER the colour-pair and font-tuple cases above, which are
-        # also sequences and have their own representations.
+        # A list reaching here is one whose property name was not supplied.
+        # Rendered as JSON anyway, since that is what every list property in
+        # this library expects -- pygubu parses them with a strict
+        # json.loads(), which raises TypeError on a Python list rather than
+        # rejecting it cleanly.
         if isinstance(value, list):
             try:
                 import json
