@@ -202,10 +202,13 @@
         "dropdown_fg_color": ["#FFFFFF", "#1F2937"],
         "dropdown_text_color": ["#1F2937", "#F9FAFB"],
         "dropdown_hover_color": ["#E5E7EB", "#374151"],
+        "border_width": 0,
+        "border_color": ["#112A4B", "#1F618D"],
         "disabled_map": {
             "fg_color": ["#CBD5E1", "#374151"],
             "button_color": ["#CBD5E1", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"]
+            "text_color": ["#94A3B8", "#64748B"],
+            "border_color": ["#CBD5E1", "#374151"]
         }
     },
     "sCTkOptionMenuSecondary": {

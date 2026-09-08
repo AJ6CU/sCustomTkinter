@@ -460,6 +460,27 @@ class ThemeableWidget:
                          if extra and str(extra) not in ("normal", "roman"))
             return " ".join(parts)
 
+        # A LIST -- values on a combo box, option menu or segmented button.
+        #
+        # pygubu parses those with ListDTO.transform(), which is a strict
+        # json.loads() and only catches JSONDecodeError. Handing it a Python
+        # list therefore raises TypeError rather than being rejected cleanly:
+        #
+        #   the JSON object must be str, bytes or bytearray, not list
+        #
+        # json.dumps() is the exact inverse, and produces the same form the
+        # user types into the field -- ["Apple", "Pear"] -- so a value read out
+        # and written back round-trips.
+        #
+        # Checked AFTER the colour-pair and font-tuple cases above, which are
+        # also sequences and have their own representations.
+        if isinstance(value, list):
+            try:
+                import json
+                return json.dumps(value)
+            except (TypeError, ValueError):
+                return value
+
         # A Tcl_Obj is what cget() hands back for a variable property --
         # textvariable, variable, listvariable. pygubu wants the variable's
         # NAME, and str() on a Tcl_Obj gives exactly that ("PY_VAR0"). Passed

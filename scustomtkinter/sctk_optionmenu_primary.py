@@ -8,9 +8,10 @@ ctk.CTkOptionMenu so CustomTkinter handles native rendering and dropdown
 behavior; this class layers automatic light/dark theme resolution and a
 distinct enabled/disabled visual state on top.
 
-Base class order matters here: `class sCTkOptionMenuPrimary(ctk.CTkOptionMenu,
-ThemeableWidget)` puts the native CTk class first, so every `super()` call in
-this file's own methods resolves to ctk.CTkOptionMenu -- and, beneath it,
+Base class order matters here. sCTkOptionMenuBorderMixin comes FIRST so its
+_draw() runs before the native one and can add a border on top; native
+ctk.CTkOptionMenu comes next, so every other `super()` call in this file's own
+methods resolves to ctk.CTkOptionMenu -- and, beneath it,
 tkinter.Misc -- never to ThemeableWidget. ThemeableWidget's own
 configure()/cget()/_set_appearance_mode() overrides have been removed entirely
 for this reason (see themeable_widget.py's docstring); this widget owns all of
@@ -25,9 +26,11 @@ found broken on the buttons.
 from typing import Any, Callable, Optional
 import customtkinter as ctk
 from .themeable_widget import ThemeableWidget
+from .sctk_optionmenu_border_mixin import sCTkOptionMenuBorderMixin
 
 
-class sCTkOptionMenuPrimary(ctk.CTkOptionMenu, ThemeableWidget):
+class sCTkOptionMenuPrimary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
+                            ThemeableWidget):
     """Themeable dropdown option-selection menu.
 
     Adds to native ctk.CTkOptionMenu:
@@ -40,6 +43,9 @@ class sCTkOptionMenuPrimary(ctk.CTkOptionMenu, ThemeableWidget):
         single-argument configure() call.
       - update_list(), a convenience method for replacing the dropdown's
         options and resetting the visible selection in one call.
+      - border_width/border_color, via sCTkOptionMenuBorderMixin. Native
+        CTkOptionMenu has no border option at all -- see that module for why
+        this matters and what it depends on.
 
     Colors are passed through to configure() as raw (light, dark) tuples rather
     than pre-resolved to a single value, so CustomTkinter's own appearance-mode
@@ -82,8 +88,16 @@ class sCTkOptionMenuPrimary(ctk.CTkOptionMenu, ThemeableWidget):
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
 
-        # 4. Initialize CustomTkinter natively with the clean final kwargs array.
-        super().__init__(master, **self.final_kw)
+        # 4. Initialize CustomTkinter natively.
+        #
+        # border_width and border_color are REMOVED first. They are this
+        # library's own additions -- native CTkOptionMenu has no border option
+        # and rejects any keyword it does not recognise, so leaving them in
+        # final_kw would raise at construction. _local_defaults above already
+        # holds copies for _init_border() to read.
+        native_kw = {k: v for k, v in self.final_kw.items()
+                     if k not in ("border_width", "border_color")}
+        super().__init__(master, **native_kw)
 
         # 5. Apply the extracted values/command/variable now that the native
         # widget exists.
@@ -93,6 +107,14 @@ class sCTkOptionMenuPrimary(ctk.CTkOptionMenu, ThemeableWidget):
             super().configure(command=command)
         if variable is not None:
             super().configure(variable=variable)
+
+        # Border, after the native widget exists: the first redraw needs a
+        # canvas. Absent from the theme block means no border, which is the
+        # native widget's own appearance.
+        self._init_border(
+            border_width=self._local_defaults.get("border_width", 0),
+            border_color=self._local_defaults.get("border_color"),
+        )
 
         self._custom_current_state = "normal"
         self._update_current_visual_state()
@@ -145,12 +167,22 @@ class sCTkOptionMenuPrimary(ctk.CTkOptionMenu, ThemeableWidget):
                 if pname == "state":
                     return ("state", "state", "state", "normal", str(self.state()))
 
+                border_value = self._cget_border(pname)
+                if border_value is not self._NOT_A_BORDER_PROPERTY:
+                    return (pname, pname, pname,
+                            self._query_value(self._local_defaults.get(pname)),
+                            self._query_value(border_value))
+
                 if pname in ["fg_color", "button_color", "button_hover_color", "text_color"]:
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
                     return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
+
+        # Consumed before the native call below, which rejects both as
+        # unknown options.
+        self._configure_border(kwargs)
 
         if "values" in kwargs:
             super().configure(values=kwargs.pop("values"))
@@ -168,8 +200,11 @@ class sCTkOptionMenuPrimary(ctk.CTkOptionMenu, ThemeableWidget):
                 kwargs.pop(k)
 
         if kwargs:
-            return super().configure(**kwargs)
-        return None
+            result =  super().configure(**kwargs)
+        else:
+            result =  None
+        self._redraw_border()  # last, after any native redraw
+        return result
 
     # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
     # attribute -- it does not automatically track whichever configure() a
@@ -177,6 +212,30 @@ class sCTkOptionMenuPrimary(ctk.CTkOptionMenu, ThemeableWidget):
     # would silently skip this entire override and land on the native widget's
     # configure() directly, bypassing theming and state handling entirely.
     config = configure
+
+    def cget(self, attribute_name: str) -> Any:
+        """
+        Standard cget(), extended to this widget's own border properties.
+
+        FIX: border_width and border_color are not native CTkOptionMenu
+        options, so without this they reached CTkBaseClass.cget() and raised
+
+            ValueError: 'border_width' is not a supported argument.
+
+        configure(pname) had a border branch already; the ordinary cget() path
+        did not, so reading a border value in application code failed while
+        querying it through the Designer worked.
+
+        Args:
+            attribute_name: The property to read.
+
+        Returns:
+            The property's value.
+        """
+        border_value = self._cget_border(attribute_name)
+        if border_value is not self._NOT_A_BORDER_PROPERTY:
+            return border_value
+        return super().cget(attribute_name)
 
     def _set_appearance_mode(self, mode_string: str) -> None:
         """
@@ -261,6 +320,16 @@ class sCTkOptionMenuPrimary(ctk.CTkOptionMenu, ThemeableWidget):
 
         if config_payload:
             super().configure(**config_payload)
+
+        # The border is not a native option, so it cannot ride along in the
+        # payload above. Its disabled colour comes from disabled_map like any
+        # other, falling back to the normal one when unspecified.
+        border_colour = target_map.get("border_color")
+        if border_colour is None:
+            border_colour = self._local_defaults.get("border_color")
+        if border_colour is not None:
+            self._border_color = border_colour
+        self._redraw_border()
 
         if is_disabled:
             super().configure(state="disabled")
