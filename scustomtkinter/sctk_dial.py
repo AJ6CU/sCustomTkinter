@@ -24,6 +24,11 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     _CONSUMES_SCROLL = True
 
     def __init__(self, master=None, divisions=24, state="normal", width=120, height=120, **kw):
+        # Pulled out BEFORE the theme pass, so it is not merged into final_kw
+        # and forwarded to the native constructor, which would reject it.
+        # None means "use the theme's label_font".
+        self._label_font_override = kw.pop("label_font", None)
+
         ThemeableWidget.__init__(self, kw)
         # THEME SOURCE -- read the RAW block, not final_kw.
         #
@@ -100,6 +105,31 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     # background does NOT dim when disabled, the knob face and text carry the
     # signal. Matches the choice made for sCTkScrollableFrame.
     _REQUIRED_DISABLED_KEYS = ("text_color", "dial_color")
+
+    def _label_font(self):
+        """
+        The font for text drawn on the canvas.
+
+        A per-instance override set through the constructor or configure()
+        wins over the theme, so one dial can carry a different label size
+        without moving every dial in the application.
+
+        FIX: the two label-drawing variants hardcoded ("Arial", 9, "bold") in
+        their create_text() calls, while the colour on the same line was read
+        from the theme -- a partial job, and one the theme file had no way to
+        reach. Same pattern as the eight hardcoded fonts found in the S-meters.
+
+        Read from _local_defaults, which this widget builds from the RAW theme
+        registry block rather than from final_kw -- see __init__. That matters
+        for the same reason the dial colours do: keys this library adds are
+        stripped out of final_kw before the native constructor sees them, so a
+        widget reading them from there gets nothing.
+
+        Returns:
+            The tuple from the theme block.
+        """
+        return (getattr(self, "_label_font_override", None)
+                or self._local_defaults.get("label_font"))
 
     def _validate_theme_keys(self) -> None:
         """
@@ -193,7 +223,16 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     def configure(self, *args, **kwargs):
         """Handles Pygubu designer queries and manages composite state updates safely."""
         if args and len(args) == 1:
-            pname = args if isinstance(args, (list, tuple)) else args
+            # FIX: was
+            #     pname = args if isinstance(args, (list, tuple)) else args
+            # -- BOTH branches assigned `args`, which is always a tuple. Every
+            # comparison below therefore tested a tuple against a string and
+            # failed, so the entire query block was dead and Pygubu could read
+            # none of these properties. The ternary made it look deliberate.
+            #
+            # Same one-character bug found in sCTkFileExplorer, sCTkSMeterBar
+            # and sCTkPathChooser.
+            pname = args[0]
             if pname == "width":
                 return ('width', 'width', 'Width', 120, super().cget("width") if hasattr(self, "cget") else 120)
             if pname == "height":
@@ -201,8 +240,23 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             if pname == "state":
                 return ('state', 'state', 'State', 'normal', getattr(self, "_state", "normal"))
             if pname == "labels":
-                return ('labels', 'labels', 'Labels', "POS 1, POS 2, POS 3",
-                        ", ".join(getattr(self, "_labels", ["POS 1", "POS 2", "POS 3"])))
+                # JSON, not a comma-joined string: pygubu parses list
+                # properties with a strict json.loads(). _query_value() renders
+                # it, given the property name -- see themeable_widget.py.
+                default_labels = ["POS 1", "POS 2", "POS 3"]
+                return ('labels', 'labels', 'Labels',
+                        self._query_value(default_labels, "labels"),
+                        self._query_value(
+                            list(getattr(self, "_labels", default_labels)),
+                            "labels"))
+
+            if pname == "label_font":
+                # The theme's label_font is the default, so clearing the field
+                # in the Designer returns to it rather than to nothing.
+                return ('label_font', 'label_font', 'Label font',
+                        self._query_value(
+                            self._local_defaults.get("label_font"), "label_font"),
+                        self._query_value(self._label_font(), "label_font"))
             if pname in ["diameter", "divisions", "arc_angle", "from_", "to", "command", "left_click_callback",
                          "right_click_callback"]:
                 return (pname, pname, pname, "", "")
@@ -223,6 +277,15 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         if "height" in kwargs:
             h = kwargs["height"]
             kwargs["height"] = int(h) if (h and str(h).strip()) else 120
+
+        if "label_font" in kwargs:
+            # Empty restores the theme's label_font, matching the query above
+            # and what generated code does when the property is omitted.
+            new_font = kwargs.pop("label_font")
+            self._label_font_override = new_font if new_font else None
+            # Full redraw, not _redraw_indicator(): the labels are part of the
+            # dial body, and the cheap indicator-only path does not touch them.
+            self._draw_dial_base()
 
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
@@ -479,11 +542,13 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                 self.canvas.create_line(x1, y1, x2, y2, fill=text_color, width=2.0)
 
                 if child_classname == "sCTkDialSelector" and i < len(self._labels):
-                    self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(self._labels[i]), fill=text_color, font=("Arial", 9, "bold"))
+                    self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(self._labels[i]), fill=text_color,
+                                            font=self._label_font())
                 elif child_classname == "sCTkDialRange":
                     from_val, to_val = getattr(self, "_from", 0), getattr(self, "_to", 100)
                     range_val = int(from_val + (to_val - from_val) * fraction)
-                    self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(range_val), fill=text_color, font=("Arial", 9, "bold"))
+                    self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(range_val), fill=text_color,
+                                            font=self._label_font())
 
             self.canvas.create_oval(center_x - knob_radius + 1, center_y - knob_radius + 4, center_x + knob_radius + 4, center_y + knob_radius + 4, fill=shadow_paint, outline="")
 
@@ -639,7 +704,9 @@ class sCTkDialSelector(sCTKDialBase):
     # This variant draws a plain line pointer rather than a dimple, so it
     # requires pointer_color instead of pointer_glow_color. pointer_color was
     # present in the theme file but never read by any code path until now.
-    _EXTRA_THEME_KEYS = ("pointer_color",)
+    # label_font is required on the two variants that DRAW text. Continuous
+    # draws none, so it does not carry the key.
+    _EXTRA_THEME_KEYS = ("pointer_color", "label_font")
 
     """
     Rotary switch selector module. Constrained to custom arc angles (default 270).
@@ -753,7 +820,9 @@ class sCTkDialRange(sCTKDialBase):
     # This variant draws a plain line pointer rather than a dimple, so it
     # requires pointer_color instead of pointer_glow_color. pointer_color was
     # present in the theme file but never read by any code path until now.
-    _EXTRA_THEME_KEYS = ("pointer_color",)
+    # label_font is required on the two variants that DRAW text. Continuous
+    # draws none, so it does not carry the key.
+    _EXTRA_THEME_KEYS = ("pointer_color", "label_font")
 
     """
     Ranged potentiometer module tracking discrete integer boundaries.

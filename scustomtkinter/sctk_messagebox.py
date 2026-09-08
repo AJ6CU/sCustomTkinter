@@ -24,7 +24,11 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
     """Advanced themeable message dialog window supporting single or dual prompt states."""
 
     # Required at the TOP LEVEL of the theme block.
-    _REQUIRED_THEME_KEYS = ("font", "text_color", "fg_color")
+    # type_font styles the "[ERROR]" / "[INFO]" marker, which is deliberately
+    # distinct from the message body's `font`. It was hardcoded as
+    # ("Arial", 12, "bold") at both sites below, so the theme file had no way
+    # to reach it while every other value on those lines was themed.
+    _REQUIRED_THEME_KEYS = ("font", "text_color", "fg_color", "type_font")
 
     # WHITELIST GUARD. Native CTkToplevel names fg_color explicitly and passes
     # everything else through to tkinter.Toplevel, which raises TclError on any
@@ -105,12 +109,16 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
             except Exception as image_err:
                 # Graceful extraction safety recovery trace
                 print(f"⚠️ sCustomTkinter Warning -> Image format initialization error: {image_err}")
-                self.image_label = sCTkLabelPrimary(self, text=f"[{typ.upper()}]", font=("Arial", 12, "bold"))
+                self.image_label = sCTkLabelPrimary(
+                    self, text=f"[{typ.upper()}]",
+                    font=self._local_defaults.get("type_font"))
                 self.image_label.grid(row=0, column=0, padx=(15, 5), pady=20, sticky="n")
         else:
             # Safe text-based interface fallback if filesystem layout tracks vanish
             print(f"⚠️ sCustomTkinter Warning -> Missing visual alert asset from target path: {light_icon_path}")
-            self.image_label = sCTkLabelPrimary(self, text=f"[{typ.upper()}]", font=("Arial", 12, "bold"))
+            self.image_label = sCTkLabelPrimary(
+                self, text=f"[{typ.upper()}]",
+                font=self._local_defaults.get("type_font"))
             self.image_label.grid(row=0, column=0, padx=(15, 5), pady=20, sticky="n")
 
         max_text_width_pixels = width - 180

@@ -71,7 +71,7 @@ class sCTkDialRangeBO(BuilderObject):
     # definition for each name. Both are required -- copying alone leaves a
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
-    OPTIONS_CUSTOM = ("from_", "to", "divisions", "diameter", "arc_angle","command", "left_click_callback", "right_click_callback")
+    OPTIONS_CUSTOM = ("from_", "to", "divisions", "diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "label_font")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
@@ -105,11 +105,51 @@ class sCTkDialSelectorBO(BuilderObject):
     # definition for each name. Both are required -- copying alone leaves a
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
-    OPTIONS_CUSTOM = ("diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels" ) #  # Note: Labels handles lists, which are usually initialized in code
+    OPTIONS_CUSTOM = ("diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels", "label_font")  # Labels handles lists, usually initialized in code
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
+    @staticmethod
+    def _parse_font(value):
+        """
+        Converts Pygubu's font string into the tuple a canvas item expects.
+
+        The `fontentry` editor produces a Tk font specification -- a family,
+        brace-wrapped when it contains spaces, then a size, then zero or more
+        styles: "{Comic Sans MS} 9 bold".
+
+        Returns:
+            A (family, size) or (family, size, style) tuple, or None when the
+            value is empty or unparseable -- in which case the theme's
+            label_font applies, which is the right fallback.
+        """
+        if not value:
+            return None
+        if isinstance(value, (tuple, list)):
+            return tuple(value)
+        text = str(value).strip()
+        if not text:
+            return None
+        if text.startswith("{"):
+            end = text.find("}")
+            if end == -1:
+                return None
+            family, rest = text[1:end], text[end + 1:].split()
+        else:
+            parts = text.split()
+            family, rest = parts[0], parts[1:]
+        if not rest:
+            return None
+        try:
+            size = int(rest[0])
+        except (TypeError, ValueError):
+            return None
+        styles = " ".join(rest[1:]).strip()
+        return (family, size, styles) if styles else (family, size)
+
     def _process_property_value(self, name, value):
+        if name == 'label_font':
+            return self._parse_font(value)
         if name == 'labels':
             # FIX: was value.split(","), which did not strip whitespace -- so
             # "AM, FM, LSB" produced ["AM", " FM", " LSB"] and the dial drew
@@ -168,6 +208,7 @@ register_widget(id_range, sCTkDialRangeBO, "sCTkDialRange", ("ttk", section_name
 # which is why the Selector and Range dials offered a third value that
 # the Continuous dial did not. Registering it explicitly makes all
 # three agree and matches the widget's real two-state model.
+register_custom_property(id_range, "label_font", "fontentry", help="Font for the labels drawn around the dial. Blank uses the theme's label_font.")
 register_custom_property(id_range, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_range, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_range, "height", "naturalnumber", help="Height in pixels.")
@@ -188,6 +229,7 @@ register_widget(id_selector, sCTkDialSelectorBO, "sCTkDialSelector", ("ttk", sec
 # which is why the Selector and Range dials offered a third value that
 # the Continuous dial did not. Registering it explicitly makes all
 # three agree and matches the widget's real two-state model.
+register_custom_property(id_selector, "label_font", "fontentry", help="Font for the labels drawn around the dial. Blank uses the theme's label_font.")
 register_custom_property(id_selector, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_selector, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_selector, "height", "naturalnumber", help="Height in pixels.")
