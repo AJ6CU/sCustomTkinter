@@ -128,8 +128,10 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         Returns:
             The tuple from the theme block.
         """
-        return (getattr(self, "_label_font_override", None)
-                or self._local_defaults.get("label_font"))
+        f = (getattr(self, "_label_font_override", None)
+             or self._local_defaults.get("label_font"))
+        print("[dial] label_font ->", repr(f))
+        return f
 
     def _validate_theme_keys(self) -> None:
         """
