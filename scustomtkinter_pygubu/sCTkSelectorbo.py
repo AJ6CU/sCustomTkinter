@@ -23,14 +23,18 @@ class sCTkSelectorBO(BuilderObject):
 
     # OPTIONS_STANDARD = ('height', 'width')
     # 1. Append 'state' to your custom options tuple array
-    OPTIONS_CUSTOM = ('items', 'multiple_choices', 'pack_propagate', 'grid_propagate', 'state')
+    # grid_propagate is deliberately absent. pack_propagate() and
+    # grid_propagate() control whether a container resizes to fit its CHILDREN,
+    # and which applies depends on how those children are managed -- this
+    # widget packs its own, so grid_propagate could never have an effect. It
+    # was offered anyway, which made it look like a knob that did nothing.
+    OPTIONS_CUSTOM = ('items', 'multiple_choices', 'pack_propagate', 'state')
     properties = CTkFrameBO.properties + OPTIONS_CUSTOM
 
     OPTIONS_CUSTOM_DEFAULTS = {
         'multiple_choices': 'True',
         'items': '["Item 1", "Item 2"]',
         'pack_propagate': 'True',
-        'grid_propagate': 'True',
         'state': 'normal'
     }
 
@@ -62,9 +66,6 @@ class sCTkSelectorBO(BuilderObject):
         p_prop = self.wmeta.properties.get('pack_propagate', 'True')
         p_prop_arg = str(p_prop).lower() in ['true', '1', 'yes']
 
-        g_prop = self.wmeta.properties.get('grid_propagate', 'True')
-        g_prop_arg = str(g_prop).lower() in ['true', '1', 'yes']
-
         # 2. Extract designer state choice
         state_arg = self.wmeta.properties.get('state', 'normal')
 
@@ -72,7 +73,6 @@ class sCTkSelectorBO(BuilderObject):
             'items': items_arg,
             'multiple_choices': mult_choice_arg,
             'pack_propagate': p_prop_arg,
-            'grid_propagate': g_prop_arg,
             'state': state_arg
         }
 
@@ -91,7 +91,7 @@ class sCTkSelectorBO(BuilderObject):
         like 'state' write out with proper Python string quotes.
         """
         # 1. Handle properties that MUST be generated as raw unquoted Python code/tokens
-        if pname in ('items', 'multiple_choices', 'pack_propagate', 'grid_propagate'):
+        if pname in ('items', 'multiple_choices', 'pack_propagate'):
             clean_string = str(value).strip("'\"")
             code_bag[pname] = clean_string
 
@@ -123,5 +123,8 @@ register_custom_property(builder_id, 'multiple_choices', 'choice', values=('True
 register_custom_property(builder_id, 'state', 'choice', values=('normal', 'disabled'))
 
 # 2. Register custom UI types as standard True/False dropdown pickers
-register_custom_property(builder_id, 'pack_propagate', 'choice', values=('True', 'False'))
-register_custom_property(builder_id, 'grid_propagate', 'choice', values=('True', 'False'))
+register_custom_property(
+    builder_id, 'pack_propagate', 'choice', values=('True', 'False'),
+    help="False stops the widget resizing to fit its checkboxes, so an "
+         "explicit width and height are honoured."
+)

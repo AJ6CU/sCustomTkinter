@@ -17,11 +17,22 @@ from .sctk_entry_primary import sCTkEntryPrimary
 from .sctk_scrollable_frame import sCTkScrollableFrame
 
 class sCTkSelector(sCTkFrame, ThemeableWidget):
+    # The placeholder list a cleared `items` property falls back to.
+    #
+    # NOT the constructor's default -- sCTkSelector(parent) with no items is
+    # legitimately empty, and stays that way. This is what the Designer's
+    # inspector shows on a fresh widget, and what its builder object passes
+    # when the field is blank, so restoring it here keeps the design view,
+    # the preview and the generated code agreeing.
+    #
+    # Previously a cleared field reported "[]" as its default and every
+    # checkbox vanished, which looked like the widget had broken.
+    DEFAULT_ITEMS = ("Item 1", "Item 2")
+
     def __init__(self, master, items: Optional[list[str]] = None, multiple_choices=True, searchBox=True, **kwargs):
         # 1. SANITIZE RUNTIME ARGUMENTS: Strip unmanaged properties out immediately
         state_init = kwargs.pop("state", "normal")
         pack_prop_init = kwargs.pop("pack_propagate", None)
-        grid_prop_init = kwargs.pop("grid_propagate", None)
 
         # 2. ENFORCE SYSTEM REGISTRY INTERACTION:
         ThemeableWidget.__init__(self, kwargs)
@@ -80,7 +91,6 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
 
         if hasattr(self.checkboxes_frame, "_parent_frame") and self.checkboxes_frame._parent_frame is not None:
             self.checkboxes_frame._parent_frame.pack_propagate(False)
-            self.checkboxes_frame._parent_frame.grid_propagate(False)
 
         self.checkboxes = []
         self.selected_indexes = []
@@ -95,7 +105,6 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             multiple_choices=multiple_choices,
             searchBox=self._search_box_visible,
             pack_propagate=pack_prop_init,
-            grid_propagate=grid_prop_init,
             state=state_init
         )
 
@@ -142,9 +151,22 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             if pname == "multiple_choices": return ("multiple_choices", "multiple_choices", "multiple_choices", "True", str(self.multiple_choices))
             if pname == "searchBox": return ("searchBox", "searchBox", "searchBox", "True", str(self._search_box_visible))
             if pname == "items":
-                current_items = [cb.cget("text") for cb in self.checkboxes] if hasattr(self, "checkboxes") else []
-                return ("items", "items", "items", "[]", str(current_items))
-            if pname in ["pack_propagate", "grid_propagate"]: return (pname, pname, pname, "None", str(getattr(self, f"_{pname}_val", None)))
+                # FIX: the default slot used to be the literal "[]", so
+                # clearing the field in the Designer reported "the default is
+                # an empty list" and every checkbox vanished -- the widget did
+                # exactly what it was told, but the answer was wrong. The
+                # constructor's default is DEFAULT_ITEMS, which is also what
+                # the inspector shows on a fresh widget.
+                #
+                # Both slots go through _query_value with the property name,
+                # so a list is rendered as JSON -- the form pygubu parses and
+                # the form a user types. str() of a Python list is neither.
+                current_items = ([cb.cget("text") for cb in self.checkboxes]
+                                 if hasattr(self, "checkboxes") else [])
+                return ("items", "items", "items",
+                        self._query_value(list(self.DEFAULT_ITEMS), "items"),
+                        self._query_value(current_items, "items"))
+            if pname == "pack_propagate": return (pname, pname, pname, "None", str(getattr(self, "_pack_propagate_val", None)))
             if pname in ["fg_color", "border_color", "text_color"]:
                 current_state = str(self.state()).lower()
                 val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
@@ -164,7 +186,11 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
 
         if "items" in kwargs:
             items_val = kwargs.pop("items")
-            if items_val == "" or items_val is None: items_val = []
+            # An empty value means "use the placeholder list", matching the
+            # query above and what the builder object passes when the
+            # inspector field is blank.
+            if items_val == "" or items_val is None:
+                items_val = list(self.DEFAULT_ITEMS)
             elif isinstance(items_val, str):
                 # Shared parser: accepts the Python-literal form this
                 # widget's inspector default uses AND the bare
@@ -208,10 +234,23 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
 
         if "state" in kwargs: self.state(kwargs.pop("state"))
 
+        # grid_propagate is deliberately GONE.
+        #
+        # pack_propagate() and grid_propagate() control whether a container
+        # resizes to fit its children, and which one applies depends on how
+        # THE CHILDREN are managed -- not on how this widget is managed by its
+        # own parent. This widget packs its children, so pack_propagate is the
+        # meaningful call and grid_propagate could never do anything.
+        #
+        # It was offered anyway, so setting it looked like a knob that did
+        # nothing, while pack_propagate appeared to work "regardless of
+        # geometry management" -- which is simply what it does. A property that
+        # provably cannot have an effect is worse than an absent one: someone
+        # sets it, sees nothing, and goes looking for a bug in their layout.
         pack_prop_val = kwargs.pop("pack_propagate", None)
-        grid_prop_val = kwargs.pop("grid_propagate", None)
+        # Accepted and discarded, so existing code passing it does not raise.
+        kwargs.pop("grid_propagate", None)
         if pack_prop_val is not None and pack_prop_val != "": setattr(self, "_pack_propagate_val", str(pack_prop_val).lower() in ['true', '1', 'yes'])
-        if grid_prop_val is not None and grid_prop_val != "": setattr(self, "_grid_propagate_val", str(grid_prop_val).lower() in ['true', '1', 'yes'])
 
         for k, v in list(kwargs.items()):
             if k in self._local_defaults: self.final_kw[k] = kwargs.pop(k)
@@ -224,24 +263,19 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         h_val = int(self.final_kw.get("height", 0))
         if w_val > 0 or h_val > 0:
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", False)
-            use_grid_p = grid_prop_val if grid_prop_val is not None else getattr(self, "_grid_propagate_val", False)
         else:
             self.final_kw["width"] = 200
             self.final_kw["height"] = 150
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", True)
-            use_grid_p = grid_prop_val if grid_prop_val is not None else getattr(self, "_grid_propagate_val", True)
 
         if isinstance(use_pack_p, str): use_pack_p = use_pack_p.lower() in ['true', '1', 'yes']
-        if isinstance(use_grid_p, str): use_grid_p = use_grid_p.lower() in ['true', '1', 'yes']
         if use_pack_p is not None: self.pack_propagate(use_pack_p)
-        if use_grid_p is not None: self.grid_propagate(use_grid_p)
 
         if hasattr(self, "checkboxes_frame") and hasattr(self.checkboxes_frame, "_parent_frame"):
             if use_pack_p is not None: self.checkboxes_frame._parent_frame.pack_propagate(use_pack_p)
-            if use_grid_p is not None: self.checkboxes_frame._parent_frame.grid_propagate(use_grid_p)
 
         self.final_kw.pop("pack_propagate", None)
-        self.final_kw.pop("grid_propagate", None)
+        self.final_kw.pop("grid_propagate", None)   # harmless if it was passed
         self.final_kw.pop("state", None)
 
         for k, v in list(kwargs.items()):

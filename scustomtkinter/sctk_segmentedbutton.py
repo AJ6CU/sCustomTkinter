@@ -42,6 +42,19 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
     a light/dark switch -- confirmed by direct testing, including while disabled.
     """
 
+    # The placeholder list a cleared `values` property falls back to.
+    #
+    # NOT the constructor's default -- sCTkSegmentedButton(parent) with no
+    # values is legitimately empty. This is what the Designer restores when
+    # the field is blanked, because reporting the CURRENT list as the default
+    # (which is what a plain cget() fallback does) meant clearing the field
+    # changed nothing at all: "the default is what you already have".
+    #
+    # An empty segmented button shows nothing, so falling back to [] would
+    # look like the widget had broken -- the same trap sCTkSelector's `items`
+    # was in.
+    DEFAULT_VALUES = ("Segment 1", "Segment 2")
+
     def __init__(self, master: Optional[Any] = None, **kw: Any) -> None:
         """
         Args:
@@ -134,6 +147,22 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
             if isinstance(args[0], dict):
                 kwargs = {**args[0], **kwargs}
             else:
+                if args[0] == "values":
+                    # Without this the fall-through asks cget("values") and
+                    # uses the answer as its own default, so blanking the
+                    # field reported "the default is what you already have"
+                    # and the previous list stayed on screen.
+                    #
+                    # Both slots go through _query_value with the property
+                    # name, which renders a list as the JSON pygubu parses.
+                    try:
+                        current = list(super().cget("values"))
+                    except Exception:
+                        current = []
+                    return ("values", "values", "values",
+                            self._query_value(list(self.DEFAULT_VALUES), "values"),
+                            self._query_value(current, "values"))
+
                 # FIX: forwarding a property NAME to a native configure()
                 # passes it as require_redraw -- CustomTkinter declares
                 # configure(self, require_redraw=False, **kwargs) -- so the call
@@ -150,7 +179,13 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
                 # _configure_query() builds one -- see themeable_widget.py.
                 return self._configure_query(args[0])
 
-        if "values" in kwargs: super().configure(values=kwargs.pop("values"))
+        if "values" in kwargs:
+            values_val = kwargs.pop("values")
+            # An empty value means "use the placeholder list", matching the
+            # query branch and what the Designer restores.
+            if values_val in ("", None, []):
+                values_val = list(self.DEFAULT_VALUES)
+            super().configure(values=values_val)
         if "variable" in kwargs: super().configure(variable=kwargs.pop("variable"))
         if "command" in kwargs: super().configure(command=kwargs.pop("command"))
 
