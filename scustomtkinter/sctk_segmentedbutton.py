@@ -134,7 +134,21 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
             if isinstance(args[0], dict):
                 kwargs = {**args[0], **kwargs}
             else:
-                return super().configure(args[0])
+                # FIX: forwarding a property NAME to a native configure()
+                # passes it as require_redraw -- CustomTkinter declares
+                # configure(self, require_redraw=False, **kwargs) -- so the call
+                # returns None, or raises outright where the signature takes no
+                # positional at all:
+                #
+                #   TypeError: CTkSegmentedButton.configure() takes 1
+                #   positional argument but 2 were given
+                #
+                # Reached whenever a field is blanked in the Designer
+                # inspector, which calls configure(name) to read the property's
+                # default and expects a Tkinter-style five-tuple back.
+                #
+                # _configure_query() builds one -- see themeable_widget.py.
+                return self._configure_query(args[0])
 
         if "values" in kwargs: super().configure(values=kwargs.pop("values"))
         if "variable" in kwargs: super().configure(variable=kwargs.pop("variable"))

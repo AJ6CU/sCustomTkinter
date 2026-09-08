@@ -160,7 +160,9 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
         Raises:
             KeyError: naming the first missing key found.
         """
-        name = self.__class__.__name__
+        # Resolved the way ThemeableWidget resolves it, so the message names
+        # the block actually read rather than the subclass's own name.
+        name = getattr(self, "_THEME_BLOCK_NAME", None) or self.__class__.__name__
         for key in self._REQUIRED_THEME_KEYS:
             if self._local_defaults.get(key) is None:
                 raise KeyError(
@@ -187,7 +189,16 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
             if isinstance(args[0], dict):
                 kwargs = {**args[0], **kwargs}
             else:
-                return super().configure(args[0])
+                # FIX: forwarding a property NAME to native configure()
+                # passes it as require_redraw -- CustomTkinter declares
+                # configure(self, require_redraw=False, **kwargs) -- so the
+                # call returns None, which pygubu then hands straight back to
+                # _set_property(). Reached whenever a field is blanked in the
+                # Designer inspector, which calls configure(name) to read a
+                # property's default and expects a Tkinter-style five-tuple.
+                #
+                # _configure_query() builds one -- see themeable_widget.py.
+                return self._configure_query(args[0])
 
         for k, v in list(kwargs.items()):
             if v == "": kwargs.pop(k)

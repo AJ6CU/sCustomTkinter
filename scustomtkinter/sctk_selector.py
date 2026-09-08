@@ -149,7 +149,16 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
                 current_state = str(self.state()).lower()
                 val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
                 return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
-            return super().configure(cnf)
+            # FIX: forwarding a property NAME to native configure() passes it
+            # as require_redraw and returns None, where pygubu expects a
+            # Tkinter-style five-tuple -- it then hands that None straight back
+            # to _set_property(). Reached whenever a field is blanked in the
+            # Designer inspector.
+            #
+            # This file uses the older (self, cnf=None, **kwargs) signature, so
+            # the query arrives as `cnf`. The batch pass that fixed this across
+            # the library matched on `pname` and `require_redraw` and missed it.
+            return self._configure_query(cnf)
 
         if isinstance(cnf, dict): kwargs = cnf | kwargs
 
