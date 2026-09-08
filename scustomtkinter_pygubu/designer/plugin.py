@@ -217,10 +217,85 @@ class sCTkSegmentedButtonForPreview(sCTkSegmentedButton):
     the Designer without making it selectable on the canvas; select it from the
     widget tree.
 
-    A crash on drop is much worse than a widget selected from the tree, which
-    is why this is worth having even though it only solves half the problem.
+    SELECTION. CustomTkinter's own attempt stops at "I can't select a
+    segmented button in preview". The same problem was solved for sCTkDialog
+    earlier, and the same solution applies here:
+
+      - Pygubu resolves a clicked widget through builder.get_widget_id(). The
+        segments are CTkButtons this widget creates for itself, so they are not
+        in the builder's map and a click on one resolves to None.
+      - winfo_children() below hides them from pygubu's binding pass, so it
+        binds this widget and not the segments.
+      - _bind_segments_to_self() then binds them to forward their click here.
+      - The forwarded event goes to self._canvas, NOT to self. CTkFrame.bind()
+        redirects every binding to its internal canvas, so that is where
+        pygubu's handler actually ended up -- generating the event on the
+        widget itself dispatches into nothing.
     """
     _THEME_BLOCK_NAME = "sCTkSegmentedButton"
+
+    def __init__(self, master=None, **kw):
+        super().__init__(master, **kw)
+        self._bind_segments_to_self()
+
+    def _segment_widgets(self):
+        """The CTkButtons this widget builds for itself, canvas excluded."""
+        return [w for w in super(tk.Frame, self).winfo_children()
+                if isinstance(w, ctk.CTkButton)]
+
+    def _bind_segments_to_self(self):
+        """
+        Makes a click on any segment select the whole widget.
+
+        A CTkButton draws on an internal canvas that receives the click before
+        the widget does, and puts its label in a separate tk.Label, so all
+        three are bound.
+        """
+        def select_self(event, target=self):
+            try:
+                canvas = getattr(target, "_canvas", None) or target
+                canvas.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        for segment in self._segment_widgets():
+            for widget in (segment,
+                           getattr(segment, "_canvas", None),
+                           getattr(segment, "_text_label", None)):
+                if widget is None:
+                    continue
+                try:
+                    widget.bind("<Button-1>", select_self)
+                except Exception:
+                    pass
+
+    def configure(self, *args, **kwargs):
+        """
+        Rebinds after any change that could rebuild the segments.
+
+        Setting `values` destroys the existing buttons and creates new ones,
+        which would otherwise be left unbound.
+        """
+        result = super().configure(*args, **kwargs)
+        if not (len(args) == 1 and not isinstance(args[0], dict)):
+            self._bind_segments_to_self()
+        return result
+
+    def winfo_children(self):
+        """
+        Hides the segments from the Designer's binding pass.
+
+        Pygubu binds a click handler to everything it finds here, and that
+        handler resolves the clicked widget through get_widget_id() -- which
+        knows nothing about buttons this widget created for itself. Excluding
+        them leaves the bindings installed by _bind_segments_to_self() intact.
+
+        The internal canvas is KEPT: it is this widget's visible background,
+        and dropping it would stop a click on empty space selecting anything.
+        """
+        return [w for w in super(tk.Frame, self).winfo_children()
+                if not isinstance(w, ctk.CTkButton)]
 
     def bind(self, sequence=None, func=None, add=None):
         for child in self.winfo_children():

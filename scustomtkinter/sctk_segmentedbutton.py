@@ -42,18 +42,22 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
     a light/dark switch -- confirmed by direct testing, including while disabled.
     """
 
-    # The placeholder list a cleared `values` property falls back to.
+    # What a segmented button shows when `values` has never been set.
     #
-    # NOT the constructor's default -- sCTkSegmentedButton(parent) with no
-    # values is legitimately empty. This is what the Designer restores when
-    # the field is blanked, because reporting the CURRENT list as the default
-    # (which is what a plain cget() fallback does) meant clearing the field
-    # changed nothing at all: "the default is what you already have".
+    # This is CustomTkinter's own placeholder, a hardcoded literal in
+    # CTkSegmentedButton.__init__:
     #
-    # An empty segmented button shows nothing, so falling back to [] would
-    # look like the widget had broken -- the same trap sCTkSelector's `items`
-    # was in.
-    DEFAULT_VALUES = ("Segment 1", "Segment 2")
+    #     self._value_list: List[str] = ["CTkSegmentedButton"]
+    #
+    # Note it does NOT carry this library's "s" prefix, because the string was
+    # written by hand rather than derived from the class -- a subclass shows it
+    # unchanged.
+    #
+    # Clearing the property in the Designer restores exactly this, so a cleared
+    # field matches a freshly placed widget. An earlier version invented its
+    # own placeholder here, which meant "clear" produced something the widget
+    # never shows on its own.
+    DEFAULT_VALUES = ("CTkSegmentedButton",)
 
     def __init__(self, master: Optional[Any] = None, **kw: Any) -> None:
         """
@@ -181,8 +185,8 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
 
         if "values" in kwargs:
             values_val = kwargs.pop("values")
-            # An empty value means "use the placeholder list", matching the
-            # query branch and what the Designer restores.
+            # An empty value restores CustomTkinter's own placeholder, so a
+            # cleared field matches a freshly placed widget.
             if values_val in ("", None, []):
                 values_val = list(self.DEFAULT_VALUES)
             super().configure(values=values_val)
