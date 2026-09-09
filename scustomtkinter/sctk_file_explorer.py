@@ -417,12 +417,31 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             if pname == "initialfile": return ("initialfile", "initialfile", "initialfile", "", self.selected_path.get())
             if pname == "filetypes": return ("filetypes", "filetypes", "filetypes", "", str(self.filetypes) if self.filetypes else "")
             if pname == "double_click_command": return ("double_click_command", "double_click_command", "double_click_command", "", str(self.double_click_command))
-            return super().configure(*args, **kwargs)
+            # FIX: was `return super().configure(*args, **kwargs)`.
+            #
+            # Native CTkFrame.configure() takes the property NAME as
+            # require_redraw and returns None, which pygubu then hands back to
+            # _set_property() -- see themeable_widget._configure_query().
+            # The library-wide sweep matched on `pname` and `require_redraw`
+            # and missed the *args form used here.
+            return self._configure_query(pname)
 
         # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
         # tuple, so this never fired and the dict-merge form of configure()
         # was dead. Same tautology fixed across the batch-one widgets.
         if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
+        # fg_color has to reach the internal CANVAS as well as the frame.
+        #
+        # _resolve_canvas_bg_color() was called only at construction and from
+        # _set_appearance_mode(), so configure(fg_color=...) repainted the
+        # outer frame and left the scrolling area on its old colour. And on the
+        # unset path -- where something did trigger a refresh -- the canvas
+        # picked up the new value while the frame did not, so clearing the
+        # field appeared to paint the WHOLE widget instead of resetting it.
+        #
+        # One symptom each way, one cause: the canvas was never refreshed at
+        # the point the colour actually changed.
+        _fg_changed = "fg_color" in kwargs
         if "state" in kwargs:
             self._state = str(kwargs.pop("state")).lower()
             if self._state not in ("normal", "disabled"): self._state = "normal"
@@ -478,7 +497,18 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                 self.final_kw.pop(custom_key, None)
 
         self._process_live_theme_repaint()
-        return super().configure(**kwargs)
+        result = super().configure(**kwargs)
+
+        # The internal CANVAS, after the frame has taken its new colour.
+        #
+        # _resolve_canvas_bg_color() reads back cget("fg_color"), so it has to
+        # run AFTER super().configure() or it re-reads the old value.
+        if _fg_changed and hasattr(self, "canvas") and self.canvas.winfo_exists():
+            self.canvas.configure(bg=self._resolve_canvas_bg_color())
+            if hasattr(self, "path_to_show"):
+                self._fill_explorer()
+
+        return result
 
     config = configure
     def get_state(self) -> str: return self.state()
@@ -639,4 +669,3 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             if (now - self._last_double_click_time) < 0.3: return
             self._last_double_click_time = now
             if self.double_click_command and callable(self.double_click_command): self.double_click_command(self, target_path)
-
