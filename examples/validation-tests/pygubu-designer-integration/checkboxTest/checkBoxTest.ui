@@ -25,11 +25,36 @@
   </project>
   <object class="scustomtkinter.sCTk" id="sctk1">
     <child>
+      <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary1">
+        <property name="fg_color">red</property>
+        <property name="state">normal</property>
+        <property name="text" translatable="yes">sctkbuttonprimary1</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
       <object class="scustomtkinter.sCTkCheckBox" id="sctkcheckbox1">
-        <property name="offvalue">0</property>
-        <property name="onvalue">1</property>
+        <property name="fg_color">red</property>
+        <property name="state">normal</property>
         <property name="text" translatable="yes">sctkcheckbox1</property>
-        <property name="textvariable">string:checkbox_VAR</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary1">
+        <property name="text" translatable="yes">sctkbuttonsecondary1</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkButtonTertiary" id="sctkbuttontertiary1">
+        <property name="text" translatable="yes">sctkbuttontertiary1</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>

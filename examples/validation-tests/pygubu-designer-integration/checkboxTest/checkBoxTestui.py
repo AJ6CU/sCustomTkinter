@@ -6,7 +6,6 @@ checkBoxTest
 
 UI source file: checkBoxTest.ui
 """
-import tkinter as tk
 from scustomtkinter.sctk_button_primary import sCTkButtonPrimary
 from scustomtkinter.sctk_checkbox import sCTkCheckBox
 from scustomtkinter.sctk_core import sCTk
@@ -54,33 +53,24 @@ class checkBoxTestUI:
         # First object created
         on_first_object_cb(sctk1)
 
-        sctkcheckbox1 = sCTkCheckBox(sctk1, onvalue=1, offvalue=0)
-        self.checkbox_VAR = tk.StringVar(value='my checkbox')
-        self.checkbox_Value = tk.StringVar()
-        sctkcheckbox1.configure(
-            fg_color="yellow",
-            state="disabled",
-            text='my checkbox',
-            text_color_disabled="yellow",
-            textvariable=self.checkbox_VAR,
-            variable=self.checkbox_Value)
-        sctkcheckbox1.pack(side="top")
-        sctkcheckbox1.configure(command=self.checkbox_CB)
         sctkbuttonprimary1 = sCTkButtonPrimary(sctk1)
         sctkbuttonprimary1.configure(
             fg_color="red",
-            state="normal",
+            state="disabled",
             text='sctkbuttonprimary1')
         sctkbuttonprimary1.pack(side="top")
+        sctkcheckbox1 = sCTkCheckBox(sctk1)
+        sctkcheckbox1.configure(
+            fg_color="red",
+            state="disabled",
+            text='sctkcheckbox1')
+        sctkcheckbox1.pack(side="top")
 
         # Main widget
         self.mainwindow = sctk1
 
     def run(self):
         self.mainwindow.mainloop()
-
-    def checkbox_CB(self):
-        pass
 
 
 if __name__ == "__main__":
