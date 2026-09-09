@@ -23,5 +23,27 @@
     <customwidgets />
     <resources />
   </project>
-  <object class="scustomtkinter.sCTk" id="sctk1" />
+  <object class="scustomtkinter.sCTk" id="sctk1">
+    <child>
+      <object class="scustomtkinter.sCTkFileExplorer" id="sctkfileexplorer1">
+        <property name="command" type="command" cbtype="simple">single_cb</property>
+        <property name="double_click_command" type="command" cbtype="simple">double_cb</property>
+        <property name="filetypes">[".py"]</property>
+        <property name="initialdir">~/Downloads</property>
+        <property name="state">normal</property>
+        <property name="type">file</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkLabelSecondary" id="sctklabelsecondary1">
+        <property name="text" translatable="yes">sctklabelsecondary1</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+  </object>
 </interface>

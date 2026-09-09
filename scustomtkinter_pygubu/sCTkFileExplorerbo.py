@@ -40,6 +40,54 @@ class sCTkFileExplorerBO(BuilderObject):
         """Passes values directly to allow core widget validations to handle exceptions."""
         return super()._process_property_value(pname, value)
 
+    def _code_define_callback_args(self, cmd_pname, cmd):
+        """
+        Declares what each callback receives, so the generated stub has
+        matching parameters.
+
+        FIX: without this, pygubu generated a stub with no arguments --
+
+            def single_cb(self):
+                pass
+
+        -- and the widget called it with the selected path:
+
+            TypeError: single_cb() takes 1 positional argument but 2 were given
+
+        The two callbacks differ. `command` receives the path alone;
+        `double_click_command` receives the WIDGET and the path, which is how
+        sCTkPathChooser drives it (it reads args[-1] to get the path).
+        """
+        if cmd_pname == "double_click_command":
+            return ("explorer", "selected_path")
+        return ("selected_path",)
+
+    def _code_set_property(self, targetid, pname, value, code_bag):
+        """
+        Emits `filetypes` as a real Python list, not a quoted string.
+
+        FIX: the bracketed form contains double quotes, and the default
+        handler wraps the whole value in double quotes again:
+
+            sctkfileexplorer1.configure(filetypes="[".py"]", ...)
+                                                  ^^^^^^^^^
+            SyntaxError: invalid syntax
+
+        Emitting the literal unquoted gives valid Python and a real list, so
+        the widget receives one directly rather than parsing a string back
+        out of it. Same approach sCTkSelectorbo uses for `items`.
+
+        A bare comma-separated value -- the other accepted form -- has no
+        brackets and no quotes, so it is emitted as a quoted string and parsed
+        by the widget as usual.
+        """
+        if pname == "filetypes" and value:
+            text = str(value).strip()
+            if text.startswith("[") and text.endswith("]"):
+                code_bag[pname] = text
+                return None
+        return super()._code_set_property(targetid, pname, value, code_bag)
+
     # NOTE: `type` and `filetypes` constrain each other in the WIDGET, but the
     # inspector does not follow.
     #
