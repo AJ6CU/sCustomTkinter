@@ -170,6 +170,16 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             pname = args[0]
             if pname == "state":
                 return ("state", "state", "state", "normal", self._state)
+            if pname in ("swr_visible", "pwr_visible", "hide_lower_row"):
+                defaults = {"swr_visible": self._default_swr_visible,
+                            "pwr_visible": self._default_pwr_visible,
+                            "hide_lower_row": self._default_hide_lower_row}
+                currents = {"swr_visible": self._swr_visible,
+                            "pwr_visible": self._pwr_visible,
+                            "hide_lower_row": self._hide_lower_row}
+                return (pname, pname, pname,
+                        str(defaults[pname]), str(currents[pname]))
+
             if pname in ["width", "height", "swr_max_value"]:
                 fallback = self._default_width if pname == "width" else (self._default_height if pname == "height" else self._default_swr_max_value)
                 current = super().cget("width") if pname == "width" else (super().cget("height") if pname == "height" else self.swr_max_value)
@@ -220,6 +230,38 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         if "height" in kwargs:
             h = kwargs["height"]
             kwargs["height"] = int(h) if (h and str(h).strip()) else self._default_height
+
+        # FIX: the three visibility flags were constructor arguments with a
+        # configure_visibility() method and cget() support, but no configure()
+        # branch -- so a Designer edit reached native CTkFrame.configure() and
+        # raised:
+        #
+        #   ['pwr_visible'] are not supported arguments.
+        #
+        # swr_max_value had a branch, which is why only these three failed.
+        #
+        # An empty value restores the constructor default, matching the query
+        # branch above and what generated code does when the property is
+        # omitted.
+        _visibility = {
+            "swr_visible": ("_swr_visible", self._default_swr_visible),
+            "pwr_visible": ("_pwr_visible", self._default_pwr_visible),
+            "hide_lower_row": ("_hide_lower_row", self._default_hide_lower_row),
+        }
+        _visibility_changed = False
+        for _key, (_attr, _fallback) in _visibility.items():
+            if _key not in kwargs:
+                continue
+            _val = kwargs.pop(_key)
+            if _val == "" or _val is None:
+                setattr(self, _attr, _fallback)
+            elif isinstance(_val, str):
+                setattr(self, _attr, _val.strip().lower() in ("true", "1", "yes"))
+            else:
+                setattr(self, _attr, bool(_val))
+            _visibility_changed = True
+        if _visibility_changed:
+            self._draw_meter()
 
         if "swr_max_value" in kwargs:
             val = kwargs.pop("swr_max_value")
