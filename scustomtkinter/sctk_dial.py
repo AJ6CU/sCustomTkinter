@@ -68,6 +68,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         # it -- the name described neither. Renamed and separated: the knob is
         # drawn at exactly this size, and the canvas defaults to leaving room
         # for labels around it.
+        target_knob = self._local_defaults.get("knob_diameter")
         self._knob_diameter = int(target_knob) if target_knob is not None else 120
         width, height = self._default_canvas_size(width, height)
 
