@@ -142,6 +142,81 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             font = (font[0], font[1], *styles) if styles else (font[0], font[1])
         return font
 
+    def _label_margin(self, texts):
+        """
+        Space the labels need outside the knob, measured rather than assumed.
+
+        The knob radius was `min(center_x, center_y) - 28` -- a fixed margin
+        tuned for short 9pt labels. Anything longer or larger ran off the
+        canvas, and no diameter helped: the knob grew with the widget and kept
+        the same 28px for text. The visible symptom was labels clipped at the
+        edge, with ipadx fixing the sides while stealing from the top and
+        ipady doing the reverse.
+
+        `diameter` stays what the caller asked for. The KNOB shrinks to leave
+        room, which keeps a panel's layout predictable -- a dial never occupies
+        more space than its diameter, however long its labels.
+
+        Tk is asked for the real extent rather than estimating from character
+        counts, because a proportional font's width depends on which
+        characters, and "WWW" is far wider than "iii".
+
+        Args:
+            texts: The label strings that will be drawn.
+
+        Returns:
+            Pixels to reserve between the knob edge and the canvas edge.
+        """
+        base = 28  # what the original hardcode reserved, and the floor here
+        if not texts:
+            return base
+
+        font = self._label_font()
+        try:
+            import tkinter.font as tkfont
+            measurer = tkfont.Font(font=font)
+        except Exception:
+            return base
+
+        widest = 0
+        tallest = 0
+        for text in texts:
+            # A label may carry newlines -- the documented way to keep a long
+            # one narrow -- so each line is measured separately and the tallest
+            # stack wins.
+            lines = str(text).split("\n")
+            for line in lines:
+                widest = max(widest, measurer.measure(line))
+            tallest = max(tallest, measurer.metrics("linespace") * len(lines))
+
+        # Half the widest label, because anchoring means only half of it sits
+        # beyond the arc point at the sides; the full height at top and bottom.
+        # Plus the gap _label_placement() puts between knob and text.
+        try:
+            size = int(font[1])
+        except (TypeError, ValueError, IndexError):
+            size = 9
+        needed = max(widest / 2.0, tallest) + 9 + size
+
+        return max(base, int(needed))
+
+    def _label_texts(self):
+        """
+        The label strings this dial will draw, or an empty list if it draws
+        none.
+
+        sCTkDialContinuous draws no labels at all, so it reserves nothing and
+        keeps the full knob it always had.
+        """
+        if hasattr(self, "_labels") and self._labels:
+            return list(self._labels)
+        if hasattr(self, "_from") and hasattr(self, "_to"):
+            divisions = int(getattr(self, "_divisions", 5) or 5)
+            span = float(self._to) - float(self._from)
+            return [str(int(float(self._from) + span * (i / max(divisions - 1, 1))))
+                    for i in range(divisions)]
+        return []
+
     def _label_placement(self, angle_rad, knob_radius):
         """
         Where a label sits, and which way it grows from there.
@@ -582,7 +657,9 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
 
         self.canvas.configure(bg=bg_color)
         center_x, center_y = width / 2, height / 2
-        knob_radius = min(center_x, center_y) - 28
+        # Measured, not assumed: see _label_margin(). The knob gives up room
+        # so the labels fit inside the diameter the caller asked for.
+        knob_radius = min(center_x, center_y) - self._label_margin(self._label_texts())
 
         has_arc_constraints = hasattr(self, "_arc_angle")
         arc_sweep = float(self._arc_angle) if has_arc_constraints else 360.0
