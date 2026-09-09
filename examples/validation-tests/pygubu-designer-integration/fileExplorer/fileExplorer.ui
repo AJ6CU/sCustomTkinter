@@ -23,23 +23,5 @@
     <customwidgets />
     <resources />
   </project>
-  <object class="scustomtkinter.sCTk" id="sctk1">
-    <child>
-      <object class="scustomtkinter.sCTkFileExplorer" id="sctkfileexplorer1">
-        <property name="type">file</property>
-        <property name="width">500</property>
-        <layout manager="pack">
-          <property name="side">top</property>
-        </layout>
-      </object>
-    </child>
-    <child>
-      <object class="scustomtkinter.sCTkLabelPrimary" id="sctklabelprimary1">
-        <property name="text" translatable="yes">sctklabelprimary1</property>
-        <layout manager="pack">
-          <property name="side">top</property>
-        </layout>
-      </object>
-    </child>
-  </object>
+  <object class="scustomtkinter.sCTk" id="sctk1" />
 </interface>

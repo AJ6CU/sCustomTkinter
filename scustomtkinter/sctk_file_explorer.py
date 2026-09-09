@@ -94,20 +94,20 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
 
         self.filetypes = []
         if filetypes:
-            # Setting filetypes implies file selection.
+            # Complaint, not correction.
             #
-            # This used to raise ValueError when the mode was "directory",
-            # which is the default -- so sCTkFileExplorer(parent,
-            # filetypes=[".py"]) failed outright, and the same combination in
-            # the Designer produced a warning inside the widget rather than a
-            # filter. Both read as the widget being broken until you notice the
-            # mode.
+            # An earlier attempt had this switch the mode to "file" silently,
+            # on the reasoning that asking for a filter is unambiguous about
+            # intent. It was wrong for the Designer: a builder object cannot
+            # write the companion value back to the live tree node, so the
+            # inspector went on showing "directory" -- and the .ui file SAVED
+            # that combination, making the divergence permanent rather than
+            # cosmetic.
             #
-            # Asking for a filter is unambiguous about intent, so the mode
-            # follows it. Clearing filetypes does NOT switch back: by then the
-            # caller has a file explorer, and silently turning it into a
-            # directory picker would be a second surprise.
-            self.response_type = "file"
+            # Refusing is better than correcting something the surrounding
+            # tooling cannot be told about.
+            if self.response_type != "file":
+                raise ValueError("Cannot provide 'filetypes' filters when widget mode is 'directory'.")
             if isinstance(filetypes, str):
                 cleaned_str = filetypes.strip()
                 if not (cleaned_str.startswith("[") and cleaned_str.endswith("]")):
@@ -536,20 +536,6 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                     if clean_f:
                         if not clean_f.startswith("."): clean_f = "." + clean_f
                         self.filetypes.append(clean_f)
-
-                # Setting filetypes implies file selection.
-                #
-                # A fresh explorer is in directory mode, where filetypes has no
-                # meaning -- so setting it there produced a warning inside the
-                # widget rather than a filter, which reads as the widget being
-                # broken until you notice the mode. Asking for a filter is
-                # unambiguous about intent, so the mode follows.
-                #
-                # Clearing filetypes does NOT switch back: by then the caller
-                # has a file explorer, and silently turning it into a directory
-                # picker would be a second surprise.
-                if self.filetypes and self.response_type != "file":
-                    self.response_type = "file"
             else: self.filetypes = None
 
         if "width" in kwargs:
@@ -635,16 +621,9 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             self._process_live_theme_repaint()
 
     def set_filetypes(self, filetypes_data: Union[list, str]):
-        # Setting filetypes implies file selection, matching the constructor
-        # and configure(). This used to raise when the mode was "directory",
-        # which is the default -- so the natural call failed on a fresh widget.
-        #
-        # The rule reads as "last action wins": set_mode("directory") clears
-        # the filetypes, because choosing directories makes a filter
-        # meaningless; setting filetypes switches to file mode, because a
-        # filter is unambiguous about intent.
-        if filetypes_data:
-            self.response_type = "file"
+        # Complaint, not correction -- see the constructor for why.
+        if self.response_type != "file":
+            raise ValueError("Cannot apply 'filetypes' when mode is 'directory'.")
         if not filetypes_data:
             self.filetypes = None
             self._process_live_theme_repaint()
@@ -766,4 +745,3 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             if (now - self._last_double_click_time) < 0.3: return
             self._last_double_click_time = now
             if self.double_click_command and callable(self.double_click_command): self.double_click_command(self, target_path)
-
