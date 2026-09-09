@@ -177,15 +177,81 @@ class sCTkFileExplorerForPreview(sCTkFileExplorer):
     """
     Designer preview for sCTkFileExplorer.
 
-    Without this the widget cannot be selected by clicking it. The explorer
-    draws its file list on an internal canvas that CTkFrame hides from
-    winfo_children(), and the Designer walks that list to bind its click
-    handler -- so it never reached the part of the widget there is to click.
+    Two problems, the second only visible once the first is fixed.
+
+    The explorer draws on an internal canvas that CTkFrame hides from
+    winfo_children(), so the Designer's binding pass never reached it and the
+    widget could not be clicked at all.
+
+    Exposing the canvas made the OUTER EDGE selectable, but nothing else: the
+    path entry, the navigation buttons and every file row are widgets the
+    explorer builds for itself, so they are not in the builder's map and a
+    click on one resolves to None. They are hidden from the binding pass and
+    bound here instead, forwarding to the canvas -- which is where
+    CTkFrame.bind() puts the Designer's own handler.
+
+    Rows are rebuilt on every navigation, so the binding is reapplied after
+    each fill.
     """
     _THEME_BLOCK_NAME = "sCTkFileExplorer"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._bind_own_parts_to_self()
+
+    def _own_part_roots(self):
+        """The containers holding widgets this explorer built for itself."""
+        return [w for w in (getattr(self, "top_frame", None),
+                            getattr(self, "explorer_frame", None))
+                if w is not None]
+
+    def _bind_own_parts_to_self(self):
+        """Makes a click anywhere inside the explorer select the explorer."""
+        def select_self(event, target=self):
+            try:
+                canvas = getattr(target, "canvas", None) or target
+                canvas.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        def bind_tree(widget, depth=0):
+            if widget is None or depth > 4:
+                return
+            for w in (widget,
+                      getattr(widget, "_canvas", None),
+                      getattr(widget, "_text_label", None)):
+                if w is None:
+                    continue
+                try:
+                    w.bind("<Button-1>", select_self)
+                except Exception:
+                    pass
+            try:
+                children = tk.Misc.winfo_children(widget)
+            except Exception:
+                children = []
+            for child in children:
+                bind_tree(child, depth + 1)
+
+        for root in self._own_part_roots():
+            bind_tree(root)
+
+    def _fill_explorer(self, *args, **kwargs):
+        """Rebinds the rows, which this call destroys and recreates."""
+        result = super()._fill_explorer(*args, **kwargs)
+        self._bind_own_parts_to_self()
+        return result
+
     def winfo_children(self):
-        return super(tk.Frame, self).winfo_children()
+        """
+        Hides the explorer's own parts from the Designer's binding pass.
+
+        The internal canvas is KEPT -- it is the visible background, and
+        dropping it would stop a click on empty space selecting anything.
+        """
+        own = set(self._own_part_roots())
+        return [w for w in super(tk.Frame, self).winfo_children() if w not in own]
 
 
 class sCTkPathChooserForPreview(sCTkPathChooser):
