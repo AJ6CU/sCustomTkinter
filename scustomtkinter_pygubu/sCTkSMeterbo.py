@@ -14,6 +14,7 @@ from pygubu.api.v1 import (
 )
 
 # Import the native custom class
+from scustomtkinter.themeable_widget import parse_font_property
 from scustomtkinter.sctk_smeter import sCTkSMeter
 
 
@@ -30,10 +31,15 @@ class sCTkSMeterBO(BuilderObject):
     class_ = sCTkSMeter
 
     # Expose custom compound parameters alongside theme state configurations
-    OPTIONS_CUSTOM = ("width", "height")
+    OPTIONS_CUSTOM = ("width", "height", "font", "scale_font")
     properties = OPTIONS_CUSTOM
 
     def _process_property_value(self, pname, value):
+        if pname in ("font", "scale_font"):
+            # Shared parser: Pygubu's fontentry emits a Tk font STRING, and
+            # "{}" for "no style selected" -- passed through, that reaches a
+            # canvas item as TclError: unknown font style "".
+            return parse_font_property(value)
         if pname in ("width", "height"):
             return int(value)
         return super()._process_property_value(pname, value)
@@ -62,5 +68,11 @@ register_custom_property(
     help="Set height in pixels of the meter"
 )
 
-
-
+register_custom_property(
+    builder_id, "font", "fontentry",
+    help='Font for the captions -- SIGNAL, SIG, SWR and PWR. Blank uses the theme font.'
+)
+register_custom_property(
+    builder_id, "scale_font", "fontentry",
+    help='Font for the scale tick labels. Blank uses the theme scale_font. Larger values can overlap on a narrow meter.'
+)

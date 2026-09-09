@@ -40,7 +40,7 @@ Initialize an infinite flywheel encoder instance. Keyword properties layer safel
 tuning_dial = sCTkDialContinuous(
     master=frame_continuous,
     divisions=24,
-    diameter=130,
+    knob_diameter=130,
     command=on_vfo_dial_rotated,
     left_click_callback=my_custom_left_click,
     right_click_callback=my_custom_right_click
@@ -91,6 +91,12 @@ Every key above is required — construction raises `KeyError` naming any that a
 `pointer_glow_color` is **specific to this variant**: it colours the ring around the finger dimple, and only this dial draws one. It is required in both the top level and `disabled_map`. Selector and Range require `pointer_color` instead.
 
 The dark-mode values above give a black anodised knob. For a brushed-aluminium look, raise `dial_shadow_color` and `dial_highlight_color` toward the light end and brighten the rim.
+
+### Sizing
+
+**`knob_diameter` names the knob; `width` and `height` name the canvas.** The property was previously called `diameter` and set both canvas dimensions to its own value, so the name described neither. This variant draws no labels, so a canvas only slightly larger than the knob is enough — given `knob_diameter` alone, it defaults to 40px more on each side.
+
+---
 
 ### Other notes
 * **Knob rendering:** the body is a shaded dome and the indicator is a recessed finger dimple, sized at 36% of the knob radius with 6% rim clearance — a VFO operator puts a finger in it to spin the dial quickly. Both scale with the knob. See [the base class page](sCTkDial.md#knob-rendering).
@@ -179,7 +185,7 @@ if __name__ == "__main__":
     tuning_dial = sCTkDialContinuous(
         base,
         divisions=24,
-        diameter=130,
+        knob_diameter=130,
         command=on_vfo_dial_rotated,
         left_click_callback=my_custom_left_click,
         right_click_callback=my_custom_right_click

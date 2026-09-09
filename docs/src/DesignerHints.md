@@ -70,7 +70,22 @@ class MyApp(baseui.MyAppUI):
 
 ---
 
+## Some widgets are not in the palette, deliberately
+
+`sCTkMessagebox` is raised at runtime in response to an error or an
+informational event, not placed on a form — there is nothing to design.
+
+`sCTkDialogToplevel` is created by `sCTkDialog`, never placed by a user. The
+class ships; only its Designer registration does not.
+
+Both are omissions by choice, not oversights.
+
+---
+
 ## Some widgets are selected from the tree, not the canvas
+
+Tab pages are the one remaining case. Segmented buttons and dials were in this
+list until recently and are now selectable.
 
 Tabview **tabs** cannot be selected by clicking them. `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed to the page you aimed at. CustomTkinter's own designer plugin contains a commented-out attempt at the same fix.
 

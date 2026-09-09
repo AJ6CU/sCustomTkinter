@@ -121,6 +121,16 @@ if __name__ == "__main__":
 
 ---
 
+### Pygubu Designer
+
+**`grid_propagate` has been removed.** `pack_propagate()` and `grid_propagate()` control whether a container resizes to fit its **children**, and which applies depends on how those children are managed — not on how this widget is managed by its own parent. This widget packs its children, so `pack_propagate` is the meaningful call and `grid_propagate` could never have an effect. It was offered anyway, which made it look like a knob that did nothing while `pack_propagate` appeared to work "regardless of geometry management" — which is simply what it does.
+
+Passing it still works and is ignored, so existing code does not raise.
+
+**Clearing `items` restores `["Item 1", "Item 2"]`** rather than emptying the list. The default slot previously reported `"[]"`, so blanking the field deleted every checkbox — the widget did exactly what it was told, but the answer was wrong.
+
+---
+
 ### Known Limitations
 
 - **Disabling this widget routes the search field to `"readonly"`, not `"disabled"`** — deliberate, so its text remains selectable/copyable, but worth knowing if you expected a uniform `"disabled"` state across every sub-component.

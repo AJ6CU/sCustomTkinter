@@ -3,6 +3,7 @@
 ### Table of Contents
 * [API Property Reference](#api-property-reference)
 * [Constructor](#constructor)
+* [Sizing and Label Placement](#sizing)
 * [Callback Signature & Usage](#callback-signature--usage)
 * [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
 * [Other Notes](#other-notes)
@@ -51,6 +52,39 @@ mode_switch = sCTkDialSelector(
 
 ---
 
+<a name="sizing"></a>
+### Sizing and Label Placement
+
+**`knob_diameter` is the knob. `width` and `height` are the canvas.**
+
+That distinction is new. The property was called `diameter` and set both canvas dimensions to its own value, so `diameter=300` produced a 300px *widget* with a 244px knob inside it — the name described neither. It is now honest: the knob is drawn at exactly `knob_diameter`, and the canvas is whatever `width` and `height` say.
+
+```python
+dial = sCTkDialSelector(parent, knob_diameter=120)              # canvas defaults to 200x200
+dial = sCTkDialSelector(parent, knob_diameter=120, width=400)   # wide canvas, same knob
+```
+
+Given only `knob_diameter`, the canvas defaults to 40px larger on each side — enough for the default labels at the default font.
+
+**Three dials sharing a `knob_diameter` have identical knobs,** however long their labels are. That is the point of the separation. An earlier version measured the labels and shrank the knob to fit them inside a fixed widget; that kept layouts predictable but made a row of controls look inconsistent, which is the case that matters most.
+
+**Labels that do not fit are clipped.** Widen the canvas, shorten the label, or break it:
+
+```python
+labels=["Very\nLong", "12", "RTTY"]
+```
+
+Labels anchor **away** from the dial — one on the left grows leftward, one at the top grows upward — so a long label extends outward rather than across the knob face. The gap between knob and text scales with `label_font`, so larger text still clears the edge.
+
+| Property | Type | Description |
+| :--- | :--- | :--- |
+| `knob_diameter` | `int` | Diameter of the knob itself, in pixels. Default 120. |
+| `width` / `height` | `int` | Canvas size. Defaults to `knob_diameter + 80` when not given. |
+| `label_font` | `tuple` | Font for the labels. Blank uses the theme's `label_font`. |
+
+---
+
+
 ### Callback Signature & Usage
 
 Dispatches the current absolute active list item integer index directly to runtime configuration listeners.
@@ -71,6 +105,7 @@ def on_operating_mode_changed(active_index: int):
     "sCTkDialSelector": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
         "text_color": ["#1A4375", "#FF9100"],
+        "label_font": ["Arial", 9, "bold"],
         "shadow_color": ["#CBD5E1", "#02040A"],
         "dial_color": ["#9E9E9E", "#2A2F3D"],
         "dial_highlight_color": ["#E4E8EC", "#42454B"],

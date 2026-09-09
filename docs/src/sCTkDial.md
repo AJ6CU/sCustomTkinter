@@ -71,7 +71,7 @@ The flat `disabled_text_color` / `disabled_dial_color` / `disabled_dimple_glow` 
 
 > **Custom drawing colours must be read from the raw theme registry, not from `final_kw`.** This is a trap that produces plausible-looking wrong colours rather than an error, and it went unnoticed in this widget family for its entire existence.
 
-`ThemeableWidget` maintains a `CUSTOM_VECTOR_KEYS` set — `dial_color`, `shadow_color`, `text_color`, `pointer_color`, `pointer_glow_color`, `diameter` and others — which it strips out of `final_kw` for vector widgets, so they never reach the native `CTkFrame` constructor and raise `ValueError`. That stripping is correct and necessary.
+`ThemeableWidget` maintains a `CUSTOM_VECTOR_KEYS` set — `dial_color`, `shadow_color`, `text_color`, `pointer_color`, `pointer_glow_color`, `knob_diameter` and others — which it strips out of `final_kw` for vector widgets, so they never reach the native `CTkFrame` constructor and raise `ValueError`. That stripping is correct and necessary.
 
 What was wrong was reading those colours back out of `final_kw` afterwards. They were never in there. Every fallback in the old draw code was therefore *always* taken, and the configured values for `dial_color`, `shadow_color`, `text_color` and `pointer_glow_color` were decorative — the dials rendered in hardcoded colours regardless of what the theme said. Applying fail-loud validation is what surfaced it.
 
@@ -98,10 +98,10 @@ The registry is reached as a **module attribute**, not a direct name import, bec
 | `configure(state=...)` | method | Same effect as `state()`. Both routes are supported. |
 | `configure(name)` | method | Pygubu-style single-argument query. |
 | `config` | alias | Bound to `configure` **on every class in the family**. |
-| `diameter` | `int` | Square bounding size; sets canvas width and height together. |
+| `knob_diameter` | `int` | Diameter of the KNOB, in pixels. Was `diameter`, which set the canvas width and height together — so it named the widget, not the circle, and a `diameter` of 300 gave a 244px knob. `width` and `height` now name the canvas independently, and dials sharing a `knob_diameter` have identical knobs whatever their labels. |
 | `divisions` | `int` | Tick count drawn around the outer ring. |
 
-**`config = configure` is declared separately on each class, and must be.** Tkinter binds `.config` to `.configure` as its own class attribute — it does not track whichever `configure()` a subclass defines. Without a per-class line, `.config(...)` skips every override and lands on the native widget, bypassing divisions/command/diameter handling and the theme repaint entirely. This was missing from all four dial classes; the same bug was confirmed on `sCTkSegmentedButton` earlier in this project's audit. An inherited alias would not help — it would point at the *parent's* `configure()`.
+**`config = configure` is declared separately on each class, and must be.** Tkinter binds `.config` to `.configure` as its own class attribute — it does not track whichever `configure()` a subclass defines. Without a per-class line, `.config(...)` skips every override and lands on the native widget, bypassing divisions/command/knob_diameter handling and the theme repaint entirely. This was missing from all four dial classes; the same bug was confirmed on `sCTkSegmentedButton` earlier in this project's audit. An inherited alias would not help — it would point at the *parent's* `configure()`.
 
 ---
 

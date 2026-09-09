@@ -14,6 +14,7 @@ from pygubu.api.v1 import (
 )
 
 # Import the native custom class
+from scustomtkinter.themeable_widget import parse_font_property
 from scustomtkinter.sctk_smeter_bar import sCTkSMeterBar
 
 #
@@ -29,10 +30,15 @@ class sCTkSMeterBarBO(BuilderObject):
     class_ = sCTkSMeterBar
 
     # Expose custom compound parameters alongside theme state configurations
-    OPTIONS_CUSTOM = ("width", "height", "swr_max_value", "swr_visible", "pwr_visible", "hide_lower_row")
+    OPTIONS_CUSTOM = ("width", "height", "swr_max_value", "swr_visible", "pwr_visible", "hide_lower_row", "font", "scale_font")
     properties = OPTIONS_CUSTOM
 
     def _process_property_value(self, pname, value):
+        if pname in ("font", "scale_font"):
+            # Shared parser: Pygubu's fontentry emits a Tk font STRING, and
+            # "{}" for "no style selected" -- passed through, that reaches a
+            # canvas item as TclError: unknown font style "".
+            return parse_font_property(value)
         if pname in ("width", "height"):
             return int(value)
         elif pname == "swr_max_value":
@@ -102,3 +108,11 @@ register_custom_property(
     help="Hides the PWR/SWR if True"
 )
 
+register_custom_property(
+    builder_id, "font", "fontentry",
+    help='Font for the captions -- SIGNAL, SIG, SWR and PWR. Blank uses the theme font.'
+)
+register_custom_property(
+    builder_id, "scale_font", "fontentry",
+    help='Font for the scale tick labels. Blank uses the theme scale_font. Larger values can overlap on a narrow meter.'
+)

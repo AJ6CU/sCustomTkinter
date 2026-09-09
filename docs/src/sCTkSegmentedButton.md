@@ -72,6 +72,8 @@ Colors are stored and passed through as raw `(light, dark)` tuples rather than b
 {
     "sCTkSegmentedButton": {
         "fg_color": ["#4F75A2", "#2B4C7E"],
+        "font": ["Arial", 13, "normal"],
+        "font": ["Arial", 13, "normal"],
         "selected_color": ["#1A4375", "#3A6FA2"],
         "unselected_hover_color": ["#3A5C85", "#3A5F8C"],
         "text_color": ["#FFFFFF", "#FFFFFF"],
@@ -133,6 +135,16 @@ if __name__ == "__main__":
 
     root.mainloop()
 ```
+
+---
+
+### Pygubu Designer
+
+**Selectable by clicking.** CustomTkinter's own designer plugin gives up here — its code carries the note "I can't select a segmented button in preview". The segments are `CTkButton`s the widget creates for itself, so they are not in the builder's widget map and a click on one resolves to nothing. This library's preview class hides them from the Designer's binding pass and forwards their clicks to the widget's internal canvas, which is where the Designer's own handler actually sits.
+
+**Clearing `values` restores `["CTkSegmentedButton"]`** — CustomTkinter's own placeholder, a hardcoded literal in `CTkSegmentedButton.__init__`. Note it does not carry this library's `s` prefix; the string was written by hand rather than derived from the class, so a subclass shows it unchanged. A cleared field therefore matches a freshly placed widget.
+
+**`font` is required in the theme block.** Without it, clearing the font field in the inspector had nothing to revert to and reported the current value as its own default — so clearing appeared to do nothing.
 
 ---
 

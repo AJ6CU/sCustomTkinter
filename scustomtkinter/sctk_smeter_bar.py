@@ -31,6 +31,15 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         # 1. Initialize our Themeable mixin tracker cleanly
         ThemeableWidget.__init__(self, kw)
         self._local_defaults = dict(self.final_kw)
+
+        # Snapshot of the THEME's fonts, taken before any per-instance
+        # override. Clearing the font field in the Designer restores these
+        # rather than leaving the override in place, matching what generated
+        # code produces when the property is omitted.
+        self._theme_font_defaults = {
+            "font": self._local_defaults.get("font"),
+            "scale_font": self._local_defaults.get("scale_font"),
+        }
         self._custom_disabled_map = dict(self._widget_disabled_map)
         self._state = "normal" if str(state).lower() == "normal" else "disabled"
         self._validate_theme_keys()
@@ -88,7 +97,10 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         Raises:
             KeyError: naming the first missing key found.
         """
-        name = self.__class__.__name__
+        # Resolved the way ThemeableWidget resolves it, so the message names
+        # the block actually read rather than a subclass's own name -- the
+        # Designer's preview classes are subclasses.
+        name = getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__
         for key in self._REQUIRED_THEME_KEYS:
             if self._local_defaults.get(key) is None:
                 raise KeyError(
@@ -162,11 +174,44 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
                 fallback = self._default_width if pname == "width" else (self._default_height if pname == "height" else self._default_swr_max_value)
                 current = super().cget("width") if pname == "width" else (super().cget("height") if pname == "height" else self.swr_max_value)
                 return (pname, pname, pname, self._query_value(fallback), self._query_value(current))
-            return super().configure(*args, **kwargs)
+            # FIX: was `return super().configure(*args, **kwargs)`.
+            #
+            # Native CTkFrame.configure() is declared
+            # configure(self, require_redraw=False, **kwargs), so the property
+            # NAME was passed as require_redraw and the call returned None.
+            # Pygubu's _get_default_value() expects a five-element tuple, got
+            # None, and handed that None straight back to _set_property() --
+            # where CustomTkinter raised "float() argument must be a string or
+            # a real number, not 'NoneType'".
+            #
+            # Reached whenever a field is blanked in the Designer inspector.
+            # The library-wide sweep that fixed this matched on `pname` and
+            # `require_redraw` as the argument name and missed the *args form
+            # used here.
+            if pname in ("font", "scale_font"):
+                return (pname, pname, pname,
+                        self._query_value(self._theme_font_defaults.get(pname), pname),
+                        self._query_value(self._local_defaults.get(pname), pname))
+
+            return self._configure_query(pname)
 
         # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
         # tuple, so this never fired and the dict form was dead code.
         if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
+        # font and scale_font are per-instance overrides of the theme keys of
+        # the same name. An empty value restores the theme's, matching what
+        # generated code does when the property is omitted -- and matching the
+        # default the query branch above reports.
+        for _font_key in ("font", "scale_font"):
+            if _font_key in kwargs:
+                _new = kwargs.pop(_font_key)
+                if _new:
+                    self._local_defaults[_font_key] = _new
+                else:
+                    self._local_defaults[_font_key] = \
+                        self._theme_font_defaults.get(_font_key)
+                self._draw_meter()
+
         # state is this library's own property, not a native CTkFrame one.
         if "state" in kwargs: self.state(kwargs.pop("state"))
         if "width" in kwargs:

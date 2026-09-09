@@ -26,6 +26,17 @@ Most of what follows was learned the expensive way. Where a section explains a b
 
 **Scroll handling** goes through `ScrollBindingMixin`. Do not write a fourth copy.
 
+**Fonts from the Designer** go through `parse_font_property()` in
+`themeable_widget.py`. Pygubu's `fontentry` editor emits a Tk font
+specification rather than a tuple, and for *no style selected* it emits Tk's
+empty-list literal:
+
+    {American Typewriter} 12 {}
+
+Passed through as a style, that reaches a canvas item as
+`TclError: unknown font style ""`. Two builder objects had their own copy of
+this parser and both got it wrong the same way, which is why there is now one.
+
 **Documentation style.** H2 title, H3 sections, no emoji, no marketing language, dark and light mode images, "Return to Table of Contents" link at the end.
 
 ---
