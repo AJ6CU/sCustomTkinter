@@ -32,6 +32,14 @@ from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_
 from scustomtkinter.sctk_separator import sCTkSeparator
 from scustomtkinter_pygubu.sCTkSeparatorbo import (sCTkSeparatorBuilder, builder_id as sCTkSeparator_builder_id)
 
+from scustomtkinter.sctk_dial import (sCTkDialContinuous, sCTkDialRange,
+                                      sCTkDialSelector)
+from scustomtkinter_pygubu.sCTkDialbo import (
+    sCTkDialContinuousBO, id_continuous as sCTkDialContinuous_builder_id,
+    sCTkDialRangeBO, id_range as sCTkDialRange_builder_id,
+    sCTkDialSelectorBO, id_selector as sCTkDialSelector_builder_id,
+)
+
 from scustomtkinter.sctk_dialog import sCTkDialog
 from scustomtkinter_pygubu.sCTkDialogbo import (sCTkDialogBO, builder_id as sCTkDialog_builder_id)
 
@@ -382,6 +390,37 @@ class sCTkTableviewForPreviewBO(sCTkTableviewBO):
     class_ = sCTkTableviewForPreview
 
 
+class sCTkDialContinuousForPreview(sCTkDialContinuous):
+    """
+    Designer preview for sCTkDialContinuous.
+
+    Without this the dial cannot be selected by clicking it. Every dial draws
+    itself on an internal canvas that CTkFrame hides from winfo_children(),
+    and the Designer walks that list to bind its click handler -- so it never
+    reached the only part of the widget there is to click.
+    """
+    _THEME_BLOCK_NAME = "sCTkDialContinuous"
+
+    def winfo_children(self):
+        return super(tk.Frame, self).winfo_children()
+
+
+class sCTkDialRangeForPreview(sCTkDialRange):
+    """Designer preview for sCTkDialRange. See sCTkDialContinuousForPreview."""
+    _THEME_BLOCK_NAME = "sCTkDialRange"
+
+    def winfo_children(self):
+        return super(tk.Frame, self).winfo_children()
+
+
+class sCTkDialSelectorForPreview(sCTkDialSelector):
+    """Designer preview for sCTkDialSelector. See sCTkDialContinuousForPreview."""
+    _THEME_BLOCK_NAME = "sCTkDialSelector"
+
+    def winfo_children(self):
+        return super(tk.Frame, self).winfo_children()
+
+
 class sCTkDialogForPreview(sCTkDialog):
     """
     Designer preview for sCTkDialog.
@@ -540,6 +579,18 @@ class sCTkSelectorForPreviewBO(sCTkSelectorBO):
 
 class sCTkSeparatorForPreviewBO(sCTkSeparatorBuilder):
     class_ = sCTkSeparatorForPreview
+
+
+class sCTkDialContinuousForPreviewBO(sCTkDialContinuousBO):
+    class_ = sCTkDialContinuousForPreview
+
+
+class sCTkDialRangeForPreviewBO(sCTkDialRangeBO):
+    class_ = sCTkDialRangeForPreview
+
+
+class sCTkDialSelectorForPreviewBO(sCTkDialSelectorBO):
+    class_ = sCTkDialSelectorForPreview
 
 
 class sCTkDialogForPreviewBO(sCTkDialogBO):
@@ -818,6 +869,12 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkSelectorForPreviewBO
         elif builder_uid == sCTkSeparator_builder_id:
             return sCTkSeparatorForPreviewBO
+        elif builder_uid == sCTkDialContinuous_builder_id:
+            return sCTkDialContinuousForPreviewBO
+        elif builder_uid == sCTkDialRange_builder_id:
+            return sCTkDialRangeForPreviewBO
+        elif builder_uid == sCTkDialSelector_builder_id:
+            return sCTkDialSelectorForPreviewBO
         elif builder_uid == sCTkDialog_builder_id:
             return sCTkDialogForPreviewBO
         elif builder_uid == sCTkOptionMenuSecondary_builder_id:

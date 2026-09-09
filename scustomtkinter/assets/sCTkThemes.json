@@ -509,7 +509,7 @@
     },
     "sCTkDialRange": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
-        "text_color": ["#1A4375", "#64748B"],
+        "text_color": ["#1A4375", "#FF9100"],
         "shadow_color": ["#CBD5E1", "#02040A"],
         "label_font": ["Arial", 9, "bold"],
         "dial_color": ["#9E9E9E", "#2A2F3D"],
