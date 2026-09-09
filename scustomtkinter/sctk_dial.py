@@ -142,6 +142,60 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             font = (font[0], font[1], *styles) if styles else (font[0], font[1])
         return font
 
+    def _label_placement(self, angle_rad, knob_radius):
+        """
+        Where a label sits, and which way it grows from there.
+
+        TWO FIXES, both visible with a long label on an sCTkDialSelector:
+
+        ANCHORING. The labels were drawn CENTRED on their point, so half of
+        each one extended back toward the dial. A label on the left of the arc
+        therefore overhung the dial face, and a long one ran across it -- "Very
+        Long" intruded at any font size, and a bigger diameter did not help
+        because the offset is a fixed distance from the knob edge. Anchoring by
+        position makes a label grow AWAY from the dial: one on the left anchors
+        east, one on the right anchors west, one at the top or bottom anchors
+        to its near edge.
+
+        sCTkDialRange never showed this because its labels are numbers, one to
+        three characters, which barely overhang when centred. Same defect,
+        different content.
+
+        OFFSET SCALING. The gap was a hardcoded 18px, tuned for 9pt. Larger
+        text sat closer to the knob in proportion, and eventually touched it.
+        It now grows with the font size.
+
+        Args:
+            angle_rad: Where on the arc this label belongs.
+            knob_radius: Radius of the drawn knob.
+
+        Returns:
+            (offset, anchor) -- the distance from centre at which to place the
+            label, and the Tk anchor to place it with.
+        """
+        font = self._label_font()
+        try:
+            size = int(font[1])
+        except (TypeError, ValueError, IndexError):
+            size = 9
+
+        # 9pt keeps the original 18px gap, so existing dials are unchanged.
+        offset = knob_radius + 9 + size
+
+        cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
+
+        # 0.3 rather than 0: near the top and bottom of the arc a label is
+        # better anchored vertically, or a nearly-horizontal one flips side
+        # over a fraction of a degree and appears to jump.
+        if cos_a < -0.3:
+            anchor = "e"
+        elif cos_a > 0.3:
+            anchor = "w"
+        else:
+            anchor = "s" if sin_a > 0 else "n"
+
+        return offset, anchor
+
     def _validate_theme_keys(self) -> None:
         """
         Hard-fails at construction on an incomplete theme block, naming the
@@ -553,13 +607,21 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                 self.canvas.create_line(x1, y1, x2, y2, fill=text_color, width=2.0)
 
                 if child_classname == "sCTkDialSelector" and i < len(self._labels):
-                    self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(self._labels[i]), fill=text_color,
-                                            font=self._label_font())
+                    label_offset, label_anchor = self._label_placement(angle_rad, knob_radius)
+                    self.canvas.create_text(
+                        center_x + label_offset * math.cos(angle_rad),
+                        center_y - label_offset * math.sin(angle_rad),
+                        text=str(self._labels[i]), fill=text_color,
+                        font=self._label_font(), anchor=label_anchor)
                 elif child_classname == "sCTkDialRange":
                     from_val, to_val = getattr(self, "_from", 0), getattr(self, "_to", 100)
                     range_val = int(from_val + (to_val - from_val) * fraction)
-                    self.canvas.create_text(center_x + (knob_radius + 18) * math.cos(angle_rad), center_y - (knob_radius + 18) * math.sin(angle_rad), text=str(range_val), fill=text_color,
-                                            font=self._label_font())
+                    label_offset, label_anchor = self._label_placement(angle_rad, knob_radius)
+                    self.canvas.create_text(
+                        center_x + label_offset * math.cos(angle_rad),
+                        center_y - label_offset * math.sin(angle_rad),
+                        text=str(range_val), fill=text_color,
+                        font=self._label_font(), anchor=label_anchor)
 
             self.canvas.create_oval(center_x - knob_radius + 1, center_y - knob_radius + 4, center_x + knob_radius + 4, center_y + knob_radius + 4, fill=shadow_paint, outline="")
 
