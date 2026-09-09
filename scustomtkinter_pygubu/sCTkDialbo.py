@@ -37,23 +37,20 @@ class sCTkDialContinuousBO(BuilderObject):
     # definition for each name. Both are required -- copying alone leaves a
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
-    OPTIONS_CUSTOM = ("divisions", "diameter", "command", "left_click_callback", "right_click_callback")
+    OPTIONS_CUSTOM = ("divisions", "knob_diameter", "command", "left_click_callback", "right_click_callback")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
-    def realize(self, parent, *args, **kwargs):
-        """Streamlined Pygubu Flywheel Tuning Wheel Lifecycle Intercept."""
-        props_map = self.wmeta.properties if hasattr(self, "wmeta") else {}
-        diameter_val = props_map.get("diameter", None)
-
-        # Calculate target boundary box footprint with design fallbacks
-        w = int(diameter_val) if (diameter_val and str(diameter_val).strip()) else 120
-        self.wmeta.properties["width"] = str(w)
-        self.wmeta.properties["height"] = str(w)
-
-        # Call the core engine to instantiate the widget using standard xml properties
-        widget = super().realize(parent, *args, **kwargs)
-        return widget
+    # NOTE: realize() no longer forces width and height from the knob size.
+    #
+    # It used to write both canvas dimensions from `diameter`, overwriting
+    # whatever the user had set in the inspector -- so a dial could not be
+    # given a canvas wider than it was tall, and long labels had nowhere to go.
+    #
+    # knob_diameter now names the KNOB and width/height name the CANVAS, which
+    # is what those words should always have meant. The widget supplies a
+    # canvas default around the knob when none is given, so a bare
+    # knob_diameter still works -- see sCTKDialBase._default_canvas_size().
 
 
 # =====================================================================
@@ -71,23 +68,12 @@ class sCTkDialRangeBO(BuilderObject):
     # definition for each name. Both are required -- copying alone leaves a
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
-    OPTIONS_CUSTOM = ("from_", "to", "divisions", "diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "label_font")
+    OPTIONS_CUSTOM = ("from_", "to", "divisions", "knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "label_font")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
-    def realize(self, parent, *args, **kwargs):
-        """Streamlined Pygubu Potentiometer Lifecycle Intercept."""
-        props_map = self.wmeta.properties if hasattr(self, "wmeta") else {}
-        diameter_val = props_map.get("diameter", None)
-
-        # Calculate target boundary box footprint with design fallbacks
-        w = int(diameter_val) if (diameter_val and str(diameter_val).strip()) else 120
-        self.wmeta.properties["width"] = str(w)
-        self.wmeta.properties["height"] = str(w)
-
-        # Call the core engine to instantiate the widget using standard xml properties
-        widget = super().realize(parent, *args, **kwargs)
-        return widget
+    # NOTE: realize() no longer forces width and height from the knob size.
+    # See the equivalent note on sCTkDialContinuousBO above.
 
 
 # =====================================================================
@@ -105,7 +91,7 @@ class sCTkDialSelectorBO(BuilderObject):
     # definition for each name. Both are required -- copying alone leaves a
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
-    OPTIONS_CUSTOM = ("diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels", "label_font")  # Labels handles lists, usually initialized in code
+    OPTIONS_CUSTOM = ("knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels", "label_font")  # Labels handles lists, usually initialized in code
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
@@ -123,23 +109,12 @@ class sCTkDialSelectorBO(BuilderObject):
             return parse_list_property(value)
         return value
 
-    def realize(self, parent, *args, **kwargs):
-        """
-        Streamlined Pygubu Selector Lifecycle Intercept.
-        Calculates symmetrical geometry footprints safely using the wmeta table
-        and lets the widget handle configuration changes natively on instantiation.
-        """
-        props_map = self.wmeta.properties if hasattr(self, "wmeta") else {}
-        diameter_val = props_map.get("diameter", None)
-
-        # Calculate target square boundary box sizes with active design fallbacks
-        w = int(diameter_val) if (diameter_val and str(diameter_val).strip()) else 120
-        self.wmeta.properties["width"] = str(w)
-        self.wmeta.properties["height"] = str(w)
-
-        # Instantiate the widget natively through Pygubu's master compilation loop
-        widget = super().realize(parent, *args, **kwargs)
-        return widget
+    # NOTE: realize() no longer forces width and height from the knob size.
+    # See the equivalent note on sCTkDialContinuousBO above.
+    #
+    # This one mattered most: a Selector's labels are user text and can be any
+    # length, so a square canvas locked to the knob size was exactly the wrong
+    # constraint -- there was no way to widen it for a long label.
 
 
 # =====================================================================
@@ -159,7 +134,8 @@ register_custom_property(id_continuous, "state", "choice", values=("normal", "di
 register_custom_property(id_continuous, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_continuous, "height", "naturalnumber", help="Height in pixels.")
 register_custom_property(id_continuous, "divisions", "naturalnumber", default_value=24, help="Flywheel detents per 360 turn.")
-register_custom_property(id_continuous, "diameter", "naturalnumber", default_value=120, help="Knob circle size.")
+register_custom_property(id_continuous, "knob_diameter", "naturalnumber", default_value=120,
+                         help="Diameter of the knob itself, in pixels. Set width and height for the canvas around it.")
 register_custom_property(id_continuous, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_continuous, "left_click_callback", "commandentry", help="Callback for left mouse click.")
 register_custom_property(id_continuous, "right_click_callback", "commandentry", help="Callback for right mouse click.")
@@ -179,7 +155,8 @@ register_custom_property(id_range, "height", "naturalnumber", help="Height in pi
 register_custom_property(id_range, "from_", "integernumber", default_value=0, help="Absolute minimum boundary limit.")
 register_custom_property(id_range, "to", "integernumber", default_value=100, help="Absolute maximum boundary limit.")
 register_custom_property(id_range, "divisions", "naturalnumber", default_value=5, help="Number of calibration tick lines drawn.")
-register_custom_property(id_range, "diameter", "naturalnumber", default_value=120, help="Knob circle size.")
+register_custom_property(id_range, "knob_diameter", "naturalnumber", default_value=120,
+                         help="Diameter of the knob itself, in pixels. Widen the canvas with width and height if labels are clipped.")
 register_custom_property(id_range, "arc_angle", "naturalnumber", default_value=270, help="Symmetrical active arc sweep.")
 register_custom_property(id_range, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_range, "left_click_callback", "commandentry", help="Callback for left mouse click.")
@@ -197,7 +174,8 @@ register_custom_property(id_selector, "label_font", "fontentry", help="Font for 
 register_custom_property(id_selector, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_selector, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_selector, "height", "naturalnumber", help="Height in pixels.")
-register_custom_property(id_selector, "diameter", "naturalnumber", default_value=120, help="Knob circle size.")
+register_custom_property(id_selector, "knob_diameter", "naturalnumber", default_value=120,
+                         help="Diameter of the knob itself, in pixels. Widen the canvas with width and height if labels are clipped.")
 register_custom_property(id_selector, "arc_angle", "naturalnumber", default_value=270, help="Symmetrical active arc sweep.")
 register_custom_property(id_selector, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_selector, "left_click_callback", "commandentry", help="Callback for left mouse click.")

@@ -61,9 +61,15 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         self._custom_disabled_map = dict(self._widget_disabled_map)
         self._validate_theme_keys()
 
-        target_diameter = self._local_defaults.get("diameter")
-        if target_diameter is not None:
-            width, height = int(target_diameter), int(target_diameter)
+        # knob_diameter names the KNOB. width and height name the CANVAS.
+        #
+        # It previously set both canvas dimensions to its own value, so a
+        # "diameter" of 300 produced a 300px WIDGET with a 244px knob inside
+        # it -- the name described neither. Renamed and separated: the knob is
+        # drawn at exactly this size, and the canvas defaults to leaving room
+        # for labels around it.
+        self._knob_diameter = int(target_knob) if target_knob is not None else 120
+        width, height = self._default_canvas_size(width, height)
 
         FRAME_VALID_KEYS = {"width", "height", "fg_color", "border_color", "border_width", "corner_radius", "bg_color"}
         frame_kwargs = {k: self._local_defaults[k] for k in FRAME_VALID_KEYS if k in self._local_defaults and self._local_defaults[k] is not None}
@@ -142,80 +148,40 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             font = (font[0], font[1], *styles) if styles else (font[0], font[1])
         return font
 
-    def _label_margin(self, texts):
+    # Room left around the knob for labels when only knob_diameter is given.
+    # Matches the margin the old fixed layout reserved, so a dial with short
+    # labels looks as it always did.
+    DEFAULT_LABEL_MARGIN = 28
+
+    def _default_canvas_size(self, width, height):
         """
-        Space the labels need outside the knob, measured rather than assumed.
+        Fills in a canvas size the caller did not specify.
 
-        The knob radius was `min(center_x, center_y) - 28` -- a fixed margin
-        tuned for short 9pt labels. Anything longer or larger ran off the
-        canvas, and no diameter helped: the knob grew with the widget and kept
-        the same 28px for text. The visible symptom was labels clipped at the
-        edge, with ipadx fixing the sides while stealing from the top and
-        ipady doing the reverse.
+        knob_diameter says how big the KNOB is; the canvas has to be at least
+        that plus somewhere for the labels. An explicit width or height always
+        wins -- this only supplies one where none was given, so a bare
+        knob_diameter still produces a usable dial without the caller having to
+        pass three numbers.
 
-        `diameter` stays what the caller asked for. The KNOB shrinks to leave
-        room, which keeps a panel's layout predictable -- a dial never occupies
-        more space than its diameter, however long its labels.
-
-        Tk is asked for the real extent rather than estimating from character
-        counts, because a proportional font's width depends on which
-        characters, and "WWW" is far wider than "iii".
+        Labels longer or larger than the default margin allows are CLIPPED,
+        deliberately: widening the canvas is the caller's decision, and
+        shrinking the knob instead would make dials sharing a knob_diameter
+        look different from one another.
 
         Args:
-            texts: The label strings that will be drawn.
+            width: The width asked for, or the class default.
+            height: The height asked for.
 
         Returns:
-            Pixels to reserve between the knob edge and the canvas edge.
+            (width, height) to build the canvas with.
         """
-        base = 28  # what the original hardcode reserved, and the floor here
-        if not texts:
-            return base
-
-        font = self._label_font()
-        try:
-            import tkinter.font as tkfont
-            measurer = tkfont.Font(font=font)
-        except Exception:
-            return base
-
-        widest = 0
-        tallest = 0
-        for text in texts:
-            # A label may carry newlines -- the documented way to keep a long
-            # one narrow -- so each line is measured separately and the tallest
-            # stack wins.
-            lines = str(text).split("\n")
-            for line in lines:
-                widest = max(widest, measurer.measure(line))
-            tallest = max(tallest, measurer.metrics("linespace") * len(lines))
-
-        # Half the widest label, because anchoring means only half of it sits
-        # beyond the arc point at the sides; the full height at top and bottom.
-        # Plus the gap _label_placement() puts between knob and text.
-        try:
-            size = int(font[1])
-        except (TypeError, ValueError, IndexError):
-            size = 9
-        needed = max(widest / 2.0, tallest) + 9 + size
-
-        return max(base, int(needed))
-
-    def _label_texts(self):
-        """
-        The label strings this dial will draw, or an empty list if it draws
-        none.
-
-        sCTkDialContinuous draws no labels at all, so it reserves nothing and
-        keeps the full knob it always had.
-        """
-        if hasattr(self, "_labels") and self._labels:
-            return list(self._labels)
-        if hasattr(self, "_from") and hasattr(self, "_to"):
-            divisions = int(getattr(self, "_divisions", 5) or 5)
-            span = float(self._to) - float(self._from)
-            return [str(int(float(self._from) + span * (i / max(divisions - 1, 1))))
-                    for i in range(divisions)]
-        return []
+        needed = self._knob_diameter + (2 * self.DEFAULT_LABEL_MARGIN)
+        explicit = self._local_defaults
+        if explicit.get("width") is None:
+            width = max(int(width or 0), needed)
+        if explicit.get("height") is None:
+            height = max(int(height or 0), needed)
+        return width, height
 
     def _label_placement(self, angle_rad, knob_radius):
         """
@@ -397,7 +363,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                         self._query_value(
                             self._local_defaults.get("label_font"), "label_font"),
                         self._query_value(self._label_font(), "label_font"))
-            if pname in ["diameter", "divisions", "arc_angle", "from_", "to", "command", "left_click_callback",
+            if pname in ["knob_diameter", "divisions", "arc_angle", "from_", "to", "command", "left_click_callback",
                          "right_click_callback"]:
                 return (pname, pname, pname, "", "")
             try:
@@ -489,7 +455,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
 
     def cget(self, attribute_name: str) -> any:
         if attribute_name == "state": return getattr(self, "_state", "normal")
-        if attribute_name == "diameter": return self.winfo_width()
+        if attribute_name == "knob_diameter": return self._knob_diameter
         if attribute_name == "divisions": return getattr(self, "_divisions", 24)
         return super().cget(attribute_name)
 
@@ -657,9 +623,23 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
 
         self.canvas.configure(bg=bg_color)
         center_x, center_y = width / 2, height / 2
-        # Measured, not assumed: see _label_margin(). The knob gives up room
-        # so the labels fit inside the diameter the caller asked for.
-        knob_radius = min(center_x, center_y) - self._label_margin(self._label_texts())
+        # knob_diameter is the KNOB, not the widget. The canvas is width x
+        # height, and the knob is drawn at the size asked for regardless -- so
+        # three dials sharing a knob_diameter have identical faces however long
+        # their labels are.
+        #
+        # An earlier version measured the labels and shrank the knob to fit
+        # them inside the widget. That kept the layout predictable but made the
+        # knobs differ between dials whose labels differed, which is wrong in
+        # the case that matters most: a row of controls on a panel.
+        #
+        # Labels that do not fit are clipped. Widen the canvas -- see
+        # _default_canvas_size() for what a bare knob_diameter reserves.
+        knob_radius = self._knob_diameter / 2.0
+
+        # Never larger than the canvas: a knob bigger than its widget would
+        # draw outside the visible area with no indication why.
+        knob_radius = min(knob_radius, min(center_x, center_y))
 
         has_arc_constraints = hasattr(self, "_arc_angle")
         arc_sweep = float(self._arc_angle) if has_arc_constraints else 360.0
@@ -773,8 +753,8 @@ class sCTkDialContinuous(sCTKDialBase):
     _EXTRA_THEME_KEYS = ("pointer_glow_color",)
     _EXTRA_DISABLED_KEYS = ("pointer_glow_color",)
 
-    def __init__(self, master=None, divisions=24, command=None, left_click_callback=None, right_click_callback=None, diameter=120, **kw):
-        super().__init__(master, divisions=divisions, diameter=diameter, **kw)
+    def __init__(self, master=None, divisions=24, command=None, left_click_callback=None, right_click_callback=None, knob_diameter=120, **kw):
+        super().__init__(master, divisions=divisions, knob_diameter=knob_diameter, **kw)
         self._command = command
         self._left_click_callback = left_click_callback if (left_click_callback and str(left_click_callback).strip()) else None
         self._right_click_callback = right_click_callback if (right_click_callback and str(right_click_callback).strip()) else None
@@ -788,9 +768,11 @@ class sCTkDialContinuous(sCTKDialBase):
         if "command" in kwargs: self._command = kwargs.pop("command")
         if "left_click_callback" in kwargs: self._left_click_callback = kwargs.pop("left_click_callback")
         if "right_click_callback" in kwargs: self._right_click_callback = kwargs.pop("right_click_callback")
-        if "diameter" in kwargs:
-            d = int(kwargs.pop("diameter"))
-            kwargs["width"], kwargs["height"] = d, d
+        if "knob_diameter" in kwargs:
+            # Sets the KNOB only. The canvas keeps whatever width and height it
+            # has -- resizing the widget when the knob changes would move
+            # everything else in the layout.
+            self._knob_diameter = int(kwargs.pop("knob_diameter"))
         result = super().configure(**kwargs)
         if hasattr(self, "canvas") and self.canvas.winfo_exists(): self._draw_dial_base()
         return result
@@ -862,7 +844,7 @@ class sCTkDialSelector(sCTKDialBase):
     Rotary switch selector module. Constrained to custom arc angles (default 270).
     Loops infinitely past outer limits and reports the active integer item index position.
     """
-    def __init__(self, master=None, labels=None, arc_angle=270, command=None, left_click_callback=None, right_click_callback=None, diameter=120, **kw):
+    def __init__(self, master=None, labels=None, arc_angle=270, command=None, left_click_callback=None, right_click_callback=None, knob_diameter=120, **kw):
         if isinstance(labels, str) and labels.strip():
             # Shared parser -- see parse_list_property(). This site used
             # literal_eval with a manual fallback; the configure() site
@@ -872,7 +854,7 @@ class sCTkDialSelector(sCTKDialBase):
         self._default_labels = ["POS 1", "POS 2", "POS 3"]
         self._labels = labels if labels is not None else list(self._default_labels)
         self._arc_angle = float(arc_angle)
-        super().__init__(master, divisions=len(self._labels), diameter=diameter, **kw)
+        super().__init__(master, divisions=len(self._labels), knob_diameter=knob_diameter, **kw)
         self._scroll_cooldown_seconds = 0.150
         self._command = command
         self._left_click_callback = left_click_callback if (left_click_callback and str(left_click_callback).strip()) else None
@@ -898,9 +880,11 @@ class sCTkDialSelector(sCTKDialBase):
         if "command" in kwargs: self._command = kwargs.pop("command")
         if "left_click_callback" in kwargs: self._left_click_callback = kwargs.pop("left_click_callback")
         if "right_click_callback" in kwargs: self._right_click_callback = kwargs.pop("right_click_callback")
-        if "diameter" in kwargs:
-            d = int(kwargs.pop("diameter"))
-            kwargs["width"], kwargs["height"] = d, d
+        if "knob_diameter" in kwargs:
+            # Sets the KNOB only. The canvas keeps whatever width and height it
+            # has -- resizing the widget when the knob changes would move
+            # everything else in the layout.
+            self._knob_diameter = int(kwargs.pop("knob_diameter"))
         result = super().configure(**kwargs)
         if hasattr(self, "canvas") and self.canvas.winfo_exists(): self._draw_dial_base()
         return result
@@ -978,11 +962,11 @@ class sCTkDialRange(sCTKDialBase):
     Ranged potentiometer module tracking discrete integer boundaries.
     Enforces absolute dead stops (does not loop at thresholds) and reports absolute integer states.
     """
-    def __init__(self, master=None, from_=0, to=100, arc_angle=270, command=None, left_click_callback=None, right_click_callback=None, diameter=120, divisions=5, **kw):
+    def __init__(self, master=None, from_=0, to=100, arc_angle=270, command=None, left_click_callback=None, right_click_callback=None, knob_diameter=120, divisions=5, **kw):
         self._from = int(from_)
         self._to = int(to)
         self._arc_angle = float(arc_angle)
-        super().__init__(master, divisions=divisions, diameter=diameter, **kw)
+        super().__init__(master, divisions=divisions, knob_diameter=knob_diameter, **kw)
         self._command = command
         self._left_click_callback = left_click_callback if (left_click_callback and str(left_click_callback).strip()) else None
         self._right_click_callback = right_click_callback if (right_click_callback and str(right_click_callback).strip()) else None
@@ -1003,9 +987,11 @@ class sCTkDialRange(sCTKDialBase):
         if "command" in kwargs: self._command = kwargs.pop("command")
         if "left_click_callback" in kwargs: self._left_click_callback = kwargs.pop("left_click_callback")
         if "right_click_callback" in kwargs: self._right_click_callback = kwargs.pop("right_click_callback")
-        if "diameter" in kwargs:
-            d = int(kwargs.pop("diameter"))
-            kwargs["width"], kwargs["height"] = d, d
+        if "knob_diameter" in kwargs:
+            # Sets the KNOB only. The canvas keeps whatever width and height it
+            # has -- resizing the widget when the knob changes would move
+            # everything else in the layout.
+            self._knob_diameter = int(kwargs.pop("knob_diameter"))
         result = super().configure(**kwargs)
         if hasattr(self, "canvas") and self.canvas.winfo_exists(): self._draw_dial_base()
         return result
