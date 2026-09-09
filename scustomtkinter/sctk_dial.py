@@ -51,7 +51,18 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         # load_initial_framework_themes() REBINDS GLOBAL_THEME_REGISTRY on
         # load; a `from ... import GLOBAL_THEME_REGISTRY` would capture the
         # empty dict that existed at import time.
-        raw_block = _tw.GLOBAL_THEME_REGISTRY.get(self.__class__.__name__) or {}
+        # _THEME_BLOCK_NAME, not the class name.
+        #
+        # This resolved the block from self.__class__.__name__ directly,
+        # bypassing the override ThemeableWidget uses everywhere else -- so a
+        # subclass got an empty block and fail-loud validation raised:
+        #
+        #   KeyError: "'sCTkDialContinuousForPreview' theme block is missing
+        #   'text_color' at the top level of sCTkThemes.json."
+        #
+        # naming a block that neither exists nor should. Hit by the Designer's
+        # preview subclasses, and by any user subclass of a dial.
+        raw_block = _tw.GLOBAL_THEME_REGISTRY.get(self._theme_block()) or {}
         raw_colors = {k: v for k, v in raw_block.items() if not isinstance(v, dict)}
         self._local_defaults = ThemeableWidget._convert_lists_to_tuples(raw_colors)
         # final_kw still wins where it has a value, so constructor overrides
@@ -153,6 +164,17 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     # Matches the margin the old fixed layout reserved, so a dial with short
     # labels looks as it always did.
     DEFAULT_LABEL_MARGIN = 28
+
+    def _theme_block(self):
+        """
+        The theme block this widget reads, honouring _THEME_BLOCK_NAME.
+
+        Used for three things that all keyed off the raw class name before:
+        resolving the block, naming it in a validation error, and deciding
+        which variant's drawing code runs. A subclass -- the Designer's
+        preview classes, or a user's own -- broke all three.
+        """
+        return getattr(self, "_THEME_BLOCK_NAME", None) or self.__class__.__name__
 
     def _default_canvas_size(self, width, height):
         """
@@ -257,7 +279,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         Raises:
             KeyError: naming the first missing key found.
         """
-        name = self.__class__.__name__
+        name = self._theme_block()
         required = self._REQUIRED_THEME_KEYS + getattr(self, "_EXTRA_THEME_KEYS", ())
         required_disabled = self._REQUIRED_DISABLED_KEYS + getattr(self, "_EXTRA_DISABLED_KEYS", ())
 
@@ -583,7 +605,9 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         width, height = self.canvas.winfo_width(), self.canvas.winfo_height()
         if width < 10 or height < 10: width = height = int(self.cget("width") if hasattr(self, "cget") else 120)
 
-        child_classname = self.__class__.__name__
+        # Resolved, not the class name: a preview or user subclass must draw
+        # as the variant it derives from, or it renders as the generic base.
+        child_classname = self._theme_block()
         # No `or ("#hex", "#hex")` fallbacks: _validate_theme_keys() hard-failed
         # at construction if any of these were missing, so every lookup here is
         # guaranteed to resolve. A fallback would only reintroduce the silent
