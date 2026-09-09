@@ -1,1139 +1,683 @@
+#!/usr/bin/python3
+"""
+sCTkFileExplorer
+
+A theme-compliant, highly configurable custom file explorer wrapper component.
+Inherits cleanly and directly from ctk.CTkFrame to preserve native features.
+"""
+import os
+import time
 import tkinter as tk
+import tkinter.ttk as ttk
 
 import customtkinter as ctk
-from customtkinter.windows.widgets.core_widget_classes import CTkBaseClass
-
-import scustomtkinter_pygubu.designer.properties
-
-from pygubu.component.plugin_engine import IDesignerPlugin
-from pygubu.stockimage import StockImageCache, StockImage
-from pygubu.utils.widget import crop_widget
-from pygubu.plugins.pygubu.designer.basehelpers import (
-    ToplevelPreviewBaseBO,
-    ToplevelPreviewFactory,
-    ToplevelPreviewMixin,
-)
-
-from scustomtkinter.sctk_frame import sCTkFrame
-from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFrame_builder_id)
-
-from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
-from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
-import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
-
-from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
-
-
-from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
-
-from scustomtkinter.sctk_file_explorer import sCTkFileExplorer
-from scustomtkinter_pygubu.sCTkFileExplorerbo import (sCTkFileExplorerBO, builder_id as sCTkFileExplorer_builder_id)
-
-from scustomtkinter.sctk_path_chooser import sCTkPathChooser
-from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
-
-from scustomtkinter.sctk_separator import sCTkSeparator
-from scustomtkinter_pygubu.sCTkSeparatorbo import (sCTkSeparatorBuilder, builder_id as sCTkSeparator_builder_id)
-
-from scustomtkinter.sctk_dial import (sCTkDialContinuous, sCTkDialRange,
-                                      sCTkDialSelector)
-from scustomtkinter_pygubu.sCTkDialbo import (
-    sCTkDialContinuousBO, id_continuous as sCTkDialContinuous_builder_id,
-    sCTkDialRangeBO, id_range as sCTkDialRange_builder_id,
-    sCTkDialSelectorBO, id_selector as sCTkDialSelector_builder_id,
-)
-
-from scustomtkinter.sctk_dialog import sCTkDialog
-from scustomtkinter_pygubu.sCTkDialogbo import (sCTkDialogBO, builder_id as sCTkDialog_builder_id)
-
-from scustomtkinter.sctk_segmentedbutton import sCTkSegmentedButton
-from scustomtkinter_pygubu.sCTkSegmentedButtonbo import (sCTkSegmentedButtonBO, builder_id as sCTkSegmentedButton_builder_id)
-
-from scustomtkinter.sctk_selector import sCTkSelector
-from scustomtkinter.sctk_checkbox import sCTkCheckBox       # Needs importing because selector made up of checkboxes and we need
-                                            # to search to find the clickable master frame
-from scustomtkinter_pygubu.sCTkSelectorbo import (sCTkSelectorBO, builder_id as sCTkSelector_builder_id)
-
-from scustomtkinter.sctk_spinbox import sCTkSpinbox
-from scustomtkinter_pygubu.sCTkSpinboxbo import (sCTkSpinboxBO, builder_id as sCTkSpinbox_builder_id)
-
-from scustomtkinter.sctk_tableview import sCTkTableview
-from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id as sCTkTableview_builder_id)
-
-# TOP-LEVEL WIDGETS.
-#
-# NOTE the module name for sCTk: it lives in sctk_core, NOT sctk_sctk. The
-# rest of this library follows sctk_<widgetname>, but that convention produces
-# an absurd name for the root window class, so this one file breaks it
-# deliberately. Import sCTk from sctk_core everywhere.
-from scustomtkinter.sctk_core import sCTk
-from scustomtkinter.sctk_toplevel import sCTkToplevel
-
-# The builder-object module follows the same naming break: sCTkCorebo, not
-# sCTkbo, matching sctk_core on the widget side.
-from scustomtkinter_pygubu.sCTkCorebo import builder_id as sCTk_builder_id
-from scustomtkinter_pygubu.sCTkToplevelbo import builder_id as sCTkToplevel_builder_id
-
-
-# =====================================================================
-# THEME BLOCK NAMING
-#
-# ThemeableWidget resolves a widget's theme block by self.__class__.__name__.
-# Every preview subclass below has a DIFFERENT class name than the widget it
-# previews -- "sCTkTableviewForPreview" rather than "sCTkTableview" -- so the
-# lookup finds no block and the widget is built with an empty theme.
-#
-# For widgets with no theme validation that means an unthemed preview. For
-# the ones that hard-fail on a missing key (sCTkTableview, sCTkSelector,
-# sCTkPathChooser, sCTkSpinbox, the labeled frames) it means a KeyError and a
-# dead preview panel.
-#
-# _THEME_BLOCK_NAME below tells ThemeableWidget which block to read instead.
-# It requires this one-line change in themeable_widget.py:
-#
-#     class_name = getattr(self, "_THEME_BLOCK_NAME", None) or self.__class__.__name__
-#
-# The attribute is generally useful beyond preview: any subclass that should
-# inherit its parent's theme rather than silently losing it can set it.
-# =====================================================================
-
-
-# =====================================================================
-# TRANSPARENT BACKGROUNDS IN THE DESIGN VIEW
-#
-# A theme block may legitimately set a colour key to "transparent", meaning
-# "show whatever is behind me". At runtime that always resolves against a
-# themed parent, so it follows light/dark correctly. The Designer canvas does
-# NOT participate in appearance mode -- it is a fixed light grey -- so a
-# transparent widget rendered on it keeps a light background while its TEXT
-# still follows the appearance mode. In dark mode that leaves dark-on-grey
-# text, or a bright band where a separator should be.
-#
-# Confirmed against sCTkSelector and sCTkSeparator; ten theme blocks currently
-# use "transparent" and any of them can show it, given text or a visible fill.
-#
-# preview_opaque() stamps a concrete background onto a preview subclass so the
-# design view stays legible in both modes. This affects the DESIGNER ONLY --
-# the real widget keeps its transparent background and its runtime appearance
-# is unchanged.
-#
-# Written as one decorator rather than a hand-written __init__ per widget:
-# this is the third widget to hit it and there will be more, so the per-widget
-# version would keep growing.
-PREVIEW_OPAQUE_BG = ("#FFFFFF", "#111827")
-
-
-def preview_opaque(colour_key="fg_color", colour=PREVIEW_OPAQUE_BG):
-    """
-    Class decorator giving a preview subclass a concrete background.
-
-    Args:
-        colour_key: The theme key carrying the background. "fg_color" for
-            most widgets; sCTkSeparator and sCTkTreeview use "bg_color".
-        colour: The (light, dark) pair to substitute. Defaults to the pair
-            used by sCTkScrollableFrame, so a stamped widget matches the
-            containers it would normally sit inside.
-
-    Returns:
-        The class, with __init__ wrapped to supply the background.
-    """
-    def decorate(cls):
-        original_init = cls.__init__
-
-        def __init__(self, master=None, **kwargs):
-            # setdefault, not assignment: an explicit value set in the
-            # Designer inspector must still win.
-            kwargs.setdefault(colour_key, colour)
-            original_init(self, master, **kwargs)
-
-        cls.__init__ = __init__
-        return cls
-    return decorate
-
-
-#
-# Preview class for sCTkFrame
-#
-@preview_opaque()
-class sCTkFrameForPreview(sCTkFrame):
-    _THEME_BLOCK_NAME = "sCTkFrame"
-
-    def winfo_children(self):
-        # CTkFrame has a hidden canvas inside. So, to make it
-        #  clickable on preview we need a hack.
-        return super(tk.Frame, self).winfo_children()
-
-
-class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
-    _THEME_BLOCK_NAME = "sCTkFrameLabeledPrimary"
-
-    def winfo_children(self):
-        # sCTkFrameLabeledPrimary has a hidden canvas inside. So, to make it
-        #  clickable on preview we need a hack.
-        return super(tk.Frame, self).winfo_children()
-
-
-class sCTkFileExplorerForPreview(sCTkFileExplorer):
-    """
-    Designer preview for sCTkFileExplorer.
-
-    Two problems, the second only visible once the first is fixed.
-
-    The explorer draws on an internal canvas that CTkFrame hides from
-    winfo_children(), so the Designer's binding pass never reached it and the
-    widget could not be clicked at all.
-
-    Exposing the canvas made the OUTER EDGE selectable, but nothing else: the
-    path entry, the navigation buttons and every file row are widgets the
-    explorer builds for itself, so they are not in the builder's map and a
-    click on one resolves to None. They are hidden from the binding pass and
-    bound here instead, forwarding to the canvas -- which is where
-    CTkFrame.bind() puts the Designer's own handler.
-
-    Rows are rebuilt on every navigation, so the binding is reapplied after
-    each fill.
-    """
-    _THEME_BLOCK_NAME = "sCTkFileExplorer"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._bind_own_parts_to_self()
-
-    def _own_part_roots(self):
-        """The containers holding widgets this explorer built for itself."""
-        return [w for w in (getattr(self, "top_frame", None),
-                            getattr(self, "explorer_frame", None))
-                if w is not None]
-
-    def _bind_own_parts_to_self(self):
-        """Makes a click anywhere inside the explorer select the explorer."""
-        def select_self(event, target=self):
-            try:
-                canvas = getattr(target, "canvas", None) or target
-                canvas.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
-            return "break"
-
-        def bind_tree(widget, depth=0):
-            if widget is None or depth > 4:
-                return
-            for w in (widget,
-                      getattr(widget, "_canvas", None),
-                      getattr(widget, "_text_label", None)):
-                if w is None:
-                    continue
-                try:
-                    w.bind("<Button-1>", select_self)
-                except Exception:
-                    pass
-            try:
-                children = tk.Misc.winfo_children(widget)
-            except Exception:
-                children = []
-            for child in children:
-                bind_tree(child, depth + 1)
-
-        for root in self._own_part_roots():
-            bind_tree(root)
-
-    def _fill_explorer(self, *args, **kwargs):
-        """Rebinds the rows, which this call destroys and recreates."""
-        result = super()._fill_explorer(*args, **kwargs)
-        self._bind_own_parts_to_self()
-        return result
-
-    def winfo_children(self):
-        """
-        Hides the explorer's own parts from the Designer's binding pass.
-
-        The internal canvas is KEPT -- it is the visible background, and
-        dropping it would stop a click on empty space selecting anything.
-        """
-        own = set(self._own_part_roots())
-        return [w for w in super(tk.Frame, self).winfo_children() if w not in own]
-
-
-class sCTkPathChooserForPreview(sCTkPathChooser):
-    _THEME_BLOCK_NAME = "sCTkPathChooser"
-
-    def winfo_children(self):
-        # sCTkPathChooser has a hidden canvas inside. So, to make it
-        #  clickable on preview we need a hack.
-        return super(tk.Frame, self).winfo_children()
-
-
-class sCTkTableviewForPreview(sCTkTableview):
-    _THEME_BLOCK_NAME = "sCTkTableview"
-
-    def winfo_children(self):
-        internal = []
-        internal.extend(self._header_widgets)
-        for row in self._cell_widgets:
-            internal.extend(row)
-        clist = [self._scrollbar]
-        for widget in internal:
-            for cwidget in widget.winfo_children():
-                clist.append(cwidget)
-        return clist
-
-
-# sCTkSeparator carries its transparency on bg_color rather than fg_color, so
-# the decorator is told which key to stamp. Its _draw() calls
-# _detect_color_of_master() and falls back to the CTk theme's own fg_color when
-# that returns transparent, which on the Designer canvas produces a bright band
-# in dark mode -- more conspicuous than the Selector's low-contrast text,
-# because the band is the full canvas height rather than a few glyphs.
-@preview_opaque(colour_key="bg_color")
-class sCTkSeparatorForPreview(sCTkSeparator):
-    _THEME_BLOCK_NAME = "sCTkSeparator"
-
-
-@preview_opaque()
-class sCTkSegmentedButtonForPreview(sCTkSegmentedButton):
-    """
-    Designer preview for sCTkSegmentedButton.
-
-    WITHOUT THIS THE DESIGNER CRASHES ON DROP. CTkSegmentedButton.bind() raises
-    NotImplementedError unconditionally, and pygubu's bind_preview_widget()
-    calls bind() on every widget it walks:
-
-        File ".../ctk_segmented_button.py", line 471, in bind
-            raise NotImplementedError
-        NotImplementedError
-
-    Forwarding to the children instead lets the walk complete. CustomTkinter's
-    own designer plugin does exactly this for its CTkSegmentedButton, with the
-    note that selection still does not work -- their comment reads "I can't
-    select a segmented button in preview". So this makes the widget usable in
-    the Designer without making it selectable on the canvas; select it from the
-    widget tree.
-
-    SELECTION. CustomTkinter's own attempt stops at "I can't select a
-    segmented button in preview". The same problem was solved for sCTkDialog
-    earlier, and the same solution applies here:
-
-      - Pygubu resolves a clicked widget through builder.get_widget_id(). The
-        segments are CTkButtons this widget creates for itself, so they are not
-        in the builder's map and a click on one resolves to None.
-      - winfo_children() below hides them from pygubu's binding pass, so it
-        binds this widget and not the segments.
-      - _bind_segments_to_self() then binds them to forward their click here.
-      - The forwarded event goes to self._canvas, NOT to self. CTkFrame.bind()
-        redirects every binding to its internal canvas, so that is where
-        pygubu's handler actually ended up -- generating the event on the
-        widget itself dispatches into nothing.
-    """
-    _THEME_BLOCK_NAME = "sCTkSegmentedButton"
-
-    def __init__(self, master=None, **kw):
-        super().__init__(master, **kw)
-        self._bind_segments_to_self()
-
-    def _segment_widgets(self):
-        """The CTkButtons this widget builds for itself, canvas excluded."""
-        return [w for w in super(tk.Frame, self).winfo_children()
-                if isinstance(w, ctk.CTkButton)]
-
-    def _bind_segments_to_self(self):
-        """
-        Makes a click on any segment select the whole widget.
-
-        A CTkButton draws on an internal canvas that receives the click before
-        the widget does, and puts its label in a separate tk.Label, so all
-        three are bound.
-        """
-        def select_self(event, target=self):
-            try:
-                canvas = getattr(target, "_canvas", None) or target
-                canvas.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
-            return "break"
-
-        for segment in self._segment_widgets():
-            for widget in (segment,
-                           getattr(segment, "_canvas", None),
-                           getattr(segment, "_text_label", None)):
-                if widget is None:
-                    continue
-                try:
-                    widget.bind("<Button-1>", select_self)
-                except Exception:
-                    pass
-
-    def configure(self, *args, **kwargs):
-        """
-        Rebinds after any change that could rebuild the segments.
-
-        Setting `values` destroys the existing buttons and creates new ones,
-        which would otherwise be left unbound.
-        """
-        result = super().configure(*args, **kwargs)
-        if not (len(args) == 1 and not isinstance(args[0], dict)):
-            self._bind_segments_to_self()
-        return result
-
-    def winfo_children(self):
-        """
-        Hides the segments from the Designer's binding pass.
-
-        Pygubu binds a click handler to everything it finds here, and that
-        handler resolves the clicked widget through get_widget_id() -- which
-        knows nothing about buttons this widget created for itself. Excluding
-        them leaves the bindings installed by _bind_segments_to_self() intact.
-
-        The internal canvas is KEPT: it is this widget's visible background,
-        and dropping it would stop a click on empty space selecting anything.
-        """
-        return [w for w in super(tk.Frame, self).winfo_children()
-                if not isinstance(w, ctk.CTkButton)]
-
-    def bind(self, sequence=None, func=None, add=None):
-        for child in self.winfo_children():
-            try:
-                child.bind(sequence, func, True)
-            except Exception:
-                # A child that refuses the binding must not take the whole
-                # walk down with it -- that is the failure being fixed here.
-                pass
-
-
-class sCTkSelectorForPreview(sCTkSelector):
-    _THEME_BLOCK_NAME = "sCTkSelector"
-
-    def winfo_children(self):
-        internal = [
-            self.search_bar,
-            self.checkboxes_frame,
-            self.checkboxes_frame._parent_frame,
-            self.checkboxes_frame._parent_canvas,
-        ]
-        clist = []
-        for widget in internal:
-            for cwidget in widget.winfo_children():
-                clist.append(cwidget)
-                if isinstance(cwidget, sCTkCheckBox):
-                    clist.append(cwidget._text_label)
-                    clist.append(cwidget._canvas)
-        return clist
-
-
-class sCTkOptionMenuSecondaryForPreview(sCTkOptionMenuSecondary):
-    _THEME_BLOCK_NAME = "sCTkOptionMenuSecondary"
-
-    def winfo_children(self):
-        """
-        FIX: this used to walk self._menu, an inner CTkOptionMenu, because the
-        widget was a COMPOSITE -- a frame wrapping a menu, which was how it got
-        a border that native CTkOptionMenu cannot draw. It is now a plain
-        CTkOptionMenu subclass like Primary, with the border supplied by
-        sCTkOptionMenuBorderMixin, so that attribute is gone and the walk
-        raised:
-
-            AttributeError: 'sCTkOptionMenuSecondaryForPreview' object has no
-            attribute '_menu'
-
-        The ordinary hack applies instead: CTkFrame hides its internal canvas
-        from winfo_children(), and the Designer needs to see it to hit-test a
-        click.
-        """
-        return super(tk.Frame, self).winfo_children()
-
-
-class sCTkSpinboxForPreview(sCTkSpinbox):
-    _THEME_BLOCK_NAME = "sCTkSpinbox"
-
-    def winfo_children(self):
-        internal = [
-            self.entry
-        ]
-        clist = []
-        for widget in internal:
-            for cwidget in widget.winfo_children():
-                clist.append(cwidget)
-        return clist
-
-
-#
-# Builder for Preview
-#
-class sCTkFramePreviewBO(sCTkFrameBO):
-    class_ = sCTkFrameForPreview
-
-
-class sCTkFrameLabeledPrimaryForPreviewBO(sCTkFrameLabeledPrimaryBO):
-    class_ = sCTkFrameLabeledPrimaryForPreview
-
-
-class sCTkFileExplorerForPreviewBO(sCTkFileExplorerBO):
-    class_ = sCTkFileExplorerForPreview
-
-
-class sCTkPathChooserForPreviewBO(sCTkPathChooserBO):
-    class_ = sCTkPathChooserForPreview
-
-
-class sCTkTableviewForPreviewBO(sCTkTableviewBO):
-    class_ = sCTkTableviewForPreview
-
-
-class sCTkDialContinuousForPreview(sCTkDialContinuous):
-    """
-    Designer preview for sCTkDialContinuous.
-
-    Without this the dial cannot be selected by clicking it. Every dial draws
-    itself on an internal canvas that CTkFrame hides from winfo_children(),
-    and the Designer walks that list to bind its click handler -- so it never
-    reached the only part of the widget there is to click.
-    """
-    _THEME_BLOCK_NAME = "sCTkDialContinuous"
-
-    def winfo_children(self):
-        return super(tk.Frame, self).winfo_children()
-
-
-class sCTkDialRangeForPreview(sCTkDialRange):
-    """Designer preview for sCTkDialRange. See sCTkDialContinuousForPreview."""
-    _THEME_BLOCK_NAME = "sCTkDialRange"
-
-    def winfo_children(self):
-        return super(tk.Frame, self).winfo_children()
-
-
-class sCTkDialSelectorForPreview(sCTkDialSelector):
-    """Designer preview for sCTkDialSelector. See sCTkDialContinuousForPreview."""
-    _THEME_BLOCK_NAME = "sCTkDialSelector"
-
-    def winfo_children(self):
-        return super(tk.Frame, self).winfo_children()
-
-
-class sCTkDialogForPreview(sCTkDialog):
-    """
-    Designer preview for sCTkDialog.
-
-    _MAKE_WINDOW = False is the whole point. At runtime this widget builds its
-    own sCTkDialogToplevel and packs itself into it -- a dialog is always its
-    own window. In the Designer that would spawn a real, separate, possibly
-    MODAL window on every redraw, and a redraw happens on every property edit.
-    A modal one would seize input and leave the Designer unusable.
-
-    With the flag off, sCTkDialog.__init__ takes its early return and
-    behaves as an ordinary frame, so the dialog renders inline on the canvas
-    where it can be laid out.
-
-    The window properties -- title, width, height, modal, offset_x, offset_y --
-    remain editable in the inspector and still reach generated code. They
-    simply have no effect on the preview, because there is no window for them
-    to act on.
-
-    _THEME_BLOCK_NAME names the block this preview reads. It must be
-    "sCTkDialog", not "sCTkFrame": the dialog now has a block of its own
-    carrying heading_font and heading_text_color, and those keys are required.
-    Pointing at sCTkFrame's block resolved without them and construction failed
-    with a KeyError naming a block the widget never reads.
-    """
-    _THEME_BLOCK_NAME = "sCTkDialog"
-    _MAKE_WINDOW = False
-
-    def __init__(self, master=None, **kw):
-        super().__init__(master, **kw)
-        self._bind_own_parts_to_self()
-
-    def _bind_own_parts_to_self(self):
-        """
-        Makes a click on the heading or a button select the DIALOG.
-
-        The Designer resolves a clicked widget through
-        builder.get_widget_id(). The heading label and the three buttons are
-        built by the dialog rather than by the builder, so they are not in its
-        map: a click on one resolved to None and selected nothing. Only the
-        very edge of the dialog -- its own background canvas -- worked.
-
-        Forwarding the click to the dialog gives the Designer a widget it knows
-        about, which is what the user meant.
-
-        Done HERE, in the preview class's own __init__, rather than in
-        configure_for_preview(): that hook was not reaching this widget, and
-        this runs unconditionally at construction. It survives the Designer's
-        own binding pass because winfo_children() below excludes these parts,
-        so that pass never visits them.
-
-        CTk buttons draw on an internal canvas that receives the click before
-        the widget does, so _canvas and _text_label are bound as well as the
-        widget itself.
-        """
-        def select_dialog(event, dialog=self):
-            # The event goes to the dialog's internal CANVAS, not to the
-            # dialog widget.
-            #
-            # CTkFrame.bind() redirects every binding to self._canvas rather
-            # than attaching it to the frame -- the same override that made
-            # scroll bindings silently vanish in sCTkScrollableFrame. So when
-            # the Designer bound its click handler to this dialog, the binding
-            # landed on the canvas. Generating the event on the dialog found
-            # nothing bound there and did nothing, which is why clicks were
-            # forwarded successfully and still selected nothing.
-            #
-            # It also explains why clicking the very edge always worked: the
-            # edge IS the canvas.
-            target = getattr(dialog, "_canvas", None) or dialog
-            try:
-                target.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
-            return "break"
-
-        # contentFrame is included, but only its CANVAS gets bound below --
-        # the frame itself stays visible to the Designer's own binding pass so
-        # that widgets the user drops inside it still select themselves. In
-        # practice a user drops a frame in here to hold their own layout, and
-        # clicking that frame should select it, not the dialog; clicking the
-        # bare content area around it should reach the dialog, since there is
-        # nothing else there to select.
-        parts = [getattr(self, "heading_Label", None),
-                 getattr(self, "titleFrame", None),
-                 getattr(self, "actionFrame", None),
-                 getattr(self, "contentFrame", None)]
-        for name in ("apply", "cancel", "reset"):
-            parts.append(getattr(self, f"{name}_Button", None))
-
-        content = getattr(self, "contentFrame", None)
-        for part in parts:
-            if part is None:
-                continue
-            if part is content:
-                # Canvas only. Binding the frame itself would intercept clicks
-                # meant for the user's own widgets inside it.
-                targets = (getattr(part, "_canvas", None),)
-            else:
-                targets = (part,
-                           getattr(part, "_canvas", None),
-                           getattr(part, "_text_label", None))
-            for target in targets:
-                if target is None:
-                    continue
-                try:
-                    target.bind("<Button-1>", select_dialog)
-                except Exception:
-                    pass
-
-    def set_buttons(self, count):
-        """Rebuilds the button row, then re-binds the new buttons."""
-        super().set_buttons(count)
-        self._bind_own_parts_to_self()
-
-    def winfo_children(self):
-        """
-        Hides this widget's OWN parts from the Designer's binding pass.
-
-        pygubu walks winfo_children() binding a click handler to everything it
-        finds, and that handler resolves the clicked widget through
-        builder.get_widget_id(). The heading label and the three buttons are
-        built by the dialog, not by the builder, so they are not in its map:
-        clicking one resolved to None and selected nothing.
-
-        Returning only the content area means pygubu binds the dialog itself
-        and whatever the user put inside it. The dialog's own parts are bound
-        separately, in _bind_own_parts_to_self() -- and because they are not in
-        this list, pygubu's pass does not visit them and cannot overwrite those
-        bindings.
-        """
-        children = super(tk.Frame, self).winfo_children()
-        content = getattr(self, "contentFrame", None)
-        if content is None:
-            return children
-
-        # Keep the internal canvas: it IS the dialog's visible background, so
-        # dropping it stopped a click on empty space selecting anything.
-        # Everything else the dialog builds for itself is excluded.
-        own_parts = {getattr(self, name, None) for name in (
-            "titleFrame", "actionFrame", "heading_Label",
-            "apply_Button", "cancel_Button", "reset_Button")}
-        keep = [w for w in children if w not in own_parts]
-        if content not in keep:
-            keep.append(content)
-        return keep
-
-
-class sCTkSegmentedButtonForPreviewBO(sCTkSegmentedButtonBO):
-    class_ = sCTkSegmentedButtonForPreview
-
-
-class sCTkSelectorForPreviewBO(sCTkSelectorBO):
-    class_ = sCTkSelectorForPreview
-
-
-class sCTkSeparatorForPreviewBO(sCTkSeparatorBuilder):
-    class_ = sCTkSeparatorForPreview
-
-
-class sCTkDialContinuousForPreviewBO(sCTkDialContinuousBO):
-    class_ = sCTkDialContinuousForPreview
-
-
-class sCTkDialRangeForPreviewBO(sCTkDialRangeBO):
-    class_ = sCTkDialRangeForPreview
-
-
-class sCTkDialSelectorForPreviewBO(sCTkDialSelectorBO):
-    class_ = sCTkDialSelectorForPreview
-
-
-class sCTkDialogForPreviewBO(sCTkDialogBO):
-    class_ = sCTkDialogForPreview
-
-    def realize(self, parent, extra_init_args: dict = None):
-        """
-        Builds the preview WITHOUT the window properties.
-
-        sCTkDialogBO.realize() passes title/width/height/modal and the
-        offsets to the constructor. With _MAKE_WINDOW False there is no
-        toplevel to receive them, and modal=True in particular must not reach
-        anything -- so they are dropped rather than passed and ignored.
-        """
-        master = parent.get_child_master() if hasattr(parent, "get_child_master") else parent
-        self.widget = self.class_(master)
-        return self.widget
-
-
-class sCTkOptionMenuSecondaryForPreviewBO(sCTkOptionMenuSecondaryBO):
-    class_ = sCTkOptionMenuSecondaryForPreview
-
-
-class sCTkSpinboxForPreviewBO(sCTkSpinboxBO):
-    class_ = sCTkSpinboxForPreview
-
-
-# =====================================================================
-# TOP-LEVEL WIDGET PREVIEWS: sCTkToplevel and sCTk
-#
-# A top-level window can't be previewed as a real window inside the designer
-# canvas, so pygubu renders it as a FRAME instead. That's why the factory
-# classes below list sCTkFrameForPreview among their bases rather than
-# sCTkToplevel: the preview IS a frame wearing the toplevel's properties.
-#
-# The consequence is that a handful of options a Toplevel accepts and a Frame
-# does not have to be routed around CTk's own configure(). That's what the
-# two mixins do -- they intercept those names and push them straight to the
-# underlying tkinter widget via super(CTkBaseClass, self).
-#
-# Mirrors CustomTkinter's own designer preview module.
-# =====================================================================
-class sCTkToplevelPreviewMixin:
-    def configure(self, cnf=None, **kw):
-        if cnf:
-            return super().configure(cnf, **kw)
-        # configure properties not supported by sCTkFrame but yes by sCTkToplevel
-        props = ("borderwidth", "highlightbackground", "highlightthickness")
-        for pname in props:
-            if pname in kw:
-                super(CTkBaseClass, self).configure(**{pname: kw.pop(pname)})
-        return super().configure(cnf, **kw)
-
-
-sCTkToplevelPreview = ToplevelPreviewFactory(
-    "sCTkToplevelPreview",
-    (sCTkToplevelPreviewMixin, ToplevelPreviewMixin, sCTkFrameForPreview, object),
-    {},
-)
-
-
-class sCTkToplevelPreviewBO(ToplevelPreviewBaseBO):
-    class_ = sCTkToplevelPreview
-    ro_properties = ToplevelPreviewBaseBO.ro_properties + (
-        "background",
-        "fg_color",
-    )
-
-    def _process_property_value(self, pname, value):
-        if pname in ("width", "height"):
-            return int(value)
-        return super()._process_property_value(pname, value)
-
-
-class sCTkPreviewMixin:
-    def configure(self, cnf=None, **kw):
-        if cnf:
-            return super().configure(cnf, **kw)
-        # configure properties not supported by sCTkFrame but yes by sCTk
-        props = ("padx", "pady", "relief", "takefocus")
-        for pname in props:
-            if pname in kw:
-                super(CTkBaseClass, self).configure(**{pname: kw.pop(pname)})
-        return super().configure(cnf, **kw)
-
-
-sCTkPreview = ToplevelPreviewFactory(
-    "sCTkPreview",
-    (sCTkPreviewMixin, ToplevelPreviewMixin, sCTkFrameForPreview, object),
-    {},
-)
-
-
-class sCTkPreviewBO(sCTkToplevelPreviewBO):
-    class_ = sCTkPreview
-    properties = ToplevelPreviewBaseBO.properties + ("appearance_mode",)
-    ro_properties = ToplevelPreviewBaseBO.ro_properties + ("fg_color",)
-
-    def _set_property(self, target_widget, pname, value):
-        """
-        Applies a property to the preview.
-
-        appearance_mode and color_theme are global CustomTkinter settings
-        rather than widget options, so they are routed to the module-level
-        setters instead of reaching the widget.
-
-        FIX: both setters are guarded against an empty value. Blanking a
-        property in the Designer inspector makes pygubu call
-        unset_property(), which resolves the property's default -- None here,
-        since these have no widget-level default to read back -- and passes
-        it straight through. CustomTkinter's set_appearance_mode() then does
-        mode_string.lower() and raises AttributeError on NoneType, taking out
-        the whole preview update. CustomTkinter's own CTkPreviewBO has the
-        same unguarded code and the same crash.
-
-        The two are guarded DIFFERENTLY, on purpose.
-
-        appearance_mode falls back to "System", which is a real state --
-        CustomTkinter's own default, meaning "follow the OS". A user who
-        picks Dark, then Light, then wants the system to decide again needs a
-        way back, and clearing the field is that way. Ignoring the call would
-        strand them on the last explicit mode, which is precisely what they
-        are trying to escape. This package registers "System" as an explicit
-        choice as well, so it is reachable without clearing anything --
-        CustomTkinter's own property offers only blank, Light and Dark.
-
-        color_theme has no equivalent "unset" state: CustomTkinter always
-        needs some theme loaded, and reverting to "blue" would be a guess
-        rather than a reversion. Blank is therefore ignored, leaving the
-        current theme in place.
-        """
-        if pname == "appearance_mode":
-            ctk.set_appearance_mode(value or "System")
-        elif pname == "color_theme":
-            if value:
-                ctk.set_default_color_theme(value)
+from .themeable_widget import ThemeableWidget, parse_list_property
+from .sctk_scroll_mixin import ScrollBindingMixin
+
+from typing import Literal, Optional, Union, Tuple
+
+from .sctk_button_primary import sCTkButtonPrimary
+from .sctk_button_secondary import sCTkButtonSecondary
+from .sctk_label_secondary import sCTkLabelSecondary
+from .sctk_entry_primary import sCTkEntryPrimary
+
+class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
+    # NOTE: an earlier version declared a _MANAGED_PROPERTIES frozenset here,
+    # never referenced anywhere else in this file -- dead code, removed. Same
+    # vestigial pattern found and removed elsewhere in this project.
+
+    def __init__(self,
+                 master: any,
+                 type: Literal["file", "directory"] = "directory",
+                 filetypes: list[str] = None,
+                 initialdir: str = None,
+                 initialfile: str = None,
+                 command: Optional[callable] = None,
+                 double_click_command: Optional[callable] = None,
+                 width: int = 400,
+                 height: int = 300,
+                 corner_radius: Optional[Union[int, str]] = None,
+                 border_width: Optional[Union[int, str]] = None,
+                 bg_color: Union[str, Tuple[str, str]] = "transparent",
+                 fg_color: Optional[Union[str, Tuple[str, str]]] = None,
+                 border_color: Optional[Union[str, Tuple[str, str]]] = None,
+                 background_corner_colors: Union[Tuple[Union[str, Tuple[str, str]]], None] = None,
+                 overwrite_preferred_drawing_method: Union[str, None] = None,
+                 **kwargs):
+
+        kwargs.pop("initialdir", None)
+        kwargs.pop("initialfile", None)
+        kwargs.pop("type", None)
+        kwargs.pop("filetypes", None)
+        kwargs.pop("defaultextension", None)
+        kwargs.pop("title", None)
+
+        self._initial_state_seed = str(kwargs.pop("state", "normal")).lower()
+
+        ThemeableWidget.__init__(self, kwargs)
+
+        self._local_defaults = dict(self.final_kw)
+        self._custom_disabled_map = dict(self._widget_disabled_map)
+
+        # fg_color from the theme block when the caller did not pass one.
+        #
+        # The named constructor parameter defaults to None and was handed
+        # straight to CTkFrame, so a theme value never reached the widget and
+        # the background came from native CustomTkinter's own default. That
+        # also left fg_color absent from _local_defaults, so a Designer query
+        # reported the CURRENT colour as the default -- and clearing the field
+        # set it to what it already was.
+        if fg_color is None:
+            fg_color = self.final_kw.get("fg_color")
+
+        super().__init__(master, width=width, height=height, corner_radius=corner_radius,
+                         border_width=border_width, bg_color=bg_color, fg_color=fg_color,
+                         border_color=border_color, background_corner_colors=background_corner_colors,
+                         overwrite_preferred_drawing_method=overwrite_preferred_drawing_method, **kwargs)
+
+        self._state = "normal" if self._initial_state_seed not in ("normal", "disabled") else self._initial_state_seed
+        self.response_type = type.lower()
+        self.change_path = True
+        self.item_labels = {}
+        self.command = command
+        self.double_click_command = double_click_command
+        self._last_double_click_time = 0.0
+
+        self._desired_width = width
+        self._desired_height = height
+
+        self.filetypes = []
+        if filetypes:
+            if self.response_type != "file":
+                raise ValueError("Cannot provide 'filetypes' filters when widget mode is 'directory'.")
+            if isinstance(filetypes, str):
+                cleaned_str = filetypes.strip()
+                if not (cleaned_str.startswith("[") and cleaned_str.endswith("]")):
+                    raise ValueError(f"Malformed filetypes sequence parsed: '{filetypes}'.")
+                try: processed_types = parse_list_property(cleaned_str)
+                except Exception as err: raise ValueError(f"Malformed syntax evaluating filetypes configuration: {err}")
+            else: processed_types = filetypes
+
+            if not isinstance(processed_types, list):
+                raise ValueError(f"Invalid filetypes configuration format context: {type(processed_types)}.")
+            for f in processed_types:
+                clean_f = str(f).lower().replace("*", "").strip()
+                if clean_f:
+                    if not clean_f.startswith("."): clean_f = "." + clean_f
+                    self.filetypes.append(clean_f)
         else:
-            return super()._set_property(target_widget, pname, value)
+            self.filetypes = None
+        raw_file = os.path.expanduser(str(initialfile)) if initialfile else None
+        raw_dir = os.path.expanduser(str(initialdir)) if initialdir else None
 
+        if self.response_type == "directory" and raw_file:
+            raw_dir = os.path.dirname(raw_file)
+            raw_file = None
 
-# Every builder id registered by this package is "scustomtkinter.<ClassName>",
-# so this prefix identifies our widgets and nothing else. Note it does NOT
-# collide with CustomTkinter's own "customtkinter." prefix -- their designer
-# plugin correctly ignores ours, and vice versa.
-namespace_prefix = "scustomtkinter."
+        if raw_dir is not None:
+            init_p = raw_dir
+        elif raw_file is not None:
+            init_p = os.path.dirname(raw_file)
+        else:
+            init_p = os.getcwd()
 
+        self.path_to_show = ctk.StringVar(self, value=os.path.normpath(os.path.abspath(init_p)))
+        self.selected_path = ctk.StringVar(self,
+                                           value=os.path.normpath(os.path.abspath(raw_file if raw_file else init_p)))
 
-def _no_op(event=None):
-    """Swallow an event during preview."""
-    pass
+        self.folder_icon = "📁 "
+        self.file_icon = "📄 "
 
+        self.top_frame = ctk.CTkFrame(self, width=self._desired_width, fg_color="transparent")
+        self.top_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+        self.top_frame.columnconfigure(1, weight=1)
 
-def _neutralize(widget, sequences):
-    """
-    Replace a widget's handlers for the given event sequences with no-ops.
+        self.back_button = sCTkButtonPrimary(self.top_frame, text="▲ Up", width=45)
+        self.back_button.grid(row=0, column=0, padx=(0, 5), sticky="nw")
 
-    Each bind is attempted independently: <TouchpadScroll> exists only on
-    macOS and raises elsewhere, and a widget may legitimately not support a
-    sequence. One failure must not skip the rest.
-    """
-    if widget is None:
-        return
-    for seq in sequences:
+        self.path_entry = sCTkEntryPrimary(self.top_frame, textvariable=self.selected_path)
+        self.path_entry.grid(row=0, column=1, sticky="ew")
+
+        self.main_container = ctk.CTkFrame(self, width=self._desired_width, height=self._desired_height - 60)
+        self.main_container.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+        self.main_container.columnconfigure(0, weight=1)
+        self.main_container.rowconfigure(0, weight=1)
+
+        self.canvas = ctk.CTkCanvas(self.main_container, highlightthickness=0, width=self._desired_width - 30,
+                                    height=self._desired_height - 70)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+
+        self.explorer_frame = ctk.CTkFrame(self.canvas, fg_color="transparent")
+        self.explorer_frame.columnconfigure(0, weight=1)
+
+        self.y_scrollbar = ctk.CTkScrollbar(self.main_container, command=self.canvas.yview)
+        self.y_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.canvas.configure(yscrollcommand=self.y_scrollbar.set)
+
+        self.canvas.create_window((0, 0), window=self.explorer_frame, anchor="nw", tags="inner_window")
+
+        # Scroll state and activation, owned by ScrollBindingMixin.
+        # _init_scroll_state() must run before any binding happens.
+        #
+        # FIX: this was previously deferred with self.after(10, ...) -- an
+        # arbitrary delay chosen to let the widget hierarchy settle. The mixin
+        # activates via after_idle() instead, which fires when Tk is actually
+        # idle rather than after a guessed interval, plus <Map> on this widget
+        # and a debounced <Configure> rebind. The delay is retained below only
+        # for the NON-scroll wiring _finalize_split_bindings() also does.
+        self._init_scroll_state()
+        self._install_scroll_activation(content_widget=self.explorer_frame)
+
+        self.after(10, self._finalize_split_bindings)
+        self._process_live_theme_repaint()
+
+        # 🔑 REGISTER LIFECYCLE HANDSHAKE HOOK: Maps registration signals back up to Pygubu windows cleanly
+        self._finalize_themeable_lifecycle()
+
+    def _resolve_canvas_bg_color(self):
+        """
+        Determines what color to give the internal raw Canvas's background,
+        since a raw Tkinter Canvas cannot render CTk's "transparent"
+        pseudo-value at all.
+
+        FIX: an earlier version reached into ctk.ThemeManager.theme["CTkFrame"]
+        -- CustomTkinter's own native theme registry -- as an intermediate
+        fallback before reaching the hardcoded literal below. Every other
+        widget in this project exclusively uses sCTkThemes.json or a
+        documented literal; this was the only place reaching into native
+        CTk's own theme as an additional fallback layer. Removed -- goes
+        directly to the documented hardcoded pair instead, matching the same
+        precedent already established in sCTkFrameLabeledPrimary's
+        _hide_internal_scrollbars(): this isn't a "theme is incomplete"
+        situation (this widget's own fg_color being "transparent" is a
+        legitimate, common choice), it's "a raw canvas needs an actual
+        renderable color, and transparent isn't one" -- a different problem
+        with a different, accepted solution.
+        """
+        canvas_bg_raw = self.cget("fg_color")
+        if canvas_bg_raw == "transparent" or canvas_bg_raw is None:
+            return "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
+        resolved_hex = self._resolve_color(canvas_bg_raw)
+        if resolved_hex == "transparent":
+            return "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
+        return resolved_hex
+
+    def _set_appearance_mode(self, mode_string):
+        """Intercepts appearance-mode changes and forces a valid hex string
+        onto the internal raw Canvas, which cannot render CTk's "transparent"."""
+        super()._set_appearance_mode(mode_string)
+        if hasattr(self, "canvas") and self.canvas.winfo_exists():
+            self.canvas.configure(bg=self._resolve_canvas_bg_color())
+            if hasattr(self, "path_to_show"): self._fill_explorer()
+
+    def _process_live_theme_repaint(self):
+        theme, d_map = self._local_defaults, self._custom_disabled_map
+        current_state = getattr(self, "_state", "normal")
+
+        # FIX: an earlier version used hardcoded fallback literals for
+        # button_color (the scrollbar's color) -- and, in the enabled branch,
+        # reached into ctk.ThemeManager.theme["CTkScrollbar"] (native CTk's
+        # own theme registry) as an additional fallback layer, the only place
+        # in this project besides the canvas-background case above doing
+        # that. Both replaced with hard-fail validation, matching the
+        # principle established for sCTkSwitch, the label family, and
+        # sCTkTableview elsewhere in this project.
+        if theme.get("button_color") is None:
+            raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'button_color' at the top level.")
+        if d_map.get("button_color") is None:
+            raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'button_color' in disabled_map.")
+
+        if current_state == "disabled":
+            btn_fg = d_map.get("btn_fg", theme.get("btn_fg"))
+            btn_border = d_map.get("btn_border_color", theme.get("btn_border_color"))
+            btn_text = d_map.get("btn_text_color", theme.get("btn_text_color"))
+            btn_hover, entry_fg = btn_fg, d_map.get("entry_fg", theme.get("entry_fg"))
+            entry_border = d_map.get("entry_border_color", theme.get("entry_border_color"))
+            entry_text = d_map.get("entry_text_color", theme.get("entry_text_color"))
+            sb_btn_color, sb_command = d_map.get("button_color"), None
+        else:
+            btn_fg, btn_border = theme.get("btn_fg"), theme.get("btn_border_color")
+            btn_text, btn_hover = theme.get("btn_text_color"), theme.get("btn_hover")
+            entry_fg, entry_border = theme.get("entry_fg"), theme.get("entry_border_color")
+            entry_text = theme.get("entry_text_color")
+            sb_btn_color = theme.get("button_color")
+            sb_command = self.canvas.yview
+
+        self.canvas.configure(bg=self._resolve_canvas_bg_color())
+
+        if hasattr(self, "back_button") and self.back_button.winfo_exists():
+            self.back_button.configure(state=current_state, font=theme.get("btn_font"),
+                                       fg_color=self._resolve_color(btn_fg), hover_color=self._resolve_color(btn_hover),
+                                       text_color=self._resolve_color(btn_text),
+                                       border_color=self._resolve_color(btn_border))
+        if hasattr(self, "path_entry") and self.path_entry.winfo_exists():
+            self.path_entry.configure(state=current_state, font=theme.get("entry_font"),
+                                      fg_color=self._resolve_color(entry_fg),
+                                      border_color=self._resolve_color(entry_border),
+                                      text_color=self._resolve_color(entry_text))
+        if hasattr(self, "y_scrollbar") and self.y_scrollbar.winfo_exists():
+            self.y_scrollbar.configure(command=sb_command, button_color=self._resolve_color(sb_btn_color),
+                                       button_hover_color=self._resolve_color(sb_btn_color))
+        if hasattr(self, "path_to_show"): self._fill_explorer()
+
+    def _configure_frame(self, event=None):
+        self.after(10, self._update_scrollregion)
+
+    def _update_scrollregion(self):
+        """
+        Sets the canvas scroll region to the content bounds, expanded to at
+        least the visible canvas height.
+
+        FIX: this previously set scrollregion straight from bbox("all"). When
+        the files don't fill the frame that region is SHORTER than the visible
+        canvas, and Tk will still scroll within it -- so dragging the
+        scrollbar pushed the rows down to the bottom of the frame with empty
+        space above them, instead of doing nothing. Growing the region to the
+        canvas height when content is shorter leaves yview with nowhere to go,
+        which is the intended "content fits, so scrolling does nothing"
+        behavior.
+        """
         try:
-            widget.bind(seq, _no_op)
+            if not self.canvas.winfo_exists():
+                return
+            bounds = self.canvas.bbox("all")
+            if not bounds:
+                return
+            x0, y0, x1, y1 = bounds
+            visible_height = self.canvas.winfo_height()
+            if (y1 - y0) < visible_height:
+                y1 = y0 + visible_height
+            self.canvas.configure(scrollregion=(x0, y0, x1, y1))
         except Exception:
             pass
 
+    def _user_path_changed(self, *args):
+        if not self.change_path: return
+        target = self.selected_path.get()
+        if os.path.isdir(target):
+            self.path_to_show.set(target)
+            self._fill_explorer()
 
-def _preview_canvas(widget):
-    """
-    Return the drawing canvas for a widget, or None.
+    def _on_entry_return(self):
+        target = self.path_entry.get().strip()
+        if os.path.exists(target) and os.path.isdir(target):
+            self.path_to_show.set(target)
+            self._fill_explorer()
 
-    Widgets inherited from CustomTkinter expose it as `_canvas`; the ones this
-    library builds from scratch -- the dials, both S-meters, sCTkFileExplorer --
-    create their own as `canvas`. CustomTkinter's plugin only checks `_canvas`,
-    which would silently return None for half of this library.
-    """
-    for attr in ("_canvas", "canvas"):
-        found = getattr(widget, attr, None)
-        if found is not None:
-            return found
-    return None
+    def _empty_explorer(self):
+        for widget in self.explorer_frame.winfo_children(): widget.destroy()
+        self.item_labels.clear()
 
+    def _move_back(self):
+        p = os.path.dirname(self.path_to_show.get())
+        if p != self.path_to_show.get():
+            self.path_to_show.set(p)
+            self.change_path = False
+            self.selected_path.set(p)
+            self.change_path = True
+            self._fill_explorer()
 
-# Sequences that make a widget grab the pointer in the designer canvas.
-_HOVER_CLICK = ("<Enter>", "<Leave>", "<Button-1>")
-_FOCUS = ("<FocusIn>", "<FocusOut>")
-# Wheel and trackpad. Neutralizing these matters more here than upstream:
-# scrolling over an un-neutralized widget scrolls IT instead of the canvas.
-_SCROLL = ("<MouseWheel>", "<TouchpadScroll>", "<Button-4>", "<Button-5>")
-# The dials additionally step on middle/right click and drag with a modifier.
-_DIAL_EXTRA = ("<Button-2>", "<Button-3>",
-               "<Shift-ButtonPress-1>", "<Shift-B1-Motion>")
-
-
-#
-# A Designer plugin for sCTk custom widgets
-#
-class sCTkDesignerPlugin(IDesignerPlugin):
-
-    def is_toplevel_widget(self, builder_uid: str) -> bool:
+    # ------------------------------------------------------------------
+    # ScrollBindingMixin contract
+    # ------------------------------------------------------------------
+    def _scroll_target(self):
         """
-        Declares which builder ids are application ROOTS rather than ordinary
-        widgets. Consulted by the Designer's script generator.
-
-        WHAT BREAKS WITHOUT THIS. pygubudesigner/codegen/scriptgenerator.py
-        decides which Mako template to use from:
-
-            toplevel_uids = ("tk.Tk", "tk.Toplevel", "customtkinter.CTk",
-                             "customtkinter.CTkToplevel",
-                             "tkmt.ThemedTKinterFrame")
-            if target_class in toplevel_uids or \
-               PluginManager.is_toplevel_widget(target_class):
-                main_widget_is_toplevel = True
-
-        That tuple is hardcoded and does not include this package's ids, so
-        sCTk fell to the WIDGET template, whose __main__ block reads:
-
-            root = tk.Tk()
-            app = MyApp(root)
-
-        sCTk creates its own Tcl interpreter, so that produced a SECOND one.
-        The consequence was nothing like the cause: a tk.StringVar built
-        without an explicit master attaches to whichever root Tkinter
-        considers default, so a variable bound to a widget in one interpreter
-        was read from the other. The widget worked, the command callback fired
-        with the right value, and variable.get() returned empty forever. Every
-        variable-bound widget in generated code was affected -- combo boxes,
-        radio buttons, switches, check boxes.
-
-        The `or` clause above is the supported fix. pygubu's own source carries
-        a FIXME beside that tuple asking plugins to implement this method
-        rather than the tuple being extended.
-
-        sCTkDialog is included for the same reason even though it is not a
-        Toplevel subclass: it always BUILDS one. Without it the generated
-        __main__ read
-
-            root = tk.Tk()
-            app = MyDialog(root)
-
-        which put a small empty window on screen beside the dialog -- the
-        application root, with nothing in it, because everything the design
-        contains lives inside the dialog's own window. Setting `transient` made
-        no difference, since the two are separate roots rather than parent and
-        child.
-
-        Note that group=GROOT on register_widget() is a DIFFERENT thing --
-        palette placement only. It does not affect code generation.
-
-        Args:
-            builder_uid: The registered id being tested.
+        The widget to scroll. Unlike sCTkScrollableFrame -- which is wrapped
+        by a native CTkScrollableFrame owning the canvas, and so has to look
+        it up via winfo_parent() -- this widget builds its own canvas
+        explicitly, so no lookup is needed.
 
         Returns:
-            True if that id names an application root.
+            self.canvas, or None if it doesn't exist yet.
         """
-        return builder_uid in (sCTk_builder_id, sCTkToplevel_builder_id,
-                               sCTkDialog_builder_id)
-
-    def get_preview_builder(self, builder_uid: str):
-        """Return a BuilderObject subclass used to build a preview
-        for the target builder_uid"""
-
-        if builder_uid == sCTkFrame_builder_id:
-            return sCTkFramePreviewBO
-        elif builder_uid == sCTkFrameLabeledPrimary_builder_id:
-            return sCTkFrameLabeledPrimaryForPreviewBO
-        elif builder_uid == sCTkFileExplorer_builder_id:
-            return sCTkFileExplorerForPreviewBO
-        elif builder_uid == sCTkPathChooser_builder_id:
-            return sCTkPathChooserForPreviewBO
-        elif builder_uid == sCTkTableview_builder_id:
-            return sCTkTableviewForPreviewBO
-        elif builder_uid == sCTkSegmentedButton_builder_id:
-            return sCTkSegmentedButtonForPreviewBO
-        elif builder_uid == sCTkSelector_builder_id:
-            return sCTkSelectorForPreviewBO
-        elif builder_uid == sCTkSeparator_builder_id:
-            return sCTkSeparatorForPreviewBO
-        elif builder_uid == sCTkDialContinuous_builder_id:
-            return sCTkDialContinuousForPreviewBO
-        elif builder_uid == sCTkDialRange_builder_id:
-            return sCTkDialRangeForPreviewBO
-        elif builder_uid == sCTkDialSelector_builder_id:
-            return sCTkDialSelectorForPreviewBO
-        elif builder_uid == sCTkDialog_builder_id:
-            return sCTkDialogForPreviewBO
-        elif builder_uid == sCTkOptionMenuSecondary_builder_id:
-            return sCTkOptionMenuSecondaryForPreviewBO
-        elif builder_uid == sCTkSpinbox_builder_id:
-            return sCTkSpinboxForPreviewBO
-        elif builder_uid == sCTkToplevel_builder_id:
-            return sCTkToplevelPreviewBO
-        elif builder_uid == sCTk_builder_id:
-            return sCTkPreviewBO
-
+        canvas = getattr(self, "canvas", None)
+        try:
+            if canvas is not None and canvas.winfo_exists():
+                return canvas
+        except Exception:
+            pass
         return None
 
-    def get_toplevel_preview_for(self, builder_uid: str, widget_id: str,
-                                 builder, top_master):
-        """Return the toplevel preview widget for a top-level builder_uid,
-        or None if this plugin doesn't handle it.
-
-        Note this does NOT instantiate a BuilderObject itself. get_preview_builder()
-        above has already told pygubu which BO class to use for this uid, so
-        builder.get_object() constructs it correctly -- with a real WidgetMeta,
-        which is what BuilderObject.__init__ actually expects. An earlier version
-        here called preview_bo(builder, widget_id).realize(top_master), passing
-        the id STRING where the meta belongs; that failed with
-        "'str' object has no attribute 'properties'" as soon as
-        _get_init_args() looked at self.wmeta.properties.
-
-        top_master is accepted for interface compatibility and deliberately
-        unused: the builder places the preview itself.
-
-        The image-cache reset exists because building a toplevel creates a NEW
-        tk root, and a StockImageCache is bound to the root it was created
-        under. Without this, images resolved against the old root either fail
-        or render blank in the new one.
-
-        Mirrors CustomTkinter's own designer plugin.
+    def _scroll_layers(self):
         """
-        toplevel_uids = (sCTk_builder_id, sCTkToplevel_builder_id)
+        Every widget that should respond to a scroll event over this explorer:
+        the widget itself, its canvas, the scrollbar, and the full row tree.
 
-        def on_root_created(root):
-            builder.image_cache = StockImageCache(root, StockImage.registry)
+        FIX: an earlier version walked only ONE level into explorer_frame
+        (`for child in self.explorer_frame.winfo_children()`), so anything
+        nested inside a row -- its label, its icon -- was never bound, and
+        the wheel did nothing while the pointer was over those. The mixin's
+        collector recurses to full depth, stopping only at nested
+        CTkScrollableFrame boundaries.
 
-        if builder_uid in toplevel_uids:
-            builder.on_first_object = on_root_created
-            return builder.get_object(widget_id)
-
-        # sCTkDialog is not a toplevel, but it BUILDS one -- it always creates
-        # its own sCTkDialogToplevel and packs itself into it.
-        #
-        # Returning None here let pygubu fall back to creating a host window of
-        # its own, and that fallback constructs through the ordinary builder
-        # object rather than the preview one -- so _MAKE_WINDOW = False never
-        # applied, the real widget built its own window, and the result was TWO
-        # windows: an empty host, and the dialog beside it.
-        #
-        # Handing back the dialog's own window instead means no host is created
-        # and you preview the real thing, correctly sized and placed.
-        if builder_uid == sCTkDialog_builder_id:
-            builder.on_first_object = on_root_created
-            widget = builder.get_object(widget_id)
-            window = getattr(widget, "dialog_toplevel", None)
-            if window is not None:
-                return window
-            # _MAKE_WINDOW was False, so there is no window of its own; fall
-            # back to whatever it was built inside.
-            return widget.winfo_toplevel()
-
-        return None
-
-    def configure_for_preview(self, builder_uid: str, widget):
-        """Make a widget display with minimal functionality in the designer.
-
-        Two jobs: crop it to its allotted space, and stop it reacting to the
-        pointer. A widget that responds to clicks and scrolling fights the
-        designer -- clicking selects nothing, and scrolling over it moves the
-        widget instead of the canvas.
-
-        NOTE ON A BUG UPSTREAM: CustomTkinter's own plugin tests
-        `builder_uid.endswith(".CTKEntry")` -- capital K in the middle. The
-        real uid is "customtkinter.CTkEntry", so that branch has never
-        matched and their entry focus bindings were never actually
-        neutralized. The equivalent branch below is spelled correctly.
+        Returns:
+            An ordered, deduplicated list of widgets.
         """
-        if not builder_uid.startswith(namespace_prefix):
-            return
+        layers = [self]
 
-        crop_widget(widget, recursive=True)
+        canvas = self._scroll_target()
+        if canvas is not None:
+            layers.append(canvas)
 
-        canvas = _preview_canvas(widget)
+        # The scrollbar is a sibling of the canvas inside main_container, not
+        # a descendant of explorer_frame, so the content walk below would
+        # never reach it -- without this the wheel does nothing while the
+        # pointer is over the scrollbar itself.
+        bar = getattr(self, "y_scrollbar", None)
+        if bar is not None:
+            self._collect_scroll_descendants(bar, layers)
 
-        # --- Widgets built on sCTkScrollableFrame ------------------------
-        # Left alone deliberately, following CustomTkinter's own early return
-        # for CTkScrollableFrame. This library's scrollable frame activates
-        # bindings through four separate paths and rebinds on <Configure>, so
-        # a neutralizing pass would be undone by the next rebind anyway --
-        # and cropping fires <Configure>, which triggers exactly that.
-        scrollable_family = (
-            ".sCTkScrollableFrame",
-            ".sCTkFrameLabeledPrimary",
-            ".sCTkFrameLabeledSecondary",
-            ".sCTkTableview",
-            ".sCTkSelector",
-        )
-        if builder_uid.endswith(scrollable_family):
-            return
-
-        # --- Direct inheritors from CustomTkinter ------------------------
-        if builder_uid.endswith((".sCTkEntryPrimary", ".sCTkEntrySecondary")):
-            _neutralize(canvas, _FOCUS)
-
-        elif builder_uid.endswith(".sCTkSlider"):
-            _neutralize(canvas, _HOVER_CLICK + ("<B1-Motion>",))
-
-        elif builder_uid.endswith((".sCTkOptionMenuPrimary",
-                                   ".sCTkOptionMenuSecondary")):
-            _neutralize(canvas, _HOVER_CLICK)
-            _neutralize(getattr(widget, "_text_label", None), _HOVER_CLICK)
-
-        elif builder_uid.endswith(".sCTkComboBox"):
-            # ComboBox binds by canvas TAG rather than on the widget, so the
-            # dropdown arrow and its surrounding region need tag_bind.
-            if canvas is not None:
-                for tag in ("right_parts", "dropdown_arrow"):
-                    for seq in _HOVER_CLICK:
-                        try:
-                            canvas.tag_bind(tag, seq, _no_op)
-                        except Exception:
-                            pass
-
-        elif builder_uid.endswith((".sCTkSwitch", ".sCTkCheckBox")):
-            # Not handled by CustomTkinter's plugin, but both toggle on click,
-            # which in the designer reads as the widget refusing to be selected.
-            _neutralize(canvas, _HOVER_CLICK)
-            _neutralize(getattr(widget, "_text_label", None), _HOVER_CLICK)
-
-        # --- Widgets original to this library ----------------------------
-        elif builder_uid.endswith((".sCTkDialContinuous",
-                                   ".sCTkDialSelector",
-                                   ".sCTkDialRange")):
-            # The worst offender in the library: steps on left/middle/right
-            # click, drags with Shift, and turns on wheel or trackpad. Scroll
-            # bindings are installed on several layers, so both the widget and
-            # its canvas are neutralized.
-            #
-            # <Configure> is deliberately NOT neutralized -- the dial redraws
-            # itself from it, and a dial that never redraws shows an empty
-            # canvas in the designer.
-            sequences = _HOVER_CLICK + _DIAL_EXTRA + _SCROLL
-            _neutralize(canvas, sequences)
-            _neutralize(widget, _SCROLL)
-
-        elif builder_uid.endswith(".sCTkFileExplorer"):
-            # Rows are created dynamically and each binds click and
-            # double-click, so neutralizing the canvas alone is not enough --
-            # the row widgets are separate children.
-            _neutralize(canvas, _SCROLL)
-            _neutralize(widget, _SCROLL)
+        frame = getattr(self, "explorer_frame", None)
+        if frame is not None:
             try:
-                for row in widget.explorer_frame.winfo_children():
-                    _neutralize(row, ("<Button-1>", "<Double-Button-1>"))
+                if frame.winfo_exists():
+                    self._collect_scroll_descendants(frame, layers)
             except Exception:
                 pass
 
-        elif builder_uid.endswith(".sCTkPathChooser"):
-            # Its browse button opens a MODAL file explorer -- clicking that
-            # inside the designer would trap the user in a dialog with no
-            # obvious way back. The attribute is `btn`; note that a wrong name
-            # here fails silently, since _neutralize() accepts None.
-            _neutralize(getattr(widget, "btn", None), ("<Button-1>",))
+        return layers
 
-        # sCTkSMeter, sCTkSMeterBar and sCTkSeparator bind only <Configure>,
-        # which they need in order to draw. Nothing to neutralize.
+    def _scroll_permitted(self) -> bool:
+        """
+        Whether this explorer should currently respond to scroll input.
+
+        Tied to the widget's state, so a disabled explorer is genuinely
+        inert -- wheel, trackpad, and scrollbar dragging all stop -- rather
+        than merely looking dimmed while still scrolling. Consistent with
+        sCTkScrollableFrame, where disabling does the same.
+
+        The mixin consults this before every bind, so state changes take
+        effect through the existing configure(state=...) path with no extra
+        wiring. See ScrollBindingMixin._toggle_scroll_bindings() for how
+        blocking is implemented.
+
+        Returns:
+            True only while state is "normal".
+        """
+        return str(getattr(self, "_state", "normal")).lower() == "normal"
+
+    def _scroll_drag_targets(self):
+        """
+        The internal scrollbar, whose click-and-drag is blocked while this
+        widget is disabled -- otherwise a disabled explorer could still be
+        scrolled by grabbing the bar, contradicting its own reported state.
+        """
+        bar = getattr(self, "y_scrollbar", None)
+        return [bar] if bar is not None else []
+
+    def _finalize_split_bindings(self):
+        if hasattr(self, "back_button"): self.back_button.configure(command=self._move_back)
+        if hasattr(self, "path_entry"): self.path_entry.bind("<Return>", lambda e: self._on_entry_return())
+        if hasattr(self, "selected_path"): self.selected_path.trace_add("write", self._user_path_changed)
+        if hasattr(self, "explorer_frame"): self.explorer_frame.bind("<Configure>", self._configure_frame)
+        if hasattr(self, "canvas"):
+            self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfig("inner_window", width=e.width))
+            self._activate_scroll_bindings()
+            self.bind("<Visibility>", lambda e: self._process_live_theme_repaint())
+        self._fill_explorer()
+    def configure(self, *args, **kwargs):
+        if args and len(args) == 1:
+            # FIX: was `pname = args`, leaving pname as a TUPLE -- every
+            # comparison below failed, so all six single-argument queries
+            # were dead and fell through to super(). Pygubu could not read
+            # any of them.
+            pname = args[0]
+            if pname == "state": return ("state", "state", "state", "normal", getattr(self, "_state", "normal"))
+            if pname == "type": return ("type", "type", "type", "directory", self.response_type)
+            if pname == "initialdir": return ("initialdir", "initialdir", "initialdir", "", self.path_to_show.get())
+            if pname == "initialfile": return ("initialfile", "initialfile", "initialfile", "", self.selected_path.get())
+            if pname == "filetypes": return ("filetypes", "filetypes", "filetypes", "", str(self.filetypes) if self.filetypes else "")
+            if pname == "double_click_command": return ("double_click_command", "double_click_command", "double_click_command", "", str(self.double_click_command))
+            # FIX: was `return super().configure(*args, **kwargs)`.
+            #
+            # Native CTkFrame.configure() takes the property NAME as
+            # require_redraw and returns None, which pygubu then hands back to
+            # _set_property() -- see themeable_widget._configure_query().
+            # The library-wide sweep matched on `pname` and `require_redraw`
+            # and missed the *args form used here.
+            return self._configure_query(pname)
+
+        # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
+        # tuple, so this never fired and the dict-merge form of configure()
+        # was dead. Same tautology fixed across the batch-one widgets.
+        if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
+        # fg_color has to reach the internal CANVAS as well as the frame.
+        #
+        # _resolve_canvas_bg_color() was called only at construction and from
+        # _set_appearance_mode(), so configure(fg_color=...) repainted the
+        # outer frame and left the scrolling area on its old colour. And on the
+        # unset path -- where something did trigger a refresh -- the canvas
+        # picked up the new value while the frame did not, so clearing the
+        # field appeared to paint the WHOLE widget instead of resetting it.
+        #
+        # One symptom each way, one cause: the canvas was never refreshed at
+        # the point the colour actually changed.
+        _fg_changed = "fg_color" in kwargs
+        if "state" in kwargs:
+            self._state = str(kwargs.pop("state")).lower()
+            if self._state not in ("normal", "disabled"): self._state = "normal"
+            # Scroll handling is tied to state via _scroll_permitted(), so
+            # rebuild the bindings. state() does the same; both entry points
+            # have to, since neither delegates to the other.
+            self._activate_scroll_bindings()
+        if "type" in kwargs:
+            self.response_type = str(kwargs.pop("type")).lower()
+            if self.response_type not in ("file", "directory"): self.response_type = "directory"
+        if "filetypes" in kwargs:
+            ft_val = kwargs.pop("filetypes")
+            if ft_val:
+                raw_types = parse_list_property(ft_val)
+                self.filetypes = []
+                for f in raw_types:
+                    clean_f = str(f).lower().replace("*", "").strip()
+                    if clean_f:
+                        if not clean_f.startswith("."): clean_f = "." + clean_f
+                        self.filetypes.append(clean_f)
+            else: self.filetypes = None
+
+        if "width" in kwargs:
+            self._desired_width = int(kwargs.pop("width"))
+            kwargs["width"] = self._desired_width
+            if hasattr(self, "top_frame"): self.top_frame.configure(width=self._desired_width)
+            if hasattr(self, "main_container"): self.main_container.configure(width=self._desired_width)
+            if hasattr(self, "canvas"): self.canvas.configure(width=self._desired_width - 30)
+        if "height" in kwargs:
+            self._desired_height = int(kwargs.pop("height"))
+            kwargs["height"] = self._desired_height
+            if hasattr(self, "main_container"): self.main_container.configure(height=self._desired_height - 60)
+            if hasattr(self, "canvas"): self.canvas.configure(height=self._desired_height - 70)
+
+        if "command" in kwargs: self.command = kwargs.pop("command")
+        if "double_click_command" in kwargs: self.double_click_command = kwargs.pop("double_click_command")
+        if "initialdir" in kwargs:
+            r = kwargs.pop("initialdir")
+            if r:
+                init_dir = os.path.normpath(os.path.abspath(os.path.expanduser(str(r))))
+                self.path_to_show.set(init_dir)
+                self.change_path = False
+                self.selected_path.set(init_dir)
+                self.change_path = True
+        if "initialfile" in kwargs:
+            r = kwargs.pop("initialfile")
+            if r: self.selected_path.set(os.path.normpath(os.path.abspath(os.path.expanduser(str(r)))))
+
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
+        if hasattr(self, "final_kw"):
+            for custom_key in ["type", "filetypes", "double_click_command", "initialdir", "initialfile", "state"]:
+                self.final_kw.pop(custom_key, None)
+
+        self._process_live_theme_repaint()
+        result = super().configure(**kwargs)
+
+        # The internal CANVAS, after the frame has taken its new colour.
+        #
+        # _resolve_canvas_bg_color() reads back cget("fg_color"), so it has to
+        # run AFTER super().configure() or it re-reads the old value.
+        if _fg_changed and hasattr(self, "canvas") and self.canvas.winfo_exists():
+            self.canvas.configure(bg=self._resolve_canvas_bg_color())
+            if hasattr(self, "path_to_show"):
+                self._fill_explorer()
+
+        return result
+
+    config = configure
+    def get_state(self) -> str: return self.state()
+    def state(self, mode: str = None) -> str:
+        if mode is None: return str(getattr(self, "_state", "normal")).lower()
+        mode = mode.lower()
+        if mode in ("normal", "enabled", "active"): self._state = "normal"
+        elif mode == "disabled": self._state = "disabled"
+        self._process_live_theme_repaint()
+        # Scroll handling is tied to state via _scroll_permitted(), so the
+        # bindings have to be rebuilt here -- without this the change wouldn't
+        # take effect until the next content rebind happened to fire.
+        self._activate_scroll_bindings()
+        return self._state
+
+    def set_mode(self, type_str: Literal["file", "directory"]):
+        target_mode = str(type_str).lower().strip()
+        if target_mode in ("file", "directory"):
+            self.response_type = target_mode
+            if self.response_type == "directory": self.filetypes = None
+            self._process_live_theme_repaint()
+
+    def set_initial_dir(self, path_str: str):
+        if path_str:
+            clean_dir = os.path.normpath(os.path.abspath(os.path.expanduser(str(path_str))))
+            if os.path.isdir(clean_dir):
+                self.path_to_show.set(clean_dir)
+                self.change_path = False
+                self.selected_path.set(clean_dir)
+                self.change_path = True
+                self._process_live_theme_repaint()
+
+    def set_initial_file(self, path_str: str):
+        if path_str:
+            self.selected_path.set(os.path.normpath(os.path.abspath(os.path.expanduser(str(path_str)))))
+            self._process_live_theme_repaint()
+
+    def set_filetypes(self, filetypes_data: Union[list, str]):
+        if self.response_type != "file": raise ValueError("Cannot apply 'filetypes' when mode is 'directory'.")
+        if not filetypes_data:
+            self.filetypes = None
+            self._process_live_theme_repaint()
+            return
+        if isinstance(filetypes_data, str):
+            s = filetypes_data.strip().strip("[]\"'")
+            raw_types = parse_list_property(s)
+        else: raw_types = filetypes_data
+
+        self.filetypes = []
+        for f in raw_types:
+            clean_f = str(f).lower().replace("*", "").strip()
+            if clean_f:
+                if not clean_f.startswith("."): clean_f = "." + clean_f
+                self.filetypes.append(clean_f)
+        self._process_live_theme_repaint()
+    def _fill_explorer(self):
+        self._empty_explorer()
+        current_dir = self.path_to_show.get()
+        current_selected = os.path.normpath(os.path.abspath(self.selected_path.get()))
+
+        if self.filetypes and self.response_type != "file":
+            sCTkLabelSecondary(self.explorer_frame, text="⚠️ UI Mismatch: Cannot filter extension when mode is 'directory'.", text_color="red").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+            self._activate_scroll_bindings()
+            return
+        try: items = sorted(os.listdir(current_dir))
+        except Exception:
+            sCTkLabelSecondary(self.explorer_frame, text="⚠️ Directory unreadable or permission denied", text_color="red").grid(row=0, column=0, padx=10, pady=10, sticky="w")
+            self._activate_scroll_bindings()
+            return
+
+        row_idx = 0
+        current_state = getattr(self, "_state", "normal")
+        theme, d_map = self._local_defaults, self._custom_disabled_map
+
+        for item in items:
+            if item.startswith('.'): continue
+            full_path = os.path.normpath(os.path.join(current_dir, item))
+            is_dir = os.path.isdir(full_path)
+
+            is_valid_row = True
+            if self.response_type == "directory" and not is_dir: is_valid_row = False
+            elif self.response_type == "file" and not is_dir and self.filetypes:
+                _, ext = os.path.splitext(item.lower())
+                if ext not in self.filetypes: is_valid_row = False
+
+            icon = self.folder_icon if is_dir else self.file_icon
+            is_currently_highlighted = (full_path == current_selected)
+
+            # FIX: an earlier version used the hardcoded literal "gray50" for
+            # row_dimmed_text (in both branches below), and reached into
+            # ctk.ThemeManager.theme["CTkLabel"] (native CTk's own theme
+            # registry) as a fallback for row_active_text. Both replaced with
+            # hard-fail validation on first use, matching the principle
+            # established for sCTkSwitch, the label family, and
+            # sCTkTableview elsewhere in this project.
+            if current_state == "disabled":
+                if d_map.get("row_dimmed_text") is None:
+                    raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'row_dimmed_text' in disabled_map.")
+                txt_color, row_widget_state, btn_bg = self._resolve_color(d_map.get("row_dimmed_text")), "disabled", "transparent"
+            elif is_valid_row:
+                if theme.get("row_active_text") is None:
+                    raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'row_active_text' at the top level.")
+                txt_color, row_widget_state = self._resolve_color(theme.get("row_active_text")), "normal"
+                btn_bg = self._resolve_color(theme.get("btn_fg")) if is_currently_highlighted else "transparent"
+            else:
+                if theme.get("row_dimmed_text") is None:
+                    raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'row_dimmed_text' at the top level.")
+                txt_color, row_widget_state, btn_bg = self._resolve_color(theme.get("row_dimmed_text")), "disabled", "transparent"
+
+            item_btn = sCTkButtonSecondary(self.explorer_frame, text=f"{icon}{item}", anchor="w", fg_color=btn_bg, text_color=txt_color, state=row_widget_state, hover_color=self._resolve_color(theme.get("btn_hover")), command=lambda p=full_path: self._on_item_clicked(p))
+            item_btn.grid(row=row_idx, column=0, sticky="ew", padx=2, pady=1)
+
+            if is_valid_row and current_state != "disabled":
+                item_btn.bind("<Double-Button-1>", lambda e, p=full_path: self._on_item_double_clicked(p))
+                self.item_labels[full_path] = item_btn
+            row_idx += 1
+        self.canvas.yview_moveto(0)
+        # FIX: navigating to a new folder replaces every row widget in
+        # explorer_frame -- re-bind scroll events so the newly-created rows
+        # get their own handlers too, not just whatever existed at the last
+        # binding pass. See _toggle_scroll_bindings()'s docstring.
+        self._activate_scroll_bindings()
+
+    def _on_item_clicked(self, target_path):
+        now = time.time()
+        if (now - self._last_double_click_time) < 0.3: return
+        target_path = os.path.normpath(target_path)
+        if self.response_type == "directory" and os.path.isfile(target_path): target_path = os.path.dirname(target_path)
+
+        self.change_path = False
+        self.selected_path.set(target_path)
+        self.change_path = True
+
+        for path, btn in self.item_labels.items():
+            if path == target_path: btn.configure(fg_color=self._resolve_color(self._local_defaults.get("btn_fg")))
+            else: btn.configure(fg_color="transparent")
+        # FIX: an earlier version called self.command(self) here, passing this
+        # FileExplorer widget instance instead of the clicked path. sCTkPathChooser's
+        # command=lambda p: self.set(p) expects p to be a path string -- with the
+        # old code, a single click would call self.set(<widget instance>), which
+        # would then try to treat str(widget) as a filesystem path. Confirmed by
+        # the maintainer: command should receive the path, matching what every
+        # caller of this widget actually expects. double_click_command is
+        # unaffected -- it already correctly passes (self, target_path).
+        if self.command and callable(self.command): self.command(target_path)
+
+    def _on_item_double_clicked(self, target_path):
+        target_path = os.path.normpath(target_path)
+        if os.path.isdir(target_path):
+            self.path_to_show.set(target_path)
+            self.change_path = False
+            self.selected_path.set(target_path)
+            self.change_path = True
+            self._fill_explorer()
+        else:
+            if self.response_type == "directory": target_path = os.path.dirname(target_path)
+            now = time.time()
+            if (now - self._last_double_click_time) < 0.3: return
+            self._last_double_click_time = now
+            if self.double_click_command and callable(self.double_click_command): self.double_click_command(self, target_path)
+
