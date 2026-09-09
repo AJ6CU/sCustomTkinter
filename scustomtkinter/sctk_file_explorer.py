@@ -59,6 +59,17 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
 
+        # fg_color from the theme block when the caller did not pass one.
+        #
+        # The named constructor parameter defaults to None and was handed
+        # straight to CTkFrame, so a theme value never reached the widget and
+        # the background came from native CustomTkinter's own default. That
+        # also left fg_color absent from _local_defaults, so a Designer query
+        # reported the CURRENT colour as the default -- and clearing the field
+        # set it to what it already was.
+        if fg_color is None:
+            fg_color = self.final_kw.get("fg_color")
+
         super().__init__(master, width=width, height=height, corner_radius=corner_radius,
                          border_width=border_width, bg_color=bg_color, fg_color=fg_color,
                          border_color=border_color, background_corner_colors=background_corner_colors,
@@ -669,3 +680,4 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             if (now - self._last_double_click_time) < 0.3: return
             self._last_double_click_time = now
             if self.double_click_command and callable(self.double_click_command): self.double_click_command(self, target_path)
+
