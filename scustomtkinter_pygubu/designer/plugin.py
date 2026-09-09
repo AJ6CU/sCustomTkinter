@@ -200,9 +200,27 @@ class sCTkFileExplorerForPreview(sCTkFileExplorer):
         self._bind_own_parts_to_self()
 
     def _own_part_roots(self):
-        """The containers holding widgets this explorer built for itself."""
+        """
+        The widgets this explorer built for itself.
+
+        Only the two DIRECT children matter -- `top_frame` and
+        `main_container` -- because the tree walk in
+        _bind_own_parts_to_self() reaches everything beneath them: the scroll
+        canvas, the scrollbar, `explorer_frame` and every file row.
+
+        An earlier version listed `canvas` and `explorer_frame` instead, which
+        was wrong twice: `explorer_frame` is a child of the canvas rather than
+        of the widget, so excluding it had no effect at this level, and the
+        canvas sits inside `main_container` rather than directly under the
+        widget -- so the Designer kept binding `main_container`, and clicking
+        the empty scrolling area still resolved to None.
+
+        `_canvas` is deliberately absent: that is CTkFrame's own background,
+        where the Designer's handler actually lives, and it must stay visible
+        to the binding pass or a click on the outer edge selects nothing.
+        """
         return [w for w in (getattr(self, "top_frame", None),
-                            getattr(self, "explorer_frame", None))
+                            getattr(self, "main_container", None))
                 if w is not None]
 
     def _bind_own_parts_to_self(self):
