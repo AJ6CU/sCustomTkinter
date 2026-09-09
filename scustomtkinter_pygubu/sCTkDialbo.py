@@ -55,7 +55,15 @@ class sCTkDialContinuousBO(BuilderObject):
         a parameter. Continuous reports a signed step delta rather than a position, since it has none.
         """
         if cmd_pname in ("left_click_callback", "right_click_callback"):
-            return ()
+            # Deferred to the base rather than returning () -- pygubu joins the
+            # names onto "self, ", so an empty tuple left the separator with
+            # nothing after it:
+            #
+            #     def left_dialRange_CB(self, ):
+            #
+            # Valid Python, but untidy. The base class already produces a stub
+            # with no extra parameters.
+            return super()._code_define_callback_args(cmd_pname, cmd)
         return ("step_delta",)
 
 
@@ -104,7 +112,15 @@ class sCTkDialRangeBO(BuilderObject):
         a parameter. Range reports the new value.
         """
         if cmd_pname in ("left_click_callback", "right_click_callback"):
-            return ()
+            # Deferred to the base rather than returning () -- pygubu joins the
+            # names onto "self, ", so an empty tuple left the separator with
+            # nothing after it:
+            #
+            #     def left_dialRange_CB(self, ):
+            #
+            # Valid Python, but untidy. The base class already produces a stub
+            # with no extra parameters.
+            return super()._code_define_callback_args(cmd_pname, cmd)
         return ("value",)
 
 
@@ -145,7 +161,15 @@ class sCTkDialSelectorBO(BuilderObject):
         a parameter. Selector reports the index of the chosen label, not the label itself.
         """
         if cmd_pname in ("left_click_callback", "right_click_callback"):
-            return ()
+            # Deferred to the base rather than returning () -- pygubu joins the
+            # names onto "self, ", so an empty tuple left the separator with
+            # nothing after it:
+            #
+            #     def left_dialRange_CB(self, ):
+            #
+            # Valid Python, but untidy. The base class already produces a stub
+            # with no extra parameters.
+            return super()._code_define_callback_args(cmd_pname, cmd)
         return ("selected_index",)
 
 
@@ -262,3 +286,4 @@ register_custom_property(id_selector, "command", "commandentry", help="Callback 
 register_custom_property(id_selector, "left_click_callback", "commandentry", help="Callback for left mouse click.")
 register_custom_property(id_selector, "right_click_callback", "commandentry", help="Callback for right mouse click.")
 register_custom_property(id_selector, "labels", "entry", help='Preferred: ["A", "B", "C"]. Bare comma-separated (A, B, C) also works, but cannot contain a comma inside a value.')
+
