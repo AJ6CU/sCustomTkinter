@@ -363,8 +363,22 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         if entry is None:
             return
         target = getattr(entry, "_entry", None) or entry
+
+        def move():
+            try:
+                target.xview_moveto(1.0)
+            except Exception:
+                pass
+
+        # Twice: now, and again once Tk is idle.
+        #
+        # A trace fires while the variable is being written, before the entry
+        # has recomputed the pixel width of its new text -- so the immediate
+        # move lands short and a long path stopped part-way through the
+        # filename instead of at the end.
+        move()
         try:
-            target.xview_moveto(1.0)
+            entry.after_idle(move)
         except Exception:
             pass
 

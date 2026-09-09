@@ -465,11 +465,19 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         on long paths.
         """
         target = getattr(self.entry, "_entry", None) or self.entry
+
+        def move():
+            try:
+                target.xview_moveto(1.0 if self.justify == "right" else 0.0)
+            except Exception:
+                pass
+
+        # Twice: now, and again once Tk is idle. The immediate call runs before
+        # the entry has recomputed the pixel width of its new text, so a long
+        # path stopped part-way through the filename rather than at the end.
+        move()
         try:
-            if self.justify == "right":
-                target.xview_moveto(1.0)
-            else:
-                target.xview_moveto(0.0)
+            self.entry.after_idle(move)
         except Exception:
             pass
 
