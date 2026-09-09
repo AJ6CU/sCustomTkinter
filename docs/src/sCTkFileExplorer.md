@@ -36,17 +36,25 @@ sCTkFileExplorer(master=None, initialdir=None, type="file", filetypes=None, ...)
 |---|---|---|
 | `master` | widget | Parent container. |
 | `initialdir` | `str` | Starting directory. |
+| `initialfile` | `str` | File to select. A bare name resolves against `initialdir`; an absolute path or one starting with `~` is used as given. |
 | `type` | `"file"` / `"directory"` | Whether individual files are selectable, or only directories. |
 | `filetypes` | `list[str]` | File extension filter (only meaningful when `type="file"`). |
 | `command` | `callable` | Called with the clicked path (a string) on a single click. |
-| `double_click_command` | `callable` | Called with `(self, path)` on a double click. |
+| `double_click_command` | `callable` | Called with `(widget, path)` on a double click — note this differs from `command`, which receives the path alone. |
 | `width` / `height` | `int` | Overall widget dimensions. |
+| `selection_color` | color | Highlight colour of the selected row. Omit to use the theme's `selection_color`. |
 | `**kwargs` | — | Any native `CTkFrame` argument, or a theme-key override (see [Theming](#theming-sctkthemesjson)). |
 
 ```python
 explorer = sCTkFileExplorer(control_panel, initialdir="/Users/you/Documents", type="directory", width=350, height=380)
 explorer.pack(fill="both", expand=True)
 ```
+
+**`filetypes` requires `type="file"`.** Passing a filter while the mode is `"directory"` — which is the default — raises `ValueError`, and the same combination set in the Designer draws a "UI Mismatch" notice in place of the listing.
+
+An earlier attempt had the widget switch to file mode silently instead, on the reasoning that asking for a filter is unambiguous. That was wrong for the Designer: a builder object cannot write the companion value back to the live tree node, so the inspector went on showing `directory` — and the `.ui` file *saved* that combination, making the divergence permanent rather than cosmetic. Refusing is better than correcting something the surrounding tooling cannot be told about.
+
+`set_mode("directory")` clears any filter, since choosing directories makes one meaningless.
 
 **`command` receives a path, not the widget.** An earlier version passed `self` (the widget instance) instead of the clicked path — confirmed and fixed, since the only real-world caller (`sCTkPathChooser`) expected a path string and would have received garbage.
 
@@ -82,6 +90,8 @@ There's currently no public method for programmatic navigation from outside the 
         "row_active_text": ["#1F2937", "#F9FAFB"],
         "row_dimmed_text": ["#94A3B8", "#64748B"],
         "button_color": ["#64748B", "#4B5563"],
+        "fg_color": ["gray86", "gray17"],
+        "selection_color": ["#3B82F6", "#1D4ED8"],
         "disabled_map": {
             "btn_fg": ["#CBD5E1", "#334155"],
             "btn_border_color": ["#CBD5E1", "#334155"],
@@ -99,6 +109,12 @@ There's currently no public method for programmatic navigation from outside the 
 **`button_color` is required at the top level and in `disabled_map`.** This is a harder requirement than it looks: `_process_live_theme_repaint()` is bound to `<Visibility>`, so it fires essentially every time the widget is displayed, not only when explicitly disabled. A theme block missing `button_color` therefore raises `KeyError` on first display, not merely on disable. The values shown above (`["#64748B", "#4B5563"]` normal, `["#CBD5E1", "#334155"]` disabled) are the suggested pair.
 
 `button_color` controls the internal scrollbar's color, distinct from `btn_fg` (the back button).
+
+**`selection_color` is the highlighted row,** and is deliberately separate from `btn_fg`. That key colours the navigation buttons as well, so exposing it directly would have meant changing the selection also recoloured Back and the path controls. It has no `disabled_map` entry: a disabled explorer draws no highlight at all, rather than a dimmed one, so there is nothing for a disabled value to apply to.
+
+**`fg_color` is now in the block.** It was absent, so the background came from native `CTkFrame`'s own default and there was nothing for the Designer to revert to when the field was cleared — the query reported the *current* colour as the default, and clearing set it to what it already was. The value above matches CustomTkinter's default, so the appearance is unchanged.
+
+Setting `fg_color` also repaints the internal canvas. It previously reached only the outer frame, because the canvas colour was recomputed on appearance-mode change and at construction but not when the property changed.
 
 `row_active_text`/`row_dimmed_text` control file/folder row text color — `row_active_text` for a normal, selectable row; `row_dimmed_text` for either a row excluded by the current filter, or every row when the whole widget is disabled. Both required at the top level; `row_dimmed_text` is also hard-required in `disabled_map` for the whole-widget-disabled case.
 
@@ -138,6 +154,8 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - No public method for programmatic navigation — see [Methods](#methods) above.
+- **The inspector does not follow the widget's own rule.** `filetypes` and `type` constrain each other, but a builder object cannot write the companion value back to the Designer's copy of the properties, so the two can be left in a combination the widget refuses. The widget complains rather than correcting silently, which is why this is visible rather than hidden.
+- **`command` and `double_click_command` have different signatures** — the first receives the path, the second receives the widget and the path. A wart rather than a design: `command` was changed at some point from passing the widget to passing the path, and the double-click callback was not changed with it. `sCTkPathChooser` reads `args[-1]` to work around it.
 - Missing a required theme key raises `KeyError` at first use, naming exactly which key and whether it's needed at the top level or in `disabled_map`.
 - **The debounced rebind also runs on genuine resizes.** `<Configure>` on the row frame doesn't distinguish "rows were added" from "the window was dragged", so resizing rebinds too. One coalesced pass rather than one per event, but on a very large directory it isn't free.
 - **The internal `Canvas` is a raw `tkinter.Canvas`,** not a themed widget, so its background is derived rather than themed — see the note at the end of [Theming](#theming-sctkthemesjson).

@@ -38,6 +38,40 @@ class sCTkPathChooserBO(BuilderObject):
         """Passes values directly to allow core widget validations to handle exceptions."""
         return super()._process_property_value(pname, value)
 
+    def _code_define_callback_args(self, cmd_pname, cmd):
+        """
+        Declares what the callback receives, so the generated stub has a
+        matching parameter.
+
+        Without this, pygubu generates a stub taking no arguments and the
+        widget calls it with the chosen path:
+
+            TypeError: on_path() takes 1 positional argument but 2 were given
+        """
+        return ("selected_path",)
+
+    def _code_set_property(self, targetid, pname, value, code_bag):
+        """
+        Emits `filetypes` as a real Python list, not a quoted string.
+
+        The bracketed form contains double quotes, and the default handler
+        wraps the whole value in double quotes again:
+
+            sctkpathchooser1.configure(filetypes="[".py"]", ...)
+                                                 ^^^^^^^^^
+            SyntaxError: invalid syntax
+
+        Emitting the literal unquoted gives valid Python and a real list. A
+        bare comma-separated value has no brackets and no quotes, so it is
+        emitted as a quoted string and parsed by the widget as usual.
+        """
+        if pname == "filetypes" and value:
+            text = str(value).strip()
+            if text.startswith("[") and text.endswith("]"):
+                code_bag[pname] = text
+                return None
+        return super()._code_set_property(targetid, pname, value, code_bag)
+
 
 # Register the widget into Pygubu's parsing engine
 builder_id = f"{builder_namespace}.{widget_classname}"
@@ -76,7 +110,9 @@ register_custom_property(
     "choice",
     values=("", "file", "directory"),
     state="readonly",
-    help="Select file or directory selection mode"
+    default_value="directory",
+    help="What the chooser selects. The widget's own default is 'directory'; "
+         "filetypes only applies when this is 'file'."
 )
 
 register_custom_property(

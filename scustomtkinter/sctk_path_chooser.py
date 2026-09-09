@@ -71,8 +71,19 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         raw_dir = kwargs.pop("initialdir", None)
         ft_raw = kwargs.pop("filetypes", None)
 
-        self.initialfile = os.path.normpath(os.path.expanduser(str(raw_file))) if raw_file else None
         self.initialdir = os.path.normpath(os.path.expanduser(str(raw_dir))) if raw_dir else os.getcwd()
+
+        # A bare initialfile resolves against initialdir, NOT against the
+        # process's working directory. os.path.expanduser() alone left
+        # initialdir="~/Downloads" with initialfile="doc.txt" pointing at
+        # <cwd>/doc.txt -- a path that usually does not exist. Same fix as
+        # sCTkFileExplorer.
+        self.initialfile = None
+        if raw_file:
+            candidate = os.path.expanduser(str(raw_file))
+            if not os.path.isabs(candidate):
+                candidate = os.path.join(self.initialdir, candidate)
+            self.initialfile = os.path.normpath(candidate)
 
         if self.type == "directory" and self.initialfile:
             self.initialdir = os.path.dirname(self.initialfile)
@@ -207,7 +218,12 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
     def configure(self, *args, **kwargs):
         """Extended configure to handle Pygubu queries and dynamic look modifications."""
         if args and len(args) == 1:
-            pname = args
+            # FIX: was `pname = args`, leaving pname as a TUPLE -- so every
+            # comparison below tested a tuple against a string and the whole
+            # query block was dead. Pygubu could read none of these seven
+            # properties. Same one-character bug found in sCTkFileExplorer,
+            # sCTkSMeterBar and the dial family.
+            pname = args[0]
             if pname == "state": return ("state", "state", "state", "normal", getattr(self, "_state", "normal"))
             if pname == "type": return ("type", "type", "type", "directory", self.type)
             if pname == "justify": return ("justify", "justify", "justify", "left", self.justify)
@@ -216,9 +232,16 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
             if pname == "entry_height": return ("entry_height", "entry_height", "entry_height", "32", self.entry_height)
             if pname == "btn_width": return ("btn_width", "btn_width", "btn_width", "110", self.btn_width)
             if pname == "btn_height": return ("btn_height", "btn_height", "btn_height", "32", self.btn_height)
-            return super().configure(*args, **kwargs)
+            # FIX: forwarding the property NAME to native configure() passes
+            # it as require_redraw and returns None, which pygubu hands back to
+            # _set_property() -- see themeable_widget._configure_query().
+            return self._configure_query(pname)
 
-        if args and isinstance(args, dict): kwargs = args | kwargs
+        # FIX: was `isinstance(args, dict)`. args is ALWAYS a tuple, so this
+        # never fired and the dict form of configure() was dead code. The value
+        # itself is args[0].
+        if args and len(args) == 1 and isinstance(args[0], dict):
+            kwargs = {**args[0], **kwargs}
 
         if "btn_text" in kwargs: self.btn_text = str(kwargs.pop("btn_text")) if kwargs["btn_text"] is not None else None
         if "type" in kwargs: self.type = str(kwargs.pop("type")).lower()

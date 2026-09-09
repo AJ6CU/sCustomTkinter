@@ -60,20 +60,16 @@ class fileExplorer_TestUI:
             state="normal",
             type="file")
         sctkfileexplorer1.pack(side="top")
-        print("after pack     :", sctkfileexplorer1.path_to_show.get())
         sctkfileexplorer1.configure(command=self.single_cb)
         sctkfileexplorer1.configure(double_click_command=self.double_cb)
-        print("after commands :", sctkfileexplorer1.path_to_show.get())
         sctklabelsecondary1 = sCTkLabelSecondary(sctk1)
         sctklabelsecondary1.configure(text='sctklabelsecondary1')
-        print("after configure:", sctkfileexplorer1.path_to_show.get())
-        sctkfileexplorer1.pack(side="top")
+        sctklabelsecondary1.pack(side="top")
 
         # Main widget
         self.mainwindow = sctk1
 
     def run(self):
-        self.mainwindow.after(200, lambda: print("after map      :", self.mainwindow.winfo_children()))
         self.mainwindow.mainloop()
 
     def single_cb(self, selected_path):
