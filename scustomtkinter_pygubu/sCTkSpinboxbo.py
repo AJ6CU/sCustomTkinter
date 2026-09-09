@@ -22,7 +22,18 @@ class sCTkSpinboxBO(BuilderObject):
                       'button_height', 'button_side', 'orientation',
                       'arrow_font_size',  'arrow_up_char',
                       'arrow_down_char', 'arrow_right_char', 'arrow_left_char',
-                      'state', 'justify', 'placeholder_text', 'values', 'wrap')
+                      'state', 'justify', 'placeholder_text', 'values', 'wrap',
+                      'command')
+
+    # FIX: 'command' was registered with register_custom_property() and listed
+    # in command_properties, but never appeared in OPTIONS_CUSTOM -- and
+    # `properties` is built from CTkFrameBO.properties + OPTIONS_CUSTOM, which
+    # does not contain it either. So the callback field was absent from the
+    # inspector entirely and no value-change handler could be wired.
+    #
+    # The loops in _get_init_args() and code_get_init_args() already `continue`
+    # on 'command', which shows it was meant to be in this tuple: they were
+    # written to skip it, and it was never there to skip.
 
     properties = CTkFrameBO.properties + OPTIONS_CUSTOM
     command_properties = ("command",)
@@ -92,6 +103,34 @@ class sCTkSpinboxBO(BuilderObject):
         value was available.
         """
         return ("value",)
+
+    def _code_set_property(self, targetid, pname, value, code_bag):
+        """
+        Emits `values` as a real Python list, not a quoted string.
+
+        FIX: code_get_init_args() was hardened first, but that is the wrong
+        path -- pygubu emits these properties through configure(), so the
+        default handler wrapped the bracketed value in double quotes it already
+        contained:
+
+            sctkspinbox1.configure(values="["VW","Porsche"]", wrap=True)
+                                                        ^
+            SyntaxError: invalid decimal literal
+
+        Emitting the literal unquoted gives valid Python and a real list, so
+        the widget receives one directly rather than parsing a string back out
+        of it. Same approach sCTkSelectorbo uses for `items` and sCTkDialbo for
+        `labels`.
+
+        A bare comma-separated value has no brackets and no quotes, so it is
+        emitted as a quoted string and parsed by the widget as usual.
+        """
+        if pname == "values" and value:
+            text = str(value).strip()
+            if text.startswith("[") and text.endswith("]"):
+                code_bag[pname] = text
+                return None
+        return super()._code_set_property(targetid, pname, value, code_bag)
 
     def code_get_configure_properties(self, code_identifier, entry):
         """Instructs Pygubu's compiler to pipe callbacks through native channels."""
