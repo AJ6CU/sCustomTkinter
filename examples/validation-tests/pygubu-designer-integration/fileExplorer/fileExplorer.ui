@@ -28,8 +28,8 @@
       <object class="scustomtkinter.sCTkFileExplorer" id="sctkfileexplorer1">
         <property name="command" type="command" cbtype="simple">single_cb</property>
         <property name="double_click_command" type="command" cbtype="simple">double_cb</property>
-        <property name="filetypes">[".py"]</property>
         <property name="initialdir">~/Downloads</property>
+        <property name="initialfile">doc.txt</property>
         <property name="state">normal</property>
         <property name="type">file</property>
         <layout manager="pack">

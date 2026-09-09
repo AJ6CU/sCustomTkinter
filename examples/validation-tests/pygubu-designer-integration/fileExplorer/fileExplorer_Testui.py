@@ -54,24 +54,32 @@ class fileExplorer_TestUI:
         on_first_object_cb(sctk1)
 
         sctkfileexplorer1 = sCTkFileExplorer(sctk1)
-        sctkfileexplorer1.configure(filetypes="['.py']", initialdir="~/Downloads", state="normal", type="file")
+        sctkfileexplorer1.configure(
+            initialdir="~/Downloads",
+            initialfile="doc.txt",
+            state="normal",
+            type="file")
         sctkfileexplorer1.pack(side="top")
+        print("after pack     :", sctkfileexplorer1.path_to_show.get())
         sctkfileexplorer1.configure(command=self.single_cb)
         sctkfileexplorer1.configure(double_click_command=self.double_cb)
+        print("after commands :", sctkfileexplorer1.path_to_show.get())
         sctklabelsecondary1 = sCTkLabelSecondary(sctk1)
         sctklabelsecondary1.configure(text='sctklabelsecondary1')
-        sctklabelsecondary1.pack(side="top")
+        print("after configure:", sctkfileexplorer1.path_to_show.get())
+        sctkfileexplorer1.pack(side="top")
 
         # Main widget
         self.mainwindow = sctk1
 
     def run(self):
+        self.mainwindow.after(200, lambda: print("after map      :", self.mainwindow.winfo_children()))
         self.mainwindow.mainloop()
 
-    def single_cb(self):
+    def single_cb(self, selected_path):
         pass
 
-    def double_cb(self):
+    def double_cb(self, explorer, selected_path):
         pass
 
 

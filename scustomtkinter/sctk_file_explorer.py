@@ -125,8 +125,18 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                     self.filetypes.append(clean_f)
         else:
             self.filetypes = None
-        raw_file = os.path.expanduser(str(initialfile)) if initialfile else None
         raw_dir = os.path.expanduser(str(initialdir)) if initialdir else None
+
+        # A bare initialfile resolves against initialdir, not against the
+        # process's working directory -- see _resolve_initial_file(). Without
+        # this, initialdir="~/Downloads" with initialfile="doc.txt" produced
+        # <cwd>/doc.txt, and since the path entry displays selected_path the
+        # widget looked as though it had opened the working directory.
+        raw_file = None
+        if initialfile:
+            raw_file = os.path.expanduser(str(initialfile))
+            if not os.path.isabs(raw_file) and raw_dir:
+                raw_file = os.path.join(raw_dir, raw_file)
 
         if self.response_type == "directory" and raw_file:
             raw_dir = os.path.dirname(raw_file)
@@ -562,7 +572,10 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                 self.change_path = True
         if "initialfile" in kwargs:
             r = kwargs.pop("initialfile")
-            if r: self.selected_path.set(os.path.normpath(os.path.abspath(os.path.expanduser(str(r)))))
+            if r:
+                resolved = self._resolve_initial_file(r)
+                if resolved:
+                    self.selected_path.set(resolved)
 
         for k, v in list(kwargs.items()):
             if v == "": kwargs.pop(k)
@@ -640,6 +653,41 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                 if not clean_f.startswith("."): clean_f = "." + clean_f
                 self.filetypes.append(clean_f)
         self._process_live_theme_repaint()
+    def _resolve_initial_file(self, raw_file, base_dir=None):
+        """
+        Resolves an `initialfile` against the explorer's directory, not the
+        process's working directory.
+
+        FIX: this used os.path.abspath() alone, which resolves a BARE filename
+        against the current working directory. So
+
+            configure(initialdir="~/Downloads", initialfile="doc.txt")
+
+        produced <cwd>/doc.txt -- a path that usually does not exist. The
+        listing was correct, but the path entry displays selected_path, so the
+        widget appeared to have opened the working directory.
+
+        An absolute path, or one starting with ~, is honoured as given.
+
+        Args:
+            raw_file: The value passed for initialfile.
+            base_dir: Directory to resolve a bare name against. Defaults to
+                whatever the explorer is currently showing.
+
+        Returns:
+            A normalised absolute path, or None.
+        """
+        if not raw_file:
+            return None
+        text = str(raw_file)
+        expanded = os.path.expanduser(text)
+        if not os.path.isabs(expanded):
+            base = base_dir or (self.path_to_show.get()
+                                if hasattr(self, "path_to_show") else None)
+            if base:
+                expanded = os.path.join(os.path.expanduser(str(base)), expanded)
+        return os.path.normpath(os.path.abspath(expanded))
+
     def _fill_explorer(self):
         self._empty_explorer()
         current_dir = self.path_to_show.get()

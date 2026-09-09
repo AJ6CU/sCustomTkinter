@@ -15,11 +15,11 @@ class fileExplorer_Test(baseui.fileExplorer_TestUI):
     def __init__(self, master=None):
         super().__init__(master)
 
-    def single_cb(self):
-        print("Single cb")
+    def single_cb(self, selected_path):
+        print("Single cb", selected_path)
 
-    def double_cb(self):
-        print("Double cb")
+    def double_cb(self, explorer, selected_path):
+        print("Double cb", selected_path)
 
 
 if __name__ == "__main__":
