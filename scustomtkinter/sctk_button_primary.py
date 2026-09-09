@@ -137,6 +137,11 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
 
                 return self._configure_query(pname)
 
+        # Runtime overrides have to reach the map a repaint reads, or
+        # _update_current_visual_state() puts the theme value straight back --
+        # see ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs:
             target_state = kwargs.pop("state")
             self.state(target_state)
@@ -272,6 +277,24 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
             self.is_pressed = False
         self._update_current_visual_state()
 
+    def _active_theme_map(self):
+        """
+        The map a repaint currently reads, following this button's own
+        precedence: disabled > alarm > pressed > normal.
+
+        The base version knows only about disabled and normal, which would send
+        an override made while the button was in its alarm or pressed state
+        into the normal map -- where it would not show until the button
+        returned to normal.
+        """
+        if getattr(self, "_custom_current_state", "normal") == "disabled":
+            return getattr(self, "_custom_disabled_map", None)
+        if getattr(self, "is_alarm", False):
+            return getattr(self, "_custom_alarm_map", None)
+        if getattr(self, "is_pressed", False):
+            return getattr(self, "_custom_pressed_map", None)
+        return None
+
     def _update_current_visual_state(self) -> None:
         """
         Recomputes and applies this widget's colors from the theme file, based
@@ -299,10 +322,28 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
         """
         if getattr(self, "_custom_current_state", "normal") == "disabled":
             config_payload = {}
-            for key in ("fg_color", "hover_color", "border_color", "text_color"):
+            for key in ("fg_color", "hover_color", "border_color"):
                 val = self._custom_disabled_map.get(key)
                 if val is not None:
                     config_payload[key] = val
+
+            # disabled_map's text_color goes to the NATIVE text_color_disabled.
+            #
+            # CTkButton has its own text_color_disabled option and its draw
+            # code uses that whenever state is "disabled", overriding whatever
+            # text_color was set to. Assigning the disabled value to text_color
+            # here was therefore discarded at draw time and the theme key had
+            # no visible effect at all.
+            #
+            # text_color keeps the NORMAL value, so the two options do not
+            # fight and CTk chooses between them as it is designed to.
+            disabled_text = self._custom_disabled_map.get("text_color")
+            if disabled_text is not None:
+                config_payload["text_color_disabled"] = disabled_text
+                normal_text = self._local_defaults.get("text_color")
+                if normal_text is not None:
+                    config_payload["text_color"] = normal_text
+
             if config_payload:
                 super().configure(**config_payload)
             return

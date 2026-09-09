@@ -147,6 +147,11 @@ class sCTkCheckBox(ctk.CTkCheckBox, ThemeableWidget):
 
                 return self._configure_query(pname)
 
+        # Runtime overrides have to reach the map a repaint reads, or
+        # _apply_theme_colors() puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 
@@ -236,10 +241,25 @@ class sCTkCheckBox(ctk.CTkCheckBox, ThemeableWidget):
         target_map = self._custom_disabled_map if is_disabled else self._local_defaults
 
         config_payload = {}
-        for key in ("fg_color", "border_color", "hover_color", "text_color", "checkmark_color", "border_width", "font"):
+        for key in ("fg_color", "border_color", "hover_color", "checkmark_color", "border_width", "font"):
             val = target_map.get(key)
             if val is not None:
                 config_payload[key] = val
+
+        # text_color is handled separately, because CTkCheckBox has its own
+        # text_color_disabled option and its draw code uses that whenever state
+        # is "disabled" -- overriding whatever text_color was set to. Swapping
+        # text_color out of disabled_map was therefore discarded at draw time
+        # and the theme key had no visible effect: setting it to yellow changed
+        # nothing.
+        #
+        # Both options are set, so CTk chooses between them as designed.
+        normal_text = self._local_defaults.get("text_color")
+        if normal_text is not None:
+            config_payload["text_color"] = normal_text
+        disabled_text = self._custom_disabled_map.get("text_color")
+        if disabled_text is not None:
+            config_payload["text_color_disabled"] = disabled_text
 
         if config_payload:
             super().configure(**config_payload)

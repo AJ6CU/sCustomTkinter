@@ -84,28 +84,28 @@ class dialTestUI:
     def dialCont_CB(self, step_delta):
         pass
 
-    def left_dialCont_CB(self, ):
+    def left_dialCont_CB(self):
         pass
 
-    def right_dialCont_CB(self, ):
+    def right_dialCont_CB(self):
         pass
 
     def dialRange_CB(self, value):
         pass
 
-    def left_dialRange_CB(self, ):
+    def left_dialRange_CB(self):
         pass
 
-    def right_dialRange_CB(self, ):
+    def right_dialRange_CB(self):
         pass
 
     def dialSelector_CB(self, selected_index):
         pass
 
-    def left_dialSelector_CB(self, ):
+    def left_dialSelector_CB(self):
         pass
 
-    def right_dialSelector_CB(self, ):
+    def right_dialSelector_CB(self):
         pass
 
 
