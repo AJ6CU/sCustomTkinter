@@ -53,14 +53,18 @@ class spinBoxTestUI:
         on_first_object_cb(sctk1)
 
         sctkspinbox1 = sCTkSpinbox(sctk1)
-        sctkspinbox1.configure(justify="left", values="["VW","Porsche","240Z"]", wrap=True)
+        sctkspinbox1.configure(values=["VW", "Porsche", "240Z"], wrap=True)
         sctkspinbox1.pack(side="top")
+        sctkspinbox1.configure(command=self.valueChanges_CB)
 
         # Main widget
         self.mainwindow = sctk1
 
     def run(self):
         self.mainwindow.mainloop()
+
+    def valueChanges_CB(self, value):
+        pass
 
 
 if __name__ == "__main__":

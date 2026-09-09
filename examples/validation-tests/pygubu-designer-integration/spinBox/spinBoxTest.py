@@ -15,6 +15,9 @@ class spinBoxTest(baseui.spinBoxTestUI):
     def __init__(self, master=None):
         super().__init__(master)
 
+    def valueChanges_CB(self, value):
+        print("valueChanges_CB", value)
+
 
 if __name__ == "__main__":
     app = spinBoxTest()
