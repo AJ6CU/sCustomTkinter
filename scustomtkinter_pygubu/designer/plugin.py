@@ -26,6 +26,9 @@ from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
 
 from scustomtkinter_pygubu.sCTkOptionMenuSecondarybo import (sCTkOptionMenuSecondaryBO, builder_id as sCTkOptionMenuSecondary_builder_id)
 
+from scustomtkinter.sctk_file_explorer import sCTkFileExplorer
+from scustomtkinter_pygubu.sCTkFileExplorerbo import (sCTkFileExplorerBO, builder_id as sCTkFileExplorer_builder_id)
+
 from scustomtkinter.sctk_path_chooser import sCTkPathChooser
 from scustomtkinter_pygubu.sCTkPathChooserbo import (sCTkPathChooserBO, builder_id as sCTkPathChooser_builder_id)
 
@@ -167,6 +170,21 @@ class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
     def winfo_children(self):
         # sCTkFrameLabeledPrimary has a hidden canvas inside. So, to make it
         #  clickable on preview we need a hack.
+        return super(tk.Frame, self).winfo_children()
+
+
+class sCTkFileExplorerForPreview(sCTkFileExplorer):
+    """
+    Designer preview for sCTkFileExplorer.
+
+    Without this the widget cannot be selected by clicking it. The explorer
+    draws its file list on an internal canvas that CTkFrame hides from
+    winfo_children(), and the Designer walks that list to bind its click
+    handler -- so it never reached the part of the widget there is to click.
+    """
+    _THEME_BLOCK_NAME = "sCTkFileExplorer"
+
+    def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
 
 
@@ -380,6 +398,10 @@ class sCTkFramePreviewBO(sCTkFrameBO):
 
 class sCTkFrameLabeledPrimaryForPreviewBO(sCTkFrameLabeledPrimaryBO):
     class_ = sCTkFrameLabeledPrimaryForPreview
+
+
+class sCTkFileExplorerForPreviewBO(sCTkFileExplorerBO):
+    class_ = sCTkFileExplorerForPreview
 
 
 class sCTkPathChooserForPreviewBO(sCTkPathChooserBO):
@@ -859,6 +881,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkFramePreviewBO
         elif builder_uid == sCTkFrameLabeledPrimary_builder_id:
             return sCTkFrameLabeledPrimaryForPreviewBO
+        elif builder_uid == sCTkFileExplorer_builder_id:
+            return sCTkFileExplorerForPreviewBO
         elif builder_uid == sCTkPathChooser_builder_id:
             return sCTkPathChooserForPreviewBO
         elif builder_uid == sCTkTableview_builder_id:
