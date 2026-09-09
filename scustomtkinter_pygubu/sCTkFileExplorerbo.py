@@ -40,29 +40,20 @@ class sCTkFileExplorerBO(BuilderObject):
         """Passes values directly to allow core widget validations to handle exceptions."""
         return super()._process_property_value(pname, value)
 
-    # `type` and `filetypes` constrain each other, so setting one writes the
-    # other back into the widget metadata.
+    # NOTE: `type` and `filetypes` constrain each other in the WIDGET, but the
+    # inspector does not follow.
     #
-    # The widget already enforces the rule -- setting filetypes switches to
-    # file mode, and choosing directory clears the filter -- but it does that
-    # to ITSELF. The Designer keeps its own copy in wmeta, so the inspector
-    # went on showing the old value: adding a filter left `type` reading blank
-    # while the widget had switched to "file", and choosing "directory"
-    # afterwards collided with a filter the inspector still believed was set.
+    # Setting filetypes switches the widget to file mode, and choosing
+    # directory clears the filter -- see sCTkFileExplorer. The widget applies
+    # that to itself, and generated code is correct either way, because the
+    # widget corrects the combination at construction.
     #
-    # Generated code reads wmeta, so leaving it stale would also have written
-    # out a combination the widget then had to correct at runtime.
-    def set_property(self, name, value):
-        if hasattr(self, "wmeta") and hasattr(self.wmeta, "properties"):
-            props = self.wmeta.properties
-            props[name] = value
-            if name == "filetypes" and value:
-                props["type"] = "file"
-            elif name == "type" and str(value).lower() == "directory":
-                props["filetypes"] = ""
-
-        if getattr(self, "widget", None) is not None:
-            self._set_property(self.widget, name, value)
+    # The Designer keeps its own copy of the properties, so the inspector goes
+    # on showing the old value: adding a filter leaves `type` reading blank
+    # while the widget has switched to file mode. A set_property() override
+    # writing the companion value back into wmeta was tried and does not
+    # reach the live tree node, so it has been removed rather than left as
+    # dead code implying a behaviour that does not happen.
 
 
 # Register the widget into Pygubu's layout parsing engine
@@ -107,7 +98,9 @@ register_custom_property(
     "choice",
     values=("", "file", "directory"),
     state="readonly",
-    help="Select file or directory structural filtering operation mode"
+    default_value="directory",
+    help="What the explorer selects. The widget's own default is 'directory'; "
+         "setting filetypes switches it to 'file'."
 )
 
 register_custom_property(
