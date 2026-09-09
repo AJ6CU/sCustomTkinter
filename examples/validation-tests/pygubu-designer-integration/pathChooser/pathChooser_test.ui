@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<interface version="1.5" author="PygubuDesigner 0.41.4">
+  <project>
+    <settings>
+      <setting id="name">pathChooserTest</setting>
+      <setting id="description">pathChooserTest</setting>
+      <setting id="template">codescript</setting>
+      <setting id="main_widget">sctk2</setting>
+      <setting id="module_namespace" />
+      <setting id="module_name">pathChooserTest</setting>
+      <setting id="main_classname">pathChooserTest</setting>
+      <setting id="output_dir">.</setting>
+      <setting id="builder_namespace">custom_widgets</setting>
+      <setting id="output_dir2" />
+      <setting id="generate_code_onsave">False</setting>
+      <setting id="use_i18n">False</setting>
+      <setting id="all_ids_attributes">False</setting>
+      <setting id="import_tkvariables">False</setting>
+      <setting id="use_ttk_styledefinition_file">False</setting>
+      <setting id="use_window_centering_code">False</setting>
+      <setting id="ttk_style_definition_file" />
+    </settings>
+    <customwidgets />
+    <resources />
+  </project>
+  <object class="scustomtkinter.sCTk" id="sctk2">
+    <child>
+      <object class="scustomtkinter.sCTkPathChooser" id="sctkpathchooser1">
+        <property name="command" type="command" cbtype="simple">single_CB</property>
+        <property name="filetypes">[".py",".txt"]</property>
+        <property name="initialdir">~/Downloads</property>
+        <property name="initialfile">doc.txt</property>
+        <property name="justify">right</property>
+        <property name="title" translatable="yes">Hello</property>
+        <property name="type">file</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+  </object>
+</interface>

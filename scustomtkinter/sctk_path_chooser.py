@@ -130,6 +130,11 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         default_seed = self.initialfile if self.initialfile else self.initialdir
         self.set(default_seed)
 
+        # Re-applied once Tk is idle. At this point the entry is not mapped and
+        # has no width, so xview_moveto() has nothing to scroll within -- a
+        # right-justified long path came up showing its start regardless.
+        self.after_idle(self._apply_entry_view)
+
         self.btn = sCTkButtonPrimary(self, width=self.btn_width, height=self.btn_height, command=self._launch_browser)
         btn_v_padding = max(0, (desired_height - self.btn_height) // 2)
         self.btn.grid(row=0, column=1, sticky="ew", pady=btn_v_padding)
@@ -247,12 +252,42 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         if "type" in kwargs: self.type = str(kwargs.pop("type")).lower()
         if "title" in kwargs: self.title = str(kwargs.pop("title"))
 
+        # FIX: initialdir, initialfile and filetypes had NO configure()
+        # branches at all -- they were constructor-only. The Designer applies
+        # every property through configure(), so setting any of the three there
+        # did nothing at all.
+        if "initialdir" in kwargs:
+            raw_dir = kwargs.pop("initialdir")
+            if raw_dir:
+                self.initialdir = os.path.normpath(
+                    os.path.expanduser(str(raw_dir)))
+                if not (self.entry.get() or "").strip():
+                    self.set(self.initialdir)
+
+        if "initialfile" in kwargs:
+            raw_file = kwargs.pop("initialfile")
+            if raw_file:
+                # A bare name resolves against initialdir, not the working
+                # directory -- same rule as the constructor.
+                candidate = os.path.expanduser(str(raw_file))
+                if not os.path.isabs(candidate):
+                    candidate = os.path.join(self.initialdir or os.getcwd(),
+                                             candidate)
+                self.initialfile = os.path.normpath(candidate)
+                self.set(self.initialfile)
+
+        if "filetypes" in kwargs:
+            ft_raw = kwargs.pop("filetypes")
+            self.filetypes = parse_list_property(ft_raw) if ft_raw else None
+
         if "justify" in kwargs:
             self.justify = str(kwargs.pop("justify")).lower()
             if self.justify not in ("left", "right", "center"): self.justify = "left"
             if hasattr(self, "entry"):
                 self.entry.configure(justify=self.justify)
-                self.set(self.entry.get())
+                # Not set(), which fires `command` -- changing alignment is not
+                # a path selection.
+                self._apply_entry_view()
 
         if "entry_height" in kwargs:
             self.entry_height = int(kwargs.pop("entry_height"))
@@ -372,14 +407,36 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         popup.geometry(f"{width}x{height}+{max(0, x)}+{max(0, y)}")
         popup.deiconify()
 
+    def _apply_entry_view(self):
+        """
+        Scrolls the entry so the requested end of a long path is visible.
+
+        A Tk entry only honours `justify` when the text is SHORTER than the
+        field. A long path scrolls instead, and what you see is governed by the
+        view position -- so "right" has to move the view explicitly.
+
+        CTkEntry does not reliably forward xview_moveto to the real tk.Entry it
+        wraps, so the inner widget is used when it is reachable. Without that
+        the call either raised or silently did nothing, depending on the
+        CustomTkinter version, which is why justify appeared to have no effect
+        on long paths.
+        """
+        target = getattr(self.entry, "_entry", None) or self.entry
+        try:
+            if self.justify == "right":
+                target.xview_moveto(1.0)
+            else:
+                target.xview_moveto(0.0)
+        except Exception:
+            pass
+
     def set(self, path_string: str):
         """Forces fully absolute tilde user expansion when paths are applied via button selections."""
         self.entry.configure(state="normal")
         self.entry.delete(0, tk.END)
         expanded_path = os.path.normpath(os.path.abspath(os.path.expanduser(str(path_string))))
         self.entry.insert(0, expanded_path)
-        if self.justify == "right": self.entry.xview_moveto(1.0)
-        else: self.entry.xview_moveto(0.0)
+        self._apply_entry_view()
         if getattr(self, "_state", "normal") == "disabled": self.entry.configure(state="disabled")
         if self.command and callable(self.command):
             try: self.command(expanded_path)
