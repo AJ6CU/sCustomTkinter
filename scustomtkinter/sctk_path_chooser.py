@@ -78,6 +78,15 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         # initialdir="~/Downloads" with initialfile="doc.txt" pointing at
         # <cwd>/doc.txt -- a path that usually does not exist. Same fix as
         # sCTkFileExplorer.
+        # An initialfile that does not EXIST is still displayed.
+        #
+        # Deliberate: this widget names a path the user is choosing, and naming
+        # a file that has yet to be created is a legitimate thing to do -- a
+        # "save as" field being the obvious case. The browse popup opens on
+        # initialdir regardless, so a nonexistent seed costs nothing.
+        #
+        # The visible consequence is that the entry shows a file while the
+        # browser behaves as though only the directory were set.
         self.initialfile = None
         if raw_file:
             candidate = os.path.expanduser(str(raw_file))
@@ -134,6 +143,15 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         # has no width, so xview_moveto() has nothing to scroll within -- a
         # right-justified long path came up showing its start regardless.
         self.after_idle(self._apply_entry_view)
+
+        # Typed input has to be acted on. The entry had NO bindings at all, so
+        # a path typed straight into it was never applied: it stayed as loose
+        # text, nothing navigated, and the justify view was never re-applied
+        # because set() is what applies it. Pressing the browse button then
+        # showed the real value and the typed text appeared to vanish.
+        self.entry.bind("<Return>", self._on_entry_commit)
+        self.entry.bind("<KP_Enter>", self._on_entry_commit)
+        self.entry.bind("<FocusOut>", self._on_entry_commit)
 
         self.btn = sCTkButtonPrimary(self, width=self.btn_width, height=self.btn_height, command=self._launch_browser)
         btn_v_padding = max(0, (desired_height - self.btn_height) // 2)
@@ -406,6 +424,31 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
 
         popup.geometry(f"{width}x{height}+{max(0, x)}+{max(0, y)}")
         popup.deiconify()
+
+    def _on_entry_commit(self, event=None):
+        """
+        Applies a path typed into the entry.
+
+        Bound to Return and focus-out. Expands `~`, and accepts the value only
+        if it exists -- a half-typed path should not replace a good one, and
+        focus-out fires whenever the user clicks elsewhere.
+
+        A directory becomes the new `initialdir`, so browsing afterwards opens
+        there; anything else is treated as a file selection.
+        """
+        raw = (self.entry.get() or "").strip()
+        if not raw:
+            return
+        expanded = os.path.normpath(os.path.abspath(os.path.expanduser(raw)))
+        if not os.path.exists(expanded):
+            return
+        if os.path.isdir(expanded):
+            self.initialdir = expanded
+            self.initialfile = None
+        else:
+            self.initialdir = os.path.dirname(expanded)
+            self.initialfile = expanded
+        self.set(expanded)
 
     def _apply_entry_view(self):
         """

@@ -6,6 +6,7 @@ pathChooserTest
 
 UI source file: pathChooser_test.ui
 """
+from scustomtkinter.sctk_checkbox import sCTkCheckBox
 from scustomtkinter.sctk_core import sCTk
 from scustomtkinter.sctk_path_chooser import sCTkPathChooser
 
@@ -57,11 +58,16 @@ class pathChooserTestUI:
             filetypes=[
                 ".py",
                 ".txt"],
-            initialdir="~/Downloads",
+            initialdir="/Users/markjhatch/Documents/GitHub/sCustomTkinter/scustomtkinter",
+            initialfile="doc.txt",
             justify="left",
+            title='Hello',
             type="file")
         sctkpathchooser1.pack(side="top")
         sctkpathchooser1.configure(command=self.single_CB)
+        sctkcheckbox1 = sCTkCheckBox(sctk2)
+        sctkcheckbox1.configure(text='sctkcheckbox1')
+        sctkcheckbox1.pack(side="top")
 
         # Main widget
         self.mainwindow = sctk2

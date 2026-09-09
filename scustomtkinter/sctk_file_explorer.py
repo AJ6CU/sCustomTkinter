@@ -346,11 +346,46 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             self.path_to_show.set(target)
             self._fill_explorer()
 
-    def _on_entry_return(self):
-        target = self.path_entry.get().strip()
-        if os.path.exists(target) and os.path.isdir(target):
+    def _on_entry_return(self, event=None):
+        """
+        Applies a path typed into the entry.
+
+        Bound to Return, keypad Enter and focus-out, matching
+        sCTkPathChooser -- the two are the same control, one with a button.
+
+        Three fixes here. `~` was never expanded, so typing "~/Documents"
+        silently did nothing. Only directories were accepted, regardless of
+        this widget's own `type` -- so a file explorer would not let you type a
+        file path. And there was no focus-out binding, so tabbing away left the
+        text unapplied.
+
+        A value is accepted only if it EXISTS: focus-out fires whenever the
+        user clicks elsewhere, and a half-typed path must not replace a good
+        one.
+        """
+        raw = (self.path_entry.get() or "").strip()
+        if not raw:
+            return
+        target = os.path.normpath(os.path.abspath(os.path.expanduser(raw)))
+        if not os.path.exists(target):
+            return
+
+        if os.path.isdir(target):
             self.path_to_show.set(target)
+            self.change_path = False
+            self.selected_path.set(target)
+            self.change_path = True
             self._fill_explorer()
+            return
+
+        # A file. Navigate to its folder either way; select it only when this
+        # explorer is actually choosing files.
+        self.path_to_show.set(os.path.dirname(target))
+        self.change_path = False
+        self.selected_path.set(target if self.response_type == "file"
+                               else os.path.dirname(target))
+        self.change_path = True
+        self._fill_explorer()
 
     def _empty_explorer(self):
         for widget in self.explorer_frame.winfo_children(): widget.destroy()
@@ -455,7 +490,10 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
 
     def _finalize_split_bindings(self):
         if hasattr(self, "back_button"): self.back_button.configure(command=self._move_back)
-        if hasattr(self, "path_entry"): self.path_entry.bind("<Return>", lambda e: self._on_entry_return())
+        if hasattr(self, "path_entry"):
+            self.path_entry.bind("<Return>", self._on_entry_return)
+            self.path_entry.bind("<KP_Enter>", self._on_entry_return)
+            self.path_entry.bind("<FocusOut>", self._on_entry_return)
         if hasattr(self, "selected_path"): self.selected_path.trace_add("write", self._user_path_changed)
         if hasattr(self, "explorer_frame"): self.explorer_frame.bind("<Configure>", self._configure_frame)
         if hasattr(self, "canvas"):

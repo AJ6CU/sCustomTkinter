@@ -28,11 +28,19 @@
       <object class="scustomtkinter.sCTkPathChooser" id="sctkpathchooser1">
         <property name="command" type="command" cbtype="simple">single_CB</property>
         <property name="filetypes">[".py",".txt"]</property>
-        <property name="initialdir">~/Downloads</property>
+        <property name="initialdir">/Users/markjhatch/Documents/GitHub/sCustomTkinter/scustomtkinter</property>
         <property name="initialfile">doc.txt</property>
         <property name="justify">right</property>
         <property name="title" translatable="yes">Hello</property>
         <property name="type">file</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkCheckBox" id="sctkcheckbox1">
+        <property name="text" translatable="yes">sctkcheckbox1</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
