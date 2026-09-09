@@ -9,21 +9,23 @@ The vast majority of the widgets provided by `sCustomTkinter` are based on the o
 
 However, this design has been architected to allow you to add your own widgets, or subclass mine for your purposes. The key to the themes is sCTkThemes.json. Don't like my color choices (understandable as I am a little red/brown color blind...) , copy this file from Github, modify it and put it in your applications directory. It will be found before the common one in scustomtkinter/assets.  The format of this file, is very similar to the original Themes definition file of `CustomTkinter` (it has additions that would give the standard `CustomTkinter` theme processor problems in addition to the new widgets that might cause a few runtime exceptions). 
 
-Want to add a widget, create it, add ThemeableWidget as a second inheritance of your class, look at the existing code for Init and Configure to avoid properties being pushed down into the underlying `CustomTkinter` library, and get coding! 
+Want to add a widget? Create it, add `ThemeableWidget` as a second base class, and see [dev/docs/Developing.md](dev/docs/Developing.md) — it covers the theme contract, the traps in forwarding properties to the underlying `CustomTkinter` widget, and the bugs that have turned up repeatedly in this library so you can avoid repeating them.
 
 
 
-## 📌 Table of Contents
+## Table of Contents
 * [Quick-Start](#quick-start)
 * [Theming](#theming)
 * [Scrolling](#scrolling)
+* [List Properties](#list-properties)
+* [Designer Hints](#designer-hints)
 * [Comprehensive Component Catalog](#comprehensive-component-catalog)
 * [Repository Directory Structure](#repository-directory-structure)
 * [License](#license)
 
 ---
 
-## 🚀 Quick-Start
+## Quick-Start
 
 ### sCustomTkinter Installation
 
@@ -66,13 +68,9 @@ root.mainloop()
 
 ### Pygubu-Designer Installation
 
-    1. Download the Pygubu-Designer plugin from [sCTkWidgetSetForPygubuDesigner] (https://github.com/AJ6CU/sCustomTkinter/blob/main/pygubu-designer-integration/sCTkWidgetSetForPygubuDesigner.py).  Store it someplace convenient so that you can reference it from multiple Pygubu-Designer sessions.
-    2. Start Pygubu-Designer, add any widget (you will probably delete and replace this later)
-    3. Create a new project and save it. 
-    4. in the Project->Settings->Custom Widgets, hit the "+", naviagate where you stored  `sCTkWidgetSetForPygubuDesigner.py` and select it.
-    5. Return to Design mode. You should see a new set of widgets on the palette under 'sCustomTkinter'.
-
-
+    1. Install Pygubu-Designer into your virtual environment after installing sCustomTkinter. It is "pygubu-designer" and can be installed using the same tools as sCustomTkinter above.
+    2. Start Pygubu-Designer, you will see the sCustomTkinter widgets at the bottom of the Components on the left.
+	3. Add a sCTK root or a sCTkToplevel and go!
 
 ## Theming
 
@@ -95,6 +93,24 @@ For most cases use `sCTkScrollableFrame`, which manages its own scrollbar. Use `
 Scroll speed is controlled by three constants that can be changed globally or per widget. If a wheel click moves too far or too little — particularly on macOS, where a wheel mouse and a Magic Mouse report wildly different values — that's what to adjust.
 
 **See [Scrolling](docs/Scrolling.md)** for the widget comparison, the tuning constants, and how disabling interacts with scroll state.
+
+---
+
+## List Properties
+
+Several widgets take a list of strings — a table's column headings, a menu's items, a dial's labels. They all accept the same three forms: a bracketed list `["A", "B", "C"]`, a bare comma-separated string, or a real Python list.
+
+The bracketed form is the one to prefer, and the only one that can hold a value containing a comma.
+
+**See [List Properties](docs/src/ListProperties.md)** for which properties use it and why seven separate parsers became one.
+
+---
+
+## Designer Hints
+
+Notes for working in Pygubu Designer: how images resolve at runtime, what clearing a field does, which widgets can only be selected from the widget tree, and what the light green background means.
+
+**See [Designer Hints](docs/src/DesignerHints.md).** Skip it if you build your interfaces in code.
 
 ---
 
@@ -191,7 +207,7 @@ All of the following are subclassed from their respective CTk. For example, sCTk
     - `sCTkDialSelector` - Provide a fixed number of selections. For example, "AM", "FM", "HF", etc.
 
 
-* <u>CTkDialog</u>: Package of widgets that can be used to create a standardize dialog for settings, and other popups.
+* <u>`sCTkDialog`</u>: A popup dialog with a heading, a content area you fill, and a row of Apply / Cancel / Reset buttons. It creates its own window, so you do not build a `Toplevel` around it.
 
 
 * <u>`sCTkFileExplorer`</u>: Allows for browsing and selection of files or directories. You provide the infrastructure on when this is popped up and what are the selection criteria.
@@ -214,7 +230,7 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 * <u>`sCTkPathChooser`</u>: Preconfigured file/directory selection widget.
 
 
-* <u>`sCTkScrollArea`</u>: Addon to sCTlScrollbar that allows you to identify what scrolls when the cursor is within the widget.
+* <u>`sCTkScrollArea`</u>: Addon to `sCTkScrollbar` that allows you to identify what scrolls when the cursor is within the widget.
 
 
 * <u>`sCTkSelector`</u>: Allows the single or multiselection of properties. Also optionally includes a search bar.
@@ -237,39 +253,41 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 
 
 
-## 📂 Repository Directory Structure
+## Repository Directory Structure
 
 ```text
-sCustomTkinter/              (The GitHub Repository Root)
-├── README.md                (This Core Architecture Readme)
-├── setup.py                 (Standard Python package deployment script)
+sCustomTkinter/                   (The GitHub repository root)
+├── README.md                     (This file)
+├── setup.py
 ├── requirements.txt
 │
-├── scustomtkinter/          (The Core Production Library Package)
-│   ├── __init__.py          (Unified top-level sctk import map)
-│   ├── sCTk.py
-│   ├── etc.
+├── scustomtkinter/               (The library package)
+│   ├── __init__.py               (Top-level import map)
+│   ├── themeable_widget.py       (Theme resolution, shared helpers)
+│   ├── sctk_core.py              (sCTk, the root window)
+│   ├── sctk_<widget>.py          (One module per widget)
 │   └── assets/
-│       └── sCTkThemes.json  (Master stylesheet look definitions)
+│       └── sCTkThemes.json       (Master stylesheet)
 │
-├── docs/                    (Pure Markdown Documentation Vault)
-│   ├── index.md
-│   ├── sCTkTableview.md
-│   ├── rest of the individual .md files
-│   └── images/              (Shared documentation screenshots)
-│       ├── tableview_showcase.png
-│       └── scrollbar_mac_demo.png
+├── scustomtkinter_pygubu/        (Pygubu Designer integration)
+│   ├── sCTk<Widget>bo.py         (One builder object per widget)
+│   └── designer/
+│       ├── plugin.py             (Preview classes and Designer hooks)
+│       └── properties.py         (Property registration)
 │
-├── examples/                (Standalone Executable Verification Benches)
-│   └── sCTkTableview_Validation_Bench.py
+├── docs/
+│   ├── README.md                 (The built manual, one file)
+│   ├── src/                      (Per-widget and shared source pages)
+│   └── images/                   (Light and dark screenshots)
 │
-├── pygubu-designer-integration/   (Pygubu Designer plugin)
-│   └── sCTkWidgetSetForPygubuDesigner.py
+├── dev/docs/
+│   └── Developing.md             (Notes for extending the library)
 │
-└── tools/                   (Internal Repository Maintenance Scripts)
-    └── build_docs.sh        (Documentation consolidation script)
+├── examples/                     (Runnable test harnesses)
+│
+└── tools/
+    └── build_docs.sh             (Concatenates docs/src into docs/README.md)
 ```
-
 ---
 
 ## License
