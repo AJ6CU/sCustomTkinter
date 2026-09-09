@@ -54,6 +54,12 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
 
         self._initial_state_seed = str(kwargs.pop("state", "normal")).lower()
 
+        # Captured BEFORE the theme pass. selection_color is this library's
+        # own key -- native CTkFrame rejects any keyword it does not
+        # recognise, so leaving it in kwargs would raise at construction.
+        # None means "use the theme's selection_color".
+        self._selection_color_override = kwargs.pop("selection_color", None)
+
         ThemeableWidget.__init__(self, kwargs)
 
         self._local_defaults = dict(self.final_kw)
@@ -201,6 +207,26 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         if resolved_hex == "transparent":
             return "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F3F4F6"
         return resolved_hex
+
+    def _selection_color(self):
+        """
+        The colour of the selected row.
+
+        Split from `btn_fg`, which also colours the navigation buttons -- so
+        exposing that key directly would have recoloured Home, Up and Refresh
+        along with the selection. `selection_color` names one thing.
+
+        A per-instance override wins over the theme, so one explorer can
+        highlight differently without moving every explorer in the
+        application.
+
+        Returns:
+            A resolved colour string.
+        """
+        value = (self._selection_color_override
+                 or self._local_defaults.get("selection_color")
+                 or self._local_defaults.get("btn_fg"))
+        return self._resolve_color(value)
 
     def _set_appearance_mode(self, mode_string):
         """Intercepts appearance-mode changes and forces a valid hex string
@@ -427,6 +453,14 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             if pname == "initialdir": return ("initialdir", "initialdir", "initialdir", "", self.path_to_show.get())
             if pname == "initialfile": return ("initialfile", "initialfile", "initialfile", "", self.selected_path.get())
             if pname == "filetypes": return ("filetypes", "filetypes", "filetypes", "", str(self.filetypes) if self.filetypes else "")
+            if pname == "selection_color":
+                return ("selection_color", "selection_color", "selection_color",
+                        self._query_value(self._local_defaults.get("selection_color")
+                                          or self._local_defaults.get("btn_fg")),
+                        self._query_value(self._selection_color_override
+                                          or self._local_defaults.get("selection_color")
+                                          or self._local_defaults.get("btn_fg")))
+
             if pname == "double_click_command": return ("double_click_command", "double_click_command", "double_click_command", "", str(self.double_click_command))
             # FIX: was `return super().configure(*args, **kwargs)`.
             #
@@ -452,6 +486,14 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         #
         # One symptom each way, one cause: the canvas was never refreshed at
         # the point the colour actually changed.
+        if "selection_color" in kwargs:
+            # Empty restores the theme's selection_color, matching the query
+            # branch and what generated code does when the property is omitted.
+            _sel = kwargs.pop("selection_color")
+            self._selection_color_override = _sel if _sel else None
+            if hasattr(self, "path_to_show"):
+                self._fill_explorer()
+
         _fg_changed = "fg_color" in kwargs
         if "state" in kwargs:
             self._state = str(kwargs.pop("state")).lower()
@@ -623,7 +665,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                 if theme.get("row_active_text") is None:
                     raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'row_active_text' at the top level.")
                 txt_color, row_widget_state = self._resolve_color(theme.get("row_active_text")), "normal"
-                btn_bg = self._resolve_color(theme.get("btn_fg")) if is_currently_highlighted else "transparent"
+                btn_bg = self._selection_color() if is_currently_highlighted else "transparent"
             else:
                 if theme.get("row_dimmed_text") is None:
                     raise KeyError(f"'{(getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__)}' theme block is missing 'row_dimmed_text' at the top level.")
@@ -654,7 +696,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         self.change_path = True
 
         for path, btn in self.item_labels.items():
-            if path == target_path: btn.configure(fg_color=self._resolve_color(self._local_defaults.get("btn_fg")))
+            if path == target_path: btn.configure(fg_color=self._selection_color())
             else: btn.configure(fg_color="transparent")
         # FIX: an earlier version called self.command(self) here, passing this
         # FileExplorer widget instance instead of the clicked path. sCTkPathChooser's

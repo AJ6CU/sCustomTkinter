@@ -28,7 +28,8 @@ class sCTkFileExplorerBO(BuilderObject):
     # Define custom plugin properties (Note: 'title' has been completely removed)
     OPTIONS_CUSTOM = (
         "width", "height", "type", "initialdir", "initialfile",
-        "filetypes", "state", "command", "double_click_command"
+        "filetypes", "state", "command", "double_click_command",
+        "selection_color"
     )
 
     # Merge custom extensions cleanly on top of core container frame attributes
@@ -113,4 +114,11 @@ register_custom_property(
     values=("", "normal", "disabled"),
     state="readonly",
     help="Set widget active visibility or input interaction lockdown state"
+)
+
+register_custom_property(
+    builder_id, "selection_color", "colorentry",
+    help="Colour of the highlighted row. Blank uses the theme's "
+         "selection_color. Separate from btn_fg, which colours the navigation "
+         "buttons -- changing one does not affect the other."
 )

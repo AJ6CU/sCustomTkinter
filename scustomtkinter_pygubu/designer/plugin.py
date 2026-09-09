@@ -207,7 +207,9 @@ class sCTkFileExplorerForPreview(sCTkFileExplorer):
 
     def _bind_own_parts_to_self(self):
         """Makes a click anywhere inside the explorer select the explorer."""
+        print("[fe] binding; roots:", self._own_part_roots())
         def select_self(event, target=self):
+            print("[fe] click forwarded from", event.widget)
             try:
                 canvas = getattr(target, "canvas", None) or target
                 canvas.event_generate("<Button-1>", x=1, y=1, when="now")

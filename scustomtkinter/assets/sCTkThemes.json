@@ -390,6 +390,7 @@
         "row_dimmed_text": ["#94A3B8", "#64748B"],
         "button_color": ["#64748B", "#4B5563"],
         "fg_color": ["gray86", "gray17"],
+        "selection_color": ["#3B82F6", "#1D4ED8"],
         "disabled_map": {
             "btn_fg": ["#CBD5E1", "#334155"],
             "btn_border_color": ["#CBD5E1", "#334155"],
