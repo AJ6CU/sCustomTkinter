@@ -161,9 +161,16 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         return font
 
     # Room left around the knob for labels when only knob_diameter is given.
-    # Matches the margin the old fixed layout reserved, so a dial with short
-    # labels looks as it always did.
-    DEFAULT_LABEL_MARGIN = 28
+    #
+    # 40, not the 28 the old fixed layout used. At 9pt a default Selector label
+    # like "POS 1" is around 40px wide, and anchoring puts half of that beyond
+    # the arc point -- about 20px -- on top of the gap _label_placement()
+    # leaves. 28 clipped the default labels of both Range and Selector at the
+    # canvas edge.
+    #
+    # Only applies when width and height are not given. An explicit canvas
+    # size always wins, so nothing laid out deliberately is affected.
+    DEFAULT_LABEL_MARGIN = 40
 
     def _theme_block(self):
         """
