@@ -346,6 +346,28 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             self.path_to_show.set(target)
             self._fill_explorer()
 
+    def _apply_entry_view(self, *args):
+        """
+        Scrolls the path entry so the END of a long path stays visible.
+
+        The entry displays `selected_path` through a textvariable, so a path
+        longer than the field showed its start and the filename ran off the
+        right -- selecting a file gave no visible feedback in the entry.
+
+        CTkEntry does not reliably forward xview_moveto to the real tk.Entry it
+        wraps, so the inner widget is used when reachable. Same helper as
+        sCTkPathChooser, which has a `justify` property to choose the end; this
+        widget has none, and the filename is the useful end.
+        """
+        entry = getattr(self, "path_entry", None)
+        if entry is None:
+            return
+        target = getattr(entry, "_entry", None) or entry
+        try:
+            target.xview_moveto(1.0)
+        except Exception:
+            pass
+
     def _on_entry_return(self, event=None):
         """
         Applies a path typed into the entry.
@@ -494,7 +516,12 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             self.path_entry.bind("<Return>", self._on_entry_return)
             self.path_entry.bind("<KP_Enter>", self._on_entry_return)
             self.path_entry.bind("<FocusOut>", self._on_entry_return)
-        if hasattr(self, "selected_path"): self.selected_path.trace_add("write", self._user_path_changed)
+        if hasattr(self, "selected_path"):
+            self.selected_path.trace_add("write", self._user_path_changed)
+            # Separate trace, deliberately: _user_path_changed is gated by
+            # change_path, which is switched off whenever the widget sets the
+            # path itself -- exactly the case where the view needs moving.
+            self.selected_path.trace_add("write", self._apply_entry_view)
         if hasattr(self, "explorer_frame"): self.explorer_frame.bind("<Configure>", self._configure_frame)
         if hasattr(self, "canvas"):
             self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfig("inner_window", width=e.width))
@@ -831,3 +858,4 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             if (now - self._last_double_click_time) < 0.3: return
             self._last_double_click_time = now
             if self.double_click_command and callable(self.double_click_command): self.double_click_command(self, target_path)
+

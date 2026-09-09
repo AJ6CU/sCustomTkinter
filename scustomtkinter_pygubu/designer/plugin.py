@@ -284,12 +284,73 @@ class sCTkFileExplorerForPreview(sCTkFileExplorer):
 
 
 class sCTkPathChooserForPreview(sCTkPathChooser):
+    """
+    Designer preview for sCTkPathChooser.
+
+    The canvas hack alone made only the outer EDGE selectable. The entry and
+    the browse button are widgets this chooser builds for itself, so they are
+    not in the builder's map and a click on one resolved to None -- and they
+    cover most of the widget.
+
+    They are hidden from the Designer's binding pass and bound here instead,
+    forwarding to _canvas, which is where CTkFrame.bind() puts the Designer's
+    own handler. Same treatment as sCTkFileExplorer and sCTkDialog.
+    """
     _THEME_BLOCK_NAME = "sCTkPathChooser"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._bind_own_parts_to_self()
+
+    def _own_part_roots(self):
+        """The widgets this chooser builds for itself."""
+        return [w for w in (getattr(self, "entry", None),
+                            getattr(self, "btn", None))
+                if w is not None]
+
+    def _bind_own_parts_to_self(self):
+        """Makes a click on the entry or the button select the chooser."""
+        def select_self(event, target=self):
+            try:
+                canvas = getattr(target, "_canvas", None) or target
+                canvas.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        def bind_tree(widget, depth=0):
+            if widget is None or depth > 3:
+                return
+            for w in (widget,
+                      getattr(widget, "_canvas", None),
+                      getattr(widget, "_text_label", None),
+                      getattr(widget, "_entry", None)):
+                if w is None:
+                    continue
+                try:
+                    w.bind("<Button-1>", select_self)
+                except Exception:
+                    pass
+            try:
+                children = tk.Misc.winfo_children(widget)
+            except Exception:
+                children = []
+            for child in children:
+                bind_tree(child, depth + 1)
+
+        for root in self._own_part_roots():
+            bind_tree(root)
+
     def winfo_children(self):
-        # sCTkPathChooser has a hidden canvas inside. So, to make it
-        #  clickable on preview we need a hack.
-        return super(tk.Frame, self).winfo_children()
+        """
+        Hides the chooser's own parts from the Designer's binding pass.
+
+        The internal canvas is KEPT -- it is the visible background, and
+        dropping it would stop a click on empty space selecting anything.
+        """
+        own = set(self._own_part_roots())
+        return [w for w in super(tk.Frame, self).winfo_children()
+                if w not in own]
 
 
 class sCTkTableviewForPreview(sCTkTableview):
