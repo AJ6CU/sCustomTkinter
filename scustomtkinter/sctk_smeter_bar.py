@@ -252,6 +252,33 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         self.canvas.configure(bg=bg_color)
         self._draw_meter()
 
+    @staticmethod
+    def _font_metrics(font):
+        """
+        Height and a width-measuring callable for a font.
+
+        Every vertical offset in _draw_meter() was a hardcoded pixel count
+        tuned for the default font -- captions sat 6px below the bar, tick
+        labels 14px above it, SWR and PWR 20px up. A larger font grew past
+        those gaps and overlapped the scale it labelled.
+
+        Returns:
+            (line_height, measure) where measure(text) gives a pixel width.
+            Falls back to a rough estimate if Tk cannot supply a font object,
+            which keeps the meter drawing rather than raising.
+        """
+        try:
+            import tkinter.font as tkfont
+            f = tkfont.Font(font=font)
+            return f.metrics("linespace"), f.measure
+        except Exception:
+            size = 10
+            try:
+                size = int(font[1])
+            except Exception:
+                pass
+            return int(size * 1.4), (lambda text: int(len(str(text)) * size * 0.6))
+
     def _draw_meter(self):
         """Wipes and paints fresh discrete LED lines, scale calibrations, and labels using adaptive look tokens."""
         self.canvas.delete("all")
@@ -274,7 +301,14 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         self.canvas.configure(bg=bg_color)
 
         num_led_segments = 30
-        start_x, end_x = 10, width - 30
+        # Right margin sized for the widest top-scale label rather than a
+        # fixed 30px. The last label is centred on the bar's end, so half of it
+        # sits beyond -- with a larger scale_font the "dB" ran off the canvas.
+        scale_h, scale_measure = self._font_metrics(scale_font)
+        label_h, _ = self._font_metrics(label_font)
+        widest_scale = max((scale_measure(str(t)) for t in ("dB", "+60", "3.5", "100")),
+                           default=20)
+        start_x, end_x = 10, width - max(30, int(widest_scale / 2) + 12)
         total_length = end_x - start_x
         sig_y = int(height * 0.50) if self._hide_lower_row else int(height * 0.28)
         lower_y = int(height * 0.70)
@@ -295,10 +329,11 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             tx = start_x + (total_length * pct)
             color = red_color if pct >= 0.60 else amber_color
             self.canvas.create_line(tx, sig_y, tx, sig_y - 6, fill=color, width=1)
-            if label_str: self.canvas.create_text(tx, sig_y - 14, text=label_str, fill=color, font=scale_font, anchor="center")
+            # Above the tick, clear of it by the label's own height.
+            if label_str: self.canvas.create_text(tx, sig_y - 8 - (scale_h / 2), text=label_str, fill=color, font=scale_font, anchor="center")
 
-        self.canvas.create_text(start_x, sig_y - 14, text="S", fill=amber_color, font=scale_font, anchor="center")
-        self.canvas.create_text(start_x + (total_length * 0.5), sig_y + 6, text="SIG", fill=amber_color, font=label_font, anchor="n")
+        self.canvas.create_text(start_x, sig_y - 8 - (scale_h / 2), text="S", fill=amber_color, font=scale_font, anchor="center")
+        self.canvas.create_text(start_x + (total_length * 0.5), sig_y + 5, text="SIG", fill=amber_color, font=label_font, anchor="n")
 
         if self._hide_lower_row: return
 
@@ -327,8 +362,8 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
 
         swr_label_color = amber_color if self._swr_visible else disabled_color
         pwr_label_color = amber_color if self._pwr_visible else disabled_color
-        self.canvas.create_text(start_x + (total_length * ((mid_gap_start / num_led_segments) * 0.5)), lower_y - 20, text="SWR", fill=swr_label_color, font=label_font, anchor="n")
-        self.canvas.create_text(start_x + (total_length * ((mid_gap_end / num_led_segments) + ((1.0 - (mid_gap_end / num_led_segments)) * 0.5))), lower_y - 20, text="PWR", fill=pwr_label_color, font=label_font, anchor="n")
+        self.canvas.create_text(start_x + (total_length * ((mid_gap_start / num_led_segments) * 0.5)), lower_y - 6 - label_h, text="SWR", fill=swr_label_color, font=label_font, anchor="n")
+        self.canvas.create_text(start_x + (total_length * ((mid_gap_end / num_led_segments) + ((1.0 - (mid_gap_end / num_led_segments)) * 0.5))), lower_y - 6 - label_h, text="PWR", fill=pwr_label_color, font=label_font, anchor="n")
 
         swr_ticks = [1.0, 1.5, 2.0]
         if self.swr_max_value > 2.0:
@@ -339,13 +374,13 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             color = (red_color if val >= 2.0 else amber_color) if self._swr_visible else disabled_color
             label = (str(int(val)) if val.is_integer() else str(val)) + ("+" if val == self.swr_max_value else "")
             self.canvas.create_line(tx, lower_y, tx, lower_y + 6, fill=color, width=1)
-            self.canvas.create_text(tx, lower_y + 12, text=label, fill=color, font=scale_font, anchor="n")
+            self.canvas.create_text(tx, lower_y + 8, text=label, fill=color, font=scale_font, anchor="n")
 
         for val, label in [(0, "0"), (50, "50"), (100, "100%")]:
             tx = start_x + (total_length * ((mid_gap_end / num_led_segments) + ((val / 100.0) * (1.0 - (mid_gap_end / num_led_segments)))))
             color = (red_color if val >= 80 else amber_color) if self._pwr_visible else disabled_color
             self.canvas.create_line(tx, lower_y, tx, lower_y + 6, fill=color, width=1)
-            self.canvas.create_text(tx - 4 if val == 100 else tx, lower_y + 12, text=label, fill=color, font=scale_font, anchor="n")
+            self.canvas.create_text(tx - 4 if val == 100 else tx, lower_y + 8, text=label, fill=color, font=scale_font, anchor="n")
     def set(self, s_value=None, swr_value=None, pwr_value=None):
         """Update any telemetry channel row independently."""
         if s_value is not None: self._current_s_value = float(s_value)

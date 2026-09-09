@@ -235,6 +235,33 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
         self.canvas.configure(bg=bg_color)
         self._draw_meter()
 
+    @staticmethod
+    def _font_metrics(font):
+        """
+        Height and a width-measuring callable for a font.
+
+        The scale labels sat at a hardcoded `radius_sig + 16`, tuned for the
+        default font. A larger one grew back across that gap and crowded the
+        arc it labelled -- and because the labels are CENTRED on their point,
+        half of each grew inward regardless of size.
+
+        Returns:
+            (line_height, measure) where measure(text) gives a pixel width.
+            Falls back to a rough estimate if Tk cannot supply a font object,
+            which keeps the meter drawing rather than raising.
+        """
+        try:
+            import tkinter.font as tkfont
+            f = tkfont.Font(font=font)
+            return f.metrics("linespace"), f.measure
+        except Exception:
+            size = 10
+            try:
+                size = int(font[1])
+            except Exception:
+                pass
+            return int(size * 1.4), (lambda text: int(len(str(text)) * size * 0.6))
+
     def _draw_meter(self):
         """Renders dial arcs, ticks, text readouts, and needles using a single layout coordinate base."""
         self.canvas.delete("all")
@@ -281,7 +308,11 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
 
             if major:
                 label = "" if i == 0 else (f"{i}" if i <= 9 else {11: "+20", 13: "+40", 15: "+60"}.get(i, ""))
-                text_radius = radius_sig + 16
+                # Clear of the arc by the label's own half-height plus the
+                # tick length, rather than a fixed 16px that a larger font grew
+                # back across.
+                scale_h, _ = self._font_metrics(scale_font)
+                text_radius = radius_sig + 8 + (scale_h / 2)
                 tx, ty = center_x + text_radius * math.cos(ang), center_y - text_radius * math.sin(ang)
                 if label: self.canvas.create_text(tx, ty, text=label, fill=red if is_red else amber, font=scale_font)
 
