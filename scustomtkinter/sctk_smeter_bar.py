@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkSMeterBar - Piece 1 of 2
+sCTkSMeterBar
 
 A standalone, low-profile horizontal discrete LED segment bar widget displaying
 simultaneous, independent tracks for incoming S-Units and transmitter SWR ratio levels.
@@ -301,14 +301,19 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         self.canvas.configure(bg=bg_color)
 
         num_led_segments = 30
-        # Right margin sized for the widest top-scale label rather than a
-        # fixed 30px. The last label is centred on the bar's end, so half of it
-        # sits beyond -- with a larger scale_font the "dB" ran off the canvas.
+        # Right margin sized for the LAST top-scale label rather than a fixed
+        # 30px. That label is centred on the bar's end, so half of it sits
+        # beyond -- and it is "+60 dB", the widest string on the scale, so a
+        # larger scale_font ran the "B" off the canvas.
+        #
+        # Measured from bar_scale_mappings below rather than from a guessed
+        # list: an earlier version measured "dB" and reserved room for a string
+        # a third of the real width, which held until about 14pt and then
+        # clipped again.
         scale_h, scale_measure = self._font_metrics(scale_font)
         label_h, _ = self._font_metrics(label_font)
-        widest_scale = max((scale_measure(str(t)) for t in ("dB", "+60", "3.5", "100")),
-                           default=20)
-        start_x, end_x = 10, width - max(30, int(widest_scale / 2) + 12)
+        last_label = "+60 dB"
+        start_x, end_x = 10, width - max(30, int(scale_measure(last_label) / 2) + 12)
         total_length = end_x - start_x
         sig_y = int(height * 0.50) if self._hide_lower_row else int(height * 0.28)
         lower_y = int(height * 0.70)
@@ -387,4 +392,3 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         if swr_value is not None: self._current_swr_value = float(swr_value)
         if pwr_value is not None: self._current_pwr_value = float(pwr_value)
         if self.canvas.winfo_exists(): self._draw_meter()
-
