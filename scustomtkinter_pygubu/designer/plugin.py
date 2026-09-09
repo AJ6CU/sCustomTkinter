@@ -207,11 +207,20 @@ class sCTkFileExplorerForPreview(sCTkFileExplorer):
 
     def _bind_own_parts_to_self(self):
         """Makes a click anywhere inside the explorer select the explorer."""
-        print("[fe] binding; roots:", self._own_part_roots())
         def select_self(event, target=self):
-            print("[fe] click forwarded from", event.widget)
+            # _canvas, NOT canvas.
+            #
+            # This widget has TWO canvases: self._canvas, which CTkFrame draws
+            # its background on, and self.canvas, the scroll canvas holding the
+            # file rows. CTkFrame.bind() redirects every binding to _canvas, so
+            # that is where the Designer's click handler ended up.
+            #
+            # Generating the event on self.canvas dispatched into a widget with
+            # nothing bound -- the forward succeeded and nothing happened. It is
+            # also why clicking the outer EDGE always worked: the edge is
+            # _canvas.
             try:
-                canvas = getattr(target, "canvas", None) or target
+                canvas = getattr(target, "_canvas", None) or target
                 canvas.event_generate("<Button-1>", x=1, y=1, when="now")
             except Exception:
                 pass
