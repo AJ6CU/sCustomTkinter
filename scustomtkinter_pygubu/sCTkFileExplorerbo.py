@@ -40,6 +40,30 @@ class sCTkFileExplorerBO(BuilderObject):
         """Passes values directly to allow core widget validations to handle exceptions."""
         return super()._process_property_value(pname, value)
 
+    # `type` and `filetypes` constrain each other, so setting one writes the
+    # other back into the widget metadata.
+    #
+    # The widget already enforces the rule -- setting filetypes switches to
+    # file mode, and choosing directory clears the filter -- but it does that
+    # to ITSELF. The Designer keeps its own copy in wmeta, so the inspector
+    # went on showing the old value: adding a filter left `type` reading blank
+    # while the widget had switched to "file", and choosing "directory"
+    # afterwards collided with a filter the inspector still believed was set.
+    #
+    # Generated code reads wmeta, so leaving it stale would also have written
+    # out a combination the widget then had to correct at runtime.
+    def set_property(self, name, value):
+        if hasattr(self, "wmeta") and hasattr(self.wmeta, "properties"):
+            props = self.wmeta.properties
+            props[name] = value
+            if name == "filetypes" and value:
+                props["type"] = "file"
+            elif name == "type" and str(value).lower() == "directory":
+                props["filetypes"] = ""
+
+        if getattr(self, "widget", None) is not None:
+            self._set_property(self.widget, name, value)
+
 
 # Register the widget into Pygubu's layout parsing engine
 builder_id = f"{builder_namespace}.{widget_classname}"

@@ -515,8 +515,17 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             # have to, since neither delegates to the other.
             self._activate_scroll_bindings()
         if "type" in kwargs:
-            self.response_type = str(kwargs.pop("type")).lower()
-            if self.response_type not in ("file", "directory"): self.response_type = "directory"
+            # Through set_mode(), so there is ONE rule rather than two.
+            #
+            # This set response_type directly and left filetypes alone, so
+            # switching to "directory" with a filter already set left the two
+            # disagreeing -- and the fill routine drew its "UI Mismatch" label
+            # instead of the listing. set_mode() clears the filter, which is
+            # what choosing directories means.
+            _mode = str(kwargs.pop("type")).lower()
+            if _mode not in ("file", "directory"):
+                _mode = "directory"
+            self.set_mode(_mode)
         if "filetypes" in kwargs:
             ft_val = kwargs.pop("filetypes")
             if ft_val:
@@ -757,3 +766,4 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
             if (now - self._last_double_click_time) < 0.3: return
             self._last_double_click_time = now
             if self.double_click_command and callable(self.double_click_command): self.double_click_command(self, target_path)
+
