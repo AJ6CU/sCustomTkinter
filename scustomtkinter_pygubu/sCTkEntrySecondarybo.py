@@ -64,6 +64,25 @@ class sCTkEntrySecondaryBO(CTkEntryBO):
         "xscrollcommand",
     )
 
+    def _code_define_callback_args(self, cmd_pname, cmd):
+        """
+        Declares what each command callback receives.
+
+        `xscrollcommand` is called by Tk with TWO arguments -- the first and
+        last visible fractions, the same pair a scrollbar's set() takes. A stub
+        generated with no parameters raises the moment the entry scrolls:
+
+            TypeError: on_scroll() takes 1 positional argument but 3 were given
+
+        `validatecommand` is called with NO arguments when it is a plain
+        callable, because Tk's %-substitutions are only passed when the command
+        is registered with them and pygubu does not do that. The base class
+        already returns nothing, so it is left alone rather than restated.
+        """
+        if cmd_pname == "xscrollcommand":
+            return ("first", "last")
+        return super()._code_define_callback_args(cmd_pname, cmd)
+
     def code_imports(self):
         # should return an iterable of (module, classname/function) to import
         # or None

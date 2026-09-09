@@ -80,6 +80,19 @@ class sCTkSpinboxBO(BuilderObject):
             if processed is not None or name == 'command':
                 self.widget.configure(**{name: processed})
 
+    def _code_define_callback_args(self, cmd_pname, cmd):
+        """
+        Declares that `command` receives the new value, so the generated stub
+        has a matching parameter.
+
+        The widget already tolerates either shape -- it calls the callback with
+        a value and falls back to calling it with none on TypeError -- so a
+        stub with no arguments *worked*, which is why this went unnoticed. It
+        also meant a user writing their own handler had no indication that a
+        value was available.
+        """
+        return ("value",)
+
     def code_get_configure_properties(self, code_identifier, entry):
         """Instructs Pygubu's compiler to pipe callbacks through native channels."""
         return ['command']
@@ -95,13 +108,19 @@ class sCTkSpinboxBO(BuilderObject):
             if value is not None and value != '':
                 processed = self._process_property_value(prop, value)
                 if processed is not None:
-                    # Enforce clean string literal encapsulation inside the code emitter pipelines
-                    if prop in ('format', 'values', 'button_side', 'orientation', 'justify',
-                                'placeholder_text', 'arrow_up_char', 'arrow_down_char',
-                                'arrow_right_char', 'arrow_left_char'):
-                        init_args[prop] = f'"{processed}"'
-                    else:
-                        init_args[prop] = repr(processed)
+                    # FIX: was f'"{processed}"' for the string properties --
+                    # manual double-quoting, which breaks the moment the value
+                    # itself contains a double quote. The bracketed list form
+                    # this widget's own help text recommends does exactly that:
+                    #
+                    #     values="["A", "B"]"
+                    #            ^^^^^^^^^^^
+                    #     SyntaxError: invalid syntax
+                    #
+                    # repr() quotes correctly for every value, choosing the
+                    # delimiter that does not clash. It was already used for
+                    # everything else in this method.
+                    init_args[prop] = repr(processed)
         return init_args
 
 

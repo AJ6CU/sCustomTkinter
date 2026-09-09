@@ -41,6 +41,24 @@ class sCTkDialContinuousBO(BuilderObject):
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
+    def _code_define_callback_args(self, cmd_pname, cmd):
+        """
+        Declares what each callback receives, so the generated stub has
+        matching parameters.
+
+        Without this, pygubu generates every stub with no arguments -- and the
+        dial calls `command` with a value:
+
+            TypeError: on_turn() takes 1 positional argument but 2 were given
+
+        The two click callbacks genuinely take nothing, so only `command` gets
+        a parameter. Continuous reports a signed step delta rather than a position, since it has none.
+        """
+        if cmd_pname in ("left_click_callback", "right_click_callback"):
+            return ()
+        return ("step_delta",)
+
+
     # NOTE: realize() no longer forces width and height from the knob size.
     #
     # It used to write both canvas dimensions from `diameter`, overwriting
@@ -72,6 +90,24 @@ class sCTkDialRangeBO(BuilderObject):
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
+    def _code_define_callback_args(self, cmd_pname, cmd):
+        """
+        Declares what each callback receives, so the generated stub has
+        matching parameters.
+
+        Without this, pygubu generates every stub with no arguments -- and the
+        dial calls `command` with a value:
+
+            TypeError: on_turn() takes 1 positional argument but 2 were given
+
+        The two click callbacks genuinely take nothing, so only `command` gets
+        a parameter. Range reports the new value.
+        """
+        if cmd_pname in ("left_click_callback", "right_click_callback"):
+            return ()
+        return ("value",)
+
+
     # NOTE: realize() no longer forces width and height from the knob size.
     # See the equivalent note on sCTkDialContinuousBO above.
 
@@ -95,6 +131,24 @@ class sCTkDialSelectorBO(BuilderObject):
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
+    def _code_define_callback_args(self, cmd_pname, cmd):
+        """
+        Declares what each callback receives, so the generated stub has
+        matching parameters.
+
+        Without this, pygubu generates every stub with no arguments -- and the
+        dial calls `command` with a value:
+
+            TypeError: on_turn() takes 1 positional argument but 2 were given
+
+        The two click callbacks genuinely take nothing, so only `command` gets
+        a parameter. Selector reports the index of the chosen label, not the label itself.
+        """
+        if cmd_pname in ("left_click_callback", "right_click_callback"):
+            return ()
+        return ("selected_index",)
+
+
     def _process_property_value(self, name, value):
         if name == 'label_font':
             # Shared parser: handles the "{}" Tk emits for "no style",
@@ -108,6 +162,33 @@ class sCTkDialSelectorBO(BuilderObject):
             # sCTkTableview's `columns` and sCTkSelector's `items`.
             return parse_list_property(value)
         return value
+
+    def _code_set_property(self, targetid, pname, value, code_bag):
+        """
+        Emits `labels` as a real Python list, not a quoted string.
+
+        The bracketed form -- the one this widget's own help text recommends --
+        contains double quotes, and the default handler wraps the whole value
+        in double quotes again:
+
+            sctkdialselector1.configure(labels="["AM", "FM"]", ...)
+                                               ^^^^^^^^^^^^^
+            SyntaxError: invalid syntax
+
+        Emitting the literal unquoted gives valid Python and a real list, so
+        the widget receives one directly rather than parsing a string back out
+        of it. Same approach sCTkSelectorbo uses for `items` and
+        sCTkFileExplorerbo for `filetypes`.
+
+        A bare comma-separated value has no brackets and no quotes, so it is
+        emitted as a quoted string and parsed by the widget as usual.
+        """
+        if pname == "labels" and value:
+            text = str(value).strip()
+            if text.startswith("[") and text.endswith("]"):
+                code_bag[pname] = text
+                return None
+        return super()._code_set_property(targetid, pname, value, code_bag)
 
     # NOTE: realize() no longer forces width and height from the knob size.
     # See the equivalent note on sCTkDialContinuousBO above.

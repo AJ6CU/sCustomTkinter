@@ -5,6 +5,7 @@
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [Typing a path](#typing)
 * [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
 * [Example](#example)
 * [Known Limitations](#known-limitations)
@@ -70,6 +71,25 @@ An earlier attempt had the widget switch to file mode silently instead, on the r
 | `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the six properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and all six queries fell through to the native widget. Pygubu could not read any of them. |
 
 There's currently no public method for programmatic navigation from outside the widget — `path_to_show` (a `StringVar`) has no automatic refresh trace of its own (unlike `selected_path`), so navigating externally means setting it *and* explicitly calling the private `_fill_explorer()` afterward, matching the pattern used internally by the back button. This is a real API gap, not a documented feature.
+
+---
+
+<a name="typing"></a>
+### Typing a path
+
+The path entry is editable, and a path typed into it is applied on **Return**, on keypad Enter, or when focus leaves the field.
+
+A value is accepted only if it exists. Focus-out fires whenever you click elsewhere, so a half-typed path must not replace a good one. `~` is expanded. A directory navigates there; a file navigates to its folder, and is also selected when `type` is `"file"`.
+
+Three fixes were needed here. `~` was never expanded, so typing `~/Documents` silently did nothing. Only directories were accepted regardless of this widget's own `type`, so a file explorer would not let you type a file path. And there was no focus-out binding, so tabbing away left the text unapplied.
+
+`sCTkPathChooser` behaves identically. The two are the same control, one with a button.
+
+**The entry scrolls to show the end of a long path,** so the filename stays visible when you select a file. It previously showed the start and the filename ran off the right.
+
+Driven by a trace on `selected_path` rather than by the existing one, which is gated by an internal flag switched off whenever the widget sets the path itself — exactly the case where the view needs moving. The move is also re-applied once Tk is idle, because the immediate call runs before the entry has recomputed the width of its new text and lands part-way through the filename.
+
+Unlike `sCTkPathChooser` there is no `justify` property; the filename is the useful end.
 
 ---
 

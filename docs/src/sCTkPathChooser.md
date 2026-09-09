@@ -4,6 +4,7 @@
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [Typing a path](#typing)
 * [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
 * [Example](#example)
 * [Known Limitations](#known-limitations)
@@ -33,10 +34,11 @@ sCTkPathChooser(master=None, initialdir=None, initialfile=None, type="file",
 | Parameter | Type | Description |
 |---|---|---|
 | `master` | widget | Parent container. |
-| `initialdir` / `initialfile` | `str` | Starting directory/filename for the browser popup. |
+| `initialdir` | `str` | Starting directory for the browser popup, and where a bare `initialfile` is resolved. |
+| `initialfile` | `str` | File to seed the entry with. A bare name resolves against `initialdir`; an absolute path or one starting with `~` is used as given. It does **not** have to exist — see [Typing a path](#typing). |
 | `type` | `"file"` / `"directory"` | Whether individual files are selectable, or only directories. |
 | `filetypes` | `list[str]` | File extension filter. |
-| `justify` | `str` | Text alignment inside the entry. |
+| `justify` | `str` | Which end of a long path stays visible: `"right"` to see the filename, `"left"` to see the root. See [Typing a path](#typing). |
 | `btn_text` | `str` | The browse button's label. |
 | `**kwargs` | — | Any native `CTkFrame` argument, or a theme-key override (see [Theming](#theming-sctkthemesjson)). |
 
@@ -54,10 +56,31 @@ save_path.pack(fill="x", padx=20, pady=10)
 | `get()` | `str` | Current path text. |
 | `set(path)` | `None` | Sets the displayed path, normalizing and expanding it. |
 | `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming both the entry and the browse button. |
-| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, accepting `state`, `type`, `title`, `justify`, `btn_text`, `entry_height`, `btn_width` and `btn_height` as first-class properties. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, accepting `state`, `type`, `title`, `justify`, `btn_text`, `entry_height`, `btn_width`, `btn_height`, and — newly — `initialdir`, `initialfile` and `filetypes` as first-class properties. Those three had **no `configure()` branch at all** and were constructor-only, so setting any of them in the Designer, which applies every property through `configure()`, did nothing. |
 | `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the eight properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and failed — all eight queries fell through to the native widget and Pygubu could read none of them. The dict form of `configure()` was dead for the same reason (`isinstance(args, dict)` on a tuple is never true). |
 
 Clicking "Browse..." opens an `sCTkFileExplorer` in a modal popup; selecting a path there calls `self.set(...)` on this widget automatically.
+
+---
+
+<a name="typing"></a>
+### Typing a path
+
+The entry is editable, and a path typed into it is applied on **Return**, on keypad Enter, or when focus leaves the field.
+
+A value is accepted only if it exists. Focus-out fires whenever you click elsewhere, so a half-typed path must not replace a good one. `~` is expanded. A directory becomes the new `initialdir`, so browsing afterwards opens there; anything else is treated as a file selection.
+
+The entry previously had **no bindings at all**, so a typed path was never applied — it stayed as loose text, nothing navigated, and pressing Browse then replaced it with the real value, which made the typing appear to vanish.
+
+`sCTkFileExplorer` behaves identically. The two are the same control, one with a button.
+
+**`justify` decides which end of a long path you see.** A Tk entry only honours the option when the text is *shorter* than the field; a longer path scrolls, and what shows is governed by the view position. `"right"` therefore moves the view to the end so the filename is visible.
+
+That needed two fixes. The move was applied to the `CTkEntry` rather than the real `tk.Entry` it wraps, which does not reliably forward it. And it ran before the entry had recomputed the width of its new text, so a long path stopped part-way through the filename — it is now re-applied once Tk is idle.
+
+Changing `justify` no longer calls `set()`, so it does not fire `command`. Changing alignment is not a path selection.
+
+**A nonexistent `initialfile` is still displayed.** Naming a file that has yet to be created is legitimate — a "save as" field being the obvious case — and the browser opens on `initialdir` regardless. The visible consequence is that the entry shows a file while the browser behaves as though only the directory were set.
 
 ---
 

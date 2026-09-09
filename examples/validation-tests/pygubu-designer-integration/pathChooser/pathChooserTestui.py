@@ -60,7 +60,7 @@ class pathChooserTestUI:
                 ".txt"],
             initialdir="/Users/markjhatch/Documents/GitHub/sCustomTkinter/scustomtkinter",
             initialfile="doc.txt",
-            justify="left",
+            justify="right",
             title='Hello',
             type="file")
         sctkpathchooser1.pack(side="top")
