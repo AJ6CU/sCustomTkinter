@@ -1,12 +1,12 @@
 ## sCTkDialContinuous
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
-* [Callback Signature & Usage](#callback-signature--usage)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Callbacks](#callbacks)
+* [Centralized Stylesheet Setup](#theming-sctkthemesjson)
+* [Other Notes](#known-limitations)
+* [Example](#example)
 
 ---
 
@@ -17,7 +17,7 @@ An infinite flywheel tuning encoder module tracking signed velocity delta step i
   ![sCTkDialContinuous_Light.png](images/sCTkDialContinuous_Light.png)
 
 
-### API Property Reference
+### Overview
 
 | Property / Feature | Type / Signature | Description |
 | :--- | :--- | :--- |
@@ -49,7 +49,7 @@ tuning_dial = sCTkDialContinuous(
 
 ---
 
-### Callback Signature & Usage
+### Callbacks
 
 Dispatches a raw signed directional integer step change directly to runtime listeners upon rotation changes.
 
@@ -63,7 +63,7 @@ def on_vfo_dial_rotated(clicks_delta: int):
     current_frequency_hz += clicks_delta * 100
 ```
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
@@ -98,7 +98,7 @@ The dark-mode values above give a black anodised knob. For a brushed-aluminium l
 
 ---
 
-### Other notes
+### Known Limitations
 * **Knob rendering:** the body is a shaded dome and the indicator is a recessed finger dimple, sized at 36% of the knob radius with 6% rim clearance — a VFO operator puts a finger in it to spin the dial quickly. Both scale with the knob. See [the base class page](sCTkDial.md#knob-rendering).
 * **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
 * **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
@@ -108,14 +108,14 @@ The dark-mode values above give a black anodised knob. For a brushed-aluminium l
 
 ---
 
-### Implementation Example & Test Harness
+### Example
 
 Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkDialContinuous` alongside custom click jump hooks and an interactive VFO digital frequency display counter readout.
 
 ```python
 #!/usr/bin/python3
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Dial Continuous
+# TESTING HARNESS IMPORTS & SETUP for Dial Continuous
 # =====================================================================
 
 import customtkinter as ctk

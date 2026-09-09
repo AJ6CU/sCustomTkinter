@@ -1,5 +1,16 @@
 ## sCTkSMeter
 
+<a name="contents"></a>
+### Table of Contents
+* [Overview](#geometry)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [State](#state)
+* [Fonts and Label Placement](#fonts)
+* [Centralized Stylesheet Integration](#theming)
+* [Example](#example)
+
+
 The `sCTkSMeter` is a standalone, theme-adaptive analog S-Meter/Power Output gauge instrument designed specifically for ham radio transceiver desktop interfaces. Natively inheriting container footprints from `customtkinter.CTkFrame`, it delivers smooth telemetry tracking sweeps without the overhead of extraneous nesting modules.
 
 
@@ -9,7 +20,8 @@ The `sCTkSMeter` is a standalone, theme-adaptive analog S-Meter/Power Output gau
 
 ---
 
-### 🛠️ Core Gauge Geometry & Scale Mechanics
+<a name="geometry"></a>
+### Overview
 
 The instrument face is split mathematically to mirror classic analog transceiver gauge divisions perfectly:
 *   **The S-Unit Scale (Ticks 0–9):** Maps incoming telemetry values from `0.0` to `9.0` linearly across the first 60% of the visual arc container, rendered in your high-contrast brand or amber theme palettes.
@@ -18,7 +30,8 @@ The instrument face is split mathematically to mirror classic analog transceiver
 
 ---
 
-### 📋 API Constructor Reference
+<a name="constructor"></a>
+### Constructor
 
 ```python
 sCTkSMeter(master=None, width=250, height=130, state="normal", **kw)
@@ -33,7 +46,8 @@ sCTkSMeter(master=None, width=250, height=130, state="normal", **kw)
 
 ---
 
-### ⚡ Global Object Instance Methods
+<a name="methods"></a>
+### Methods
 
 To drive the needle tracking sweep fluidly inside background receiver threads, automatic VFO frequency scanning loops, or telemetry data parsing hooks, utilize this direct public setter:
 
@@ -60,7 +74,26 @@ The background is deliberately **not** dimmed; the face and needle carry the sig
 
 ---
 
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+<a name="fonts"></a>
+### Fonts and Label Placement
+
+`font` and `scale_font` are **per-instance properties** as well as theme keys. Set either in the constructor, through `configure()`, or in the Designer's inspector; leave it blank and the theme's value applies.
+
+| Property | Applies to |
+| :--- | :--- |
+| `font` | The `"SIGNAL"` and `"RF OUTPUT"` captions |
+| `scale_font` | The numeric scale tick labels |
+
+```python
+meter.configure(scale_font=("Arial", 12, "bold"))
+meter.configure(scale_font="")      # back to the theme's scale_font
+```
+
+**Label positions are derived from the font, not hardcoded.** Every gap between a label and the scale it marks used to be a fixed pixel count tuned for the default size, so a larger font grew across it and overlapped the thing it was labelling. Those offsets now come from the font's own line height, so text stays clear at any reasonable size.
+
+The scale labels are placed by angle around the arc, so an oversized `scale_font` crowds them against one another rather than clipping at the canvas edge. There is no automatic spacing: if the labels start to touch, use a smaller `scale_font` or a larger meter.
+<a name="theming"></a>
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
@@ -90,7 +123,8 @@ The background is deliberately **not** dimmed; the face and needle carry the sig
 
 ---
 
-### Implementation Example & Test Harness
+<a name="example"></a>
+### Example
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use `sCTkSMeter`.
 
@@ -98,7 +132,7 @@ Below is a complete, self-contained interactive test execution script demonstrat
 ```python
 #!/usr/bin/python3
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for S Meter
+# TESTING HARNESS IMPORTS & SETUP for S Meter
 # =====================================================================
 
 import customtkinter as ctk
@@ -150,3 +184,5 @@ if __name__ == "__main__":
     root.mainloop()
 
 ```
+
+[Return to Table of Contents](#contents)

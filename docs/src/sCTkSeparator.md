@@ -3,15 +3,15 @@
 (Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
-* [System Architecture Overview](#system-architecture-overview)
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
+* [Constructor](#constructor)
 * [Changing properties at runtime](#runtime-changes)
 * [State](#state)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
+* [Theming](#theming-sctkthemesjson)
 * [Layout Manager Integration](#layout-manager-integration)
-* [Pygubu Designer Properties Guide](#pygubu-designer-properties-guide)
+* [Pygubu Designer](#pygubu-designer)
 * [Event Binding](#event-binding)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Example](#example)
 
 ---
 
@@ -23,7 +23,7 @@ The *sCTkSeparator* is an advanced, themeable divider widget for CustomTkinter. 
   ![sCTkSeparator_Light.png](images/sCTkSeparator_Light.png)
 
 
-### System Architecture Overview
+### Overview
 
 The component functions as a structural vector drawing lane subclassed from `ctk.CTkBaseClass`. Rather than forcing a static line width or texture file, it wraps a native Tkinter canvas object to paint partitions programmatically.
 
@@ -33,7 +33,7 @@ The visual update matrix implements two important enhancements:
 
 ---
 
-### API Property Reference
+### Constructor
 
 | Property Name | Data Type | Default Value | Description |
 | :--- | :--- | :--- | :--- |
@@ -77,7 +77,7 @@ A separator has nothing to interact with, so disabling only repaints it from `di
 
 ---
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
 
 The component queries your centralized theme sheet profile matrix using standard `self._resolve_color()` lookup calls, ensuring that indicator dots and canvas borders translate colors smoothly across appearance updates.
 
@@ -130,7 +130,7 @@ Mixing layout manager tracking loops within the same immediate frame layer is co
 
 ---
 
-### Pygubu Designer Properties Guide
+### Pygubu Designer
 
 When configuring layouts visually within the Pygubu Designer editing workspace panel strip, observe these property formatting rules:
 
@@ -157,14 +157,14 @@ If existing code depended on the old behaviour it will change — though neither
 
 ---
 
-### Implementation Example & Test Harness
+### Example
 
 Below is a complete, self-contained test execution script demonstrating how to layout horizontal, vertical, and dashed separators inside an interactive telemetry deck panel while exercising lock states and skin sweeps.
 
 ```python
 #!/usr/bin/python3
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Separator
+# TESTING HARNESS IMPORTS & SETUP for Separator
 # =====================================================================
 
 import customtkinter as ctk

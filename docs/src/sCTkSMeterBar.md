@@ -1,5 +1,16 @@
 ## sCTkSMeterBar
 
+<a name="contents"></a>
+### Table of Contents
+* [Overview](#geometry)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [State](#state)
+* [Fonts and Label Placement](#fonts)
+* [Centralized Stylesheet Integration](#theming)
+* [Example](#example)
+
+
 The `sCTkSMeterBar` is a standalone, low-profile horizontal discrete 30-segment LED bar instrumentation widget displaying independent telemetry tracks for incoming receiver S-Units, transmitter SWR ratio levels, and forward RF Power output percentage. Like all sCTk widgets, it is fully theme-adaptive.
 
 
@@ -9,7 +20,8 @@ The `sCTkSMeterBar` is a standalone, low-profile horizontal discrete 30-segment 
 
 ---
 
-### 🛠️ Subsystem Layout & Multi-Track Physics
+<a name="geometry"></a>
+### Overview
 
 The discrete LED matrix map shifts automatically based on the device operational path constraints:
 *   **The S-Meter Track (Top Row):** Maps incoming telemetry values across 30 linear segments. Signals from `0.0` to `9.0` utilize the first 60% of the bar, while advanced signal ranges up to `+60dB` expand into the remaining 40% redline warning zone.
@@ -18,7 +30,8 @@ The discrete LED matrix map shifts automatically based on the device operational
 
 ---
 
-### 📋 API Constructor Reference
+<a name="constructor"></a>
+### Constructor
 
 ```python
 sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True,
@@ -38,7 +51,8 @@ sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True
 
 ---
 
-### ⚡ Global Object Instance Methods
+<a name="methods"></a>
+### Methods
 
 #### Update Instrument Telemetry Channels
 ```python
@@ -52,6 +66,15 @@ led_bar_gauge.set(s_value=9.2, swr_value=1.4, pwr_value=45.0)
 # Updates layout presentation properties on the fly without reconstruction overhead.
 led_bar_gauge.configure_visibility(swr_visible=False, pwr_visible=True, hide_lower_row=False)
 ```
+
+The same three flags also go through the standard `configure()` call, which is what the Designer's inspector uses:
+
+```python
+led_bar_gauge.configure(swr_visible=False, hide_lower_row=True)
+led_bar_gauge.configure(swr_visible="")      # back to the constructor default
+```
+
+They were constructor arguments with `cget()` support but **no `configure()` branch**, so setting one in the inspector reached native `CTkFrame` and raised `['pwr_visible'] are not supported arguments`. `swr_max_value` had a branch, which is why only these three failed.
 
 <a name="state"></a>
 ### State
@@ -72,7 +95,26 @@ The background is deliberately **not** dimmed; the LEDs and labels carry the sig
 
 ---
 
-### 🎨 Centralized Stylesheet Integration (`sCTkThemes.json`)
+<a name="fonts"></a>
+### Fonts and Label Placement
+
+`font` and `scale_font` are **per-instance properties** as well as theme keys. Set either in the constructor, through `configure()`, or in the Designer's inspector; leave it blank and the theme's value applies.
+
+| Property | Applies to |
+| :--- | :--- |
+| `font` | The `"SIG"`, `"SWR"` and `"PWR"` captions |
+| `scale_font` | The numeric scale tick labels |
+
+```python
+meter.configure(scale_font=("Arial", 12, "bold"))
+meter.configure(scale_font="")      # back to the theme's scale_font
+```
+
+**Label positions are derived from the font, not hardcoded.** Every gap between a label and the scale it marks used to be a fixed pixel count tuned for the default size, so a larger font grew across it and overlapped the thing it was labelling. Those offsets now come from the font's own line height, so text stays clear at any reasonable size.
+
+The right-hand margin is sized for the widest scale label, `"+60 dB"`, which is centred on the end of the bar so half of it extends beyond. A larger `scale_font` therefore leaves proportionally less room for the bar itself — noticeable above about 18pt on a default-width meter. Widen the meter to compensate.
+<a name="theming"></a>
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
@@ -107,7 +149,8 @@ The background is deliberately **not** dimmed; the LEDs and labels carry the sig
 
 ---
 
-### Implementation Example & Test Harness
+<a name="example"></a>
+### Example
 
 Below is a complete, self-contained interactive test execution script demonstrating how to use `sCTkSMeterBar`.
 
@@ -115,7 +158,7 @@ Below is a complete, self-contained interactive test execution script demonstrat
 ```python
 #!/usr/bin/python3
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for S Meter Bar
+# TESTING HARNESS IMPORTS & SETUP for S Meter Bar
 # =====================================================================
 
 import customtkinter as ctk
@@ -175,3 +218,5 @@ if __name__ == "__main__":
     app.mainloop()
 
 ```
+
+[Return to Table of Contents](#contents)

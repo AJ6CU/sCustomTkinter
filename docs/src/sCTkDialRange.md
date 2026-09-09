@@ -1,13 +1,13 @@
 ## sCTkDialRange
 
 ### Table of Contents
-* [API Property Reference](#api-property-reference)
+* [Overview](#overview)
 * [Constructor](#constructor)
 * [Sizing and Label Placement](#sizing)
-* [Callback Signature & Usage](#callback-signature--usage)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Other Notes](#other-notes)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Callbacks](#callbacks)
+* [Centralized Stylesheet Setup](#theming-sctkthemesjson)
+* [Other Notes](#known-limitations)
+* [Example](#example)
 
 ---
 
@@ -18,7 +18,7 @@ A concrete rotary encoder range variant designed for hard-bounded linear control
   ![sCTkDialRange_Light.png](images/sCTkDialRange_Light.png)
 
 
-### API Property Reference
+### Overview
 
 | Property / Feature | Type / Signature | Description |
 | :--- | :--- | :--- |
@@ -88,7 +88,7 @@ Labels anchor **away** from the dial — one on the left grows leftward, one at 
 ---
 
 
-### Callback Signature & Usage
+### Callbacks
 
 Dispatches the current absolute active integer value directly to runtime tracking listeners upon position changes.
 
@@ -101,7 +101,7 @@ def on_volume_level_changed(active_value: int):
     print(f"Active Selected Option Value position tracker = {active_value}")
 ```
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
@@ -128,7 +128,7 @@ Every key above is required — construction raises `KeyError` naming any that a
 
 `pointer_color` is **specific to this variant and its Selector sibling**, and colours the pointer line. It was present in the theme file for a long time but read by no code path at all — the pointer drew in `text_color` instead. It is now live, so the pointer can differ from the tick labels. It has no `disabled_map` entry; a disabled pointer falls back to the disabled `text_color`.
 
-### Other notes
+### Known Limitations
 * **Knob rendering:** the body is a shaded dome, marked with a plain straight line from dead centre out to just short of the rim. An earlier version drew an arrowhead and a raised centre cap; both are gone, along with the cap's two hardcoded outline colours. See [the base class page](sCTkDial.md#knob-rendering).
 * **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
 * **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
@@ -138,14 +138,14 @@ Every key above is required — construction raises `KeyError` naming any that a
 
 ---
 
-### Implementation Example & Test Harness
+### Example
 
 Below is a complete, self-contained test execution script demonstrating how to properly embed an `sCTkDialRange` alongside custom click jump hooks and an active volume gain control panel display tracker.
 
 ```python
 #!/usr/bin/python3
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Dial Range
+# TESTING HARNESS IMPORTS & SETUP for Dial Range
 # =====================================================================
 
 import customtkinter as ctk

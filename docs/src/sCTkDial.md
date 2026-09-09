@@ -127,3 +127,5 @@ The body is now roughly twenty shaded ovals plus ticks and labels, none of which
 - **Knurling teeth and the canvas background fallback remain hardcoded.** The teeth are a shadow effect rather than a palette choice; the background fallback is the "a raw canvas needs a renderable colour" case accepted elsewhere in this library.
 - **Ticks and labels are not affected by the body shading** — they sit outside the knob radius and draw flat in `text_color`.
 - **Scroll handling is duplicated across the three subclasses.** `_process_mac_touchpad_scroll` and `_process_scroll_wheel` are near-identical in each, differing only in the line that applies the step. This is not a candidate for `ScrollBindingMixin`: a dial steps discretely with a cooldown and has no `yview_scroll` target. It belongs in this base class with one overridable step method.
+
+[Return to Table of Contents](#table-of-contents)

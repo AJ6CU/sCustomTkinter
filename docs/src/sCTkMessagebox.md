@@ -2,13 +2,13 @@
 (Derived from Separator class by Fastattack, 2024. This widget was made available to the community via the MIT License. Source Repository: [MoreCustomTkinterWidgets](https://github.com/fastattackv/MoreCustomTkinterWidgets) )
 
 ### Table of Contents
-* [API Constructor Reference](#api-constructor-reference)
-* [Global Shortcut Function Handlers](#global-shortcut-function-handlers)
+* [Constructor](#constructor)
+* [Methods](#methods)
 * [Simple Syntax Quick-Reference Guide](#simple-syntax-quick-reference-guide)
-* [Centralized Stylesheet Setup](#centralized-stylesheet-setup-sctkthemesjson)
-* [Layout & Text Wrapping Integration Rules](#layout--text-wrapping-integration-rules)
+* [Centralized Stylesheet Setup](#theming-sctkthemesjson)
+* [Layout and Text Wrapping Rules](#layout-and-text-wrapping-rules)
 * [Configuration](#configuration)
-* [Implementation Example & Test Harness](#implementation-example--test-harness)
+* [Example](#example)
 
 ---
 
@@ -21,7 +21,7 @@ The `sCTkMessagebox` is an advanced, themeable dialog window system designed to 
 	![sCTkMessagebox_Light.png](images/sCTkMessagebox_Light.png)
 
 
-### API Constructor Reference
+### Constructor
 
 ```python
 sCTkMessagebox(title, message, typ, master=None, buttons="ok", ok_text="Ok", yes_text="Yes", no_text="No", width=400)
@@ -41,7 +41,7 @@ sCTkMessagebox(title, message, typ, master=None, buttons="ok", ok_text="Ok", yes
 
 ---
 
-### Global Shortcut Function Handlers
+### Methods
 
 To launch modal dialog blocks quickly inside callback triggers without handling complete class instantiations manually, utilize these pre-wired shortcuts via the **`messagebox`** namespace proxy:
 
@@ -132,7 +132,7 @@ if sCTkMessagebox.askerroryesno("Cascade Failure", "Buffer buffer overflow hit. 
 
 ---
 
-### Centralized Stylesheet Setup (`sCTkThemes.json`)
+### Theming (`sCTkThemes.json`)
 
 ```json
 {
@@ -154,7 +154,7 @@ if sCTkMessagebox.askerroryesno("Cascade Failure", "Buffer buffer overflow hit. 
 
 ---
 
-### Layout & Text Wrapping Integration Rules
+### Layout and Text Wrapping Rules
 
 To completely bypass CustomTkinter's internal multi-line font calculation limitations, this widget uses Python's native `textwrap` module to inject hard newline coordinates before passing layout parameters to your primary text components.
 
@@ -178,14 +178,14 @@ Three separate defects were fixed here, all silent:
 
 ---
 
-### Implementation Example & Test Harness
+### Example
 
 Below is a complete, self-contained test execution script demonstrating how to properly map shortcut handlers, custom text boundaries, and dynamic boolean feedback out of an interactive transceiver dashboard setup.
 
 ```python
 #!/usr/bin/python3
 # =====================================================================
-# 🛠️ TESTING HARNESS IMPORTS & SETUP for Messagebox
+# TESTING HARNESS IMPORTS & SETUP for Messagebox
 # =====================================================================
 
 import customtkinter as ctk
@@ -198,7 +198,7 @@ if __name__ == "__main__":
 
     long_msg = "Warning: The VFO phase lock loop has lost lock synchronization with the master synthesizer. Override?"
 
-    # 🚀 Clean functional callbacks using the messagebox namespace!
+    #  Clean functional callbacks using the messagebox namespace!
     def trigger_info_ask():
         print(f"Feedback: {sCTkMessagebox.askyesno('Info Query', 'Log parameter data?', yes_text='Log', no_text='Skip', master=root)}")
 
@@ -208,7 +208,7 @@ if __name__ == "__main__":
     def trigger_error_ask():
         print(f"Feedback: {sCTkMessagebox.askerroryesno('Fatal Error', 'Attempt buffer cold reset?', yes_text='Reset', no_text='Quit', master=root)}")
 
-    # 🚀 Native drop-in style execution pass!
+    #  Native drop-in style execution pass!
     sCTkButtonPrimary(root, text="Test Info (OK)", width=200, command=lambda: sCTkMessagebox.showinfo("Message Example", "Short statement alert.", ok_text="Acknowledge", master=root)).pack(pady=8)
     sCTkButtonPrimary(root, text="Test Info (Yes/No)", width=200, command=trigger_info_ask).pack(pady=(8, 25))
     sCTkButtonPrimary(root, text="Test Warning (OK)", width=200, command=lambda: sCTkMessagebox.showwarning("Warning", "Listen carefully", ok_text="Proceed", master=root)).pack(pady=8)
@@ -218,3 +218,5 @@ if __name__ == "__main__":
 
     root.mainloop()
 ```
+
+[Return to Table of Contents](#table-of-contents)

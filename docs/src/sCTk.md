@@ -2,13 +2,13 @@
 
 The `sCTk` is the primary main window container class wrapper for the `sCustomTkinter` workstation library ecosystem. It acts as a clean, direct pass-through equivalent to its foundational parent container layout class, `customtkinter.CTk`.
 
-### 📌 Localized Table of Contents
-* [Core Architectural Purpose](#core-architectural-purpose)
-* [Constructor Reference](#constructor-reference)
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
 
 ---
 
-### Core Architectural Purpose
+### Overview
 
 The application base frame serves as the core master anchor for your interface tree:
 1. **Decoupled User Space:** It eliminates the architectural requirement to maintain raw `import customtkinter` bindings inside your station cockpit panel code.
@@ -16,7 +16,7 @@ The application base frame serves as the core master anchor for your interface t
 
 ---
 
-### Constructor Reference
+### Constructor
 
 It maps perfectly onto all native window properties, event loop callbacks, lifecycle handlers, and geometries tracking parameters out-of-the-box.
 
