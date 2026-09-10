@@ -121,7 +121,23 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
 
         self._rebuild_grid_layout()
         self._apply_custom_theme_colors()
-        if self._state == "disabled": super().configure(state="disabled")
+
+        # FIX: this used to be
+        #     if self._state == "disabled": super().configure(state="disabled")
+        # -- but this widget is a CTkFrame subclass, and CTkFrame has no
+        # `state` option at all:
+        #
+        #     ValueError: ['state'] are not supported arguments.
+        #
+        # It only fired when the spinbox was CONSTRUCTED already disabled,
+        # which is what a Designer preview does -- the .ui carries the state,
+        # so it reaches the constructor rather than a later configure() call.
+        # Building one disabled in application code failed the same way.
+        #
+        # Nothing is needed here: _apply_custom_theme_colors() above already
+        # reads self._state and disables the entry and the arrow buttons, which
+        # is where this widget's interactivity actually lives. The frame itself
+        # has no state to set.
         self._finalize_themeable_lifecycle()
 
     def _parse_string_list(self, input_data) -> list:
@@ -568,14 +584,22 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             "fg_color": m.get("entry_color"),
             "border_color": m.get("border_color"),
         }
-        if is_readonly:
-            # text_color is only overridden for readonly -- normal/disabled
-            # never included it here originally, and sCTkEntryPrimary's own
-            # state() call already applies the correct text_color for those
-            # two states. Readonly needs it here too since Spinbox's own
-            # readonly_map is the source of truth for this override.
-            entry_override["text_color"] = m.get("text_color")
-        self.entry.configure(**entry_override) 
+        # text_color is applied for ALL THREE states, not just readonly.
+        #
+        # It sat behind `if is_readonly:` and was delegated to
+        # sCTkEntryPrimary's own state() for normal and disabled -- so this
+        # widget's own text_color, including its disabled_map value, never
+        # reached the entry. Setting disabled_map.text_color on an sCTkSpinbox
+        # coloured the ARROWS, which take it a few lines below, while the
+        # number in the box kept sCTkEntryPrimary's colour. One key appearing
+        # to affect the wrong part of the widget.
+        #
+        # The sCTkSpinbox block is the source of truth for a spinbox, so it
+        # wins for every state. Note this can change the NORMAL appearance too,
+        # where the two blocks disagree -- which is the point: the widget now
+        # honours its own theme.
+        entry_override["text_color"] = m.get("text_color")
+        self.entry.configure(**entry_override)
 
         b_color = self._local_defaults.get("button_color")
         b_hover = self._local_defaults.get("button_hover_color")

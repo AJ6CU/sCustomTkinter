@@ -175,21 +175,13 @@
           </object>
         </child>
         <child>
-          <object class="customtkinter.CTkRadioButton" id="ctkradiobutton4">
-            <property name="text" translatable="yes">ctkradiobutton4</property>
+          <object class="scustomtkinter.sCTkSpinbox" id="sctkspinbox1">
+            <property name="state">normal</property>
             <layout manager="pack">
               <property name="side">top</property>
             </layout>
           </object>
         </child>
-      </object>
-    </child>
-    <child>
-      <object class="customtkinter.CTkRadioButton" id="ctkradiobutton5">
-        <property name="text" translatable="yes">ctkradiobutton5</property>
-        <layout manager="pack">
-          <property name="side">top</property>
-        </layout>
       </object>
     </child>
   </object>
