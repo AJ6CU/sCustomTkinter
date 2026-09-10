@@ -284,9 +284,26 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
                 _current = self.cget(require_redraw)
             except Exception:
                 _current = None
-            _default = self._NATIVE_QUERY_DEFAULTS.get(require_redraw, _current)
+
+            # FIX: the default came from _NATIVE_QUERY_DEFAULTS or, failing
+            # that, from cget() -- the CURRENT value. This widget's table is
+            # empty, so clearing a colour in the Designer reported the
+            # override as its own default and put it straight back: setting
+            # fg_color red and then clearing it left the switch red.
+            #
+            # The THEME's value is the right answer, taken from an untouched
+            # copy so a runtime override cannot corrupt it -- see
+            # ThemeableWidget._theme_default(). The native table still wins
+            # where it has an entry, for properties the theme says nothing
+            # about.
+            _default = self._NATIVE_QUERY_DEFAULTS.get(require_redraw)
+            if _default is None:
+                _default = self._theme_default(require_redraw)
+            if _default is None:
+                _default = _current
             return (require_redraw, require_redraw, require_redraw,
-                    _default, _current)
+                    self._query_value(_default, require_redraw),
+                    self._query_value(_current, require_redraw))
 
         if isinstance(require_redraw, dict):
             kwargs = require_redraw | kwargs
