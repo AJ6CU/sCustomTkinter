@@ -441,16 +441,23 @@ class ThemeableWidget:
         unnecessary -- and it leaves native options the theme says nothing
         about untouched.
 
-        THE CHANGE GOES TO WHICHEVER MAP IS ACTIVE. Most widgets carry a
-        disabled_map as well, and a repaint reads one or the other depending on
-        state. Writing only to _local_defaults would mean a colour set on a
-        DISABLED widget went into the normal map and did not appear until it
-        was re-enabled -- the same class of surprise this method exists to
-        remove.
+        THE CHANGE ALWAYS GOES TO THE NORMAL MAP, whatever state the widget is
+        in. That is not an oversight -- it follows from the Designer having ONE
+        field per property while this library keeps several maps.
 
-        A value set in one state does not affect the other, which is
-        deliberate: the two maps describe different appearances, and setting a
-        normal colour should not silently redefine the disabled one.
+        An earlier version chose the map by current state, so that a colour set
+        on a disabled widget was visible immediately. It made a single field
+        mean different things at different moments:
+
+            normal:   set fg_color green   -> normal map green
+            disabled: clear fg_color       -> DISABLED map reset, normal
+                                              map still green
+            normal:   green returns
+
+        which reads as the clear having failed. One field, one meaning.
+
+        A property with its own separate field is the exception, and is handled
+        explicitly below -- text_color_disabled is the only one.
 
         Call once near the top of a widget's configure(), before the values are
         consumed or forwarded.
@@ -475,7 +482,6 @@ class ThemeableWidget:
         # pristine.
         self._snapshot_theme_defaults()
 
-        active = self._active_theme_map()
         disabled_map = getattr(self, "_custom_disabled_map", None)
 
         for key, value in kwargs.items():
@@ -499,9 +505,7 @@ class ThemeableWidget:
                     disabled_map["text_color"] = value
                 continue
 
-            if active is not None and key in active:
-                active[key] = value
-            elif key in defaults:
+            if key in defaults:
                 defaults[key] = value
 
     def _snapshot_theme_defaults(self):
@@ -543,26 +547,6 @@ class ThemeableWidget:
         if pristine is None:
             return (getattr(self, "_custom_disabled_map", {}) or {}).get(key)
         return pristine.get(key)
-
-    def _active_theme_map(self):
-        """
-        The theme map a repaint would currently read from, or None for the
-        normal one.
-
-        Two-state widgets get the right answer from this base version. A widget
-        with more maps -- sCTkButtonPrimary has disabled, alarm, pressed and
-        normal -- overrides it, so a runtime override lands in the map that is
-        actually on screen rather than in the normal one.
-
-        Returns:
-            The active map, or None to mean _local_defaults.
-        """
-        disabled_map = getattr(self, "_custom_disabled_map", None)
-        is_disabled = str(
-            getattr(self, "_custom_current_state", None)
-            or getattr(self, "_state", "normal")
-        ).lower() == "disabled"
-        return disabled_map if (is_disabled and disabled_map) else None
 
     def _configure_query(self, pname, defaults=None):
         """

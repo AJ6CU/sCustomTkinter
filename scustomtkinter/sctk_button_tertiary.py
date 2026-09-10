@@ -259,21 +259,6 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
         self.is_pressed = pressed
         self._update_current_visual_state()
 
-    def _active_theme_map(self):
-        """
-        The map a repaint currently reads, following this button's precedence:
-        disabled > pressed > normal.
-
-        The base version knows only about disabled and normal, so an override
-        made while the button was pressed would land in the normal map and not
-        show until it was released.
-        """
-        if getattr(self, "_custom_current_state", "normal") == "disabled":
-            return getattr(self, "_custom_disabled_map", None)
-        if getattr(self, "is_pressed", False):
-            return getattr(self, "_custom_pressed_map", None)
-        return None
-
     def _update_current_visual_state(self) -> None:
         """
         Recomputes and applies this widget's colors from the theme file, based
