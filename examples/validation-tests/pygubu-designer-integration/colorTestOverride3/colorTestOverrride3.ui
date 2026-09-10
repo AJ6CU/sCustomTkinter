@@ -98,5 +98,13 @@ Frame</property>
         </layout>
       </object>
     </child>
+    <child>
+      <object class="scustomtkinter.sCTkScrollableFrame" id="sctkscrollableframe2">
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">2</property>
+        </layout>
+      </object>
+    </child>
   </object>
 </interface>

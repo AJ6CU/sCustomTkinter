@@ -193,6 +193,7 @@ class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
             return
         target = getattr(self, "_parent_canvas", None) or getattr(
             self, "_parent_frame", None)
+        print("[overlay]", type(self).__name__, "target:", target)
         if target is None:
             return
         try:
@@ -202,7 +203,8 @@ class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
             overlay.place(in_=target, x=0, y=0, relwidth=1, relheight=1)
             overlay.lower()
             self._selection_overlay = overlay
-        except Exception:
+        except Exception as exc:
+            print("[overlay] place failed:", exc)
             # place(in_=...) refuses if the two widgets do not share a
             # toplevel. Losing selection is the pre-existing behaviour, so
             # failing quietly leaves things no worse.
