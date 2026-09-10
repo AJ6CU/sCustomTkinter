@@ -711,38 +711,6 @@ class sCTkDialContinuousForPreview(sCTkDialContinuous):
     """
     _THEME_BLOCK_NAME = "sCTkDialContinuous"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._bind_dial_canvas()
-
-    def _bind_dial_canvas(self):
-        """
-        Makes a click on the dial face select the dial.
-
-        Exposing the widget's children was not enough on its own. A dial draws
-        itself on `self.canvas`, which it creates for the purpose -- so that
-        canvas is what the user clicks, and the builder knows nothing about it.
-        The Designer's handler fired and resolved the widget to None.
-
-        The click is forwarded to _canvas, CTkFrame's own background canvas,
-        which is where CTkFrame.bind() puts the Designer's handler. Same
-        approach as sCTkDialog and sCTkFileExplorer.
-        """
-        def select_self(event, target=self):
-            try:
-                canvas = getattr(target, "_canvas", None) or target
-                canvas.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
-            return "break"
-
-        face = getattr(self, "canvas", None)
-        if face is not None:
-            try:
-                face.bind("<Button-1>", select_self)
-            except Exception:
-                pass
-
     def winfo_children(self):
         """
         Hides the dial's own drawing canvas from the Designer's binding pass,
@@ -756,38 +724,6 @@ class sCTkDialRangeForPreview(sCTkDialRange):
     """Designer preview for sCTkDialRange. See sCTkDialContinuousForPreview."""
     _THEME_BLOCK_NAME = "sCTkDialRange"
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._bind_dial_canvas()
-
-    def _bind_dial_canvas(self):
-        """
-        Makes a click on the dial face select the dial.
-
-        Exposing the widget's children was not enough on its own. A dial draws
-        itself on `self.canvas`, which it creates for the purpose -- so that
-        canvas is what the user clicks, and the builder knows nothing about it.
-        The Designer's handler fired and resolved the widget to None.
-
-        The click is forwarded to _canvas, CTkFrame's own background canvas,
-        which is where CTkFrame.bind() puts the Designer's handler. Same
-        approach as sCTkDialog and sCTkFileExplorer.
-        """
-        def select_self(event, target=self):
-            try:
-                canvas = getattr(target, "_canvas", None) or target
-                canvas.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
-            return "break"
-
-        face = getattr(self, "canvas", None)
-        if face is not None:
-            try:
-                face.bind("<Button-1>", select_self)
-            except Exception:
-                pass
-
     def winfo_children(self):
         """
         Hides the dial's own drawing canvas from the Designer's binding pass,
@@ -800,38 +736,6 @@ class sCTkDialRangeForPreview(sCTkDialRange):
 class sCTkDialSelectorForPreview(sCTkDialSelector):
     """Designer preview for sCTkDialSelector. See sCTkDialContinuousForPreview."""
     _THEME_BLOCK_NAME = "sCTkDialSelector"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._bind_dial_canvas()
-
-    def _bind_dial_canvas(self):
-        """
-        Makes a click on the dial face select the dial.
-
-        Exposing the widget's children was not enough on its own. A dial draws
-        itself on `self.canvas`, which it creates for the purpose -- so that
-        canvas is what the user clicks, and the builder knows nothing about it.
-        The Designer's handler fired and resolved the widget to None.
-
-        The click is forwarded to _canvas, CTkFrame's own background canvas,
-        which is where CTkFrame.bind() puts the Designer's handler. Same
-        approach as sCTkDialog and sCTkFileExplorer.
-        """
-        def select_self(event, target=self):
-            try:
-                canvas = getattr(target, "_canvas", None) or target
-                canvas.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
-            return "break"
-
-        face = getattr(self, "canvas", None)
-        if face is not None:
-            try:
-                face.bind("<Button-1>", select_self)
-            except Exception:
-                pass
 
     def winfo_children(self):
         """
@@ -1528,9 +1432,47 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             # <Configure> is deliberately NOT neutralized -- the dial redraws
             # itself from it, and a dial that never redraws shows an empty
             # canvas in the designer.
-            sequences = _HOVER_CLICK + _DIAL_EXTRA + _SCROLL
-            _neutralize(canvas, sequences)
+            # The dial's OWN canvas, not _preview_canvas()'s answer.
+            #
+            # A dial has TWO canvases: CTkFrame's background `_canvas`, and
+            # `canvas`, which the dial creates and draws itself on.
+            # _preview_canvas() returns _canvas first -- and that is where
+            # CTkFrame.bind() puts the DESIGNER's click handler. Neutralizing
+            # <Button-1> there removed the selection binding itself, so a dial
+            # could not be selected on the canvas at all.
+            #
+            # The interactive bindings that need silencing are on the dial's
+            # own canvas. _canvas keeps its handler.
+            face = getattr(widget, "canvas", None)
+
+            # Everything EXCEPT <Button-1> is neutralized outright.
+            sequences = tuple(s for s in (_HOVER_CLICK + _DIAL_EXTRA + _SCROLL)
+                              if s != "<Button-1>")
+            _neutralize(face, sequences)
             _neutralize(widget, _SCROLL)
+
+            # <Button-1> is FORWARDED rather than swallowed.
+            #
+            # A no-op would stop the click at the dial face, so it never
+            # reaches _canvas -- where CTkFrame.bind() puts the Designer's own
+            # selection handler. The dial would stay unselectable, which is
+            # what "the dial captures the click" looked like.
+            #
+            # Done here rather than in the preview class because this function
+            # runs afterwards and would otherwise replace that binding.
+            if face is not None:
+                def _select_dial(event, target=widget):
+                    try:
+                        bg = getattr(target, "_canvas", None)
+                        if bg is not None:
+                            bg.event_generate("<Button-1>", x=1, y=1, when="now")
+                    except Exception:
+                        pass
+                    return "break"
+                try:
+                    face.bind("<Button-1>", _select_dial)
+                except Exception:
+                    pass
 
         elif builder_uid.endswith(".sCTkFileExplorer"):
             # Rows are created dynamically and each binds click and
