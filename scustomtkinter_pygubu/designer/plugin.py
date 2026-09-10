@@ -556,7 +556,7 @@ class sCTkTabviewForPreview(sCTkTabview):
         """
         segmented = getattr(self, "_segmented_button", None)
         buttons = getattr(segmented, "_buttons_dict", None) if segmented else None
-        print("[tabview] binding; buttons:", list(buttons or
+        print("[tabview] binding; buttons:", list(buttons or {}))
         if not buttons:
             return
 
