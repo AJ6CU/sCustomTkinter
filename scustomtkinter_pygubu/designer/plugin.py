@@ -517,11 +517,25 @@ class sCTkTabviewForPreview(sCTkTabview):
     nothing on the canvas but the widget's own hidden background, which the
     Designer never saw. Once a tab existed, the tab button was clickable and
     masked the problem.
+
+    The internal CTkSegmentedButton is EXCLUDED from that list, for two
+    reasons. Its bind() raises NotImplementedError unconditionally, so the
+    Designer's binding walk crashed on load:
+
+        File ".../ctk_segmented_button.py", line 471, in bind
+            raise NotImplementedError
+
+    And leaving it unbound keeps tab switching working -- the clicks go to
+    CustomTkinter's own handler rather than being intercepted for selection.
     """
     _THEME_BLOCK_NAME = "sCTkTabview"
 
     def winfo_children(self):
-        return super(tk.Frame, self).winfo_children()
+        children = super(tk.Frame, self).winfo_children()
+        segmented = getattr(self, "_segmented_button", None)
+        if segmented is None:
+            return children
+        return [w for w in children if w is not segmented]
 
 
 class sCTkSelectorForPreview(sCTkSelector):
