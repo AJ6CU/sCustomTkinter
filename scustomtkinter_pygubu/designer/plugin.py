@@ -530,6 +530,76 @@ class sCTkTabviewForPreview(sCTkTabview):
     """
     _THEME_BLOCK_NAME = "sCTkTabview"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.after_idle(self._bind_tab_buttons)
+
+    def _bind_tab_buttons(self):
+        """
+        Makes clicking a tab select that tab in the Designer, as well as
+        switching to it.
+
+        Excluding the segmented button from winfo_children() keeps switching
+        working, but means a tab click never reaches the Designer's selection
+        handler -- so the page changed while the inspector went on showing the
+        previous tab. Clicking a widget inside the new page corrected it, which
+        made the inspector look arbitrary rather than broken.
+
+        The inner buttons are bound with add=True, so CustomTkinter's own
+        handler still runs and the tab still switches. Ours then forwards a
+        click to the PAGE that switching revealed, which is a widget the
+        builder knows about -- so the Designer selects the tab.
+
+        Deferred to idle twice over: once here, because the buttons do not
+        exist until the tabs are built, and once in the handler, because the
+        switch has to complete before the new page can be found.
+        """
+        segmented = getattr(self, "_segmented_button", None)
+        buttons = getattr(segmented, "_buttons_dict", None) if segmented else None
+        if not buttons:
+            return
+
+        def select_page(event, name=None):
+            def forward():
+                page = (getattr(self, "_sctk_pages", {}) or {}).get(name)
+                if page is None:
+                    return
+                target = getattr(page, "_canvas", None) or page
+                try:
+                    target.event_generate("<Button-1>", x=1, y=1, when="now")
+                except Exception:
+                    pass
+            try:
+                self.after_idle(forward)
+            except Exception:
+                pass
+
+        for name, button in buttons.items():
+            for widget in (button,
+                           getattr(button, "_canvas", None),
+                           getattr(button, "_text_label", None)):
+                if widget is None:
+                    continue
+                try:
+                    widget.bind("<Button-1>",
+                                lambda e, n=name: select_page(e, n), add=True)
+                except Exception:
+                    pass
+
+    def add(self, *args, **kwargs):
+        """
+        Rebinds after a tab is added, since its button did not exist before.
+
+        The Designer adds tabs one at a time as the user builds the layout, so
+        binding only at construction would cover none of them.
+        """
+        result = super().add(*args, **kwargs)
+        try:
+            self.after_idle(self._bind_tab_buttons)
+        except Exception:
+            pass
+        return result
+
     def winfo_children(self):
         children = super(tk.Frame, self).winfo_children()
         segmented = getattr(self, "_segmented_button", None)

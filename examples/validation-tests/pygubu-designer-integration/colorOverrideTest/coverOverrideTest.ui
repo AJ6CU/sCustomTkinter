@@ -170,12 +170,52 @@
         <child>
           <object class="scustomtkinter.sCTkRadioButton" id="sctkradiobutton3">
             <property name="command" type="command" cbtype="simple">radioButton_CB</property>
+            <property name="fg_color">red</property>
+            <property name="state">normal</property>
             <property name="text" translatable="yes">button3</property>
             <property name="textvariable">string:button3Text_VAR</property>
             <property name="value">3</property>
             <property name="variable">string:radiobutton_VAR</property>
             <layout manager="pack">
               <property name="pady">0 20</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkFrame" id="sctkframe2">
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+        <child>
+          <object class="customtkinter.CTkRadioButton" id="ctkradiobutton1">
+            <property name="state">normal</property>
+            <property name="text" translatable="yes">ctkradiobutton1</property>
+            <property name="value">1</property>
+            <property name="variable">string:v1</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="customtkinter.CTkRadioButton" id="ctkradiobutton2">
+            <property name="text" translatable="yes">ctkradiobutton2</property>
+            <property name="value">2</property>
+            <property name="variable">string:v1</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="customtkinter.CTkRadioButton" id="ctkradiobutton3">
+            <property name="text" translatable="yes">ctkradiobutton3</property>
+            <property name="value">3</property>
+            <property name="variable">string:v1</property>
+            <layout manager="pack">
               <property name="side">top</property>
             </layout>
           </object>
