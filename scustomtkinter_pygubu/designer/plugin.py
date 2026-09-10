@@ -177,6 +177,37 @@ class sCTkFrameForPreview(sCTkFrame):
 class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
     _THEME_BLOCK_NAME = "sCTkFrameLabeledPrimary"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.after_idle(self._install_selection_overlay)
+
+    def _install_selection_overlay(self):
+        """
+        Places a transparent child over the visible area, so a click on empty
+        space resolves to this widget.
+
+        See the class docstring for why the parent and the position have to be
+        different widgets.
+        """
+        if getattr(self, "_selection_overlay", None) is not None:
+            return
+        target = getattr(self, "_parent_canvas", None) or getattr(
+            self, "_parent_frame", None)
+        if target is None:
+            return
+        try:
+            # A plain tk.Frame, not a CTk one: this must not draw anything, and
+            # CTkFrame would paint its own background over the content.
+            overlay = tk.Frame(self, bd=0, highlightthickness=0)
+            overlay.place(in_=target, x=0, y=0, relwidth=1, relheight=1)
+            overlay.lower()
+            self._selection_overlay = overlay
+        except Exception:
+            # place(in_=...) refuses if the two widgets do not share a
+            # toplevel. Losing selection is the pre-existing behaviour, so
+            # failing quietly leaves things no worse.
+            self._selection_overlay = None
+
     def winfo_children(self):
         # sCTkFrameLabeledPrimary has a hidden canvas inside. So, to make it
         #  clickable on preview we need a hack.
@@ -187,25 +218,59 @@ class sCTkFrameLabeledSecondaryForPreview(sCTkFrameLabeledSecondary):
     """
     Designer preview for sCTkFrameLabeledSecondary.
 
-    NOT SELECTABLE BY CLICKING, and this cannot be fixed here.
+    SELECTION VIA AN OVERLAY. CTkScrollableFrame inverts the usual
+    arrangement: the widget IS the inner frame, created inside a canvas owned
+    by a separate outer frame. So the surface the user sees is this widget's
+    PARENT, and the widget has no real children of its own --
+    winfo_children() reports an empty list.
 
-    CTkScrollableFrame inverts the usual arrangement: the widget IS the inner
-    frame, created inside a canvas that belongs to a separate outer frame. So
-    the surface the user sees is this widget's PARENT, and the widget has no
-    real children of its own -- winfo_children() reports an empty list.
+    That defeats plain forwarding. The Designer's handler ends up on
+    _parent_canvas, resolves event.widget to the canvas, and walking up from
+    there never reaches this widget -- because the widget is a DESCENDANT of
+    the canvas, not an ancestor. Binding the canvas directly is worse: it
+    replaces the Designer's own handler.
 
-    That defeats every route available to a plugin. CTkScrollableFrame.bind()
-    routes bindings to _parent_canvas, so the Designer's own click handler ends
-    up there and resolves event.widget to the canvas -- which the builder does
-    not know about, and from which walking up the tree never reaches this
-    widget, because it is a DESCENDANT of the canvas rather than an ancestor.
-    Binding the canvas directly is worse still: it replaces the Designer's
-    handler, so nothing is selected at all.
+    The overlay works around it by separating PARENT from POSITION. Tk's
+    place(in_=...) lets a widget be a child of one widget while being drawn
+    over another, as long as they share a toplevel. So the overlay's parent is
+    this frame -- which is what the Designer resolves when it is clicked --
+    while it is displayed across the outer canvas, covering the visible area.
 
-    A child dropped inside IS selectable, because it is a real descendant.
-    Select the frame itself from the widget tree.
+    It is lowered so anything the user drops in sits above it and stays
+    clickable in its own right, and it exists only in the Designer.
     """
     _THEME_BLOCK_NAME = "sCTkFrameLabeledSecondary"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.after_idle(self._install_selection_overlay)
+
+    def _install_selection_overlay(self):
+        """
+        Places a transparent child over the visible area, so a click on empty
+        space resolves to this widget.
+
+        See the class docstring for why the parent and the position have to be
+        different widgets.
+        """
+        if getattr(self, "_selection_overlay", None) is not None:
+            return
+        target = getattr(self, "_parent_canvas", None) or getattr(
+            self, "_parent_frame", None)
+        if target is None:
+            return
+        try:
+            # A plain tk.Frame, not a CTk one: this must not draw anything, and
+            # CTkFrame would paint its own background over the content.
+            overlay = tk.Frame(self, bd=0, highlightthickness=0)
+            overlay.place(in_=target, x=0, y=0, relwidth=1, relheight=1)
+            overlay.lower()
+            self._selection_overlay = overlay
+        except Exception:
+            # place(in_=...) refuses if the two widgets do not share a
+            # toplevel. Losing selection is the pre-existing behaviour, so
+            # failing quietly leaves things no worse.
+            self._selection_overlay = None
 
     def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
@@ -215,25 +280,59 @@ class sCTkScrollableFrameForPreview(sCTkScrollableFrame):
     """
     Designer preview for sCTkScrollableFrame.
 
-    NOT SELECTABLE BY CLICKING, and this cannot be fixed here.
+    SELECTION VIA AN OVERLAY. CTkScrollableFrame inverts the usual
+    arrangement: the widget IS the inner frame, created inside a canvas owned
+    by a separate outer frame. So the surface the user sees is this widget's
+    PARENT, and the widget has no real children of its own --
+    winfo_children() reports an empty list.
 
-    CTkScrollableFrame inverts the usual arrangement: the widget IS the inner
-    frame, created inside a canvas that belongs to a separate outer frame. So
-    the surface the user sees is this widget's PARENT, and the widget has no
-    real children of its own -- winfo_children() reports an empty list.
+    That defeats plain forwarding. The Designer's handler ends up on
+    _parent_canvas, resolves event.widget to the canvas, and walking up from
+    there never reaches this widget -- because the widget is a DESCENDANT of
+    the canvas, not an ancestor. Binding the canvas directly is worse: it
+    replaces the Designer's own handler.
 
-    That defeats every route available to a plugin. CTkScrollableFrame.bind()
-    routes bindings to _parent_canvas, so the Designer's own click handler ends
-    up there and resolves event.widget to the canvas -- which the builder does
-    not know about, and from which walking up the tree never reaches this
-    widget, because it is a DESCENDANT of the canvas rather than an ancestor.
-    Binding the canvas directly is worse still: it replaces the Designer's
-    handler, so nothing is selected at all.
+    The overlay works around it by separating PARENT from POSITION. Tk's
+    place(in_=...) lets a widget be a child of one widget while being drawn
+    over another, as long as they share a toplevel. So the overlay's parent is
+    this frame -- which is what the Designer resolves when it is clicked --
+    while it is displayed across the outer canvas, covering the visible area.
 
-    A child dropped inside IS selectable, because it is a real descendant.
-    Select the frame itself from the widget tree.
+    It is lowered so anything the user drops in sits above it and stays
+    clickable in its own right, and it exists only in the Designer.
     """
     _THEME_BLOCK_NAME = "sCTkScrollableFrame"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.after_idle(self._install_selection_overlay)
+
+    def _install_selection_overlay(self):
+        """
+        Places a transparent child over the visible area, so a click on empty
+        space resolves to this widget.
+
+        See the class docstring for why the parent and the position have to be
+        different widgets.
+        """
+        if getattr(self, "_selection_overlay", None) is not None:
+            return
+        target = getattr(self, "_parent_canvas", None) or getattr(
+            self, "_parent_frame", None)
+        if target is None:
+            return
+        try:
+            # A plain tk.Frame, not a CTk one: this must not draw anything, and
+            # CTkFrame would paint its own background over the content.
+            overlay = tk.Frame(self, bd=0, highlightthickness=0)
+            overlay.place(in_=target, x=0, y=0, relwidth=1, relheight=1)
+            overlay.lower()
+            self._selection_overlay = overlay
+        except Exception:
+            # place(in_=...) refuses if the two widgets do not share a
+            # toplevel. Losing selection is the pre-existing behaviour, so
+            # failing quietly leaves things no worse.
+            self._selection_overlay = None
 
     def winfo_children(self):
         return super(tk.Frame, self).winfo_children()

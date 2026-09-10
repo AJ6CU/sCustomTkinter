@@ -11,7 +11,7 @@
         <property name="fg_color">red</property>
         <property name="label_text">My Scollable</property>
         <property name="label_text_color">Yellow</property>
-        <property name="state">normal</property>
+        <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">0</property>
           <property name="row">0</property>
@@ -31,6 +31,7 @@
         <property name="fg_color">red</property>
         <property name="label_text">My Primary</property>
         <property name="label_text_color">Yellow</property>
+        <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">1</property>
           <property name="row">0</property>
@@ -51,6 +52,7 @@ Frame</property>
         <property name="fg_color">red</property>
         <property name="label_text">My Secondary</property>
         <property name="label_text_color">Yellow</property>
+        <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">2</property>
           <property name="row">0</property>
