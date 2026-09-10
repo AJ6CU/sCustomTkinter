@@ -213,6 +213,56 @@ class sCTkEntryPrimary(ctk.CTkEntry, ThemeableWidget):
             except Exception:
                 pass
 
+    def _write_through_state(self, action, *args, **kwargs):
+        """
+        Runs a text-modifying call even when the field is disabled.
+
+        A disabled Tk entry silently ignores insert() and delete() -- no error,
+        no text. That bites in generated code, because pygubu emits the state
+        before the content:
+
+            sctkentryprimary1.configure(state="disabled")
+            sctkentryprimary1.delete(0, "end")
+            sctkentryprimary1.insert(0, 'mark')
+
+        which produced a permanently empty disabled field. Setting text on a
+        disabled widget is a normal thing for an application to do -- the state
+        is about what the USER may edit, not about what the program may write.
+
+        The native state is lifted for the write and restored afterwards, which
+        is the same approach sCTkPathChooser.set() already uses. The widget's
+        own _custom_current_state is untouched, so the colours do not flicker.
+
+        Args:
+            action: The bound native method to call.
+            *args, **kwargs: Passed through to it.
+
+        Returns:
+            Whatever the native method returns.
+        """
+        was_disabled = self._custom_current_state == "disabled"
+        if was_disabled:
+            try:
+                super().configure(state="normal")
+            except Exception:
+                was_disabled = False
+        try:
+            return action(*args, **kwargs)
+        finally:
+            if was_disabled:
+                try:
+                    super().configure(state="disabled")
+                except Exception:
+                    pass
+
+    def insert(self, *args, **kwargs):
+        """Inserts text, even while disabled -- see _write_through_state()."""
+        return self._write_through_state(super().insert, *args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Deletes text, even while disabled -- see _write_through_state()."""
+        return self._write_through_state(super().delete, *args, **kwargs)
+
     def get_state(self) -> str:
         """Equivalent to calling state() with no argument."""
         return self.state()
