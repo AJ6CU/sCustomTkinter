@@ -431,6 +431,20 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 
+        # This library's own theme keys are consumed here.
+        #
+        # They are not native CTkFrame options -- text_color, dial_color,
+        # pointer_color and the rest describe things this widget draws on its
+        # own canvas -- so forwarding them raises:
+        #
+        #     ['text_color'] are not supported arguments.
+        #
+        # _record_theme_overrides() above has already stored the value and
+        # triggered a redraw, so there is nothing left to do with them.
+        for _own_key in list(kwargs):
+            if _own_key in self._local_defaults:
+                kwargs.pop(_own_key)
+
         if kwargs:
             for k, v in list(kwargs.items()):
                 if v == "": kwargs.pop(k)

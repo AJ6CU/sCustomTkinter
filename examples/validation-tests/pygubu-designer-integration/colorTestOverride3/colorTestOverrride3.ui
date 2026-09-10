@@ -70,7 +70,6 @@ Frame</property>
     </child>
     <child>
       <object class="scustomtkinter.sCTkDialContinuous" id="sctkdialcontinuous1">
-        <property name="fg_color">red</property>
         <property name="state">normal</property>
         <layout manager="grid">
           <property name="column">0</property>
@@ -80,7 +79,6 @@ Frame</property>
     </child>
     <child>
       <object class="scustomtkinter.sCTkDialRange" id="sctkdialrange1">
-        <property name="fg_color">red</property>
         <property name="state">normal</property>
         <layout manager="grid">
           <property name="column">1</property>
@@ -90,19 +88,10 @@ Frame</property>
     </child>
     <child>
       <object class="scustomtkinter.sCTkDialSelector" id="sctkdialselector1">
-        <property name="fg_color">red</property>
         <property name="state">normal</property>
         <layout manager="grid">
           <property name="column">2</property>
           <property name="row">1</property>
-        </layout>
-      </object>
-    </child>
-    <child>
-      <object class="scustomtkinter.sCTkScrollableFrame" id="sctkscrollableframe2">
-        <layout manager="grid">
-          <property name="column">0</property>
-          <property name="row">2</property>
         </layout>
       </object>
     </child>

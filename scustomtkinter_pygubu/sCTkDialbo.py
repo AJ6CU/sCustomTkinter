@@ -37,7 +37,8 @@ class sCTkDialContinuousBO(BuilderObject):
     # definition for each name. Both are required -- copying alone leaves a
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
-    OPTIONS_CUSTOM = ("divisions", "knob_diameter", "command", "left_click_callback", "right_click_callback")
+    OPTIONS_CUSTOM = ("divisions", "knob_diameter", "command", "left_click_callback", "right_click_callback",
+                      "text_color", "dial_color", "pointer_glow_color")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
@@ -94,7 +95,8 @@ class sCTkDialRangeBO(BuilderObject):
     # definition for each name. Both are required -- copying alone leaves a
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
-    OPTIONS_CUSTOM = ("from_", "to", "divisions", "knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "label_font")
+    OPTIONS_CUSTOM = ("from_", "to", "divisions", "knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "label_font",
+                      "text_color", "dial_color", "pointer_color")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
@@ -143,7 +145,8 @@ class sCTkDialSelectorBO(BuilderObject):
     # definition for each name. Both are required -- copying alone leaves a
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
-    OPTIONS_CUSTOM = ("knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels", "label_font")  # Labels handles lists, usually initialized in code
+    OPTIONS_CUSTOM = ("knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels", "label_font",
+                      "text_color", "dial_color", "pointer_color")  # Labels handles lists, usually initialized in code
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback", "right_click_callback")
 
@@ -235,6 +238,9 @@ register_widget(id_continuous, sCTkDialContinuousBO, "sCTkDialContinuous", ("ttk
 # which is why the Selector and Range dials offered a third value that
 # the Continuous dial did not. Registering it explicitly makes all
 # three agree and matches the widget's real two-state model.
+register_custom_property(id_continuous, "text_color", "colorentry", help="Colour of the labels AND the tick marks -- both are drawn with this one key. Blank uses the theme's text_color.")
+register_custom_property(id_continuous, "dial_color", "colorentry", help="Colour of the knob face. Blank uses the theme's dial_color.")
+register_custom_property(id_continuous, "pointer_glow_color", "colorentry", help="Colour of the glow around the pointer. Blank uses the theme's pointer_glow_color.")
 register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_continuous, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_continuous, "height", "naturalnumber", help="Height in pixels.")
@@ -254,6 +260,9 @@ register_widget(id_range, sCTkDialRangeBO, "sCTkDialRange", ("ttk", section_name
 # the Continuous dial did not. Registering it explicitly makes all
 # three agree and matches the widget's real two-state model.
 register_custom_property(id_range, "label_font", "fontentry", help="Font for the labels drawn around the dial. Blank uses the theme's label_font.")
+register_custom_property(id_range, "text_color", "colorentry", help="Colour of the labels AND the tick marks -- both are drawn with this one key. Blank uses the theme's text_color.")
+register_custom_property(id_range, "dial_color", "colorentry", help="Colour of the knob face. Blank uses the theme's dial_color.")
+register_custom_property(id_range, "pointer_color", "colorentry", help="Colour of the pointer on the knob. Blank uses the theme's pointer_color.")
 register_custom_property(id_range, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_range, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_range, "height", "naturalnumber", help="Height in pixels.")
@@ -276,6 +285,9 @@ register_widget(id_selector, sCTkDialSelectorBO, "sCTkDialSelector", ("ttk", sec
 # the Continuous dial did not. Registering it explicitly makes all
 # three agree and matches the widget's real two-state model.
 register_custom_property(id_selector, "label_font", "fontentry", help="Font for the labels drawn around the dial. Blank uses the theme's label_font.")
+register_custom_property(id_selector, "text_color", "colorentry", help="Colour of the labels AND the tick marks -- both are drawn with this one key. Blank uses the theme's text_color.")
+register_custom_property(id_selector, "dial_color", "colorentry", help="Colour of the knob face. Blank uses the theme's dial_color.")
+register_custom_property(id_selector, "pointer_color", "colorentry", help="Colour of the pointer on the knob. Blank uses the theme's pointer_color.")
 register_custom_property(id_selector, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_selector, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_selector, "height", "naturalnumber", help="Height in pixels.")
