@@ -159,7 +159,7 @@ class sCTkOptionMenuSecondary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
                 border_value = self._cget_border(pname)
                 if border_value is not self._NOT_A_BORDER_PROPERTY:
                     return (pname, pname, pname,
-                            self._query_value(self._local_defaults.get(pname)),
+                            self._query_value(self._theme_default(pname)),
                             self._query_value(border_value))
 
                 if pname in ["fg_color", "button_color", "button_hover_color",
@@ -168,7 +168,7 @@ class sCTkOptionMenuSecondary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
                     source = (self._custom_disabled_map if is_disabled
                               else self._local_defaults)
                     return (pname, pname, pname,
-                            self._query_value(self._local_defaults.get(pname)),
+                            self._query_value(self._theme_default(pname)),
                             self._query_value(source.get(pname)))
 
                 return self._configure_query(pname)
@@ -183,6 +183,11 @@ class sCTkOptionMenuSecondary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
             super().configure(command=kwargs.pop("command"))
         if "variable" in kwargs:
             super().configure(variable=kwargs.pop("variable"))
+
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs:
             self.state(str(kwargs.pop("state")).lower())
@@ -298,7 +303,14 @@ class sCTkOptionMenuSecondary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
         payload.update({
             "fg_color": fill,
             "button_color": fill,
-            "text_color": target_map.get("text_color"),
+            # text_color stays the NORMAL value and the disabled one goes to
+            # CTk's native text_color_disabled, because the state below puts
+            # the widget into CTk's own disabled mode -- where its draw code
+            # uses that option and ignores text_color entirely. Assigning the
+            # disabled colour here was discarded at draw time, so the theme key
+            # had no visible effect.
+            "text_color": self._local_defaults.get("text_color"),
+            "text_color_disabled": self._custom_disabled_map.get("text_color"),
             "state": "disabled" if is_disabled else "normal",
         })
         super().configure(**payload)

@@ -187,10 +187,22 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
             pass
 
         # Intercept child buttons array dictionary to forcefully assign text color mappings cleanly
+        #
+        # BOTH options are set, because state() puts the segmented button into
+        # CTk's own disabled mode -- which puts its inner CTkButtons there too,
+        # and a disabled CTkButton draws from text_color_disabled and ignores
+        # text_color entirely. Setting only text_color meant the theme's
+        # disabled tab colour was discarded at draw time in favour of
+        # CustomTkinter's default grey.
+        #
+        # resolved_txt already comes from the ACTIVE map, so it is the disabled
+        # colour when disabled and the normal one otherwise; assigning it to
+        # both makes the widget show the theme's value either way.
         if hasattr(self._segmented_button, "_buttons_dict") and self._segmented_button._buttons_dict:
             for button in self._segmented_button._buttons_dict.values():
                 try:
-                    button.configure(text_color=resolved_txt)
+                    button.configure(text_color=resolved_txt,
+                                     text_color_disabled=resolved_txt)
                 except Exception:
                     pass
     def configure(self, *args, **kwargs):
@@ -231,6 +243,11 @@ class sCTkTabview(ctk.CTkTabview, ThemeableWidget):
 
         # state is this library's own property, not a native CTkTabview one,
         # and must be removed before the super() call below.
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 

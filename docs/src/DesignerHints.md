@@ -45,13 +45,25 @@ code rather than in the preview.
 
 ---
 
-## Clearing a field restores the theme value
+## Overriding a theme value in the inspector
 
-Blanking a property in the inspector doesn't blank the property. It reverts to what the theme says, which is what the generated code produces anyway — the property is omitted and the constructor default applies.
+Set a colour, a font or a size in the inspector and it **replaces** the theme's value for that widget, for as long as that widget exists. Leave the field blank and the theme applies.
 
-So clearing a button's `apply_text` shows "Apply" again rather than an empty button, and clearing a colour returns it to the theme's colour rather than to nothing.
+**An override survives state changes.** Set `fg_color` red, disable the widget, re-enable it, and it is still red. That sounds obvious, and it was not true until recently: widgets repaint themselves from a snapshot of the theme taken at construction, and nothing wrote runtime changes into that snapshot — so any state change quietly restored the theme colour. In the Designer it happened immediately, because properties are applied in an order that sets `state` after the colours.
+
+**Clearing a field returns to the theme, not to the last value.** Blanking a property does not blank the property — it reverts to what the theme says, which is what the generated code produces anyway, since the property is simply omitted and the constructor default applies. Clearing a button's `apply_text` shows "Apply" again rather than an empty button.
+
+The default reported to the Designer comes from an untouched copy of the theme block, so clearing a field you have already overridden gives you the theme's value rather than the override you just replaced.
 
 Properties the theme says nothing about keep their current value instead. A no-op is better than a guessed default, because the guess would be applied.
+
+**One field means one thing.** A widget usually has two sets of colours — the normal ones and a `disabled_map` — but the inspector shows a single field per property. That field always edits the **normal** value, whatever state the widget is currently in. Setting a colour on a disabled widget therefore shows nothing until you re-enable it.
+
+The one exception is `text_color_disabled`, which has its own field precisely because it names the disabled value directly. Setting it is equivalent to setting `disabled_map.text_color` in the theme, and the two are kept as a single value rather than fighting each other.
+
+**A property the theme says nothing about is not overridden — it is just set.** Only keys present in a widget's theme block participate in any of this, because those are the only ones a repaint touches.
+
+**Some properties are absent from `disabled_map` on purpose,** and keep their current value when the widget is disabled rather than changing. The labels are the clearest case: their `fg_color` is `transparent`, so a disabled fill would give them a solid background they do not otherwise have. If a property does not appear to change on disable, that is usually why.
 
 ---
 
@@ -111,8 +123,18 @@ You cannot drop children into `sCTkSelector`, `sCTkPathChooser`, `sCTkFileExplor
 
 ---
 
-## Dropdowns ignore an explicitly set appearance mode
+## Dropdown colours are ignored on macOS
 
-If your application calls `ctk.set_appearance_mode("dark")` while the operating system is in light mode, the dropdown lists on `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary` stay light. They are native menus the OS draws itself.
+The dropdown lists on `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary` are native menus the operating system draws itself. On macOS that means the OS decides how they look, and the theme keys that describe them have no effect:
 
-Reproducible with plain `customtkinter.CTkComboBox`, so it is not something this library introduces, and it cannot be fixed from the theme file. See [Theming](Theming.md#light-and-dark).
+- `dropdown_fg_color`
+- `dropdown_text_color`
+- `dropdown_hover_color`
+
+The same applies to appearance mode: call `ctk.set_appearance_mode("dark")` while the system is in light mode and the dropdown stays light, whatever the rest of the application does.
+
+All of it is reproducible with plain `customtkinter.CTkComboBox`, so it is not something this library introduces and it cannot be fixed from the theme file.
+
+**Platform-specific, not dead.** These keys are expected to work where Tk draws the menu itself rather than handing it to the OS. Do not remove them from your theme because they do nothing on a Mac.
+
+See [Theming](Theming.md#light-and-dark).

@@ -10,7 +10,11 @@ from scustomtkinter.sctk_button_primary import sCTkButtonPrimary
 from scustomtkinter.sctk_button_secondary import sCTkButtonSecondary
 from scustomtkinter.sctk_button_tertiary import sCTkButtonTertiary
 from scustomtkinter.sctk_checkbox import sCTkCheckBox
+from scustomtkinter.sctk_combobox import sCTkComboBox
 from scustomtkinter.sctk_core import sCTk
+from scustomtkinter.sctk_label_primary import sCTkLabelPrimary
+from scustomtkinter.sctk_label_secondary import sCTkLabelSecondary
+from scustomtkinter.sctk_label_tertiary import sCTkLabelTertiary
 
 
 def safe_i18n_translator(value):
@@ -62,7 +66,7 @@ class checkBoxTestUI:
             text_color_disabled="red")
         sctkbuttonprimary1.pack(side="top")
         sctkbuttonprimary2 = sCTkButtonPrimary(sctk1)
-        sctkbuttonprimary2.configure(text='sctkbuttonprimary2')
+        sctkbuttonprimary2.configure(state="normal", text='sctkbuttonprimary2')
         sctkbuttonprimary2.pack(side="top")
         sctkbuttonsecondary1 = sCTkButtonSecondary(sctk1)
         sctkbuttonsecondary1.configure(
@@ -88,6 +92,38 @@ class checkBoxTestUI:
             state="normal",
             text='sctkcheckbox1')
         sctkcheckbox1.pack(side="top")
+        sctkcombobox1 = sCTkComboBox(sctk1)
+        sctkcombobox1.configure(
+            dropdown_text_color="yellow",
+            fg_color="purple",
+            state="normal",
+            values=[
+                "vw",
+                "240z"])
+        sctkcombobox1.pack(side="top")
+        sctkcombobox2 = sCTkComboBox(sctk1)
+        sctkcombobox2.configure(values=["VW", "240z"])
+        sctkcombobox2.pack(side="top")
+        sctklabelprimary1 = sCTkLabelPrimary(sctk1)
+        sctklabelprimary1.configure(state="disabled", text='sctklabelprimary1')
+        sctklabelprimary1.pack(side="top")
+        sctklabelprimary2 = sCTkLabelPrimary(sctk1)
+        sctklabelprimary2.configure(state="normal", text='sctklabelprimary2')
+        sctklabelprimary2.pack(side="top")
+        sctklabelsecondary1 = sCTkLabelSecondary(sctk1)
+        sctklabelsecondary1.configure(
+            state="disabled", text='sctklabelsecondary1')
+        sctklabelsecondary1.pack(side="top")
+        sctklabelsecondary2 = sCTkLabelSecondary(sctk1)
+        sctklabelsecondary2.configure(text='sctklabelsecondary2')
+        sctklabelsecondary2.pack(side="top")
+        sctklabeltertiary1 = sCTkLabelTertiary(sctk1)
+        sctklabeltertiary1.configure(
+            state="disabled", text='sctklabeltertiary1')
+        sctklabeltertiary1.pack(side="top")
+        sctklabeltertiary2 = sCTkLabelTertiary(sctk1)
+        sctklabeltertiary2.configure(text='sctklabeltertiary2')
+        sctklabeltertiary2.pack(side="top")
 
         # Main widget
         self.mainwindow = sctk1

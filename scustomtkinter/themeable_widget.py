@@ -598,8 +598,15 @@ class ThemeableWidget:
         if defaults and pname in defaults:
             default = defaults[pname]
         else:
-            theme_defaults = getattr(self, "_local_defaults", None) or {}
-            default = theme_defaults.get(pname, current)
+            # The PRISTINE theme value, not _local_defaults.
+            #
+            # _record_theme_overrides() writes runtime changes into
+            # _local_defaults so a repaint keeps them -- which means that dict
+            # no longer holds the theme's value. Reading the default from it
+            # made clearing a field in the Designer restore the last override
+            # instead of the theme. _theme_default() reads the untouched copy.
+            theme_value = self._theme_default(pname)
+            default = current if theme_value is None else theme_value
 
         # A (light, dark) pair has to be resolved to ONE colour here.
         #

@@ -198,6 +198,11 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         # self._custom_current_state, the native interactive lock, and the
         # disabled color swap all in sync. Leaving it in kwargs previously
         # locked the widget correctly but left get_state() permanently wrong.
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 

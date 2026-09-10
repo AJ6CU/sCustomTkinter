@@ -92,7 +92,7 @@
         "disabled_map": {
             "fg_color": ["#F3F4F6", "#1F2937"],
             "border_color": ["#E5E7EB", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"],
+            "text_color": ["yellow", "yellow"],
             "button_color": ["#94A3B8", "#4B5563"]
         }
     },
@@ -172,7 +172,7 @@
         "fg_color": "transparent",
         "text_color": ["#111827", "#F9FAFB"],
         "disabled_map": {
-            "text_color": ["#64748B", "#94A3B8"]
+            "text_color": ["yellow", "yellow"]
         }
     },
     "sCTkLabelSecondary": {
@@ -180,7 +180,7 @@
         "fg_color": "transparent",
         "text_color": ["#374151", "#D1D5DB"],
         "disabled_map": {
-            "text_color": ["#94A3B8", "#64748B"]
+            "text_color": ["yellow", "yellow"]
         }
     },
     "sCTkLabelTertiary": {
@@ -188,7 +188,7 @@
         "fg_color": "transparent",
         "text_color": ["#4B5563", "#9CA3AF"],
         "disabled_map": {
-            "text_color": ["#CBD5E1", "#475569"]
+            "text_color": ["yellow", "yellow"]
         }
     },
     "sCTkOptionMenuPrimary": {

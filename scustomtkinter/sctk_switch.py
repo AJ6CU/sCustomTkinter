@@ -291,6 +291,11 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         if isinstance(require_redraw, dict):
             kwargs = require_redraw | kwargs
 
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs:
             self._custom_current_state = str(kwargs.pop("state")).lower()
             super().configure(state=self._custom_current_state)
@@ -402,7 +407,8 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
                 )
             if disabled_map.get(required_key) is None:
                 raise KeyError(
-                    f"'{self.__class__.__name__}' theme block is missing '{required_key}' in disabled_map."
+                    f"'{getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__}' "
+                    f"theme block is missing '{required_key}' in disabled_map."
                 )
 
         color_map = disabled_map if is_disabled else normal_map

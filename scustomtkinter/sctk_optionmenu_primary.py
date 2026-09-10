@@ -170,13 +170,13 @@ class sCTkOptionMenuPrimary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
                 border_value = self._cget_border(pname)
                 if border_value is not self._NOT_A_BORDER_PROPERTY:
                     return (pname, pname, pname,
-                            self._query_value(self._local_defaults.get(pname)),
+                            self._query_value(self._theme_default(pname)),
                             self._query_value(border_value))
 
                 if pname in ["fg_color", "button_color", "button_hover_color", "text_color"]:
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
 
@@ -190,6 +190,11 @@ class sCTkOptionMenuPrimary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
             super().configure(command=kwargs.pop("command"))
         if "variable" in kwargs:
             super().configure(variable=kwargs.pop("variable"))
+
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs:
             target_state = str(kwargs.pop("state")).lower()
@@ -313,10 +318,25 @@ class sCTkOptionMenuPrimary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
         target_map = self._custom_disabled_map if is_disabled else self._local_defaults
 
         config_payload = {}
-        for key in ("fg_color", "button_color", "button_hover_color", "text_color", "dropdown_fg_color", "dropdown_text_color", "font"):
+        for key in ("fg_color", "button_color", "button_hover_color", "dropdown_fg_color", "dropdown_text_color", "font"):
             val = target_map.get(key)
             if val is not None:
                 config_payload[key] = val
+
+
+        # text_color is handled separately, because this widget sets CTk's own
+        # state="disabled" -- and the native draw code then uses its
+        # text_color_disabled option, overriding whatever text_color was set
+        # to. Swapping text_color out of disabled_map was therefore discarded
+        # at draw time and the theme key had no visible effect.
+        #
+        # Both options are set, so CTk chooses between them as designed.
+        _normal_text = self._local_defaults.get("text_color")
+        if _normal_text is not None:
+            config_payload["text_color"] = _normal_text
+        _disabled_text = self._custom_disabled_map.get("text_color")
+        if _disabled_text is not None:
+            config_payload["text_color_disabled"] = _disabled_text
 
         if config_payload:
             super().configure(**config_payload)
