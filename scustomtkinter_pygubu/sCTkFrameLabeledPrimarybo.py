@@ -37,6 +37,17 @@ container_layout = False
 class sCTkFrameLabeledPrimaryBO(CTkScrollableFrameBO):
     class_ = sCTkFrameLabeledPrimary
 
+    # state was never declared here, so the property did not reach the
+    # inspector at all -- even though the widget implements it fully, with its
+    # own state()/get_state() and a disabled_map that dims the border and the
+    # label. sCTkScrollableFramebo declares it the same way.
+    OPTIONS_CUSTOM = ("state",)
+    properties = CTkScrollableFrameBO.properties + OPTIONS_CUSTOM
+
+    OPTIONS_CUSTOM_DEFAULTS = {
+        "state": "normal",
+    }
+
 
     def code_imports(self):
             # should return an iterable of (module, classname/function) to import
@@ -50,3 +61,9 @@ register_widget(
     builder_id, sCTkFrameLabeledPrimaryBO, widget_classname, ("ttk", section_name)
 )
 
+register_custom_property(
+    builder_id, "state", "choice", values=("normal", "disabled"),
+    state="readonly", default_value="normal",
+    help="Disabled dims the border and the label. The contents keep their own "
+         "state -- disabling the frame does not disable what is inside it."
+)

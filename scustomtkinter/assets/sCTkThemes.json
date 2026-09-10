@@ -260,13 +260,15 @@
         "corner_radius": 8,
         "fg_color": ["#FFFFFF", "#111827"],
         "label_fg_color": "transparent",
+        "label_text_color": ["#111827", "#F9FAFB"],
         "scrollbar_fg_color": ["#FFFFFF", "#111827"],
         "scrollbar_button_color": ["#64748B", "#4B5563"],
         "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
         "disabled_map": {
             "border_color": ["#CBD5E1", "#374151"],
             "scrollbar_button_color": ["#CBD5E1", "#1F2937"],
-            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"]
+            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"],
+            "label_text_color": ["#94A3B8", "#64748B"]
         }
     },
       "sCTkScrollbar": {

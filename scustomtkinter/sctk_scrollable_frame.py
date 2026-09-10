@@ -668,7 +668,12 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableW
             return self._local_defaults.get(key)
 
         config_payload = {}
-        for key in ("fg_color", "border_color", "label_fg_color"):
+        # label_text_color included: this widget can carry a label, and a
+        # disabled panel whose heading stays at full contrast reads as enabled.
+        # The two labelled-frame variants already dim theirs; this one did not,
+        # so its disabled_map.label_text_color had no effect.
+        for key in ("fg_color", "border_color", "label_fg_color",
+                    "label_text_color"):
             val = themed(key)
             if val is not None:
                 config_payload[key] = val
