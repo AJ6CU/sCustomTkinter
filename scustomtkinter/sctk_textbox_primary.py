@@ -182,9 +182,14 @@ class sCTkTextboxPrimary(ctk.CTkTextbox, ThemeableWidget):
                 if pname in ["fg_color", "text_color", "border_color", "scrollbar_button_color",
                              "scrollbar_button_hover_color"]:
                     val = self._custom_disabled_map.get(pname) if self._custom_current_state == "disabled" else self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
+
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs:
             self._custom_current_state = str(kwargs.pop("state")).lower()

@@ -164,9 +164,14 @@ class sCTkEntryPrimary(ctk.CTkEntry, ThemeableWidget):
                         val = self._custom_readonly_map.get(pname)
                     else:
                         val = self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
+
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
