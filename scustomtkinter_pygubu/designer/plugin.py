@@ -1200,6 +1200,73 @@ class sCTkDesignerPlugin(IDesignerPlugin):
 
         return None
 
+    def ensure_visibility_in_preview(self, builder, selected_uid: str):
+        """
+        Switches the canvas to whichever tab holds the selected widget.
+
+        Selecting a tab in the widget tree previously did nothing visible: the
+        canvas stayed on the tab it was already showing, so the selection
+        outline was drawn around a widget that is not mapped -- which collapses
+        to a small square near the origin. Selecting something INSIDE another
+        tab had the same problem, and together they made the tree and the canvas
+        disagree with no way to reconcile them.
+
+        This is the hook for the tree-to-canvas direction, and this plugin
+        simply never implemented it. Modelled on CustomTkinter's own, which
+        does the same for its CTkTabview.
+
+        Both tab class names are searched. Tabs may be registered as this
+        library's own type or, where that registration is commented out,
+        inherited from CustomTkinter -- and a .ui file written under either is
+        still valid.
+
+        Args:
+            builder: The preview builder, giving access to the parsed .ui and
+                the realized objects.
+            selected_uid: The id of the widget selected in the tree.
+        """
+        tab_classes = ("scustomtkinter.sCTkTabviewTab",
+                       "scustomtkinter.sCTkTabview.Tab",
+                       "customtkinter.CTkTabviewTab")
+
+        tabs = []
+        for class_name in tab_classes:
+            found = builder.uidefinition.root.findall(
+                f".//object[@class='{class_name}']")
+            if found:
+                tabs.extend(found)
+        if not tabs:
+            return
+
+        for tab in tabs:
+            tab_id = tab.get("id")
+            if tab_id is None:
+                continue
+
+            # The tab itself, or anything nested inside it.
+            activate = tab_id == selected_uid
+            if not activate:
+                activate = tab.find(f".//object[@id='{selected_uid}']") is not None
+            if not activate:
+                continue
+
+            tab_builder = builder.objects.get(tab_id)
+            if tab_builder is None or tab_builder.widget is None:
+                return
+            try:
+                top = tab_builder.widget.winfo_toplevel()
+                tabview = top.nametowidget(tab_builder.widget.winfo_parent())
+                tabname = tab_builder.wmeta.properties.get("label")
+                if tabname and tabview.get() != tabname:
+                    tabview.set(tabname)
+                    top.update()
+            except Exception:
+                # A tab that is not realized yet, or a parent that is not the
+                # tabview. Failing to switch is a cosmetic loss; raising here
+                # would break selection entirely.
+                pass
+            return
+
     def configure_for_preview(self, builder_uid: str, widget):
         """Make a widget display with minimal functionality in the designer.
 
