@@ -26,8 +26,54 @@
   <object class="scustomtkinter.sCTk" id="sctk1">
     <child>
       <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary1">
-        <property name="state">normal</property>
+        <property name="state">disabled</property>
         <property name="text" translatable="yes">sctkbuttonprimary1</property>
+        <property name="text_color_disabled">red</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary2">
+        <property name="state">normal</property>
+        <property name="text" translatable="yes">sctkbuttonprimary2</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary1">
+        <property name="state">disabled</property>
+        <property name="text" translatable="yes">sctkbuttonsecondary1</property>
+        <property name="text_color_disabled">red</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary2">
+        <property name="text" translatable="yes">sctkbuttonsecondary2</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkButtonTertiary" id="sctkbuttontertiary1">
+        <property name="state">disabled</property>
+        <property name="text" translatable="yes">sctkbuttontertiary1</property>
+        <property name="text_color_disabled">red</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkButtonTertiary" id="sctkbuttontertiary2">
+        <property name="text" translatable="yes">sctkbuttontertiary2</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
@@ -38,24 +84,6 @@
         <property name="fg_color">red</property>
         <property name="state">normal</property>
         <property name="text" translatable="yes">sctkcheckbox1</property>
-        <layout manager="pack">
-          <property name="side">top</property>
-        </layout>
-      </object>
-    </child>
-    <child>
-      <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary1">
-        <property name="state">normal</property>
-        <property name="text" translatable="yes">sctkbuttonsecondary1</property>
-        <layout manager="pack">
-          <property name="side">top</property>
-        </layout>
-      </object>
-    </child>
-    <child>
-      <object class="scustomtkinter.sCTkButtonTertiary" id="sctkbuttontertiary1">
-        <property name="state">normal</property>
-        <property name="text" translatable="yes">sctkbuttontertiary1</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>

@@ -57,25 +57,37 @@ class checkBoxTestUI:
 
         sctkbuttonprimary1 = sCTkButtonPrimary(sctk1)
         sctkbuttonprimary1.configure(
-            fg_color="red",
-            hover_color="green",
-            state="normal",
-            text='sctkbuttonprimary1')
+            state="disabled",
+            text='sctkbuttonprimary1',
+            text_color_disabled="red")
         sctkbuttonprimary1.pack(side="top")
+        sctkbuttonprimary2 = sCTkButtonPrimary(sctk1)
+        sctkbuttonprimary2.configure(text='sctkbuttonprimary2')
+        sctkbuttonprimary2.pack(side="top")
+        sctkbuttonsecondary1 = sCTkButtonSecondary(sctk1)
+        sctkbuttonsecondary1.configure(
+            state="disabled",
+            text='sctkbuttonsecondary1',
+            text_color_disabled="red")
+        sctkbuttonsecondary1.pack(side="top")
+        sctkbuttonsecondary2 = sCTkButtonSecondary(sctk1)
+        sctkbuttonsecondary2.configure(text='sctkbuttonsecondary2')
+        sctkbuttonsecondary2.pack(side="top")
+        sctkbuttontertiary1 = sCTkButtonTertiary(sctk1)
+        sctkbuttontertiary1.configure(
+            state="disabled",
+            text='sctkbuttontertiary1',
+            text_color_disabled="red")
+        sctkbuttontertiary1.pack(side="top")
+        sctkbuttontertiary2 = sCTkButtonTertiary(sctk1)
+        sctkbuttontertiary2.configure(text='sctkbuttontertiary2')
+        sctkbuttontertiary2.pack(side="top")
         sctkcheckbox1 = sCTkCheckBox(sctk1)
         sctkcheckbox1.configure(
             fg_color="red",
             state="normal",
             text='sctkcheckbox1')
         sctkcheckbox1.pack(side="top")
-        sctkbuttonsecondary1 = sCTkButtonSecondary(sctk1)
-        sctkbuttonsecondary1.configure(
-            state="disabled", text='sctkbuttonsecondary1')
-        sctkbuttonsecondary1.pack(side="top")
-        sctkbuttontertiary1 = sCTkButtonTertiary(sctk1)
-        sctkbuttontertiary1.configure(
-            state="disabled", text='sctkbuttontertiary1')
-        sctkbuttontertiary1.pack(side="top")
 
         # Main widget
         self.mainwindow = sctk1

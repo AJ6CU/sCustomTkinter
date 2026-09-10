@@ -158,9 +158,14 @@ class sCTkLabelTertiary(ctk.CTkLabel, ThemeableWidget):
                 if pname in ["fg_color", "text_color"]:
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
+
+        # Runtime overrides have to reach the map a repaint reads, or
+        # _update_current_visual_state() puts the theme value straight back --
+        # see ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
@@ -252,7 +257,8 @@ class sCTkLabelTertiary(ctk.CTkLabel, ThemeableWidget):
 
         if target_map.get("text_color") is None:
             raise KeyError(
-                f"'{self.__class__.__name__}' theme block is missing 'text_color' in its "
+                f"'{getattr(self, '_THEME_BLOCK_NAME', None) or self.__class__.__name__}' "
+                f"theme block is missing 'text_color' in its "
                 f"{'disabled_map' if is_disabled else 'top-level'} section of sCTkThemes.json."
             )
 

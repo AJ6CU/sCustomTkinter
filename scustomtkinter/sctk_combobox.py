@@ -68,13 +68,18 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
                 if pname in ["fg_color", "border_color", "text_color", "hover_color"]:
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
 
         if "values" in kwargs: super().configure(values=kwargs.pop("values"))
         if "command" in kwargs: super().configure(command=kwargs.pop("command"))
         if "variable" in kwargs: super().configure(variable=kwargs.pop("variable"))
+
+        # Runtime overrides have to reach the map a repaint reads, or
+        # _update_current_visual_state() puts the theme value straight back --
+        # see ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
@@ -107,6 +112,12 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
             self._custom_current_state = "disabled"
             self._update_current_visual_state()
 
+        # FIX: this returned nothing when SETTING a mode -- only the query
+        # branch above returned a value -- so `widget.state("disabled")` gave
+        # None. Every other themed widget returns the resulting state, and
+        # sCTkCheckBox had the identical gap fixed earlier in this audit.
+        return self._custom_current_state
+
     def _update_current_visual_state(self):
         """
         EXPERIMENTAL: passes raw (light, dark) tuples straight through to configure()
@@ -117,11 +128,25 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
         target_map = self._custom_disabled_map if is_disabled else self._local_defaults
 
         config_payload = {}
-        for key in ("fg_color", "border_color", "text_color", "button_color", "button_hover_color",
+        for key in ("fg_color", "border_color", "button_color", "button_hover_color",
                     "dropdown_fg_color", "dropdown_text_color", "dropdown_hover_color", "border_width", "font"):
             val = target_map.get(key)
             if val is not None:
                 config_payload[key] = val
+
+        # text_color is handled separately, because this widget sets CTk's own
+        # state="disabled" below -- and CTkComboBox's draw code then uses its
+        # native text_color_disabled option, overriding whatever text_color was
+        # set to. Swapping text_color out of disabled_map was therefore
+        # discarded at draw time and the theme key had no visible effect.
+        #
+        # Both options are set, so CTk chooses between them as designed.
+        normal_text = self._local_defaults.get("text_color")
+        if normal_text is not None:
+            config_payload["text_color"] = normal_text
+        disabled_text = self._custom_disabled_map.get("text_color")
+        if disabled_text is not None:
+            config_payload["text_color_disabled"] = disabled_text
 
         if config_payload:
             super().configure(**config_payload)
