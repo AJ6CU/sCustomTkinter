@@ -7,6 +7,8 @@ Pygubu Builder Object for a S Meter.
 import ast
 import pygubu
 
+from pygubu.plugins.customtkinter.widgets import CTkFrameBO
+
 from pygubu.api.v1 import (
     BuilderObject,
     register_widget,
@@ -32,7 +34,18 @@ class sCTkSMeterBO(BuilderObject):
 
     # Expose custom compound parameters alongside theme state configurations
     OPTIONS_CUSTOM = ("width", "height", "font", "scale_font")
-    properties = OPTIONS_CUSTOM
+
+    # CTkFrameBO's properties are folded in, so the frame AROUND the meter
+    # can be styled from the inspector -- fg_color, border_color,
+    # border_width, corner_radius. Without them this widget offered only its
+    # own four properties and nothing else, unlike every other widget in the
+    # library.
+    #
+    # The meter's OWN colours stay theme-only: there are a dozen of them and
+    # they are tuned as a set, so exposing them individually invites a change
+    # that reads as broken rather than different. Same call as the dial's
+    # shading keys.
+    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
 
     def _process_property_value(self, pname, value):
         if pname in ("font", "scale_font"):
