@@ -483,6 +483,7 @@ class ThemeableWidget:
         self._snapshot_theme_defaults()
 
         disabled_map = getattr(self, "_custom_disabled_map", None)
+        changed = False
 
         for key, value in kwargs.items():
             if value == "":
@@ -503,10 +504,52 @@ class ThemeableWidget:
             if key == "text_color_disabled":
                 if disabled_map is not None:
                     disabled_map["text_color"] = value
+                    changed = True
                 continue
 
             if key in defaults:
                 defaults[key] = self._normalise_override(key, value)
+                changed = True
+
+        if changed:
+            self._repaint_after_override()
+
+    def _repaint_after_override(self):
+        """
+        Re-runs the widget's own colour pass after a theme key changes.
+
+        DERIVED values are the reason. Several widgets compute one colour from
+        another -- sCTkOptionMenuSecondary sets button_color from fg_color so
+        the arrow blends into the control, and the segmented button derives its
+        unselected fill the same way. Those are worked out in the repaint
+        method, which runs on a state change and NOT on a plain configure().
+
+        So clearing fg_color in the Designer put the theme value back on the
+        native option and left the derived ones holding the override: the
+        background reverted while the arrow, or the segment fill, stayed red.
+
+        The repaint method is found by name because widgets do not agree on
+        one. Guarded against re-entry, since a repaint configures the widget
+        and would otherwise call back into here.
+        """
+        if getattr(self, "_in_override_repaint", False):
+            return
+        for name in ("_update_current_visual_state",
+                     "_apply_custom_theme_colors",
+                     "_apply_theme_colors"):
+            method = getattr(self, name, None)
+            if method is None:
+                continue
+            self._in_override_repaint = True
+            try:
+                method()
+            except Exception:
+                # A widget not fully built yet. Losing one repaint is
+                # cosmetic; raising here would break the property edit.
+                pass
+            finally:
+                self._in_override_repaint = False
+            return
 
     def _normalise_override(self, key, value):
         """

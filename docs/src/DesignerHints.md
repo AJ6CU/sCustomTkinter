@@ -96,12 +96,42 @@ Both are omissions by choice, not oversights.
 
 ## Some widgets are selected from the tree, not the canvas
 
-Tab pages are the one remaining case. Segmented buttons and dials were in this
-list until recently and are now selectable.
+**Selecting a tab in the tree switches the canvas to it,** and selecting a
+widget inside a tab switches to whichever tab holds it. Until recently neither
+did: the canvas stayed where it was, so the selection outline was drawn around
+a widget that is not mapped and collapsed into a small square near the origin.
 
-Tabview **tabs** cannot be selected by clicking them. `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed to the page you aimed at. CustomTkinter's own designer plugin contains a commented-out attempt at the same fix.
+What still does not work is the other direction.
+
+Tabview **tabs** cannot be selected by clicking them on the canvas. The page
+switches, but the inspector goes on showing whatever was selected before --
+clicking a widget inside the new page corrects it. `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed to the page you aimed at. CustomTkinter's own designer plugin contains a commented-out attempt at the same fix.
 
 Select the tab in the widget tree to edit its `label`.
+
+Worth knowing why, since it looks fixable: the tab's page is a frame the
+tabview creates at runtime rather than something the builder made, so it is not
+in the builder's widget map and a click on it resolves to nothing. Forwarding
+the click elsewhere was tried and does not help. CustomTkinter's own plugin
+carries a commented-out attempt at the same problem.
+
+---
+
+## sCTkTabview does not grow with its contents
+
+A tabview is a fixed size. Drop widgets into a tab and the tabview stays as it
+was, clipping anything that does not fit -- it does not expand the way a frame
+does, and no amount of packing or `expand=True` on the children changes that.
+
+Set `width` and `height` on the tabview itself.
+
+This is native `CTkTabview` behaviour rather than something this library adds:
+the widget takes explicit dimensions and does not propagate its children's
+requested size. Its theme block sets neither, so the size you get without
+asking is CustomTkinter's own default.
+
+If a tab's contents look cut off, that is why. Reach for `width` and `height`
+before suspecting the layout.
 
 ---
 

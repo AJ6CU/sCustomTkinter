@@ -27,7 +27,6 @@
     <child>
       <object class="scustomtkinter.sCTkOptionMenuPrimary" id="sctkoptionmenuprimary1">
         <property name="command" type="command" cbtype="simple">optionMenuPrimary_CB</property>
-        <property name="fg_color">red</property>
         <property name="state">normal</property>
         <property name="values">["School","Canyon","Sandringham"]
 </property>
@@ -40,7 +39,6 @@
     <child>
       <object class="scustomtkinter.sCTkOptionMenuSecondary" id="sctkoptionmenusecondary1">
         <property name="command" type="command" cbtype="simple">optionSecondary_CB</property>
-        <property name="fg_color">red</property>
         <property name="state">normal</property>
         <property name="values">["School","Canyon","Sandringham"]</property>
         <property name="variable">string:optionMenuSecondary_VAR</property>
@@ -52,7 +50,6 @@
     <child>
       <object class="scustomtkinter.sCTkSegmentedButton" id="sctksegmentedbutton1">
         <property name="command" type="command" cbtype="simple">segmentedButton_CB</property>
-        <property name="fg_color">red</property>
         <property name="state">normal</property>
         <property name="values">["VW","Porshe","240Z"]</property>
         <property name="variable">string:segmentedButton_VAR</property>
@@ -64,7 +61,6 @@
     <child>
       <object class="scustomtkinter.sCTkSwitch" id="sctkswitch1">
         <property name="command" type="command" cbtype="simple">switchClicked_CB</property>
-        <property name="fg_color">red</property>
         <property name="offvalue">0</property>
         <property name="onvalue">1</property>
         <property name="state">normal</property>
@@ -78,7 +74,6 @@
     </child>
     <child>
       <object class="scustomtkinter.sCTkTabview" id="sctktabview1">
-        <property name="fg_color">red</property>
         <property name="state">normal</property>
         <property name="text_color_disabled">green</property>
         <layout manager="pack">
@@ -141,7 +136,6 @@
         <child>
           <object class="scustomtkinter.sCTkRadioButton" id="sctkradiobutton1">
             <property name="command" type="command" cbtype="simple">radioButton_CB</property>
-            <property name="fg_color">red</property>
             <property name="state">normal</property>
             <property name="text" translatable="yes">button1</property>
             <property name="textvariable">string:button1Text_VAR</property>
@@ -156,7 +150,6 @@
         <child>
           <object class="scustomtkinter.sCTkRadioButton" id="sctkradiobutton2">
             <property name="command" type="command" cbtype="simple">radioButton_CB</property>
-            <property name="fg_color">red</property>
             <property name="state">normal</property>
             <property name="text" translatable="yes">button2</property>
             <property name="textvariable">string:button2Text_VAR</property>
@@ -170,7 +163,6 @@
         <child>
           <object class="scustomtkinter.sCTkRadioButton" id="sctkradiobutton3">
             <property name="command" type="command" cbtype="simple">radioButton_CB</property>
-            <property name="fg_color">red</property>
             <property name="state">normal</property>
             <property name="text" translatable="yes">button3</property>
             <property name="textvariable">string:button3Text_VAR</property>
@@ -182,44 +174,22 @@
             </layout>
           </object>
         </child>
+        <child>
+          <object class="customtkinter.CTkRadioButton" id="ctkradiobutton4">
+            <property name="text" translatable="yes">ctkradiobutton4</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
     <child>
-      <object class="scustomtkinter.sCTkFrame" id="sctkframe2">
+      <object class="customtkinter.CTkRadioButton" id="ctkradiobutton5">
+        <property name="text" translatable="yes">ctkradiobutton5</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
-        <child>
-          <object class="customtkinter.CTkRadioButton" id="ctkradiobutton1">
-            <property name="state">normal</property>
-            <property name="text" translatable="yes">ctkradiobutton1</property>
-            <property name="value">1</property>
-            <property name="variable">string:v1</property>
-            <layout manager="pack">
-              <property name="side">top</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="customtkinter.CTkRadioButton" id="ctkradiobutton2">
-            <property name="text" translatable="yes">ctkradiobutton2</property>
-            <property name="value">2</property>
-            <property name="variable">string:v1</property>
-            <layout manager="pack">
-              <property name="side">top</property>
-            </layout>
-          </object>
-        </child>
-        <child>
-          <object class="customtkinter.CTkRadioButton" id="ctkradiobutton3">
-            <property name="text" translatable="yes">ctkradiobutton3</property>
-            <property name="value">3</property>
-            <property name="variable">string:v1</property>
-            <layout manager="pack">
-              <property name="side">top</property>
-            </layout>
-          </object>
-        </child>
       </object>
     </child>
   </object>
