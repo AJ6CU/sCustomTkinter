@@ -511,8 +511,26 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableW
                 kwargs = {**args[0], **kwargs}
             else:
                 pname = args[0]
-                if pname in ["fg_color", "label_fg_color", "scrollbar_button_color", "border_color"]:
-                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(self._theme_default(pname)))
+                if pname in ["fg_color", "label_fg_color", "label_text_color",
+                             "scrollbar_button_color", "border_color"]:
+                    # FIX: the default came straight from the theme with no
+                    # fallback, so a key the block does not define reported
+                    # None -- and pygubu handed that None back to the widget:
+                    #
+                    #     color is None, for transparency set color='transparent'
+                    #
+                    # Falling back to the current value makes clearing such a
+                    # field a no-op rather than an error. label_text_color is
+                    # in the list because this widget applies it; it was
+                    # missing, so clearing it fell through to a branch that did
+                    # not know about it and returned None.
+                    theme_value = self._theme_default(pname)
+                    current = self._local_defaults.get(pname)
+                    if theme_value is None:
+                        theme_value = current
+                    return (pname, pname, pname,
+                            self._query_value(theme_value),
+                            self._query_value(current))
                 if pname == "state":
                     return (pname, pname, pname,
                             str(self._local_defaults.get("state", "normal")),

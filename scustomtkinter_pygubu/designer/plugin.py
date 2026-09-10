@@ -725,6 +725,76 @@ class sCTkDialContinuousForPreview(sCTkDialContinuous):
     """
     _THEME_BLOCK_NAME = "sCTkDialContinuous"
 
+    def _inject_private_layer_bindings(self):
+        """
+        Deliberately does nothing in the Designer.
+
+        The real method binds the scroll sequences on three layers -- the dial
+        canvas, the widget, and CTkFrame's canvas -- with add="+", and it is
+        scheduled 50ms after construction. Both details defeat
+        configure_for_preview(): it has already run by then, and add="+"
+        appends rather than replaces, so the dial's own handlers sit alongside
+        the no-ops instead of being displaced by them.
+
+        The visible symptom was a dial that still turned under a trackpad in
+        the design canvas. Not injecting at all is simpler than trying to
+        neutralize afterwards, and a preview dial has no reason to scroll.
+        """
+        return
+
+    def state(self, mode=None):
+        """
+        Re-applies the Designer's bindings after a state change.
+
+        A dial's state() rebinds its own canvas handlers -- <Button-1>,
+        <Button-2>, <Button-3> and the scroll sequences -- every time it
+        returns to normal, and clears them when disabled. That wipes out
+        whatever configure_for_preview() installed, so a dial stopped being
+        selectable the moment its state was touched and did not recover when
+        set back to normal.
+
+        Deferred to idle so it runs after state() has finished its own
+        rebinding rather than racing it.
+        """
+        result = super().state(mode) if mode is not None else super().state()
+        if mode is not None:
+            try:
+                self.after_idle(self._reapply_preview_bindings)
+            except Exception:
+                pass
+        return result
+
+    def _reapply_preview_bindings(self):
+        """
+        Silences the dial's interactive bindings and forwards clicks for
+        selection -- the same treatment configure_for_preview() applies, in a
+        form the widget can re-run for itself.
+        """
+        face = getattr(self, "canvas", None)
+        if face is None:
+            return
+
+        for seq in (s for s in (_HOVER_CLICK + _DIAL_EXTRA + _SCROLL)
+                    if s != "<Button-1>"):
+            try:
+                face.bind(seq, _no_op)
+            except Exception:
+                pass
+
+        def select_self(event, target=self):
+            try:
+                bg = getattr(target, "_canvas", None)
+                if bg is not None:
+                    bg.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        try:
+            face.bind("<Button-1>", select_self)
+        except Exception:
+            pass
+
     def winfo_children(self):
         """
         Hides the dial's own drawing canvas from the Designer's binding pass,
@@ -738,6 +808,76 @@ class sCTkDialRangeForPreview(sCTkDialRange):
     """Designer preview for sCTkDialRange. See sCTkDialContinuousForPreview."""
     _THEME_BLOCK_NAME = "sCTkDialRange"
 
+    def _inject_private_layer_bindings(self):
+        """
+        Deliberately does nothing in the Designer.
+
+        The real method binds the scroll sequences on three layers -- the dial
+        canvas, the widget, and CTkFrame's canvas -- with add="+", and it is
+        scheduled 50ms after construction. Both details defeat
+        configure_for_preview(): it has already run by then, and add="+"
+        appends rather than replaces, so the dial's own handlers sit alongside
+        the no-ops instead of being displaced by them.
+
+        The visible symptom was a dial that still turned under a trackpad in
+        the design canvas. Not injecting at all is simpler than trying to
+        neutralize afterwards, and a preview dial has no reason to scroll.
+        """
+        return
+
+    def state(self, mode=None):
+        """
+        Re-applies the Designer's bindings after a state change.
+
+        A dial's state() rebinds its own canvas handlers -- <Button-1>,
+        <Button-2>, <Button-3> and the scroll sequences -- every time it
+        returns to normal, and clears them when disabled. That wipes out
+        whatever configure_for_preview() installed, so a dial stopped being
+        selectable the moment its state was touched and did not recover when
+        set back to normal.
+
+        Deferred to idle so it runs after state() has finished its own
+        rebinding rather than racing it.
+        """
+        result = super().state(mode) if mode is not None else super().state()
+        if mode is not None:
+            try:
+                self.after_idle(self._reapply_preview_bindings)
+            except Exception:
+                pass
+        return result
+
+    def _reapply_preview_bindings(self):
+        """
+        Silences the dial's interactive bindings and forwards clicks for
+        selection -- the same treatment configure_for_preview() applies, in a
+        form the widget can re-run for itself.
+        """
+        face = getattr(self, "canvas", None)
+        if face is None:
+            return
+
+        for seq in (s for s in (_HOVER_CLICK + _DIAL_EXTRA + _SCROLL)
+                    if s != "<Button-1>"):
+            try:
+                face.bind(seq, _no_op)
+            except Exception:
+                pass
+
+        def select_self(event, target=self):
+            try:
+                bg = getattr(target, "_canvas", None)
+                if bg is not None:
+                    bg.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        try:
+            face.bind("<Button-1>", select_self)
+        except Exception:
+            pass
+
     def winfo_children(self):
         """
         Hides the dial's own drawing canvas from the Designer's binding pass,
@@ -750,6 +890,76 @@ class sCTkDialRangeForPreview(sCTkDialRange):
 class sCTkDialSelectorForPreview(sCTkDialSelector):
     """Designer preview for sCTkDialSelector. See sCTkDialContinuousForPreview."""
     _THEME_BLOCK_NAME = "sCTkDialSelector"
+
+    def _inject_private_layer_bindings(self):
+        """
+        Deliberately does nothing in the Designer.
+
+        The real method binds the scroll sequences on three layers -- the dial
+        canvas, the widget, and CTkFrame's canvas -- with add="+", and it is
+        scheduled 50ms after construction. Both details defeat
+        configure_for_preview(): it has already run by then, and add="+"
+        appends rather than replaces, so the dial's own handlers sit alongside
+        the no-ops instead of being displaced by them.
+
+        The visible symptom was a dial that still turned under a trackpad in
+        the design canvas. Not injecting at all is simpler than trying to
+        neutralize afterwards, and a preview dial has no reason to scroll.
+        """
+        return
+
+    def state(self, mode=None):
+        """
+        Re-applies the Designer's bindings after a state change.
+
+        A dial's state() rebinds its own canvas handlers -- <Button-1>,
+        <Button-2>, <Button-3> and the scroll sequences -- every time it
+        returns to normal, and clears them when disabled. That wipes out
+        whatever configure_for_preview() installed, so a dial stopped being
+        selectable the moment its state was touched and did not recover when
+        set back to normal.
+
+        Deferred to idle so it runs after state() has finished its own
+        rebinding rather than racing it.
+        """
+        result = super().state(mode) if mode is not None else super().state()
+        if mode is not None:
+            try:
+                self.after_idle(self._reapply_preview_bindings)
+            except Exception:
+                pass
+        return result
+
+    def _reapply_preview_bindings(self):
+        """
+        Silences the dial's interactive bindings and forwards clicks for
+        selection -- the same treatment configure_for_preview() applies, in a
+        form the widget can re-run for itself.
+        """
+        face = getattr(self, "canvas", None)
+        if face is None:
+            return
+
+        for seq in (s for s in (_HOVER_CLICK + _DIAL_EXTRA + _SCROLL)
+                    if s != "<Button-1>"):
+            try:
+                face.bind(seq, _no_op)
+            except Exception:
+                pass
+
+        def select_self(event, target=self):
+            try:
+                bg = getattr(target, "_canvas", None)
+                if bg is not None:
+                    bg.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        try:
+            face.bind("<Button-1>", select_self)
+        except Exception:
+            pass
 
     def winfo_children(self):
         """
