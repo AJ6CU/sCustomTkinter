@@ -534,9 +534,16 @@ class ThemeableWidget:
         """
         if getattr(self, "_in_override_repaint", False):
             return
+        # The list is in preference order, and covers every repaint entry
+        # point in the library. Canvas-drawing widgets are included because
+        # they have no colour-application method as such -- redrawing IS how
+        # they apply colours -- and without them an override was recorded but
+        # not shown until something else forced a redraw.
         for name in ("_update_current_visual_state",
                      "_apply_custom_theme_colors",
-                     "_apply_theme_colors"):
+                     "_apply_theme_colors",
+                     "_draw_dial_base",     # the dial family
+                     "_draw_meter"):        # sCTkSMeter, sCTkSMeterBar
             method = getattr(self, name, None)
             if method is None:
                 continue

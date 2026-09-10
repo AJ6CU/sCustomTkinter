@@ -512,7 +512,7 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableW
             else:
                 pname = args[0]
                 if pname in ["fg_color", "label_fg_color", "scrollbar_button_color", "border_color"]:
-                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(self._local_defaults.get(pname)))
+                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(self._theme_default(pname)))
                 if pname == "state":
                     return (pname, pname, pname,
                             str(self._local_defaults.get("state", "normal")),
@@ -571,6 +571,11 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableW
 
         # state is likewise this library's own property, not a native CTk one,
         # and must be popped before the super() call for the same reason.
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs:
             self._state = str(kwargs.pop("state"))
             self._toggle_scroll_bindings(bind=self._scroll_effective())

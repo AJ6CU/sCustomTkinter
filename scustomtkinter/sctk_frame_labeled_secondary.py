@@ -162,8 +162,13 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
                 if pname in ["fg_color", "border_color", "label_text_color"]:
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
                 return self._configure_query(pname)
+
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs:
             target_state = kwargs.pop("state")

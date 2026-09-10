@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkSeparator - Piece 1 of 2
+sCTkSeparator
 
 An advanced Separator widget supporting custom section header text,
 dashed line patterns, corner roundness, and responsive orientation modes.
@@ -199,13 +199,18 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
             if pname == "state": return ("state", "state", "state", "normal", self.get_state())
             if pname in ["fg_color", "text_color"]:
                 val = self._custom_disabled_map.get(pname) if self.get_state() == "disabled" else self._local_defaults.get(pname)
-                return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
             return self._configure_query(pname)
 
         # FIX: was `if args and isinstance(args, dict)`. args is ALWAYS a
         # tuple, so this never fired and the dict form of configure() was
         # dead code. Same tautology fixed across the batch-one widgets.
         if len(args) == 1 and isinstance(args[0], dict): kwargs = {**args[0], **kwargs}
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs: self.state(kwargs.pop("state"))
         if "text" in kwargs: self._text = str(kwargs.pop("text"))
         if "dash" in kwargs: self._dash = kwargs.pop("dash")
