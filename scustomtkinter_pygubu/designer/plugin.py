@@ -177,6 +177,44 @@ class sCTkFrameForPreview(sCTkFrame):
 class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
     _THEME_BLOCK_NAME = "sCTkFrameLabeledPrimary"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.after_idle(self._bind_outer_surface)
+
+    def _bind_outer_surface(self):
+        """
+        Makes a click on the visible background select this widget.
+
+        CTkScrollableFrame inverts the usual arrangement: the widget itself IS
+        the inner frame, created inside a canvas that belongs to a separate
+        outer frame. So the surface the user sees and clicks -- the canvas --
+        is this widget's PARENT, not its child, and the Designer's binding walk
+        never reaches it.
+
+        The effect was that a child frame dropped inside could be selected
+        while the scrollable frame itself could not: the child is a real
+        descendant, the visible empty space is the parent's canvas.
+
+        The clicks are forwarded to this widget, which the builder does know
+        about. Deferred to idle because the outer parts are wired up during
+        construction.
+        """
+        def select_self(event, target=self):
+            try:
+                target.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        for name in ("_parent_canvas", "_parent_frame", "_scrollbar"):
+            part = getattr(self, name, None)
+            if part is None:
+                continue
+            try:
+                part.bind("<Button-1>", select_self)
+            except Exception:
+                pass
+
     def winfo_children(self):
         # sCTkFrameLabeledPrimary has a hidden canvas inside. So, to make it
         #  clickable on preview we need a hack.
@@ -193,6 +231,44 @@ class sCTkFrameLabeledSecondaryForPreview(sCTkFrameLabeledSecondary):
     """
     _THEME_BLOCK_NAME = "sCTkFrameLabeledSecondary"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.after_idle(self._bind_outer_surface)
+
+    def _bind_outer_surface(self):
+        """
+        Makes a click on the visible background select this widget.
+
+        CTkScrollableFrame inverts the usual arrangement: the widget itself IS
+        the inner frame, created inside a canvas that belongs to a separate
+        outer frame. So the surface the user sees and clicks -- the canvas --
+        is this widget's PARENT, not its child, and the Designer's binding walk
+        never reaches it.
+
+        The effect was that a child frame dropped inside could be selected
+        while the scrollable frame itself could not: the child is a real
+        descendant, the visible empty space is the parent's canvas.
+
+        The clicks are forwarded to this widget, which the builder does know
+        about. Deferred to idle because the outer parts are wired up during
+        construction.
+        """
+        def select_self(event, target=self):
+            try:
+                target.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        for name in ("_parent_canvas", "_parent_frame", "_scrollbar"):
+            part = getattr(self, name, None)
+            if part is None:
+                continue
+            try:
+                part.bind("<Button-1>", select_self)
+            except Exception:
+                pass
+
     def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
 
@@ -202,6 +278,44 @@ class sCTkScrollableFrameForPreview(sCTkScrollableFrame):
     Designer preview for sCTkScrollableFrame. See the labelled frames above.
     """
     _THEME_BLOCK_NAME = "sCTkScrollableFrame"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.after_idle(self._bind_outer_surface)
+
+    def _bind_outer_surface(self):
+        """
+        Makes a click on the visible background select this widget.
+
+        CTkScrollableFrame inverts the usual arrangement: the widget itself IS
+        the inner frame, created inside a canvas that belongs to a separate
+        outer frame. So the surface the user sees and clicks -- the canvas --
+        is this widget's PARENT, not its child, and the Designer's binding walk
+        never reaches it.
+
+        The effect was that a child frame dropped inside could be selected
+        while the scrollable frame itself could not: the child is a real
+        descendant, the visible empty space is the parent's canvas.
+
+        The clicks are forwarded to this widget, which the builder does know
+        about. Deferred to idle because the outer parts are wired up during
+        construction.
+        """
+        def select_self(event, target=self):
+            try:
+                target.event_generate("<Button-1>", x=1, y=1, when="now")
+            except Exception:
+                pass
+            return "break"
+
+        for name in ("_parent_canvas", "_parent_frame", "_scrollbar"):
+            part = getattr(self, name, None)
+            if part is None:
+                continue
+            try:
+                part.bind("<Button-1>", select_self)
+            except Exception:
+                pass
 
     def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
