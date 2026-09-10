@@ -7,6 +7,8 @@ checkBoxTest
 UI source file: checkBoxTest.ui
 """
 from scustomtkinter.sctk_button_primary import sCTkButtonPrimary
+from scustomtkinter.sctk_button_secondary import sCTkButtonSecondary
+from scustomtkinter.sctk_button_tertiary import sCTkButtonTertiary
 from scustomtkinter.sctk_checkbox import sCTkCheckBox
 from scustomtkinter.sctk_core import sCTk
 
@@ -56,15 +58,24 @@ class checkBoxTestUI:
         sctkbuttonprimary1 = sCTkButtonPrimary(sctk1)
         sctkbuttonprimary1.configure(
             fg_color="red",
-            state="disabled",
+            hover_color="green",
+            state="normal",
             text='sctkbuttonprimary1')
         sctkbuttonprimary1.pack(side="top")
         sctkcheckbox1 = sCTkCheckBox(sctk1)
         sctkcheckbox1.configure(
             fg_color="red",
-            state="disabled",
+            state="normal",
             text='sctkcheckbox1')
         sctkcheckbox1.pack(side="top")
+        sctkbuttonsecondary1 = sCTkButtonSecondary(sctk1)
+        sctkbuttonsecondary1.configure(
+            state="disabled", text='sctkbuttonsecondary1')
+        sctkbuttonsecondary1.pack(side="top")
+        sctkbuttontertiary1 = sCTkButtonTertiary(sctk1)
+        sctkbuttontertiary1.configure(
+            state="disabled", text='sctkbuttontertiary1')
+        sctkbuttontertiary1.pack(side="top")
 
         # Main widget
         self.mainwindow = sctk1

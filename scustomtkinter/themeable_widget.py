@@ -462,6 +462,19 @@ class ThemeableWidget:
         if not defaults:
             return
 
+        # Snapshot the THEME before the first override lands on it.
+        #
+        # Recording overrides into _local_defaults makes a repaint keep them,
+        # which is the point -- but it also destroys the notion of a "default".
+        # The Designer reads the default from the same dict, so after setting
+        # fg_color yellow the reported default WAS yellow, and clearing the
+        # field restored the override instead of the theme.
+        #
+        # Taken lazily rather than in __init__ so widgets need no constructor
+        # change: the first override is the last moment the maps are still
+        # pristine.
+        self._snapshot_theme_defaults()
+
         active = self._active_theme_map()
         disabled_map = getattr(self, "_custom_disabled_map", None)
 
@@ -490,6 +503,46 @@ class ThemeableWidget:
                 active[key] = value
             elif key in defaults:
                 defaults[key] = value
+
+    def _snapshot_theme_defaults(self):
+        """
+        Keeps an untouched copy of the theme maps, once, for reporting
+        defaults.
+
+        See _record_theme_overrides() for why this is needed and why it is
+        lazy.
+        """
+        if getattr(self, "_pristine_defaults", None) is not None:
+            return
+        self._pristine_defaults = dict(getattr(self, "_local_defaults", {}) or {})
+        disabled_map = getattr(self, "_custom_disabled_map", None)
+        self._pristine_disabled = dict(disabled_map or {})
+
+    def _theme_default(self, key):
+        """
+        The value the THEME gives a key, ignoring any runtime override.
+
+        Use this for the `default` slot of a configure() query, so clearing a
+        field in the Designer returns to the theme rather than to whatever was
+        last set.
+
+        Args:
+            key: The property name.
+
+        Returns:
+            The theme's value, or None.
+        """
+        pristine = getattr(self, "_pristine_defaults", None)
+        if pristine is None:
+            return (getattr(self, "_local_defaults", {}) or {}).get(key)
+        return pristine.get(key)
+
+    def _theme_disabled_default(self, key):
+        """The theme's disabled_map value for a key, ignoring overrides."""
+        pristine = getattr(self, "_pristine_disabled", None)
+        if pristine is None:
+            return (getattr(self, "_custom_disabled_map", {}) or {}).get(key)
+        return pristine.get(key)
 
     def _active_theme_map(self):
         """
