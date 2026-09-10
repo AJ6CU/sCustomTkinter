@@ -170,7 +170,9 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             if pname in ["fg_color", "border_color", "text_color"]:
                 current_state = str(self.state()).lower()
                 val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                return (pname, pname, pname,
+                        self._query_value(self._theme_default(pname)),
+                        self._query_value(val))
             # FIX: forwarding a property NAME to native configure() passes it
             # as require_redraw and returns None, where pygubu expects a
             # Tkinter-style five-tuple -- it then hands that None straight back
@@ -231,6 +233,11 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             if mult_val == "" or mult_val is None: mult_val = True
             elif isinstance(mult_val, str): mult_val = str(mult_val).lower() in ['true', '1', 'yes']
             self.multiple_choices = mult_val
+
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs: self.state(kwargs.pop("state"))
 

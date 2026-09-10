@@ -340,6 +340,11 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
                 self.btn.configure(height=tb)
                 self.btn.grid_configure(pady=max(0, (h_val - tb) // 2))
 
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs: self.state(kwargs.pop("state"))
 
         if hasattr(self, "final_kw"):

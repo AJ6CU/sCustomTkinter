@@ -223,6 +223,11 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
                 self._draw_meter()
 
         # state is this library's own property, not a native CTkFrame one.
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs: self.state(kwargs.pop("state"))
         if "width" in kwargs:
             w = kwargs["width"]

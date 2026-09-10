@@ -596,6 +596,11 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                 self._fill_explorer()
 
         _fg_changed = "fg_color" in kwargs
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs:
             self._state = str(kwargs.pop("state")).lower()
             if self._state not in ("normal", "disabled"): self._state = "normal"

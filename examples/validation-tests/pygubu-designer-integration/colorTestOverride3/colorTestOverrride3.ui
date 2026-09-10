@@ -1,16 +1,32 @@
 <?xml version='1.0' encoding='utf-8'?>
 <interface version="1.5" author="PygubuDesigner 0.41.4">
   <project>
-    <settings />
+    <settings>
+      <setting id="name">colorTestOverride3</setting>
+      <setting id="description">colorTestOverride3</setting>
+      <setting id="template">codescript</setting>
+      <setting id="main_widget">sctk1</setting>
+      <setting id="module_namespace" />
+      <setting id="module_name">colorTestOverride3</setting>
+      <setting id="main_classname">colorTestOverride3</setting>
+      <setting id="output_dir">.</setting>
+      <setting id="builder_namespace">custom_widgets</setting>
+      <setting id="output_dir2" />
+      <setting id="generate_code_onsave">False</setting>
+      <setting id="use_i18n">False</setting>
+      <setting id="all_ids_attributes">False</setting>
+      <setting id="import_tkvariables">False</setting>
+      <setting id="use_ttk_styledefinition_file">False</setting>
+      <setting id="use_window_centering_code">False</setting>
+      <setting id="ttk_style_definition_file" />
+    </settings>
     <customwidgets />
     <resources />
   </project>
   <object class="scustomtkinter.sCTk" id="sctk1">
     <child>
       <object class="scustomtkinter.sCTkScrollableFrame" id="sctkscrollableframe1">
-        <property name="fg_color">red</property>
         <property name="label_text">My Scollable</property>
-        <property name="label_text_color">Yellow</property>
         <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">0</property>
@@ -28,9 +44,7 @@
     </child>
     <child>
       <object class="scustomtkinter.sCTkFrameLabeledPrimary" id="sctkframelabeledprimary1">
-        <property name="fg_color">red</property>
         <property name="label_text">My Primary</property>
-        <property name="label_text_color">Yellow</property>
         <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">1</property>
@@ -49,9 +63,7 @@ Frame</property>
     </child>
     <child>
       <object class="scustomtkinter.sCTkFrameLabeledSecondary" id="sctkframelabeledsecondary1">
-        <property name="fg_color">red</property>
         <property name="label_text">My Secondary</property>
-        <property name="label_text_color">Yellow</property>
         <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">2</property>
@@ -70,7 +82,7 @@ Frame</property>
     </child>
     <child>
       <object class="scustomtkinter.sCTkDialContinuous" id="sctkdialcontinuous1">
-        <property name="state">normal</property>
+        <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">0</property>
           <property name="row">1</property>
@@ -79,7 +91,7 @@ Frame</property>
     </child>
     <child>
       <object class="scustomtkinter.sCTkDialRange" id="sctkdialrange1">
-        <property name="state">normal</property>
+        <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">1</property>
           <property name="row">1</property>
@@ -88,7 +100,7 @@ Frame</property>
     </child>
     <child>
       <object class="scustomtkinter.sCTkDialSelector" id="sctkdialselector1">
-        <property name="state">normal</property>
+        <property name="state">disabled</property>
         <layout manager="grid">
           <property name="column">2</property>
           <property name="row">1</property>

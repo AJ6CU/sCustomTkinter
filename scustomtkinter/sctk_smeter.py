@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """
-sCTkSMeter - Piece 1 of 2
+sCTkSMeter
 
 A custom, theme-compliant analog signal and power output instrument widget.
 Inherits directly from ctk.CTkFrame to bypass sub-frame keyword replication bugs,
@@ -202,6 +202,11 @@ class sCTkSMeter(ctk.CTkFrame, ThemeableWidget):
 
         # state is this library's own property, not a native CTkFrame one, and
         # must be removed before the super() call below.
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
+
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 
