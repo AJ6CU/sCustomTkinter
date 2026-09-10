@@ -35,7 +35,7 @@
             "fg_color": ["#F3F4F6", "#1F2937"],
             "hover_color": ["#F3F4F6", "#1F2937"],
             "border_color": ["#E5E7EB", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"]
+            "text_color": ["yellow", "yellow"]
         },
         "pressed_map": {
             "fg_color": ["#CBD5E1", "#1F2937"],

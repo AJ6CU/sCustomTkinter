@@ -463,9 +463,29 @@ class ThemeableWidget:
             return
 
         active = self._active_theme_map()
+        disabled_map = getattr(self, "_custom_disabled_map", None)
+
         for key, value in kwargs.items():
             if value == "":
                 continue
+
+            # text_color_disabled and disabled_map's text_color are the SAME
+            # thing under two names.
+            #
+            # The first is CustomTkinter's native option; the second is this
+            # library's theme key, and a repaint feeds one into the other. So a
+            # value typed into the Designer's text_color_disabled field was not
+            # recorded here -- the theme block does not contain that name -- and
+            # the next repaint overwrote it from disabled_map. The field looked
+            # inert.
+            #
+            # Recording it against the theme key it feeds makes the native
+            # property live, and keeps a single source for the colour.
+            if key == "text_color_disabled":
+                if disabled_map is not None:
+                    disabled_map["text_color"] = value
+                continue
+
             if active is not None and key in active:
                 active[key] = value
             elif key in defaults:

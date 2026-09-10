@@ -29,6 +29,7 @@
         <property name="fg_color">red</property>
         <property name="state">normal</property>
         <property name="text" translatable="yes">sctkbuttonprimary1</property>
+        <property name="text_color_disabled">blue</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
@@ -46,7 +47,13 @@
     </child>
     <child>
       <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary1">
+        <property name="bg_color">red</property>
+        <property name="border_color">green</property>
+        <property name="fg_color">yellow</property>
+        <property name="state">disabled</property>
         <property name="text" translatable="yes">sctkbuttonsecondary1</property>
+        <property name="text_color">orange</property>
+        <property name="text_color_disabled">blue</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
