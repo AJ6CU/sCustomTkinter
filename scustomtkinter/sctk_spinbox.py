@@ -221,9 +221,22 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
                 _current = self.cget(require_redraw)
             except Exception:
                 _current = None
-            _default = self._NATIVE_QUERY_DEFAULTS.get(require_redraw, _current)
+            # FIX: the default came from _NATIVE_QUERY_DEFAULTS or, failing
+            # that, from cget() -- the CURRENT value. So clearing a themed
+            # property in the Designer reported whatever override was in place
+            # as its own default and put it straight back.
+            #
+            # The THEME's value is the right answer, taken from an untouched
+            # copy so a runtime override cannot corrupt it -- see
+            # ThemeableWidget._theme_default().
+            _default = self._NATIVE_QUERY_DEFAULTS.get(require_redraw)
+            if _default is None:
+                _default = self._theme_default(require_redraw)
+            if _default is None:
+                _default = _current
             return (require_redraw, require_redraw, require_redraw,
-                    _default, _current)
+                    self._query_value(_default, require_redraw),
+                    self._query_value(_current, require_redraw))
 
         if isinstance(require_redraw, dict): kwargs.update(require_redraw)
         if "wrap" in kwargs: self._wrap = kwargs.pop("wrap") if isinstance(kwargs["wrap"], bool) else (str(kwargs.pop("wrap")).lower() in ("true", "1", "yes"))
@@ -288,6 +301,11 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         if rebuild_grid and hasattr(self, "cget") and hasattr(self, "entry"):
             self.entry.configure(width=int(self.cget("width")) - (self._button_width * (2 if self._button_side == "split" or self._orientation == "horizontal" else 1)))
             self._rebuild_grid_layout()
+
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "state" in kwargs:
             self._state = str(kwargs.pop("state")).lower()

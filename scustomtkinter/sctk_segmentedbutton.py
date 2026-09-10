@@ -411,8 +411,15 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
                     # The selected segment keeps a more prominent text color
                     # while disabled, so the user can still tell what was chosen
                     # even though the whole control is grayed out.
-                    button.configure(text_color=selected_disabled_txt)
+                    # BOTH text options: a disabled CTkSegmentedButton puts its
+                    # inner CTkButtons into CTk's own disabled state, and a
+                    # disabled CTkButton draws from text_color_disabled and
+                    # ignores text_color entirely -- so the theme's disabled
+                    # colours were discarded for CustomTkinter's default grey.
+                    button.configure(text_color=selected_disabled_txt,
+                                     text_color_disabled=selected_disabled_txt)
                 else:
-                    button.configure(text_color=unselected_disabled_txt)
+                    button.configure(text_color=unselected_disabled_txt,
+                                     text_color_disabled=unselected_disabled_txt)
             else:
                 button.configure(text_color=base_txt_tuple)
