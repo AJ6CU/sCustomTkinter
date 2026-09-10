@@ -96,24 +96,26 @@ Both are omissions by choice, not oversights.
 
 ## Some widgets are selected from the tree, not the canvas
 
-**Selecting a tab in the tree switches the canvas to it,** and selecting a
-widget inside a tab switches to whichever tab holds it. Until recently neither
-did: the canvas stayed where it was, so the selection outline was drawn around
-a widget that is not mapped and collapsed into a small square near the origin.
+Most widgets can be selected by clicking them on the canvas. Two cannot:
+**tabview tabs**, and the three scrolling frames -- `sCTkScrollableFrame`,
+`sCTkFrameLabeledPrimary` and `sCTkFrameLabeledSecondary`.
 
-What still does not work is the other direction.
+Clicking a tab switches the page but leaves the inspector showing whatever was
+selected before; clicking a widget inside the new page corrects it. Clicking
+one of the three frames does nothing at all.
 
-Tabview **tabs** cannot be selected by clicking them on the canvas. The page
-switches, but the inspector goes on showing whatever was selected before --
-clicking a widget inside the new page corrects it. `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed to the page you aimed at. CustomTkinter's own designer plugin contains a commented-out attempt at the same fix.
+**Select them in the widget tree.** Selecting a tab there switches the canvas
+to it, and selecting a widget inside a tab switches to whichever tab holds it.
+A widget dropped *inside* any of these is selectable by clicking as normal, so
+this affects only the container itself.
 
-Select the tab in the widget tree to edit its `label`.
+Both are dead ends rather than outstanding bugs, for reasons in how
+CustomTkinter builds those two widgets. If you are curious, or tempted to fix
+it, `dev/docs/Developing.md` records the mechanism and the three approaches
+that were tried and failed.
 
-Worth knowing why, since it looks fixable: the tab's page is a frame the
-tabview creates at runtime rather than something the builder made, so it is not
-in the builder's widget map and a click on it resolves to nothing. Forwarding
-the click elsewhere was tried and does not help. CustomTkinter's own plugin
-carries a commented-out attempt at the same problem.
+Segmented buttons, dials and the file explorer were on this list until
+recently and are now selectable.
 
 ---
 

@@ -434,7 +434,23 @@ class MyApp(baseui.MyAppUI):
 
 ### What the Designer cannot do
 
-Tab pages cannot be selected by clicking them in the design canvas — `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed. CustomTkinter's own plugin contains a commented-out attempt at the same fix. Select tabs from the widget tree.
+Two widgets cannot be selected by clicking them on the canvas, and both are dead ends rather than open bugs. The user-facing consequence is in `DesignerHints.md`; this is the mechanism, so nobody spends an afternoon rediscovering it.
+
+**Tab pages.** The page is a frame `sCTkTabview.add()` creates at runtime, not something the builder made, so it is absent from the builder's widget map and `get_widget_id()` returns `None` for it. Binding the tab buttons with `add=True` and forwarding a click to the revealed page was tried: the tab switched, the handler fired, the page was found — and selecting it did nothing, because of that same absence. CustomTkinter's own plugin carries a commented-out attempt at the same problem.
+
+**The three scrolling frames** — `sCTkScrollableFrame` and both labelled variants. `CTkScrollableFrame` inverts the usual arrangement: the widget IS the inner frame, created inside a canvas owned by a separate outer frame. So the visible surface is the widget's *parent*, and `winfo_children()` returns an empty list.
+
+Three routes, each closed by something specific:
+
+| Approach | What closes it |
+| :--- | :--- |
+| Forward the click to the widget | The Designer resolves a click by walking *up* the tree. The frame is a **descendant** of the canvas, so the walk never reaches it. |
+| Bind the canvas directly | `CTkScrollableFrame.bind()` routes the Designer's own handler to `_parent_canvas`. Binding it replaces that handler, so nothing is selected at all — worse than before. |
+| A transparent overlay parented to the frame | Tk refuses: `place(in_=...)` requires its target to be the widget's own parent or a descendant of it, and the canvas is the overlay's **grandparent**. |
+
+The one route not tried is rebuilding the labelled frames as `sCTkFrame` composites — they use `CTkScrollableFrame` only for its built-in label, and an ordinary frame is selectable. That means owning `label_text`, `label_font`, `label_text_color` and `label_fg_color` yourself, and returning the inner frame from `get_children()` so dropped widgets land below the label rather than beside it — the same arrangement `sCTkDialog` uses with `contentFrame`. `sCTkScrollableFrame` itself cannot be rebuilt that way, since the scrolling is the point.
+
+**Preview classes are still worth having for all four**, selectable or not: they set `_THEME_BLOCK_NAME`, which is what makes a validation error name the real theme block instead of `sCTkScrollableFrameForPreview`.
 
 ---
 
