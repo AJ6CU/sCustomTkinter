@@ -60,6 +60,12 @@ from scustomtkinter_pygubu.sCTkSpinboxbo import (sCTkSpinboxBO, builder_id as sC
 from scustomtkinter.sctk_tableview import sCTkTableview
 from scustomtkinter_pygubu.sCTkTableviewbo import (sCTkTableviewBO, builder_id as sCTkTableview_builder_id)
 
+from scustomtkinter.sctk_radiobutton import sCTkRadioButton
+from scustomtkinter_pygubu.sCTkRadioButtonbo import (sCTkRadioButtonBO, builder_id as sCTkRadioButton_builder_id)
+
+from scustomtkinter.sctk_tabview import sCTkTabview
+from scustomtkinter_pygubu.sCTkTabviewbo import (sCTkTabviewBO, builder_id as sCTkTabview_builder_id)
+
 # TOP-LEVEL WIDGETS.
 #
 # NOTE the module name for sCTk: it lives in sctk_core, NOT sctk_sctk. The
@@ -489,6 +495,35 @@ class sCTkSegmentedButtonForPreview(sCTkSegmentedButton):
                 pass
 
 
+class sCTkRadioButtonForPreview(sCTkRadioButton):
+    """
+    Designer preview for sCTkRadioButton.
+
+    Without this the widget cannot be selected by clicking it: CTkFrame hides
+    its internal canvas from winfo_children(), the Designer walks that list to
+    bind its click handler, and the canvas is the only thing there is to click.
+    """
+    _THEME_BLOCK_NAME = "sCTkRadioButton"
+
+    def winfo_children(self):
+        return super(tk.Frame, self).winfo_children()
+
+
+class sCTkTabviewForPreview(sCTkTabview):
+    """
+    Designer preview for sCTkTabview.
+
+    An EMPTY tabview could not be selected at all -- with no tabs there is
+    nothing on the canvas but the widget's own hidden background, which the
+    Designer never saw. Once a tab existed, the tab button was clickable and
+    masked the problem.
+    """
+    _THEME_BLOCK_NAME = "sCTkTabview"
+
+    def winfo_children(self):
+        return super(tk.Frame, self).winfo_children()
+
+
 class sCTkSelectorForPreview(sCTkSelector):
     _THEME_BLOCK_NAME = "sCTkSelector"
 
@@ -749,6 +784,14 @@ class sCTkDialogForPreview(sCTkDialog):
 
 class sCTkSegmentedButtonForPreviewBO(sCTkSegmentedButtonBO):
     class_ = sCTkSegmentedButtonForPreview
+
+
+class sCTkRadioButtonForPreviewBO(sCTkRadioButtonBO):
+    class_ = sCTkRadioButtonForPreview
+
+
+class sCTkTabviewForPreviewBO(sCTkTabviewBO):
+    class_ = sCTkTabviewForPreview
 
 
 class sCTkSelectorForPreviewBO(sCTkSelectorBO):
@@ -1045,6 +1088,10 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkTableviewForPreviewBO
         elif builder_uid == sCTkSegmentedButton_builder_id:
             return sCTkSegmentedButtonForPreviewBO
+        elif builder_uid == sCTkRadioButton_builder_id:
+            return sCTkRadioButtonForPreviewBO
+        elif builder_uid == sCTkTabview_builder_id:
+            return sCTkTabviewForPreviewBO
         elif builder_uid == sCTkSelector_builder_id:
             return sCTkSelectorForPreviewBO
         elif builder_uid == sCTkSeparator_builder_id:

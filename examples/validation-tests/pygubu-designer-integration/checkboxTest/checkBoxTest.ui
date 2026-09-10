@@ -89,5 +89,76 @@
         </layout>
       </object>
     </child>
+    <child>
+      <object class="scustomtkinter.sCTkComboBox" id="sctkcombobox1">
+        <property name="dropdown_text_color">yellow</property>
+        <property name="fg_color">purple</property>
+        <property name="state">normal</property>
+        <property name="values">["vw","240z"]</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkComboBox" id="sctkcombobox2">
+        <property name="values">["VW","240z"]</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkLabelPrimary" id="sctklabelprimary1">
+        <property name="state">disabled</property>
+        <property name="text" translatable="yes">sctklabelprimary1</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkLabelPrimary" id="sctklabelprimary2">
+        <property name="state">normal</property>
+        <property name="text" translatable="yes">sctklabelprimary2</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkLabelSecondary" id="sctklabelsecondary1">
+        <property name="state">disabled</property>
+        <property name="text" translatable="yes">sctklabelsecondary1</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkLabelSecondary" id="sctklabelsecondary2">
+        <property name="text" translatable="yes">sctklabelsecondary2</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkLabelTertiary" id="sctklabeltertiary1">
+        <property name="state">disabled</property>
+        <property name="text" translatable="yes">sctklabeltertiary1</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkLabelTertiary" id="sctklabeltertiary2">
+        <property name="text" translatable="yes">sctklabeltertiary2</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
   </object>
 </interface>

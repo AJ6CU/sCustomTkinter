@@ -506,7 +506,56 @@ class ThemeableWidget:
                 continue
 
             if key in defaults:
-                defaults[key] = value
+                defaults[key] = self._normalise_override(key, value)
+
+    def _normalise_override(self, key, value):
+        """
+        Puts a value from the Designer into the shape the theme maps hold.
+
+        Theme colours are stored as (light, dark) tuples, and widgets rely on
+        that: several call tuple() on them directly. The inspector supplies a
+        plain string, so storing it raw meant a widget did tuple("red") and
+        got ('r', 'e', 'd') -- which CustomTkinter rejected:
+
+            color ('r', 'e', 'd') must be string ('transparent' or
+            'color-name' or 'hex-color') or tuple of two strings
+
+        The shape is taken from the value ALREADY in the map rather than from
+        a list of key names. _convert_lists_to_tuples() special-cases only
+        fg_color, text_color and border_color, so a string given for
+        selected_color or hover_color would still have been stored raw and
+        exploded the same way -- and every widget names its colours
+        differently.
+
+        Args:
+            key: The property name.
+            value: The raw value.
+
+        Returns:
+            The value in theme-map shape.
+        """
+        if value == "transparent":
+            return "transparent"
+
+        if isinstance(value, (list, tuple)):
+            if len(value) == 2:
+                return "transparent" if "transparent" in value else tuple(value)
+            return value
+
+        if isinstance(value, str) and key not in self._LIST_PROPERTIES:
+            existing = (getattr(self, "_local_defaults", {}) or {}).get(key)
+            # A pair of STRINGS in the map means this key is a (light, dark)
+            # colour, so a single string has to become one.
+            #
+            # _LIST_PROPERTIES is excluded first: a two-item `values` list looks
+            # exactly like a colour pair, and would otherwise be stored as
+            # ('["A","B"]', '["A","B"]') -- the same collision that made
+            # _query_value() take the property name rather than guess.
+            if (isinstance(existing, (list, tuple)) and len(existing) == 2
+                    and all(isinstance(x, str) for x in existing)):
+                return (value, value)
+
+        return value
 
     def _snapshot_theme_defaults(self):
         """
