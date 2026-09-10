@@ -19,7 +19,11 @@ from scustomtkinter_pygubu.sCTkFramebo import (sCTkFrameBO, builder_id as sCTkFr
 
 from scustomtkinter.sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
 from scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo import (sCTkFrameLabeledPrimaryBO, builder_id as sCTkFrameLabeledPrimary_builder_id)
-import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
+from scustomtkinter.sctk_frame_labeled_secondary import sCTkFrameLabeledSecondary
+from scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo import (sCTkFrameLabeledSecondaryBO, builder_id as sCTkFrameLabeledSecondary_builder_id)
+
+from scustomtkinter.sctk_scrollable_frame import sCTkScrollableFrame
+from scustomtkinter_pygubu.sCTkScrollableFramebo import (sCTkScrollableFrameBO, builder_id as sCTkScrollableFrame_builder_id)
 
 from scustomtkinter.sctk_optionmenu_secondary import sCTkOptionMenuSecondary
 
@@ -176,6 +180,30 @@ class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
     def winfo_children(self):
         # sCTkFrameLabeledPrimary has a hidden canvas inside. So, to make it
         #  clickable on preview we need a hack.
+        return super(tk.Frame, self).winfo_children()
+
+
+class sCTkFrameLabeledSecondaryForPreview(sCTkFrameLabeledSecondary):
+    """
+    Designer preview for sCTkFrameLabeledSecondary.
+
+    CTkFrame hides its internal canvas from winfo_children(), and the Designer
+    walks that list to bind its click handler -- so without this the frame
+    could only be selected from the widget tree.
+    """
+    _THEME_BLOCK_NAME = "sCTkFrameLabeledSecondary"
+
+    def winfo_children(self):
+        return super(tk.Frame, self).winfo_children()
+
+
+class sCTkScrollableFrameForPreview(sCTkScrollableFrame):
+    """
+    Designer preview for sCTkScrollableFrame. See the labelled frames above.
+    """
+    _THEME_BLOCK_NAME = "sCTkScrollableFrame"
+
+    def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
 
 
@@ -618,6 +646,14 @@ class sCTkFramePreviewBO(sCTkFrameBO):
 
 class sCTkFrameLabeledPrimaryForPreviewBO(sCTkFrameLabeledPrimaryBO):
     class_ = sCTkFrameLabeledPrimaryForPreview
+
+
+class sCTkFrameLabeledSecondaryForPreviewBO(sCTkFrameLabeledSecondaryBO):
+    class_ = sCTkFrameLabeledSecondaryForPreview
+
+
+class sCTkScrollableFrameForPreviewBO(sCTkScrollableFrameBO):
+    class_ = sCTkScrollableFrameForPreview
 
 
 class sCTkFileExplorerForPreviewBO(sCTkFileExplorerBO):
@@ -1109,6 +1145,10 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkFramePreviewBO
         elif builder_uid == sCTkFrameLabeledPrimary_builder_id:
             return sCTkFrameLabeledPrimaryForPreviewBO
+        elif builder_uid == sCTkFrameLabeledSecondary_builder_id:
+            return sCTkFrameLabeledSecondaryForPreviewBO
+        elif builder_uid == sCTkScrollableFrame_builder_id:
+            return sCTkScrollableFrameForPreviewBO
         elif builder_uid == sCTkFileExplorer_builder_id:
             return sCTkFileExplorerForPreviewBO
         elif builder_uid == sCTkPathChooser_builder_id:

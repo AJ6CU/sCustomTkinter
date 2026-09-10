@@ -23,5 +23,50 @@
     <customwidgets />
     <resources />
   </project>
-  <object class="scustomtkinter.sCTk" id="sctk1" />
+  <object class="scustomtkinter.sCTk" id="sctk1">
+    <child>
+      <object class="scustomtkinter.sCTkEntryPrimary" id="sctkentryprimary1">
+        <property name="state">disabled</property>
+        <property name="text" translatable="yes">mark</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkEntrySecondary" id="sctkentrysecondary1">
+        <property name="state">normal</property>
+        <property name="text" translatable="yes">sue</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkProgressBar" id="sctkprogressbar1">
+        <layout manager="pack">
+          <property name="pady">20</property>
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkTextboxPrimary" id="sctktextboxprimary1">
+        <property name="state">disabled</property>
+        <property name="text" translatable="yes">sctktextboxprimary1</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkTextboxSecondary" id="sctktextboxsecondary1">
+        <property name="state">disabled</property>
+        <property name="text" translatable="yes">sctktextboxsecondary1</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+  </object>
 </interface>
