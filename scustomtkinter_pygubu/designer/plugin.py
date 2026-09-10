@@ -556,19 +556,21 @@ class sCTkTabviewForPreview(sCTkTabview):
         """
         segmented = getattr(self, "_segmented_button", None)
         buttons = getattr(segmented, "_buttons_dict", None) if segmented else None
+        print("[tabview] binding; buttons:", list(buttons or
         if not buttons:
             return
 
         def select_page(event, name=None):
             def forward():
                 page = (getattr(self, "_sctk_pages", {}) or {}).get(name)
+                print("[tabview] page for", name, "->", page)
                 if page is None:
                     return
                 target = getattr(page, "_canvas", None) or page
                 try:
                     target.event_generate("<Button-1>", x=1, y=1, when="now")
                 except Exception:
-                    pass
+                    print("[tabview] event_generate failed:", exc)
             try:
                 self.after_idle(forward)
             except Exception:
