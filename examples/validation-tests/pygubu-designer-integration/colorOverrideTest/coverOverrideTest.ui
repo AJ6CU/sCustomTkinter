@@ -176,7 +176,7 @@
         </child>
         <child>
           <object class="scustomtkinter.sCTkSpinbox" id="sctkspinbox1">
-            <property name="state">normal</property>
+            <property name="state">disabled</property>
             <layout manager="pack">
               <property name="side">top</property>
             </layout>

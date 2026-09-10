@@ -325,11 +325,33 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
                 _current = self.cget(require_redraw)
             except Exception:
                 _current = None
-            _default = self._NATIVE_QUERY_DEFAULTS.get(require_redraw, _current)
+            # FIX: the default came from _NATIVE_QUERY_DEFAULTS or, failing
+            # that, from cget() -- the CURRENT value. So clearing a themed
+            # property in the Designer reported whatever override was in place
+            # as its own default and put it straight back.
+            #
+            # The THEME's value is the right answer, taken from an untouched
+            # copy so a runtime override cannot corrupt it -- see
+            # ThemeableWidget._theme_default(). The native table still wins
+            # where it has an entry, for properties the theme says nothing
+            # about.
+            _default = self._NATIVE_QUERY_DEFAULTS.get(require_redraw)
+            if _default is None:
+                _default = self._theme_default(require_redraw)
+            if _default is None:
+                _default = _current
             return (require_redraw, require_redraw, require_redraw,
-                    _default, _current)
+                    self._query_value(_default, require_redraw),
+                    self._query_value(_current, require_redraw))
 
         if isinstance(require_redraw, dict): kwargs.update(require_redraw); require_redraw = False
+
+        # Runtime overrides have to reach the map a repaint reads, or the
+        # repaint puts the theme value straight back -- see
+        # ThemeableWidget._record_theme_overrides(). Placed after the dict form
+        # is merged, so a value passed that way is recorded too.
+        self._record_theme_overrides(kwargs)
+
         rebuild_layout = False
 
         for k in ["cell_bg_color", "cell_alt_bg_color", "num_columns", "num_rows", "header_line_width", "grid_mode",
