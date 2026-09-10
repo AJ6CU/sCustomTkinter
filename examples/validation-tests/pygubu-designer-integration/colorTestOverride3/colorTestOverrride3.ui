@@ -12,6 +12,11 @@
           <property name="column">0</property>
           <property name="row">0</property>
         </layout>
+        <child>
+          <object class="scustomtkinter.sCTkFrame" id="sctkframe1">
+            <layout manager="pack" />
+          </object>
+        </child>
       </object>
     </child>
     <child>

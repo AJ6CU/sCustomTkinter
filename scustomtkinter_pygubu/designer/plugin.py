@@ -200,20 +200,26 @@ class sCTkFrameLabeledPrimaryForPreview(sCTkFrameLabeledPrimary):
         construction.
         """
         def select_self(event, target=self):
+            print("[frame] click forwarded from", event.widget)
             try:
                 target.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
+            except Exception as exc:
+                print("[frame] event_generate failed:", exc)
             return "break"
 
+        found = []
         for name in ("_parent_canvas", "_parent_frame", "_scrollbar"):
             part = getattr(self, name, None)
+            found.append((name, part is not None))
             if part is None:
                 continue
             try:
                 part.bind("<Button-1>", select_self)
-            except Exception:
-                pass
+            except Exception as exc:
+                print("[frame] bind failed on", name, exc)
+        print("[frame]", type(self).__name__, "outer parts:", found)
+        print("[frame]   real children:", tk.Misc.winfo_children(self))
+        print("[frame]   winfo_parent:", self.winfo_parent())
 
     def winfo_children(self):
         # sCTkFrameLabeledPrimary has a hidden canvas inside. So, to make it
@@ -254,20 +260,26 @@ class sCTkFrameLabeledSecondaryForPreview(sCTkFrameLabeledSecondary):
         construction.
         """
         def select_self(event, target=self):
+            print("[frame] click forwarded from", event.widget)
             try:
                 target.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
+            except Exception as exc:
+                print("[frame] event_generate failed:", exc)
             return "break"
 
+        found = []
         for name in ("_parent_canvas", "_parent_frame", "_scrollbar"):
             part = getattr(self, name, None)
+            found.append((name, part is not None))
             if part is None:
                 continue
             try:
                 part.bind("<Button-1>", select_self)
-            except Exception:
-                pass
+            except Exception as exc:
+                print("[frame] bind failed on", name, exc)
+        print("[frame]", type(self).__name__, "outer parts:", found)
+        print("[frame]   real children:", tk.Misc.winfo_children(self))
+        print("[frame]   winfo_parent:", self.winfo_parent())
 
     def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
@@ -302,20 +314,26 @@ class sCTkScrollableFrameForPreview(sCTkScrollableFrame):
         construction.
         """
         def select_self(event, target=self):
+            print("[frame] click forwarded from", event.widget)
             try:
                 target.event_generate("<Button-1>", x=1, y=1, when="now")
-            except Exception:
-                pass
+            except Exception as exc:
+                print("[frame] event_generate failed:", exc)
             return "break"
 
+        found = []
         for name in ("_parent_canvas", "_parent_frame", "_scrollbar"):
             part = getattr(self, name, None)
+            found.append((name, part is not None))
             if part is None:
                 continue
             try:
                 part.bind("<Button-1>", select_self)
-            except Exception:
-                pass
+            except Exception as exc:
+                print("[frame] bind failed on", name, exc)
+        print("[frame]", type(self).__name__, "outer parts:", found)
+        print("[frame]   real children:", tk.Misc.winfo_children(self))
+        print("[frame]   winfo_parent:", self.winfo_parent())
 
     def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
