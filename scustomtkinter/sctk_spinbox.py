@@ -575,7 +575,7 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             # two states. Readonly needs it here too since Spinbox's own
             # readonly_map is the source of truth for this override.
             entry_override["text_color"] = m.get("text_color")
-        self.entry.configure(**entry_override)
+        self.entry.configure(**entry_override) 
 
         b_color = self._local_defaults.get("button_color")
         b_hover = self._local_defaults.get("button_hover_color")
