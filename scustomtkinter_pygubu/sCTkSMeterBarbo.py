@@ -7,8 +7,6 @@ Pygubu Builder Object for a bar style s-meter, pwr and swr.
 import ast
 import pygubu
 
-from pygubu.plugins.customtkinter.widgets import CTkFrameBO
-
 from pygubu.api.v1 import (
     BuilderObject,
     register_widget,
@@ -34,15 +32,22 @@ class sCTkSMeterBarBO(BuilderObject):
     # Expose custom compound parameters alongside theme state configurations
     OPTIONS_CUSTOM = ("width", "height", "swr_max_value", "swr_visible", "pwr_visible", "hide_lower_row", "font", "scale_font")
 
-    # CTkFrameBO's properties are folded in, so the frame AROUND the meter
-    # can be styled from the inspector -- fg_color, border_color,
-    # border_width, corner_radius. Without them this widget offered only its
-    # own properties and nothing else, unlike every other widget in the
-    # library.
+    # NOT CTkFrameBO.properties.
     #
-    # The meter's OWN colours stay theme-only: there are a dozen of them and
-    # they are tuned as a set. Same call as the dial's shading keys.
-    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
+    # Folding them in was tried and taken back out. The meter draws on a canvas
+    # that covers the whole widget, so the frame underneath is never visible:
+    # border_color, border_width and corner_radius appeared in the inspector
+    # and did nothing at all. A property that cannot work is worse than an
+    # absent one.
+    #
+    # fg_color is handled separately by the widget, which paints the CANVAS
+    # with it -- see sCTkSMeter.configure().
+    #
+    # corner_radius is the real loss: rounding the meter would mean rounding
+    # the canvas, which Tk cannot do to a canvas widget. It would have to be
+    # drawn -- a rounded rectangle filling the canvas in the parent's colour,
+    # masking the corners. Possible, not free.
+    properties = OPTIONS_CUSTOM
 
     def _process_property_value(self, pname, value):
         if pname in ("font", "scale_font"):

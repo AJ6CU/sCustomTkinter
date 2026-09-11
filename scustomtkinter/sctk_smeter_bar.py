@@ -52,6 +52,9 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         # fallback and the configured fg_color never applied.
         theme_bg_raw = self._local_defaults.pop("fg_color")
         self._theme_bg_raw = theme_bg_raw
+        # Untouched copy, so clearing fg_color in the Designer can return to
+        # the theme rather than to whatever was last set.
+        self._theme_bg_default = theme_bg_raw
 
         # 🔑 THE STRUCTURAL CLEAN PURGE: Clear custom analog gauge properties explicitly out of self.final_kw
         # This completely guarantees the native CustomTkinter constructor won't throw a ValueError!
@@ -198,6 +201,11 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             # The library-wide sweep that fixed this matched on `pname` and
             # `require_redraw` as the argument name and missed the *args form
             # used here.
+            if pname == "fg_color":
+                return (pname, pname, pname,
+                        self._query_value(self._theme_bg_default, pname),
+                        self._query_value(self._theme_bg_raw, pname))
+
             if pname in ("font", "scale_font"):
                 return (pname, pname, pname,
                         self._query_value(self._theme_font_defaults.get(pname), pname),
@@ -227,6 +235,18 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         # repaint puts the theme value straight back -- see
         # ThemeableWidget._record_theme_overrides().
         self._record_theme_overrides(kwargs)
+
+        # fg_color paints the CANVAS, which covers the frame entirely.
+        #
+        # It is popped out of _local_defaults at construction into
+        # _theme_bg_raw, so _record_theme_overrides() never sees it -- and
+        # forwarding it to the frame underneath changes a surface nobody can
+        # see. Handled here instead: an empty value restores the theme's.
+        if "fg_color" in kwargs:
+            _bg = kwargs.pop("fg_color")
+            self._theme_bg_raw = _bg if _bg else self._theme_bg_default
+            if hasattr(self, "canvas") and self.canvas.winfo_exists():
+                self.canvas.configure(bg=self._resolve_color(self._theme_bg_raw))
 
         if "state" in kwargs: self.state(kwargs.pop("state"))
         if "width" in kwargs:

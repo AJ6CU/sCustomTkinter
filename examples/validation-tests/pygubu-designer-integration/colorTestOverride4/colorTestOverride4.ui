@@ -5,5 +5,28 @@
     <customwidgets />
     <resources />
   </project>
-  <object class="scustomtkinter.sCTk" id="sctk1" />
+  <object class="scustomtkinter.sCTk" id="sctk1">
+    <child>
+      <object class="scustomtkinter.sCTkSMeter" id="sctksmeter1">
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkSMeterBar" id="sctksmeterbar1">
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkSelector" id="sctkselector1">
+        <property name="fg_color">red</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+  </object>
 </interface>
