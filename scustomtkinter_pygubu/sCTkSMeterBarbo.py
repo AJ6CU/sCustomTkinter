@@ -30,7 +30,7 @@ class sCTkSMeterBarBO(BuilderObject):
     class_ = sCTkSMeterBar
 
     # Expose custom compound parameters alongside theme state configurations
-    OPTIONS_CUSTOM = ("width", "height", "swr_max_value", "swr_visible", "pwr_visible", "hide_lower_row", "font", "scale_font")
+    OPTIONS_CUSTOM = ("width", "height", "fg_color", "swr_max_value", "swr_visible", "pwr_visible", "hide_lower_row", "font", "scale_font")
 
     # NOT CTkFrameBO.properties.
     #
@@ -40,8 +40,10 @@ class sCTkSMeterBarBO(BuilderObject):
     # and did nothing at all. A property that cannot work is worse than an
     # absent one.
     #
-    # fg_color is handled separately by the widget, which paints the CANVAS
-    # with it -- see sCTkSMeter.configure().
+    # fg_color IS listed above, because the widget paints the CANVAS with it --
+    # see sCTkSMeterBar.configure(). It was reaching sCTkSMeter and not this
+    # widget before, inherited from somewhere rather than declared, so the pair
+    # disagreed about a property they both support.
     #
     # corner_radius is the real loss: rounding the meter would mean rounding
     # the canvas, which Tk cannot do to a canvas widget. It would have to be
@@ -131,4 +133,11 @@ register_custom_property(
 register_custom_property(
     builder_id, "scale_font", "fontentry",
     help='Font for the scale tick labels. Blank uses the theme scale_font. Larger values can overlap on a narrow meter.'
+)
+
+register_custom_property(
+    builder_id, "fg_color", "colorentry",
+    help="Background the meter is drawn on. This paints the CANVAS, not the "
+         "frame behind it -- the canvas covers the whole widget. Blank uses "
+         "the theme's fg_color."
 )
