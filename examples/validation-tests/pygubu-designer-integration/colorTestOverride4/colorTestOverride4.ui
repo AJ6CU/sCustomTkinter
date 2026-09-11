@@ -8,6 +8,7 @@
   <object class="scustomtkinter.sCTk" id="sctk1">
     <child>
       <object class="scustomtkinter.sCTkSMeter" id="sctksmeter1">
+        <property name="bg_color">yellow</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
@@ -15,6 +16,9 @@
     </child>
     <child>
       <object class="scustomtkinter.sCTkSMeterBar" id="sctksmeterbar1">
+        <property name="border_color">green</property>
+        <property name="border_width">10</property>
+        <property name="corner_radius">20</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
@@ -23,6 +27,7 @@
     <child>
       <object class="scustomtkinter.sCTkSelector" id="sctkselector1">
         <property name="fg_color">red</property>
+        <property name="items">["vw","porsche","240z"]</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
