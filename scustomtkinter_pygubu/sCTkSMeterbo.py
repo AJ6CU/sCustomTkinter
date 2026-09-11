@@ -7,8 +7,6 @@ Pygubu Builder Object for a S Meter.
 import ast
 import pygubu
 
-from pygubu.plugins.customtkinter.widgets import CTkFrameBO
-
 from pygubu.api.v1 import (
     BuilderObject,
     register_widget,
@@ -33,19 +31,26 @@ class sCTkSMeterBO(BuilderObject):
     class_ = sCTkSMeter
 
     # Expose custom compound parameters alongside theme state configurations
-    OPTIONS_CUSTOM = ("width", "height", "font", "scale_font")
+    OPTIONS_CUSTOM = ("width", "height", "fg_color", "font", "scale_font")
 
-    # CTkFrameBO's properties are folded in, so the frame AROUND the meter
-    # can be styled from the inspector -- fg_color, border_color,
-    # border_width, corner_radius. Without them this widget offered only its
-    # own four properties and nothing else, unlike every other widget in the
-    # library.
+    # NOT CTkFrameBO.properties.
     #
-    # The meter's OWN colours stay theme-only: there are a dozen of them and
-    # they are tuned as a set, so exposing them individually invites a change
-    # that reads as broken rather than different. Same call as the dial's
-    # shading keys.
-    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
+    # Folding them in was tried and taken back out. The meter draws on a canvas
+    # that covers the whole widget, so the frame underneath is never visible:
+    # border_color, border_width and corner_radius appeared in the inspector
+    # and did nothing at all. A property that cannot work is worse than an
+    # absent one.
+    #
+    # fg_color IS listed, because the widget paints the canvas with it -- see
+    # sCTkSMeter.configure(). It was reaching only one of the two meters
+    # before, inherited from somewhere rather than declared, so the pair
+    # disagreed about a property they both support.
+    #
+    # corner_radius is the real loss: rounding the meter would mean rounding
+    # the canvas, which Tk cannot do to a canvas widget. It would have to be
+    # drawn -- a rounded rectangle filling the canvas in the parent's colour,
+    # masking the corners. Possible, not free.
+    properties = OPTIONS_CUSTOM
 
     def _process_property_value(self, pname, value):
         if pname in ("font", "scale_font"):
@@ -88,4 +93,9 @@ register_custom_property(
 register_custom_property(
     builder_id, "scale_font", "fontentry",
     help='Font for the scale tick labels. Blank uses the theme scale_font. Larger values can overlap on a narrow meter.'
+)
+
+register_custom_property(
+    builder_id, "fg_color", "colorentry",
+    help="Background the meter is drawn on. This paints the CANVAS, not the frame behind it -- the canvas covers the whole widget. Blank uses the theme's fg_color."
 )
