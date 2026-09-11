@@ -280,9 +280,17 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         w_val = int(kwargs.get("width", self.final_kw.get("width", 0)) or 0)
         h_val = int(kwargs.get("height", self.final_kw.get("height", 0)) or 0)
 
-        print("[sel] kwargs:", {k: v for k, v in kwargs.items() if k in ("width", "height")},
-              " final_kw:", {k: v for k, v in self.final_kw.items() if k in ("width", "height")},
-              " -> w_val:", w_val, "h_val:", h_val)
+        # And put the COERCED values back, because the Designer sends strings.
+        #
+        # h_val above is an int and is used for the propagate decision, but the
+        # raw kwargs entry -- '100', with quotes -- is what reaches
+        # CTkFrame.configure() at the end of this method, which wants a number.
+        # The height was computed correctly, used correctly, and then forwarded
+        # in a form the native widget could not act on.
+        if "width" in kwargs:
+            kwargs["width"] = w_val
+        if "height" in kwargs:
+            kwargs["height"] = h_val
         if w_val > 0 or h_val > 0:
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", False)
         else:
