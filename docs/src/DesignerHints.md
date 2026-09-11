@@ -63,7 +63,11 @@ The one exception is `text_color_disabled`, which has its own field precisely be
 
 **A property the theme says nothing about is not overridden — it is just set.** Only keys present in a widget's theme block participate in any of this, because those are the only ones a repaint touches.
 
-**Some properties are absent from `disabled_map` on purpose,** and keep their current value when the widget is disabled rather than changing. The labels are the clearest case: their `fg_color` is `transparent`, so a disabled fill would give them a solid background they do not otherwise have. If a property does not appear to change on disable, that is usually why.
+**Some properties are absent from `disabled_map` on purpose,** and keep their current value when the widget is disabled rather than changing. The labels and `sCTkSelector` are the clearest cases: their `fg_color` is `transparent`, so a disabled fill would give them a solid background they do not otherwise have — appearing when you disable the widget and vanishing when you enable it. If a property does not appear to change on disable, that is usually why.
+
+**An override of such a property will not dim either.** Set a colour the theme has no disabled value for, and it stays exactly as you set it through a state change. That is the same rule, not a separate one — there is nothing to change to, and the library will not invent a dimmed version of your colour.
+
+If you want it to dim, add the key to that widget's `disabled_map` in the theme. Your override then dims to whatever you put there.
 
 ---
 

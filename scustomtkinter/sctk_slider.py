@@ -132,7 +132,24 @@ class sCTkSlider(ctk.CTkSlider, ThemeableWidget):
                 if pname in ["fg_color", "progress_color", "button_color", "button_hover_color"]:
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
+
+                    # The default falls back to the CURRENT value when the
+                    # theme has nothing to offer. sCTkThemes.json has no
+                    # sCTkSlider block at all, so every one of these lookups
+                    # returns None -- and pygubu hands that None straight back
+                    # to the widget:
+                    #
+                    #     color is None, for transparency set color='transparent'
+                    #
+                    # With the fallback, clearing such a field is a no-op
+                    # rather than an error. Adding the theme block is the real
+                    # fix; this stops the Designer breaking in the meantime.
+                    theme_value = self._theme_default(pname)
+                    if theme_value is None:
+                        theme_value = val if val is not None else super().cget(pname)
+                    return (pname, pname, pname,
+                            self._query_value(theme_value),
+                            self._query_value(val if val is not None else super().cget(pname)))
 
                 return self._configure_query(pname)
 

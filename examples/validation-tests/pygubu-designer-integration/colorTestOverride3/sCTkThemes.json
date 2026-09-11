@@ -310,6 +310,19 @@
         "button_hover_color": ["#CBD5E1", "#94A3B8"]
       }
     },
+    "sCTkSlider": {
+        "fg_color": ["#CBD5E1", "#374151"],
+        "progress_color": ["#1A4375", "#2471A3"],
+        "button_color": ["#1A4375", "#2471A3"],
+        "button_hover_color": ["#152F52", "#1B5A82"],
+
+        "disabled_map": {
+          "fg_color": ["#E2E8F0", "#1F2937"],
+          "progress_color": ["#CBD5E1", "#374151"],
+          "button_color": ["#CBD5E1", "#374151"],
+          "button_hover_color": ["#CBD5E1", "#374151"]
+        }
+    },
     "sCTkTabview": {
         "font": ["Arial", 15, "normal"],
         "fg_color": ["#FFFFFF", "#111827"],

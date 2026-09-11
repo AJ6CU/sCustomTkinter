@@ -1,14 +1,31 @@
 <?xml version='1.0' encoding='utf-8'?>
 <interface version="1.5" author="PygubuDesigner 0.41.4">
   <project>
-    <settings />
+    <settings>
+      <setting id="name">testColorOverride4</setting>
+      <setting id="description">testColorOverride4</setting>
+      <setting id="template">codescript</setting>
+      <setting id="main_widget">sctk1</setting>
+      <setting id="module_namespace" />
+      <setting id="module_name">testColorOverride4</setting>
+      <setting id="main_classname">testColorOverride4</setting>
+      <setting id="output_dir">.</setting>
+      <setting id="builder_namespace">custom_widgets</setting>
+      <setting id="output_dir2" />
+      <setting id="generate_code_onsave">False</setting>
+      <setting id="use_i18n">False</setting>
+      <setting id="all_ids_attributes">False</setting>
+      <setting id="import_tkvariables">False</setting>
+      <setting id="use_ttk_styledefinition_file">False</setting>
+      <setting id="use_window_centering_code">False</setting>
+      <setting id="ttk_style_definition_file" />
+    </settings>
     <customwidgets />
     <resources />
   </project>
   <object class="scustomtkinter.sCTk" id="sctk1">
     <child>
       <object class="scustomtkinter.sCTkSMeter" id="sctksmeter1">
-        <property name="bg_color">yellow</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
@@ -16,9 +33,6 @@
     </child>
     <child>
       <object class="scustomtkinter.sCTkSMeterBar" id="sctksmeterbar1">
-        <property name="border_color">green</property>
-        <property name="border_width">10</property>
-        <property name="corner_radius">20</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
@@ -26,8 +40,24 @@
     </child>
     <child>
       <object class="scustomtkinter.sCTkSelector" id="sctkselector1">
-        <property name="fg_color">red</property>
         <property name="items">["vw","porsche","240z"]</property>
+        <property name="state">disabled</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkFileExplorer" id="sctkfileexplorer1">
+        <property name="state">disabled</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkSlider" id="sctkslider1">
+        <property name="state">normal</property>
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
