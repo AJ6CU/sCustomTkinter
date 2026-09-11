@@ -91,6 +91,8 @@ Four visual states, not two, with a fixed precedence when more than one could ap
 
 Note there's no `border_color` anywhere in this block — this button style has no themed border by design (it's a solid-fill button). The widget checks for `border_color` in every state's color swap for consistency with the other themed widgets, but that lookup always resolves to nothing here and is simply skipped.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, the same approach already confirmed working on `sCTkComboBox` and `sCTkSegmentedButton` — so they should correctly follow system/app appearance-mode changes automatically. That specific behavior hasn't been separately re-confirmed for this widget's light/dark toggle, only for its disable/enable cycle.
 
 Disabling this button uses CustomTkinter's native `state="disabled"`, not a manual workaround — that distinction matters here specifically because an earlier version of this widget instead manually unbound mouse events while leaving the native state at `"normal"`, and that approach was directly tested and found to **not** actually block clicks. Native `state="disabled"` is what's required.
@@ -136,7 +138,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged. No exception is raised.
-- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color — e.g. `"('#1A4375', '#2471A3')"` instead of a plain hex string. This is a known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project, not specific to this widget.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` is supported and merges into the update; a positional property-name string returns the Tkinter-style query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

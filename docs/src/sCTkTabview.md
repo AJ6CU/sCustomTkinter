@@ -138,6 +138,10 @@ The two hover colors deliberately have no `disabled_map` entry. A disabled tab b
 
 `font` and `segmented_button_height` are both intercepted before native construction and forwarded to the internal segmented button. This is not optional: `CTkTabview` names every parameter explicitly with no `**kwargs` catch-all, so any key it doesn't recognize raises `ValueError` from its constructor. They're applied once rather than on every repaint, since neither varies by state. See [Known Limitations](#limitations) regarding what `segmented_button_height` actually achieves.
 
+**Disabled tab text now honours `disabled_map.text_color`.** It did not before: disabling puts the internal segmented button into CustomTkinter's own disabled state, which puts its inner buttons there too — and a disabled `CTkButton` draws from `text_color_disabled` and ignores `text_color` entirely. The theme's value was set and then discarded at draw time in favour of CustomTkinter's default grey. Both options are now set on each button.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 **Validation is scoped to direct construction.** A subclass reaches this constructor with `final_kw` built from *its own* theme block — `ThemeableWidget`'s run-once guard means it is never rebuilt — so validating these keys against a subclass's block would raise on every construction. Subclasses own their own theme contract.
 
 ---
@@ -219,6 +223,7 @@ if __name__ == "__main__":
 
   Note this is a `CTkTabview` layout constraint, **not** a limitation of the segmented button: a standalone `sCTkSegmentedButton` honors `height` normally.
 - **Tabs are selected from the widget tree, not the design canvas.** Clicking a tab page in Pygubu Designer does not select that tab. `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed to the page you aimed at — an attempt at this produced a highlight on one tab while the tree showed another, which is worse than not working. CustomTkinter's own tabs have the same limitation; their designer plugin contains a commented-out attempt at the same fix. Select the tab in the tree to edit its `label`.
+- **A tabview does not grow with its contents.** It is a fixed size: drop widgets into a tab and the tabview stays as it was, clipping anything that does not fit. Set `width` and `height` on the tabview itself. This is native `CTkTabview` behaviour — the widget takes explicit dimensions and does not propagate its children's requested size — and its theme block sets neither, so the size you get without asking is CustomTkinter's own default.
 - **Disabling does not cascade to children.** It dims the tab bar and locks tab selection, but widgets placed inside a page are unaffected — disabling them is the caller's responsibility.
 - **`add()` and `tab()` return a different type than the native widget.** Code doing an `isinstance` check against `ctk.CTkFrame`, or reaching for CTkFrame-specific internals on a tab page, would notice. `ctk.CTkTabview.tab(widget, name)` still reaches the native shell.
 - **The internal segmented button is a native `CTkSegmentedButton`**, not `sCTkSegmentedButton`. It is created inside `CTkTabview.__init__` and re-themed afterwards by pushing colors onto it. Replacing it with the themed variant would let it theme itself and remove most of that code, but the swap hasn't been made.

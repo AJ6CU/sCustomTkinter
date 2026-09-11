@@ -143,7 +143,15 @@ The right-hand margin is sized for the widest scale label, `"+60 dB"`, which is 
 
 `font` is used for the "SIG", "SWR" and "PWR" section labels; `scale_font` for the numeric scale markings — S units, SWR values and power percentages. These were previously hardcoded across eight separate `create_text` calls and never consulted the theme.
 
-> **Font size has layout consequences.** Label positions are computed from fixed pixel offsets tuned for 9pt and 10pt text. A noticeably larger font will overlap the tick marks and the LED rows — the widget does not measure text and adjust. Change these values in small steps and look at the result.
+> **Superseded.** This page used to warn that label positions were fixed pixel offsets tuned for 9pt and 10pt text and that a larger font would overlap the scale. They are now derived from the font's own metrics — see [Fonts and Label Placement](#fonts) for what still constrains a large font.
+
+**`fg_color` is a property as well as a theme key,** and it paints the **canvas** rather than the frame behind it — the canvas covers the whole widget, so the frame is never visible. Set it in the inspector or through `configure()`; blank returns to the theme's value.
+
+The other frame properties are deliberately **not** offered. `border_color`, `border_width` and `corner_radius` were added to the inspector at one point and taken back out: they appeared and did nothing at all, for the same reason. A property that cannot work is worse than an absent one.
+
+`corner_radius` is the real loss. Rounding the meter would mean rounding the canvas, which Tk cannot do — it would have to be drawn, as a rounded rectangle filling the corners in the parent's colour. Possible, not free, and not done.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme rather than to the previous value. See [Theming](Theming.md#changing-values-at-runtime).
 
 **Fixed:** the configured `fg_color` never actually rendered. It was popped out of the resolved defaults in the constructor (correctly — the native frame takes it separately) and then read back afterwards from the dictionary it had been removed from, so the background always fell through to a hardcoded value. Light mode is where this was visible.
 

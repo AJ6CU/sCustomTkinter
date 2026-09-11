@@ -53,6 +53,19 @@ notes_entry.pack(fill="x", padx=40, pady=10)
 
 ---
 
+**`insert()` and `delete()` work while disabled.** A disabled Tk entry silently ignores both — no error, no text. That matters because generated code sets the state before the content:
+
+```python
+entry1.configure(state="disabled")
+entry1.insert(0, "read only value")
+```
+
+which produced a permanently empty field. The native state is lifted for the write and restored afterwards, leaving the widget's own state flag untouched so the colours do not flicker.
+
+The reasoning: state describes what the **user** may edit, not what the program may write. Setting text on a disabled field is ordinary.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 - **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
@@ -86,6 +99,8 @@ notes_entry.pack(fill="x", padx=40, pady=10)
 **`readonly_map` requires all four keys** whenever `readonly` is actually requested — see `sCTkEntryPrimary`'s docs for the full requirement and design rationale (`text_color` deliberately matches normal exactly; `fg_color` stays close to normal too, since Secondary's normal state is already fairly subtle and there wasn't much room to differentiate further without it starting to look disabled instead).
 
 Same rationale as `sCTkEntryPrimary`: `placeholder_text_color` is a genuinely distinct, themed value, following CustomTkinter's own convention of giving placeholder text a visibly more muted color than typed text. CTkEntry has no separate font for placeholder text — it always shares the single `font` property with typed text; that's a real limitation of the underlying widget, not a gap in this theme file.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
@@ -126,7 +141,7 @@ if __name__ == "__main__":
 - `state()` only recognizes `"disabled"`, `"readonly"`, and `"normal"`/`"enabled"`/`"active"`; any other value leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
 - **`readonly` never deactivates placeholder text, even on focus** — confirmed directly against CustomTkinter's own source; see `sCTkEntryPrimary`'s docs for the full explanation.
 - The disable/enable-cycle cursor-position fix is also applied on transitions into `readonly`, as a precaution not independently verified the way normal↔disabled was — see `sCTkEntryPrimary`'s docs for why this is likely lower-risk than it sounds.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

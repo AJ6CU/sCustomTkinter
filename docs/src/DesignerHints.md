@@ -6,7 +6,7 @@ Rough notes for now — expect this to grow.
 
 ---
 
-## Images resolve relative to the running directory
+### Images resolve relative to the running directory
 
 Set an image in the inspector and it appears on the canvas. Run the generated code from a different directory and it won't.
 
@@ -22,7 +22,7 @@ The generated `safe_image_loader` is an explicit stub — its docstring says "Se
 
 Worth knowing that the two widget families fail differently when it isn't found. The tk stub wraps its load in `except tk.TclError: pass` and returns `None`, so `configure(image=None)` succeeds and you get no image and no message. The CustomTkinter path calls `Image.open()` unwrapped and raises `FileNotFoundError`. Same cause, opposite symptoms — a silent blank in one case, a traceback in the other.
 
-### Images fail in "Preview in toplevel"
+#### Images fail in "Preview in toplevel"
 
 Separate from the above, and not a path problem. A widget with an image shows
 correctly on the design canvas, then previewing it produces:
@@ -45,7 +45,7 @@ code rather than in the preview.
 
 ---
 
-## Overriding a theme value in the inspector
+### Overriding a theme value in the inspector
 
 Set a colour, a font or a size in the inspector and it **replaces** the theme's value for that widget, for as long as that widget exists. Leave the field blank and the theme applies.
 
@@ -69,9 +69,20 @@ The one exception is `text_color_disabled`, which has its own field precisely be
 
 If you want it to dim, add the key to that widget's `disabled_map` in the theme. Your override then dims to whatever you put there.
 
+**An override can look stale on the canvas after a state change.** Set two
+colours on a slider, switch it to disabled, and one may keep the colour you
+gave it while the other dims — the canvas shows a value the widget has already
+moved on from.
+
+The data is correct: preview and generated code both dim properly, and adding
+any other widget forces the canvas to catch up. It comes from the Designer
+applying properties one at a time as you edit, in an order that can land a
+colour after the repaint that was meant to replace it. Nothing is wrong with
+what gets saved.
+
 ---
 
-## The Bindings tab is empty
+### The Bindings tab is empty
 
 Deliberately, and not by us — CustomTkinter's plugin disables it on twelve builder objects individually. Most CTk widgets are composites that draw on an internal canvas, and a binding attached to the outer widget frequently never fires; the canvas or a child receives the event instead. An enabled tab producing dead bindings would be worse than no tab.
 
@@ -86,7 +97,7 @@ class MyApp(baseui.MyAppUI):
 
 ---
 
-## Some widgets are not in the palette, deliberately
+### Some widgets are not in the palette, deliberately
 
 `sCTkMessagebox` is raised at runtime in response to an error or an
 informational event, not placed on a form — there is nothing to design.
@@ -98,7 +109,7 @@ Both are omissions by choice, not oversights.
 
 ---
 
-## Some widgets are selected from the tree, not the canvas
+### Some widgets are selected from the tree, not the canvas
 
 Most widgets can be selected by clicking them on the canvas. Two cannot:
 **tabview tabs**, and the three scrolling frames -- `sCTkScrollableFrame`,
@@ -123,7 +134,7 @@ recently and are now selectable.
 
 ---
 
-## sCTkTabview does not grow with its contents
+### sCTkTabview does not grow with its contents
 
 A tabview is a fixed size. Drop widgets into a tab and the tabview stays as it
 was, clipping anything that does not fit -- it does not expand the way a frame
@@ -141,7 +152,7 @@ before suspecting the layout.
 
 ---
 
-## Transparent widgets look wrong on the canvas
+### Transparent widgets look wrong on the canvas
 
 A widget whose theme sets `"transparent"` shows whatever is behind it. At runtime that's a themed parent, so it follows light and dark correctly. The design canvas does not participate in appearance mode — it is a fixed light grey — so in dark mode a transparent widget keeps a light background while its text follows the dark palette, and the text can become almost unreadable.
 
@@ -151,7 +162,7 @@ The **light green** you sometimes see is pygubu's own preview background, showin
 
 ---
 
-## Widgets that build their own contents are not containers
+### Widgets that build their own contents are not containers
 
 You cannot drop children into `sCTkSelector`, `sCTkPathChooser`, `sCTkFileExplorer` or the dials. Each builds and manages what it holds, and a child dropped in would land in an unmanaged position and be destroyed by the next rebuild.
 
@@ -159,7 +170,7 @@ You cannot drop children into `sCTkSelector`, `sCTkPathChooser`, `sCTkFileExplor
 
 ---
 
-## Dropdown colours are ignored on macOS
+### Dropdown colours are ignored on macOS
 
 The dropdown lists on `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary` are native menus the operating system draws itself. On macOS that means the OS decides how they look, and the theme keys that describe them have no effect:
 

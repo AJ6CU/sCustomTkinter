@@ -4,6 +4,7 @@
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Callbacks](#callbacks)
+* [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
 * [Example](#example)
@@ -63,6 +64,22 @@ def on_vfo_dial_rotated(clicks_delta: int):
     current_frequency_hz += clicks_delta * 100
 ```
 
+### Colours you can set per instance
+
+Three of this widget's colours are properties as well as theme keys — set them in the constructor, through `configure()`, or in the Designer's inspector, and leave blank for the theme's value.
+
+| Property | Applies to |
+| :--- | :--- |
+| `text_color` | The labels **and** the tick marks — both are drawn with this one key. |
+| `dial_color` | The knob face. |
+| `pointer_glow_color` | The glow around the finger dimple. |
+
+The remaining five — `dial_highlight_color`, `dial_shadow_color`, `dial_rim_light_color`, `dial_rim_shadow_color` and `shadow_color` — stay theme-only on purpose. They produce the shaded dome together, and changing one in isolation tends to read as broken rather than different.
+
+There is no separate tick colour. If you want ticks and labels to differ, that needs a new theme key and a change to the draw code.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 ```json
@@ -86,7 +103,9 @@ def on_vfo_dial_rotated(clicks_delta: int):
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+Every key above is required — construction raises `KeyError` naming any that are missing.
+**A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+ See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
 `pointer_glow_color` is **specific to this variant**: it colours the ring around the finger dimple, and only this dial draws one. It is required in both the top level and `disabled_map`. Selector and Range require `pointer_color` instead.
 

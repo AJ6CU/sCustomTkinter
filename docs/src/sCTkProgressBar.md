@@ -72,6 +72,8 @@ signal_meter.set(0.65)
 
 There's no `border_color` anywhere in this theme block, even though the repaint loop checks for one — this style simply has no themed border, the same situation as `sCTkButtonPrimary`'s `border_color`.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -110,7 +112,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` performs no validation at all — any string you pass is stored verbatim; only `"disabled"` actually changes the rendered colors.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

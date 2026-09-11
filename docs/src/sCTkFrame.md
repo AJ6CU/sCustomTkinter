@@ -64,6 +64,8 @@ Everything is applied once, at construction — there's no `disabled_map` for th
 
 With `border_width` at `0`, `border_color` never actually renders visibly regardless of its value — the two are set to the neutral Tkinter color name `"gray"` for both light and dark mode here, but that's moot while the border has no width.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are passed through as raw `(light, dark)` tuples at construction and never touched again, so CustomTkinter's own native appearance-mode tracking handles light/dark repaints on its own — there's no `_set_appearance_mode()` override here, since there's nothing for one to re-trigger. This is the same underlying mechanism validated more deliberately on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family.
 
 **Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkFrame` directly (rather than placing it as a child), construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkFrame` actually accepts (confirmed directly against CustomTkinter's source) to its own native constructor call, so any of your composite's own theme keys that `CTkFrame` wouldn't recognize are filtered out rather than causing a `TypeError`. This only matters for that composition pattern — constructing a plain `sCTkFrame` directly is unaffected either way.
@@ -101,7 +103,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()`/`get_state()`/`configure(state=...)` are all no-ops by design — there's no way to visually disable a frame through this API, since the widget has no disabled state at all.
-- Calling `configure("fg_color")` or `configure("border_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`border_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

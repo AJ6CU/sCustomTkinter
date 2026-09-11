@@ -80,6 +80,8 @@ agree_checkbox.pack(anchor="w", padx=20, pady=10)
 
 Note there's no `hover_color` entry in `disabled_map` — the widget's native disabled state is expected to suppress hover interaction entirely (consistent with the same behavior confirmed on other themed widgets in this project), so a disabled-specific hover color was judged unnecessary; this hasn't been independently re-confirmed for this specific widget.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`, though not separately re-confirmed for this widget's light/dark toggle specifically.
 
 ---
@@ -119,7 +121,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) silently leaves the state unchanged.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 - Color reapplication after a `state()` change is deferred by one event-loop tick (`after_idle`), as a precaution carried over from a confirmed race condition on `sCTkButtonPrimary`. In virtually all normal usage this is imperceptible, but code that inspects colors in the same tick as a `state()` call may see the pre-change values.
 

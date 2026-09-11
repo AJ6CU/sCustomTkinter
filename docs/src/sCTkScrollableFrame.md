@@ -114,10 +114,12 @@ Calling `disable_scroll()` before placement correctly suppresses automatic activ
         "scrollbar_fg_color": ["#FFFFFF", "#111827"],
         "scrollbar_button_color": ["#64748B", "#4B5563"],
         "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
+        "label_text_color": ["#111827", "#F9FAFB"],
         "disabled_map": {
             "border_color": ["#CBD5E1", "#374151"],
             "scrollbar_button_color": ["#CBD5E1", "#1F2937"],
-            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"]
+            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"],
+            "label_text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
@@ -128,6 +130,12 @@ Calling `disable_scroll()` before placement correctly suppresses automatic activ
 **`disabled_map` is required, not optional.** Construction raises `KeyError` immediately if `border_color`, `scrollbar_button_color`, or `scrollbar_button_hover_color` is missing from either the top-level block or `disabled_map`. This is the same fail-loud principle used across this project — a theme gap surfaces at construction with a message naming exactly what's missing, rather than being papered over with a guessed color.
 
 The hover color needs a disabled entry because a disabled scrollbar is inert (dragging is blocked), and one that still lit up on hover would falsely advertise itself as draggable. Setting it to the same value as the disabled `scrollbar_button_color`, as above, means it simply doesn't react.
+
+**`label_text_color` dims when disabled.** This widget can carry a label, and its heading used to stay at full contrast on a disabled panel — the repaint applied `fg_color`, `border_color` and `label_fg_color` but not the text colour, so `disabled_map.label_text_color` had no effect. Both labelled-frame variants already dimmed theirs; this one now matches.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
+Note that a disabled scrolling frame is subtle by design — only the border, the scrollbar and the label change. `fg_color` is deliberately absent from `disabled_map`, so the panel background stays put and the contents carry the signal.
 
 Only the keys that genuinely change when disabled are required in `disabled_map`. `fg_color` is deliberately **not** among them: the content background stays put when disabled, and the border and the now-inert scrollbar carry the visual signal on their own.
 

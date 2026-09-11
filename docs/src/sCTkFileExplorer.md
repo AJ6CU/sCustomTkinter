@@ -68,7 +68,7 @@ An earlier attempt had the widget switch to file mode silently instead, on the r
 | `_finalize_split_bindings()` | `None` | Wires the back button, path entry, and canvas resize handling, then loads the initial directory. Auto-scheduled via `self.after(10, ...)` inside `__init__` — you don't need to call it yourself. It no longer governs scroll activation; `ScrollBindingMixin` handles that independently via `after_idle()`, which fires when Tk is actually idle rather than after a guessed delay. |
 | `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming the back button, path entry, scrollbar, and all rows. Disabling also stops scrolling entirely — wheel, trackpad, and scrollbar dragging — matching `sCTkScrollableFrame`. |
 | `configure(**kwargs)` | `None` | Standard configuration, accepting `state`, `type`, `initialdir`, `initialfile`, `filetypes`, and `double_click_command` alongside native options. |
-| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the six properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and all six queries fell through to the native widget. Pygubu could not read any of them. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the six properties above. **Previously broken twice:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string; and the fall-through forwarded the property *name* to native `CTkFrame.configure()`, which takes it as `require_redraw` and returns `None`. Pygubu could read none of them. |
 
 There's currently no public method for programmatic navigation from outside the widget — `path_to_show` (a `StringVar`) has no automatic refresh trace of its own (unlike `selected_path`), so navigating externally means setting it *and* explicitly calling the private `_fill_explorer()` afterward, matching the pattern used internally by the back button. This is a real API gap, not a documented feature.
 
@@ -135,6 +135,8 @@ Unlike `sCTkPathChooser` there is no `justify` property; the filename is the use
 **`fg_color` is now in the block.** It was absent, so the background came from native `CTkFrame`'s own default and there was nothing for the Designer to revert to when the field was cleared — the query reported the *current* colour as the default, and clearing set it to what it already was. The value above matches CustomTkinter's default, so the appearance is unchanged.
 
 Setting `fg_color` also repaints the internal canvas. It previously reached only the outer frame, because the canvas colour was recomputed on appearance-mode change and at construction but not when the property changed.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 `row_active_text`/`row_dimmed_text` control file/folder row text color — `row_active_text` for a normal, selectable row; `row_dimmed_text` for either a row excluded by the current filter, or every row when the whole widget is disabled. Both required at the top level; `row_dimmed_text` is also hard-required in `disabled_map` for the whole-widget-disabled case.
 

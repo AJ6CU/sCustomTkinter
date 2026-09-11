@@ -52,6 +52,19 @@ freq_entry.pack(fill="x", padx=40, pady=10)
 
 ---
 
+**`insert()` and `delete()` work while disabled.** A disabled Tk entry silently ignores both — no error, no text. That matters because generated code sets the state before the content:
+
+```python
+entry1.configure(state="disabled")
+entry1.insert(0, "read only value")
+```
+
+which produced a permanently empty field. The native state is lifted for the write and restored afterwards, leaving the widget's own state flag untouched so the colours do not flicker.
+
+The reasoning: state describes what the **user** may edit, not what the program may write. Setting text on a disabled field is ordinary.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 - **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
@@ -89,6 +102,8 @@ The design intent behind the values above: `text_color` in `readonly_map` delibe
 `placeholder_text_color` is a genuinely distinct, themed value — not a fallback to `text_color`. This follows CustomTkinter's own convention: in the library's stock `dark-blue` theme, `text_color` is `["gray14", "gray84"]` while `placeholder_text_color` is a visibly more muted `["gray52", "gray62"]`. The value here reuses the muted gray already established throughout this theme file for disabled states — deliberate, but worth knowing if you'd rather placeholder text and disabled text look distinguishable from each other.
 
 Note: CTkEntry has no separate font for placeholder text — it always shares the single `font` property with typed text. This is a real limitation of the underlying widget, not a gap in this theme file; there's no way to make placeholder text use a different font.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
@@ -157,7 +172,7 @@ if __name__ == "__main__":
 - `state()` only recognizes `"disabled"`, `"readonly"`, and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
 - **`readonly` never deactivates placeholder text, even on focus** — confirmed directly against CustomTkinter's own source: native `CTkEntry`'s internal placeholder logic explicitly skips clearing the placeholder whenever `state` is `"readonly"`. This makes sense (there's no reason to clear a placeholder for typing on a field that can't be typed into), but it means a readonly field showing placeholder text will keep showing it indefinitely, regardless of focus.
 - The disable/enable-cycle cursor-position fix (`_reset_cursor_if_showing_placeholder`) is also applied on transitions into `readonly`, as a precaution — but this specific transition (unlike normal↔disabled, which is directly confirmed by testing) has not been independently verified. Given the point above, this is likely lower-risk than it might otherwise seem, since a readonly field showing placeholder text stays in that state continuously rather than toggling.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

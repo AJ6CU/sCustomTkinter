@@ -11,7 +11,7 @@ Several widgets take a list of strings — column headings, selectable items, di
 ---
 
 <a name="accepted-formats"></a>
-## Accepted formats
+### Accepted formats
 
 Three forms, all equivalent:
 
@@ -41,7 +41,7 @@ Space is **not** a separator. `Meat Loaf` is one value.
 ---
 
 <a name="which-properties"></a>
-## Which properties
+### Which properties
 
 | Widget | Property |
 |---|---|
@@ -57,7 +57,7 @@ All are settable at construction and through `configure()`, and both paths parse
 ---
 
 <a name="in-pygubu-designer"></a>
-## In Pygubu Designer
+### In Pygubu Designer
 
 Type the bracketed form into the property field:
 
@@ -72,7 +72,7 @@ Generated code always emits a real Python list regardless of which form you type
 ---
 
 <a name="in-python-code"></a>
-## In Python code
+### In Python code
 
 Pass a real list. There's no reason to pass a string:
 
@@ -87,7 +87,7 @@ Tuples work too, and are returned as lists.
 ---
 
 <a name="why-this-is-shared"></a>
-## Why this is shared
+### Why this is shared
 
 These properties previously had **seven different parsers** and no two behaved alike:
 

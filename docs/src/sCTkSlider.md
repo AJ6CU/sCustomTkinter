@@ -81,6 +81,10 @@ volume_slider.pack(fill="x", padx=40, pady=10)
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
+**A colour set at runtime survives a state change.** `configure(progress_color="yellow")` holds through disable and re-enable, rather than being reverted by the repaint above. Clearing the property returns it to the theme's value, not to whatever was set before it. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
+**This widget's theme block went missing from `sCTkThemes.json` at some point**, and nothing failed — the slider simply rendered in CustomTkinter's own colours and never dimmed when disabled, because its `disabled_map` was empty. The values above are the original ones. If a slider looks untouched by your theme, check the block is present before looking anywhere else.
+
 ---
 
 ### Example
@@ -115,7 +119,7 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)

@@ -112,6 +112,8 @@ Changing `justify` no longer calls `set()`, so it does not fire `command`. Chang
 
 Every key the code references is present in both the top-level block and `disabled_map` — confirmed by direct cross-check against the actual source, nothing missing.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Every top-level key is now required and validated at construction, matching `sCTkFileExplorer`/`sCTkTableview`/`sCTkSpinbox`/`sCTkSelector` — missing any raises immediately, naming the exact key. `disabled_map` entries deliberately keep their original, more lenient behavior: gracefully falling back to the top-level/normal value if not overridden, rather than hard-failing, since that's intentional and already correct.
 
 ---

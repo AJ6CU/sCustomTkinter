@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
-- No single-argument property-query support (e.g. `configure("fg_color")` does nothing) — consistent with this widget's overall minimalism, but different from every other widget in this library.
+- No single-argument property-query support (e.g. `configure("fg_color")` does nothing) — different from every other widget in this library. `ThemeableWidget._configure_query()` would supply it in one line if a use for it appears; a window has no inspector to answer to, which is why it has not been added.
 - No `state()`/`get_state()`/disabled concept at all — this widget has no visual state to toggle.
 
 [Return to Table of Contents](#contents)

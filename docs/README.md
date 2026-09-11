@@ -20,29 +20,9 @@ Where a page explains why something works the way it does, or records a limitati
 # Contents
 
 * [Theming](#theming)
-  * [Where the file lives](#where-the-file-lives)
-  * [Block structure](#block-structure)
-  * [State maps](#state-maps)
-  * [Light and dark](#light-and-dark)
-  * [Changing values at runtime](#changing-values-at-runtime)
-  * [Things that will break your theme](#things-that-will-break-your-theme)
-  * [Adding a theme block for your own widget](#adding-a-theme-block-for-your-own-widget)
 * [Scrolling](#scrolling)
 * [List Properties](#list-properties)
-  * [Accepted formats](#accepted-formats)
-  * [Which properties](#which-properties)
-  * [In Pygubu Designer](#in-pygubu-designer)
-  * [In Python code](#in-python-code)
-  * [Why this is shared](#why-this-is-shared)
 * [Designer Hints](#designer-hints)
-  * [Images resolve relative to the running directory](#images-resolve-relative-to-the-running-directory)
-  * [Clearing a field restores the theme value](#clearing-a-field-restores-the-theme-value)
-  * [The Bindings tab is empty](#the-bindings-tab-is-empty)
-  * [Some widgets are not in the palette, deliberately](#some-widgets-are-not-in-the-palette-deliberately)
-  * [Some widgets are selected from the tree, not the canvas](#some-widgets-are-selected-from-the-tree-not-the-canvas)
-  * [Transparent widgets look wrong on the canvas](#transparent-widgets-look-wrong-on-the-canvas)
-  * [Widgets that build their own contents are not containers](#widgets-that-build-their-own-contents-are-not-containers)
-  * [Dropdowns ignore an explicitly set appearance mode](#dropdowns-ignore-an-explicitly-set-appearance-mode)
 * [Containers](#containers)
   * [sCTk](#sctk)
   * [sCTkToplevel](#sctktoplevel)
@@ -51,7 +31,6 @@ Where a page explains why something works the way it does, or records a limitati
 * [Controls and Display](#controls-and-display)
   * [sCTkButtonPrimary](#sctkbuttonprimary)
   * [sCTkButtonSecondary](#sctkbuttonsecondary)
-  * [Known Limitations](#known-limitations)
   * [sCTkButtonTertiary](#sctkbuttontertiary)
   * [sCTkCheckBox](#sctkcheckbox)
   * [sCTkEntryPrimary](#sctkentryprimary)
@@ -109,7 +88,7 @@ Every colour, font, and several structural values in this library come from a si
 ---
 
 <a name="where-the-file-lives"></a>
-## Where the file lives
+### Where the file lives
 
 Two locations are checked, in this order:
 
@@ -129,7 +108,7 @@ The file is read once, at import time. Changes require a restart.
 ---
 
 <a name="block-structure"></a>
-## Block structure
+### Block structure
 
 One block per widget class, keyed by the exact class name:
 
@@ -159,7 +138,7 @@ You mostly don't need to know which is which. It matters in one place: see [addi
 ---
 
 <a name="state-maps"></a>
-## State maps
+### State maps
 
 Nested inside a block, a state map overrides specific keys when the widget is in that state. Anything not listed keeps its normal value.
 
@@ -179,7 +158,7 @@ Some keys exist *only* inside a state map, because they have no normal-state equ
 ---
 
 <a name="light-and-dark"></a>
-## Light and dark
+### Light and dark
 
 Colours are written as a two-element list: **`[light_mode, dark_mode]`**.
 
@@ -193,11 +172,19 @@ A single string is also accepted, and means the same colour in both modes. The l
 
 Fonts are `[family, size]` or `[family, size, weight]`.
 
-### One place appearance mode does not reach
+#### One place the theme does not reach
 
-If you call `ctk.set_appearance_mode("dark")` while the operating system is set to light, **dropdown menus follow the system, not your setting.** The main widget goes dark; the menu that drops out of it stays light. Switch the system to dark and the menu follows — proving it is tracking the OS rather than the application.
+**Dropdown menus ignore both your appearance mode and your colours**, on `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary`.
 
-Affects `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary`.
+Call `ctk.set_appearance_mode("dark")` while the operating system is set to light and the main widget goes dark while the menu that drops out of it stays light. Switch the system to dark and the menu follows — proving it tracks the OS rather than the application.
+
+The same applies to the three keys that describe the menu:
+
+- `dropdown_fg_color`
+- `dropdown_text_color`
+- `dropdown_hover_color`
+
+On macOS they have no visible effect at all. Keep them: they are expected to work where Tk draws the menu itself rather than handing it to the operating system, so this is platform-specific rather than dead.
 
 This is **not** something the theme file can fix, and not specific to this library — plain `customtkinter.CTkComboBox` behaves identically, confirmed by direct testing. The dropdown is a native menu that the operating system draws itself, largely ignoring the colours a widget configures on it.
 
@@ -208,7 +195,7 @@ If your application sets an appearance mode explicitly rather than following the
 ---
 
 <a name="changing-values-at-runtime"></a>
-## Changing values at runtime
+### Changing values at runtime
 
 `configure()` accepts theme keys directly, and the override **sticks**:
 
@@ -226,14 +213,22 @@ frame.configure(fg_color=("#FFFFFF", "#111827"))
 
 **State maps still win in their state.** Overriding `border_color` sets the *normal*-state colour. If the widget is disabled, or later becomes disabled, `disabled_map` supplies the border colour as usual. To change what a disabled widget looks like, change the theme file.
 
+**An override survives a state change.** Set a colour, disable the widget, enable it again, and your colour is still there. That sounds obvious and was not true until recently: widgets repaint themselves from a snapshot of the theme taken at construction, and a runtime change was not written into that snapshot — so the next repaint quietly restored the theme value. Every widget now records the change first, and the repaint reproduces it.
+
+**Only keys the theme block defines are tracked.** That is exactly the set a repaint reapplies, so it is the set that needs recording. `configure(width=200)` on a widget whose block says nothing about `width` is an ordinary property change and behaves as it always did.
+
+**A key absent from `disabled_map` does not dim — and neither does an override of it.** Several widgets deliberately leave `fg_color` out, so a transparent widget does not gain a solid background when disabled. Override that property and it stays exactly as you set it through a state change, because there is nothing to change to. The library will not invent a dimmed version of your colour. If you want it to dim, add the key to `disabled_map`.
+
+**`text_color_disabled` and `disabled_map.text_color` are one value.** The first is CustomTkinter's own option, the second this library's theme key, and a repaint feeds one into the other. Setting either is equivalent; they will not fight.
+
 ---
 
 <a name="things-that-will-break-your-theme"></a>
-## Things that will break your theme
+### Things that will break your theme
 
 This section is the important one. JSON is unforgiving and the failure modes are not always obvious.
 
-### Syntax errors take out the entire file
+#### Syntax errors take out the entire file
 
 A missing comma, a stray trailing comma before a `}`, an unclosed brace, or a smart quote pasted in from a document — any one of these makes the whole file unparseable. The library catches the error, prints a warning, and **continues with an empty theme registry**. Every widget then fails to construct.
 
@@ -251,7 +246,7 @@ python -m json.tool sCTkThemes.json > /dev/null
 
 Silence means it parsed. Any editor with JSON support will also flag these as you type — worth using one.
 
-### Deleting a key is not the same as leaving it at default
+#### Deleting a key is not the same as leaving it at default
 
 There is no "default" to fall back to. Widgets validate their required keys at construction and raise immediately:
 
@@ -263,7 +258,7 @@ That message names the exact key and whether it belongs at the top level or in a
 
 If you genuinely don't want a widget's block, don't delete it — you'll break that widget. Change its values instead.
 
-### Misspelling a key is worse than deleting it
+#### Misspelling a key is worse than deleting it
 
 A misspelled key is not an error. It's an unrecognised key that gets ignored, while the *correct* key is now missing:
 
@@ -275,20 +270,42 @@ That produces a `KeyError` about `text_color` being missing — which is confusi
 
 A misspelling inside a state map is quieter still: state maps aren't validated as strictly, so a typo there usually means "that property just doesn't change when disabled," with no error at all.
 
-### Renaming a block orphans it
+#### A widget with no block at all is themed by CustomTkinter
+
+Not a crash, and easy to miss. A widget whose block is absent gets no values from this file, so it renders in CustomTkinter's own defaults and its state maps are empty — meaning it never dims when disabled.
+
+`sCTkSlider` was in exactly this position, and the way it got there is the warning. Its block existed and was documented — the values are still in `sCTkSlider.md` — but it went missing from the file at some point. Nothing failed. The slider simply looked like a plain CTk slider and did not change when disabled, and the absence was only noticed when someone tried to clear a colour in the Designer.
+
+A block can disappear from a hand-edited file without anything announcing it, which is exactly why the check below is worth running after a large edit.
+
+A quick check that every widget has one:
+
+```bash
+python3 -c "
+import json
+t = json.load(open('sCTkThemes.json'))
+print(sorted(t))
+"
+```
+
+Compare that list against the widget pages. Six absences are correct: `sCTk` itself, the abstract `sCTkDial` base, `sCTkDialogToplevel` (which shares `sCTkDialog`'s block), the two mixins, and the plugin registration module.
+
+---
+
+#### Renaming a block orphans it
 
 Rename `sCTkSlider` to `sCTkSliders` and the block becomes dead data while every slider fails to construct. Block names must match class names exactly.
 
 The reverse also happens: a block for a widget that no longer exists, or was renamed, sits in the file doing nothing. Harmless, but it accumulates.
 
-### Adding a key that isn't read does nothing
+#### Adding a key that isn't read does nothing
 
 Adding `"hover_glow_color"` to a block will not make anything glow. Widgets read a fixed set of keys; extra ones are ignored silently. If you want a new visual property, the widget's drawing code has to read it.
 
 ---
 
 <a name="adding-a-theme-block-for-your-own-widget"></a>
-## Adding a theme block for your own widget
+### Adding a theme block for your own widget
 
 If you subclass `ThemeableWidget`, your block is found automatically by class name. Three things to know:
 
@@ -454,7 +471,7 @@ Several widgets take a list of strings — column headings, selectable items, di
 ---
 
 <a name="accepted-formats"></a>
-## Accepted formats
+### Accepted formats
 
 Three forms, all equivalent:
 
@@ -484,7 +501,7 @@ Space is **not** a separator. `Meat Loaf` is one value.
 ---
 
 <a name="which-properties"></a>
-## Which properties
+### Which properties
 
 | Widget | Property |
 |---|---|
@@ -500,7 +517,7 @@ All are settable at construction and through `configure()`, and both paths parse
 ---
 
 <a name="in-pygubu-designer"></a>
-## In Pygubu Designer
+### In Pygubu Designer
 
 Type the bracketed form into the property field:
 
@@ -515,7 +532,7 @@ Generated code always emits a real Python list regardless of which form you type
 ---
 
 <a name="in-python-code"></a>
-## In Python code
+### In Python code
 
 Pass a real list. There's no reason to pass a string:
 
@@ -530,7 +547,7 @@ Tuples work too, and are returned as lists.
 ---
 
 <a name="why-this-is-shared"></a>
-## Why this is shared
+### Why this is shared
 
 These properties previously had **seven different parsers** and no two behaved alike:
 
@@ -559,7 +576,7 @@ Rough notes for now — expect this to grow.
 
 ---
 
-## Images resolve relative to the running directory
+### Images resolve relative to the running directory
 
 Set an image in the inspector and it appears on the canvas. Run the generated code from a different directory and it won't.
 
@@ -575,7 +592,7 @@ The generated `safe_image_loader` is an explicit stub — its docstring says "Se
 
 Worth knowing that the two widget families fail differently when it isn't found. The tk stub wraps its load in `except tk.TclError: pass` and returns `None`, so `configure(image=None)` succeeds and you get no image and no message. The CustomTkinter path calls `Image.open()` unwrapped and raises `FileNotFoundError`. Same cause, opposite symptoms — a silent blank in one case, a traceback in the other.
 
-### Images fail in "Preview in toplevel"
+#### Images fail in "Preview in toplevel"
 
 Separate from the above, and not a path problem. A widget with an image shows
 correctly on the design canvas, then previewing it produces:
@@ -598,17 +615,44 @@ code rather than in the preview.
 
 ---
 
-## Clearing a field restores the theme value
+### Overriding a theme value in the inspector
 
-Blanking a property in the inspector doesn't blank the property. It reverts to what the theme says, which is what the generated code produces anyway — the property is omitted and the constructor default applies.
+Set a colour, a font or a size in the inspector and it **replaces** the theme's value for that widget, for as long as that widget exists. Leave the field blank and the theme applies.
 
-So clearing a button's `apply_text` shows "Apply" again rather than an empty button, and clearing a colour returns it to the theme's colour rather than to nothing.
+**An override survives state changes.** Set `fg_color` red, disable the widget, re-enable it, and it is still red. That sounds obvious, and it was not true until recently: widgets repaint themselves from a snapshot of the theme taken at construction, and nothing wrote runtime changes into that snapshot — so any state change quietly restored the theme colour. In the Designer it happened immediately, because properties are applied in an order that sets `state` after the colours.
+
+**Clearing a field returns to the theme, not to the last value.** Blanking a property does not blank the property — it reverts to what the theme says, which is what the generated code produces anyway, since the property is simply omitted and the constructor default applies. Clearing a button's `apply_text` shows "Apply" again rather than an empty button.
+
+The default reported to the Designer comes from an untouched copy of the theme block, so clearing a field you have already overridden gives you the theme's value rather than the override you just replaced.
 
 Properties the theme says nothing about keep their current value instead. A no-op is better than a guessed default, because the guess would be applied.
 
+**One field means one thing.** A widget usually has two sets of colours — the normal ones and a `disabled_map` — but the inspector shows a single field per property. That field always edits the **normal** value, whatever state the widget is currently in. Setting a colour on a disabled widget therefore shows nothing until you re-enable it.
+
+The one exception is `text_color_disabled`, which has its own field precisely because it names the disabled value directly. Setting it is equivalent to setting `disabled_map.text_color` in the theme, and the two are kept as a single value rather than fighting each other.
+
+**A property the theme says nothing about is not overridden — it is just set.** Only keys present in a widget's theme block participate in any of this, because those are the only ones a repaint touches.
+
+**Some properties are absent from `disabled_map` on purpose,** and keep their current value when the widget is disabled rather than changing. The labels and `sCTkSelector` are the clearest cases: their `fg_color` is `transparent`, so a disabled fill would give them a solid background they do not otherwise have — appearing when you disable the widget and vanishing when you enable it. If a property does not appear to change on disable, that is usually why.
+
+**An override of such a property will not dim either.** Set a colour the theme has no disabled value for, and it stays exactly as you set it through a state change. That is the same rule, not a separate one — there is nothing to change to, and the library will not invent a dimmed version of your colour.
+
+If you want it to dim, add the key to that widget's `disabled_map` in the theme. Your override then dims to whatever you put there.
+
+**An override can look stale on the canvas after a state change.** Set two
+colours on a slider, switch it to disabled, and one may keep the colour you
+gave it while the other dims — the canvas shows a value the widget has already
+moved on from.
+
+The data is correct: preview and generated code both dim properly, and adding
+any other widget forces the canvas to catch up. It comes from the Designer
+applying properties one at a time as you edit, in an order that can land a
+colour after the repaint that was meant to replace it. Nothing is wrong with
+what gets saved.
+
 ---
 
-## The Bindings tab is empty
+### The Bindings tab is empty
 
 Deliberately, and not by us — CustomTkinter's plugin disables it on twelve builder objects individually. Most CTk widgets are composites that draw on an internal canvas, and a binding attached to the outer widget frequently never fires; the canvas or a child receives the event instead. An enabled tab producing dead bindings would be worse than no tab.
 
@@ -623,7 +667,7 @@ class MyApp(baseui.MyAppUI):
 
 ---
 
-## Some widgets are not in the palette, deliberately
+### Some widgets are not in the palette, deliberately
 
 `sCTkMessagebox` is raised at runtime in response to an error or an
 informational event, not placed on a form — there is nothing to design.
@@ -635,18 +679,50 @@ Both are omissions by choice, not oversights.
 
 ---
 
-## Some widgets are selected from the tree, not the canvas
+### Some widgets are selected from the tree, not the canvas
 
-Tab pages are the one remaining case. Segmented buttons and dials were in this
-list until recently and are now selectable.
+Most widgets can be selected by clicking them on the canvas. Two cannot:
+**tabview tabs**, and the three scrolling frames -- `sCTkScrollableFrame`,
+`sCTkFrameLabeledPrimary` and `sCTkFrameLabeledSecondary`.
 
-Tabview **tabs** cannot be selected by clicking them. `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed to the page you aimed at. CustomTkinter's own designer plugin contains a commented-out attempt at the same fix.
+Clicking a tab switches the page but leaves the inspector showing whatever was
+selected before; clicking a widget inside the new page corrects it. Clicking
+one of the three frames does nothing at all.
 
-Select the tab in the widget tree to edit its `label`.
+**Select them in the widget tree.** Selecting a tab there switches the canvas
+to it, and selecting a widget inside a tab switches to whichever tab holds it.
+A widget dropped *inside* any of these is selectable by clicking as normal, so
+this affects only the container itself.
+
+Both are dead ends rather than outstanding bugs, for reasons in how
+CustomTkinter builds those two widgets. If you are curious, or tempted to fix
+it, `dev/docs/Developing.md` records the mechanism and the three approaches
+that were tried and failed.
+
+Segmented buttons, dials and the file explorer were on this list until
+recently and are now selectable.
 
 ---
 
-## Transparent widgets look wrong on the canvas
+### sCTkTabview does not grow with its contents
+
+A tabview is a fixed size. Drop widgets into a tab and the tabview stays as it
+was, clipping anything that does not fit -- it does not expand the way a frame
+does, and no amount of packing or `expand=True` on the children changes that.
+
+Set `width` and `height` on the tabview itself.
+
+This is native `CTkTabview` behaviour rather than something this library adds:
+the widget takes explicit dimensions and does not propagate its children's
+requested size. Its theme block sets neither, so the size you get without
+asking is CustomTkinter's own default.
+
+If a tab's contents look cut off, that is why. Reach for `width` and `height`
+before suspecting the layout.
+
+---
+
+### Transparent widgets look wrong on the canvas
 
 A widget whose theme sets `"transparent"` shows whatever is behind it. At runtime that's a themed parent, so it follows light and dark correctly. The design canvas does not participate in appearance mode — it is a fixed light grey — so in dark mode a transparent widget keeps a light background while its text follows the dark palette, and the text can become almost unreadable.
 
@@ -656,7 +732,7 @@ The **light green** you sometimes see is pygubu's own preview background, showin
 
 ---
 
-## Widgets that build their own contents are not containers
+### Widgets that build their own contents are not containers
 
 You cannot drop children into `sCTkSelector`, `sCTkPathChooser`, `sCTkFileExplorer` or the dials. Each builds and manages what it holds, and a child dropped in would land in an unmanaged position and be destroyed by the next rebuild.
 
@@ -664,11 +740,21 @@ You cannot drop children into `sCTkSelector`, `sCTkPathChooser`, `sCTkFileExplor
 
 ---
 
-## Dropdowns ignore an explicitly set appearance mode
+### Dropdown colours are ignored on macOS
 
-If your application calls `ctk.set_appearance_mode("dark")` while the operating system is in light mode, the dropdown lists on `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary` stay light. They are native menus the OS draws itself.
+The dropdown lists on `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary` are native menus the operating system draws itself. On macOS that means the OS decides how they look, and the theme keys that describe them have no effect:
 
-Reproducible with plain `customtkinter.CTkComboBox`, so it is not something this library introduces, and it cannot be fixed from the theme file. See [Theming](Theming.md#light-and-dark).
+- `dropdown_fg_color`
+- `dropdown_text_color`
+- `dropdown_hover_color`
+
+The same applies to appearance mode: call `ctk.set_appearance_mode("dark")` while the system is in light mode and the dropdown stays light, whatever the rest of the application does.
+
+All of it is reproducible with plain `customtkinter.CTkComboBox`, so it is not something this library introduces and it cannot be fixed from the theme file.
+
+**Platform-specific, not dead.** These keys are expected to work where Tk draws the menu itself rather than handing it to the OS. Do not remove them from your theme because they do nothing on a Mac.
+
+See [Theming](Theming.md#light-and-dark).
 
 
 
@@ -806,7 +892,7 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
-- No single-argument property-query support (e.g. `configure("fg_color")` does nothing) — consistent with this widget's overall minimalism, but different from every other widget in this library.
+- No single-argument property-query support (e.g. `configure("fg_color")` does nothing) — different from every other widget in this library. `ThemeableWidget._configure_query()` would supply it in one line if a use for it appears; a window has no inspector to answer to, which is why it has not been added.
 - No `state()`/`get_state()`/disabled concept at all — this widget has no visual state to toggle.
 
 [Return to Table of Contents](#contents)
@@ -879,6 +965,8 @@ Everything is applied once, at construction — there's no `disabled_map` for th
 
 With `border_width` at `0`, `border_color` never actually renders visibly regardless of its value — the two are set to the neutral Tkinter color name `"gray"` for both light and dark mode here, but that's moot while the border has no width.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are passed through as raw `(light, dark)` tuples at construction and never touched again, so CustomTkinter's own native appearance-mode tracking handles light/dark repaints on its own — there's no `_set_appearance_mode()` override here, since there's nothing for one to re-trigger. This is the same underlying mechanism validated more deliberately on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family.
 
 **Safe to use as a base class for your own composite widgets.** If you build a composite widget by inheriting `sCTkFrame` directly (rather than placing it as a child), construction is protected on two fronts: a run-once guard in `ThemeableWidget.__init__` stops your composite's own `final_kw` from being silently overwritten if your widget explicitly calls `ThemeableWidget.__init__` before `super().__init__()`; and this widget's own constructor only forwards the specific keys native `CTkFrame` actually accepts (confirmed directly against CustomTkinter's source) to its own native constructor call, so any of your composite's own theme keys that `CTkFrame` wouldn't recognize are filtered out rather than causing a `TypeError`. This only matters for that composition pattern — constructing a plain `sCTkFrame` directly is unaffected either way.
@@ -916,7 +1004,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()`/`get_state()`/`configure(state=...)` are all no-ops by design — there's no way to visually disable a frame through this API, since the widget has no disabled state at all.
-- Calling `configure("fg_color")` or `configure("border_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`border_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -1039,10 +1127,12 @@ Calling `disable_scroll()` before placement correctly suppresses automatic activ
         "scrollbar_fg_color": ["#FFFFFF", "#111827"],
         "scrollbar_button_color": ["#64748B", "#4B5563"],
         "scrollbar_button_hover_color": ["#1A4375", "#2471A3"],
+        "label_text_color": ["#111827", "#F9FAFB"],
         "disabled_map": {
             "border_color": ["#CBD5E1", "#374151"],
             "scrollbar_button_color": ["#CBD5E1", "#1F2937"],
-            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"]
+            "scrollbar_button_hover_color": ["#CBD5E1", "#1F2937"],
+            "label_text_color": ["#94A3B8", "#64748B"]
         }
     }
 }
@@ -1053,6 +1143,12 @@ Calling `disable_scroll()` before placement correctly suppresses automatic activ
 **`disabled_map` is required, not optional.** Construction raises `KeyError` immediately if `border_color`, `scrollbar_button_color`, or `scrollbar_button_hover_color` is missing from either the top-level block or `disabled_map`. This is the same fail-loud principle used across this project — a theme gap surfaces at construction with a message naming exactly what's missing, rather than being papered over with a guessed color.
 
 The hover color needs a disabled entry because a disabled scrollbar is inert (dragging is blocked), and one that still lit up on hover would falsely advertise itself as draggable. Setting it to the same value as the disabled `scrollbar_button_color`, as above, means it simply doesn't react.
+
+**`label_text_color` dims when disabled.** This widget can carry a label, and its heading used to stay at full contrast on a disabled panel — the repaint applied `fg_color`, `border_color` and `label_fg_color` but not the text colour, so `disabled_map.label_text_color` had no effect. Both labelled-frame variants already dimmed theirs; this one now matches.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
+Note that a disabled scrolling frame is subtle by design — only the border, the scrollbar and the label change. `fg_color` is deliberately absent from `disabled_map`, so the panel background stays put and the contents carry the signal.
 
 Only the keys that genuinely change when disabled are required in `disabled_map`. `fg_color` is deliberately **not** among them: the content background stays put when disabled, and the border and the now-inert scrollbar carry the visual signal on their own.
 
@@ -1225,6 +1321,8 @@ Four visual states, not two, with a fixed precedence when more than one could ap
 
 Note there's no `border_color` anywhere in this block — this button style has no themed border by design (it's a solid-fill button). The widget checks for `border_color` in every state's color swap for consistency with the other themed widgets, but that lookup always resolves to nothing here and is simply skipped.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, the same approach already confirmed working on `sCTkComboBox` and `sCTkSegmentedButton` — so they should correctly follow system/app appearance-mode changes automatically. That specific behavior hasn't been separately re-confirmed for this widget's light/dark toggle, only for its disable/enable cycle.
 
 Disabling this button uses CustomTkinter's native `state="disabled"`, not a manual workaround — that distinction matters here specifically because an earlier version of this widget instead manually unbound mouse events while leaving the native state at `"normal"`, and that approach was directly tested and found to **not** actually block clicks. Native `state="disabled"` is what's required.
@@ -1270,7 +1368,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged. No exception is raised.
-- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color — e.g. `"('#1A4375', '#2471A3')"` instead of a plain hex string. This is a known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project, not specific to this widget.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` is supported and merges into the update; a positional property-name string returns the Tkinter-style query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -1366,6 +1464,8 @@ Three visual states, with precedence **disabled > pressed > normal** when both c
 
 Unlike `sCTkButtonPrimary` (which has no themed border at all, being a solid-fill button), this style does define `border_color` at every tier — normal, pressed, and disabled all have their own distinct border color.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`.
 
 ---
@@ -1400,10 +1500,10 @@ if __name__ == "__main__":
 
 ---
 
-## Known Limitations
+### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
-- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 
@@ -1500,6 +1600,8 @@ A few design decisions specific to this outline style, worth knowing before edit
 - **`disabled_map` has no `fg_color` or `hover_color` entries, deliberately.** Since only keys present in a map get swapped, omitting these means the button stays transparent when disabled instead of gaining an unwanted solid gray fill — a filled button (Primary/Secondary) wants that fill; this one doesn't.
 - **`pressed_map` has no `hover_color` entry either.** Rather than leaving hover color unset while pressed, the widget explicitly falls back to the normal-state `hover_color` in that case.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`.
 
 ---
@@ -1537,7 +1639,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) silently leaves the state unchanged.
-- Calling `configure("fg_color")` (or `"border_color"`/`"text_color"`/`"hover_color"`) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -1626,6 +1728,8 @@ agree_checkbox.pack(anchor="w", padx=20, pady=10)
 
 Note there's no `hover_color` entry in `disabled_map` — the widget's native disabled state is expected to suppress hover interaction entirely (consistent with the same behavior confirmed on other themed widgets in this project), so a disabled-specific hover color was judged unnecessary; this hasn't been independently re-confirmed for this specific widget.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and `sCTkButtonPrimary`, though not separately re-confirmed for this widget's light/dark toggle specifically.
 
 ---
@@ -1665,7 +1769,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) silently leaves the state unchanged.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 - Color reapplication after a `state()` change is deferred by one event-loop tick (`after_idle`), as a precaution carried over from a confirmed race condition on `sCTkButtonPrimary`. In virtually all normal usage this is imperceptible, but code that inspects colors in the same tick as a `state()` call may see the pre-change values.
 
@@ -1727,6 +1831,19 @@ freq_entry.pack(fill="x", padx=40, pady=10)
 
 ---
 
+**`insert()` and `delete()` work while disabled.** A disabled Tk entry silently ignores both — no error, no text. That matters because generated code sets the state before the content:
+
+```python
+entry1.configure(state="disabled")
+entry1.insert(0, "read only value")
+```
+
+which produced a permanently empty field. The native state is lifted for the write and restored afterwards, leaving the widget's own state flag untouched so the colours do not flicker.
+
+The reasoning: state describes what the **user** may edit, not what the program may write. Setting text on a disabled field is ordinary.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 - **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
@@ -1764,6 +1881,8 @@ The design intent behind the values above: `text_color` in `readonly_map` delibe
 `placeholder_text_color` is a genuinely distinct, themed value — not a fallback to `text_color`. This follows CustomTkinter's own convention: in the library's stock `dark-blue` theme, `text_color` is `["gray14", "gray84"]` while `placeholder_text_color` is a visibly more muted `["gray52", "gray62"]`. The value here reuses the muted gray already established throughout this theme file for disabled states — deliberate, but worth knowing if you'd rather placeholder text and disabled text look distinguishable from each other.
 
 Note: CTkEntry has no separate font for placeholder text — it always shares the single `font` property with typed text. This is a real limitation of the underlying widget, not a gap in this theme file; there's no way to make placeholder text use a different font.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
@@ -1832,7 +1951,7 @@ if __name__ == "__main__":
 - `state()` only recognizes `"disabled"`, `"readonly"`, and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
 - **`readonly` never deactivates placeholder text, even on focus** — confirmed directly against CustomTkinter's own source: native `CTkEntry`'s internal placeholder logic explicitly skips clearing the placeholder whenever `state` is `"readonly"`. This makes sense (there's no reason to clear a placeholder for typing on a field that can't be typed into), but it means a readonly field showing placeholder text will keep showing it indefinitely, regardless of focus.
 - The disable/enable-cycle cursor-position fix (`_reset_cursor_if_showing_placeholder`) is also applied on transitions into `readonly`, as a precaution — but this specific transition (unlike normal↔disabled, which is directly confirmed by testing) has not been independently verified. Given the point above, this is likely lower-risk than it might otherwise seem, since a readonly field showing placeholder text stays in that state continuously rather than toggling.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -1894,6 +2013,19 @@ notes_entry.pack(fill="x", padx=40, pady=10)
 
 ---
 
+**`insert()` and `delete()` work while disabled.** A disabled Tk entry silently ignores both — no error, no text. That matters because generated code sets the state before the content:
+
+```python
+entry1.configure(state="disabled")
+entry1.insert(0, "read only value")
+```
+
+which produced a permanently empty field. The native state is lifted for the write and restored afterwards, leaving the widget's own state flag untouched so the colours do not flicker.
+
+The reasoning: state describes what the **user** may edit, not what the program may write. Setting text on a disabled field is ordinary.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 - **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
@@ -1927,6 +2059,8 @@ notes_entry.pack(fill="x", padx=40, pady=10)
 **`readonly_map` requires all four keys** whenever `readonly` is actually requested — see `sCTkEntryPrimary`'s docs for the full requirement and design rationale (`text_color` deliberately matches normal exactly; `fg_color` stays close to normal too, since Secondary's normal state is already fairly subtle and there wasn't much room to differentiate further without it starting to look disabled instead).
 
 Same rationale as `sCTkEntryPrimary`: `placeholder_text_color` is a genuinely distinct, themed value, following CustomTkinter's own convention of giving placeholder text a visibly more muted color than typed text. CTkEntry has no separate font for placeholder text — it always shares the single `font` property with typed text; that's a real limitation of the underlying widget, not a gap in this theme file.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
@@ -1967,7 +2101,7 @@ if __name__ == "__main__":
 - `state()` only recognizes `"disabled"`, `"readonly"`, and `"normal"`/`"enabled"`/`"active"`; any other value leaves the internal state flag unchanged, though colors are still harmlessly re-applied.
 - **`readonly` never deactivates placeholder text, even on focus** — confirmed directly against CustomTkinter's own source; see `sCTkEntryPrimary`'s docs for the full explanation.
 - The disable/enable-cycle cursor-position fix is also applied on transitions into `readonly`, as a precaution not independently verified the way normal↔disabled was — see `sCTkEntryPrimary`'s docs for why this is likely lower-risk than it sounds.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -2049,6 +2183,8 @@ console_header.pack(expand=True, pady=10)
 
 Primary's disabled color is intentionally the least muted of the three label tiers — by design, a disabled `sCTkLabelPrimary` should still read as more prominent than a disabled `sCTkLabelSecondary` or `sCTkLabelTertiary`, echoing the hierarchy the three tiers already have when enabled.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -2086,7 +2222,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
-- Calling `configure("fg_color")` or `configure("text_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`text_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -2168,6 +2304,8 @@ Unlike `sCTkLabelPrimary`/`sCTkLabelTertiary`'s history, this widget's `_update_
 
 Secondary's disabled color sits deliberately in the middle of the three label tiers' disabled states — less muted than Tertiary's, more muted than Primary's — mirroring the emphasis hierarchy the three tiers already have when enabled.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -2205,7 +2343,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
-- Calling `configure("fg_color")` or `configure("text_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`text_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -2287,6 +2425,8 @@ panel_legend.pack(expand=True, pady=10)
 
 Tertiary's disabled color is intentionally the most muted of the three label tiers — by design, a disabled `sCTkLabelTertiary` should read as the least prominent of the three even while disabled, echoing the hierarchy the three tiers already have when enabled.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -2324,7 +2464,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value (including typos) matches neither branch and silently leaves the state unchanged.
-- Calling `configure("fg_color")` or `configure("text_color")` returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`text_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -2405,6 +2545,8 @@ signal_meter.set(0.65)
 
 There's no `border_color` anywhere in this theme block, even though the repaint loop checks for one — this style simply has no themed border, the same situation as `sCTkButtonPrimary`'s `border_color`.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -2443,7 +2585,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` performs no validation at all — any string you pass is stored verbatim; only `"disabled"` actually changes the rendered colors.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -2531,6 +2673,8 @@ fm_radio.pack(anchor="w")
 
 `border_width_unchecked` and `border_width_checked` are real, top-level-only theme keys (not in `disabled_map`) that control the button's border thickness based on whether it's currently the selected button in its group — thicker when checked, to show the filled dot. They're applied once at construction and left alone afterward; the native widget switches between them internally based on the checked/unchecked state, so no repaint-time logic is needed here.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -2573,7 +2717,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value matches neither branch, though colors are still harmlessly re-applied.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for `state`/`fg_color`/`border_color`/`text_color`/`hover_color`, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -2950,6 +3094,10 @@ volume_slider.pack(fill="x", padx=40, pady=10)
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
+**A colour set at runtime survives a state change.** `configure(progress_color="yellow")` holds through disable and re-enable, rather than being reverted by the repaint above. Clearing the property returns it to the theme's value, not to whatever was set before it. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
+**This widget's theme block went missing from `sCTkThemes.json` at some point**, and nothing failed — the slider simply rendered in CustomTkinter's own colours and never dimmed when disabled, because its `disabled_map` was empty. The values above are the original ones. If a slider looks untouched by your theme, check the block is present before looking anywhere else.
+
 ---
 
 ### Example
@@ -2984,7 +3132,7 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for four specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -3264,6 +3412,10 @@ The two hover colors deliberately have no `disabled_map` entry. A disabled tab b
 
 `font` and `segmented_button_height` are both intercepted before native construction and forwarded to the internal segmented button. This is not optional: `CTkTabview` names every parameter explicitly with no `**kwargs` catch-all, so any key it doesn't recognize raises `ValueError` from its constructor. They're applied once rather than on every repaint, since neither varies by state. See [Known Limitations](#limitations) regarding what `segmented_button_height` actually achieves.
 
+**Disabled tab text now honours `disabled_map.text_color`.** It did not before: disabling puts the internal segmented button into CustomTkinter's own disabled state, which puts its inner buttons there too — and a disabled `CTkButton` draws from `text_color_disabled` and ignores `text_color` entirely. The theme's value was set and then discarded at draw time in favour of CustomTkinter's default grey. Both options are now set on each button.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 **Validation is scoped to direct construction.** A subclass reaches this constructor with `final_kw` built from *its own* theme block — `ThemeableWidget`'s run-once guard means it is never rebuilt — so validating these keys against a subclass's block would raise on every construction. Subclasses own their own theme contract.
 
 ---
@@ -3345,6 +3497,7 @@ if __name__ == "__main__":
 
   Note this is a `CTkTabview` layout constraint, **not** a limitation of the segmented button: a standalone `sCTkSegmentedButton` honors `height` normally.
 - **Tabs are selected from the widget tree, not the design canvas.** Clicking a tab page in Pygubu Designer does not select that tab. `CTkTabview` stacks every page in one grid cell with only the active one mapped, so a click cannot be attributed to the page you aimed at — an attempt at this produced a highlight on one tab while the tree showed another, which is worse than not working. CustomTkinter's own tabs have the same limitation; their designer plugin contains a commented-out attempt at the same fix. Select the tab in the tree to edit its `label`.
+- **A tabview does not grow with its contents.** It is a fixed size: drop widgets into a tab and the tabview stays as it was, clipping anything that does not fit. Set `width` and `height` on the tabview itself. This is native `CTkTabview` behaviour — the widget takes explicit dimensions and does not propagate its children's requested size — and its theme block sets neither, so the size you get without asking is CustomTkinter's own default.
 - **Disabling does not cascade to children.** It dims the tab bar and locks tab selection, but widgets placed inside a page are unaffected — disabling them is the caller's responsibility.
 - **`add()` and `tab()` return a different type than the native widget.** Code doing an `isinstance` check against `ctk.CTkFrame`, or reaching for CTkFrame-specific internals on a tab page, would notice. `ctk.CTkTabview.tab(widget, name)` still reaches the native shell.
 - **The internal segmented button is a native `CTkSegmentedButton`**, not `sCTkSegmentedButton`. It is created inside `CTkTabview.__init__` and re-themed afterwards by pushing colors onto it. Replacing it with the themed variant would let it theme itself and remove most of that code, but the swap hasn't been made.
@@ -3436,6 +3589,8 @@ log_area.pack(fill="both", expand=True, padx=40, pady=10)
 
 `scrollbar_button_color` and `scrollbar_button_hover_color` are required to be present in whichever map is active — if either is missing, the widget raises immediately rather than substituting a hardcoded color.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -3473,7 +3628,7 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for six specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -3558,6 +3713,8 @@ notes_area.pack(fill="both", expand=True, padx=40, pady=10)
 
 `scrollbar_button_color` and `scrollbar_button_hover_color` are required to be present in whichever map is active — if either is missing, the widget raises immediately rather than substituting a hardcoded color.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -3595,7 +3752,7 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for six specific properties, and falls through to the native widget's `configure()` for anything else.
 
 [Return to Table of Contents](#contents)
@@ -3978,6 +4135,8 @@ band_menu.pack(fill="x", padx=40, pady=10)
 
 `fg_color` and `text_color` are required to be present in whichever map is active — if either is missing, the widget raises immediately rather than substituting a hardcoded color, per this project's design of failing hard on incomplete theme data (see `sCTkLabelPrimary`/`Secondary`/`Tertiary` for the precedent). An earlier version of this widget used hardcoded hex fallbacks for both, and separately had a real bug where the theme's actual `button_hover_color` was computed correctly and then immediately overwritten with `fg_color` — both are fixed as of this project's audit.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
 ---
@@ -4017,7 +4176,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - `state()` only recognizes `"disabled"` and `"normal"`/`"enabled"`/`"active"`; any other value matches neither branch, though colors are still harmlessly re-applied.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - Passing a positional dict to `configure()` merges into the update; a positional property-name string returns the query tuple described above for five specific properties, and falls through to the native widget's `configure()` for anything else.
 - **The border depends on a CustomTkinter internal.** `sCTkOptionMenuBorderMixin` replaces the widget's private `_draw()` and calls the private draw engine, because native `CTkOptionMenu` passes a hardcoded `0` where the border width belongs. If an upstream release changes that method, the border disappears — a visual regression, not a crash.
 - **`self._menu` is gone.** Code written against the previous composite structure, which reached the inner dropdown directly, needs updating: this widget *is* the dropdown now.
@@ -4170,6 +4329,7 @@ The body is now roughly twenty shaded ovals plus ticks and labels, none of which
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Callbacks](#callbacks)
+* [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
 * [Example](#example)
@@ -4229,6 +4389,22 @@ def on_vfo_dial_rotated(clicks_delta: int):
     current_frequency_hz += clicks_delta * 100
 ```
 
+### Colours you can set per instance
+
+Three of this widget's colours are properties as well as theme keys — set them in the constructor, through `configure()`, or in the Designer's inspector, and leave blank for the theme's value.
+
+| Property | Applies to |
+| :--- | :--- |
+| `text_color` | The labels **and** the tick marks — both are drawn with this one key. |
+| `dial_color` | The knob face. |
+| `pointer_glow_color` | The glow around the finger dimple. |
+
+The remaining five — `dial_highlight_color`, `dial_shadow_color`, `dial_rim_light_color`, `dial_rim_shadow_color` and `shadow_color` — stay theme-only on purpose. They produce the shaded dome together, and changing one in isolation tends to read as broken rather than different.
+
+There is no separate tick colour. If you want ticks and labels to differ, that needs a new theme key and a change to the draw code.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 ```json
@@ -4252,7 +4428,9 @@ def on_vfo_dial_rotated(clicks_delta: int):
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+Every key above is required — construction raises `KeyError` naming any that are missing.
+**A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+ See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
 `pointer_glow_color` is **specific to this variant**: it colours the ring around the finger dimple, and only this dial draws one. It is required in both the top level and `disabled_map`. Selector and Range require `pointer_color` instead.
 
@@ -4382,6 +4560,7 @@ if __name__ == "__main__":
 * [Constructor](#constructor)
 * [Sizing and Label Placement](#sizing)
 * [Callbacks](#callbacks)
+* [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
 * [Example](#example)
@@ -4478,6 +4657,22 @@ def on_volume_level_changed(active_value: int):
     print(f"Active Selected Option Value position tracker = {active_value}")
 ```
 
+### Colours you can set per instance
+
+Three of this widget's colours are properties as well as theme keys — set them in the constructor, through `configure()`, or in the Designer's inspector, and leave blank for the theme's value.
+
+| Property | Applies to |
+| :--- | :--- |
+| `text_color` | The labels **and** the tick marks — both are drawn with this one key. |
+| `dial_color` | The knob face. |
+| `pointer_color` | The pointer line on the knob. |
+
+The remaining five — `dial_highlight_color`, `dial_shadow_color`, `dial_rim_light_color`, `dial_rim_shadow_color` and `shadow_color` — stay theme-only on purpose. They produce the shaded dome together, and changing one in isolation tends to read as broken rather than different.
+
+There is no separate tick colour. If you want ticks and labels to differ, that needs a new theme key and a change to the draw code.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 ```json
@@ -4501,7 +4696,9 @@ def on_volume_level_changed(active_value: int):
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+Every key above is required — construction raises `KeyError` naming any that are missing.
+**A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+ See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
 `pointer_color` is **specific to this variant and its Selector sibling**, and colours the pointer line. It was present in the theme file for a long time but read by no code path at all — the pointer drew in `text_color` instead. It is now live, so the pointer can differ from the tick labels. It has no `disabled_map` entry; a disabled pointer falls back to the disabled `text_color`.
 
@@ -4606,6 +4803,7 @@ if __name__ == "__main__":
 * [Constructor](#constructor)
 * [Sizing and Label Placement](#sizing)
 * [Callbacks](#callbacks)
+* [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
 * [Example](#example)
@@ -4699,6 +4897,22 @@ def on_operating_mode_changed(active_index: int):
     print(f"Active Selected Option Index position tracker = {active_index}")
 ```
 
+### Colours you can set per instance
+
+Three of this widget's colours are properties as well as theme keys — set them in the constructor, through `configure()`, or in the Designer's inspector, and leave blank for the theme's value.
+
+| Property | Applies to |
+| :--- | :--- |
+| `text_color` | The labels **and** the tick marks — both are drawn with this one key. |
+| `dial_color` | The knob face. |
+| `pointer_color` | The pointer line on the knob. |
+
+The remaining five — `dial_highlight_color`, `dial_shadow_color`, `dial_rim_light_color`, `dial_rim_shadow_color` and `shadow_color` — stay theme-only on purpose. They produce the shaded dome together, and changing one in isolation tends to read as broken rather than different.
+
+There is no separate tick colour. If you want ticks and labels to differ, that needs a new theme key and a change to the draw code.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 ```json
@@ -4722,7 +4936,9 @@ def on_operating_mode_changed(active_index: int):
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+Every key above is required — construction raises `KeyError` naming any that are missing.
+**A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+ See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
 `pointer_color` is **specific to this variant and its Range sibling**, and colours the pointer line. It was present in the theme file for a long time but read by no code path at all — the pointer drew in `text_color` instead. It is now live, so the pointer can differ from the tick labels. It has no `disabled_map` entry; a disabled pointer falls back to the disabled `text_color`.
 
@@ -5174,6 +5390,7 @@ if __name__ == "__main__":
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [Typing a path](#typing)
 * [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
 * [Example](#example)
 * [Known Limitations](#known-limitations)
@@ -5205,17 +5422,25 @@ sCTkFileExplorer(master=None, initialdir=None, type="file", filetypes=None, ...)
 |---|---|---|
 | `master` | widget | Parent container. |
 | `initialdir` | `str` | Starting directory. |
+| `initialfile` | `str` | File to select. A bare name resolves against `initialdir`; an absolute path or one starting with `~` is used as given. |
 | `type` | `"file"` / `"directory"` | Whether individual files are selectable, or only directories. |
 | `filetypes` | `list[str]` | File extension filter (only meaningful when `type="file"`). |
 | `command` | `callable` | Called with the clicked path (a string) on a single click. |
-| `double_click_command` | `callable` | Called with `(self, path)` on a double click. |
+| `double_click_command` | `callable` | Called with `(widget, path)` on a double click — note this differs from `command`, which receives the path alone. |
 | `width` / `height` | `int` | Overall widget dimensions. |
+| `selection_color` | color | Highlight colour of the selected row. Omit to use the theme's `selection_color`. |
 | `**kwargs` | — | Any native `CTkFrame` argument, or a theme-key override (see [Theming](#theming-sctkthemesjson)). |
 
 ```python
 explorer = sCTkFileExplorer(control_panel, initialdir="/Users/you/Documents", type="directory", width=350, height=380)
 explorer.pack(fill="both", expand=True)
 ```
+
+**`filetypes` requires `type="file"`.** Passing a filter while the mode is `"directory"` — which is the default — raises `ValueError`, and the same combination set in the Designer draws a "UI Mismatch" notice in place of the listing.
+
+An earlier attempt had the widget switch to file mode silently instead, on the reasoning that asking for a filter is unambiguous. That was wrong for the Designer: a builder object cannot write the companion value back to the live tree node, so the inspector went on showing `directory` — and the `.ui` file *saved* that combination, making the divergence permanent rather than cosmetic. Refusing is better than correcting something the surrounding tooling cannot be told about.
+
+`set_mode("directory")` clears any filter, since choosing directories makes one meaningless.
 
 **`command` receives a path, not the widget.** An earlier version passed `self` (the widget instance) instead of the clicked path — confirmed and fixed, since the only real-world caller (`sCTkPathChooser`) expected a path string and would have received garbage.
 
@@ -5228,9 +5453,28 @@ explorer.pack(fill="both", expand=True)
 | `_finalize_split_bindings()` | `None` | Wires the back button, path entry, and canvas resize handling, then loads the initial directory. Auto-scheduled via `self.after(10, ...)` inside `__init__` — you don't need to call it yourself. It no longer governs scroll activation; `ScrollBindingMixin` handles that independently via `after_idle()`, which fires when Tk is actually idle rather than after a guessed delay. |
 | `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming the back button, path entry, scrollbar, and all rows. Disabling also stops scrolling entirely — wheel, trackpad, and scrollbar dragging — matching `sCTkScrollableFrame`. |
 | `configure(**kwargs)` | `None` | Standard configuration, accepting `state`, `type`, `initialdir`, `initialfile`, `filetypes`, and `double_click_command` alongside native options. |
-| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the six properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and all six queries fell through to the native widget. Pygubu could not read any of them. |
+| `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the six properties above. **Previously broken twice:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string; and the fall-through forwarded the property *name* to native `CTkFrame.configure()`, which takes it as `require_redraw` and returns `None`. Pygubu could read none of them. |
 
 There's currently no public method for programmatic navigation from outside the widget — `path_to_show` (a `StringVar`) has no automatic refresh trace of its own (unlike `selected_path`), so navigating externally means setting it *and* explicitly calling the private `_fill_explorer()` afterward, matching the pattern used internally by the back button. This is a real API gap, not a documented feature.
+
+---
+
+<a name="typing"></a>
+### Typing a path
+
+The path entry is editable, and a path typed into it is applied on **Return**, on keypad Enter, or when focus leaves the field.
+
+A value is accepted only if it exists. Focus-out fires whenever you click elsewhere, so a half-typed path must not replace a good one. `~` is expanded. A directory navigates there; a file navigates to its folder, and is also selected when `type` is `"file"`.
+
+Three fixes were needed here. `~` was never expanded, so typing `~/Documents` silently did nothing. Only directories were accepted regardless of this widget's own `type`, so a file explorer would not let you type a file path. And there was no focus-out binding, so tabbing away left the text unapplied.
+
+`sCTkPathChooser` behaves identically. The two are the same control, one with a button.
+
+**The entry scrolls to show the end of a long path,** so the filename stays visible when you select a file. It previously showed the start and the filename ran off the right.
+
+Driven by a trace on `selected_path` rather than by the existing one, which is gated by an internal flag switched off whenever the widget sets the path itself — exactly the case where the view needs moving. The move is also re-applied once Tk is idle, because the immediate call runs before the entry has recomputed the width of its new text and lands part-way through the filename.
+
+Unlike `sCTkPathChooser` there is no `justify` property; the filename is the useful end.
 
 ---
 
@@ -5251,6 +5495,8 @@ There's currently no public method for programmatic navigation from outside the 
         "row_active_text": ["#1F2937", "#F9FAFB"],
         "row_dimmed_text": ["#94A3B8", "#64748B"],
         "button_color": ["#64748B", "#4B5563"],
+        "fg_color": ["gray86", "gray17"],
+        "selection_color": ["#3B82F6", "#1D4ED8"],
         "disabled_map": {
             "btn_fg": ["#CBD5E1", "#334155"],
             "btn_border_color": ["#CBD5E1", "#334155"],
@@ -5268,6 +5514,14 @@ There's currently no public method for programmatic navigation from outside the 
 **`button_color` is required at the top level and in `disabled_map`.** This is a harder requirement than it looks: `_process_live_theme_repaint()` is bound to `<Visibility>`, so it fires essentially every time the widget is displayed, not only when explicitly disabled. A theme block missing `button_color` therefore raises `KeyError` on first display, not merely on disable. The values shown above (`["#64748B", "#4B5563"]` normal, `["#CBD5E1", "#334155"]` disabled) are the suggested pair.
 
 `button_color` controls the internal scrollbar's color, distinct from `btn_fg` (the back button).
+
+**`selection_color` is the highlighted row,** and is deliberately separate from `btn_fg`. That key colours the navigation buttons as well, so exposing it directly would have meant changing the selection also recoloured Back and the path controls. It has no `disabled_map` entry: a disabled explorer draws no highlight at all, rather than a dimmed one, so there is nothing for a disabled value to apply to.
+
+**`fg_color` is now in the block.** It was absent, so the background came from native `CTkFrame`'s own default and there was nothing for the Designer to revert to when the field was cleared — the query reported the *current* colour as the default, and clearing set it to what it already was. The value above matches CustomTkinter's default, so the appearance is unchanged.
+
+Setting `fg_color` also repaints the internal canvas. It previously reached only the outer frame, because the canvas colour was recomputed on appearance-mode change and at construction but not when the property changed.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 `row_active_text`/`row_dimmed_text` control file/folder row text color — `row_active_text` for a normal, selectable row; `row_dimmed_text` for either a row excluded by the current filter, or every row when the whole widget is disabled. Both required at the top level; `row_dimmed_text` is also hard-required in `disabled_map` for the whole-widget-disabled case.
 
@@ -5307,6 +5561,8 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - No public method for programmatic navigation — see [Methods](#methods) above.
+- **The inspector does not follow the widget's own rule.** `filetypes` and `type` constrain each other, but a builder object cannot write the companion value back to the Designer's copy of the properties, so the two can be left in a combination the widget refuses. The widget complains rather than correcting silently, which is why this is visible rather than hidden.
+- **`command` and `double_click_command` have different signatures** — the first receives the path, the second receives the widget and the path. A wart rather than a design: `command` was changed at some point from passing the widget to passing the path, and the double-click callback was not changed with it. `sCTkPathChooser` reads `args[-1]` to work around it.
 - Missing a required theme key raises `KeyError` at first use, naming exactly which key and whether it's needed at the top level or in `disabled_map`.
 - **The debounced rebind also runs on genuine resizes.** `<Configure>` on the row frame doesn't distinguish "rows were added" from "the window was dragged", so resizing rebinds too. One coalesced pass rather than one per event, but on a very large directory it isn't free.
 - **The internal `Canvas` is a raw `tkinter.Canvas`,** not a themed widget, so its background is derived rather than themed — see the note at the end of [Theming](#theming-sctkthemesjson).
@@ -5324,6 +5580,7 @@ if __name__ == "__main__":
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [In Pygubu Designer](#designer)
 * [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
 * [Example](#example)
 * [Known Limitations](#known-limitations)
@@ -5374,6 +5631,17 @@ channel_panel.pack(expand=True, fill="both", padx=25, pady=25)
 
 ---
 
+<a name="designer"></a>
+### In Pygubu Designer
+
+**`state` is now a property in the inspector.** The widget has always implemented it, but the builder object never declared it — so a panel could only be disabled from code. It offers `normal` and `disabled`, defaulting to `normal`.
+
+**This panel cannot be selected by clicking it on the canvas.** Select it in the widget tree instead. A widget dropped *inside* it selects normally, so this affects only the container itself.
+
+That is a dead end rather than an open bug. `CTkScrollableFrame` — which this widget is built on — makes the widget the *inner* frame inside a canvas owned by a separate outer frame, so the surface you click is the widget's parent and it has no real children of its own. Forwarding the click, binding the canvas, and a transparent overlay were each tried and each is closed off by something specific; `dev/docs/Developing.md` records which.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 - **Applied once, at construction** — every key in the widget's theme block, including `label_font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
@@ -5397,6 +5665,8 @@ channel_panel.pack(expand=True, fill="both", padx=25, pady=25)
 ```
 
 **On the internal scrollbar:** since this widget is built on `CTkScrollableFrame`, a scrollbar exists internally even though scrolling isn't the intent. It's suppressed by matching its colors to the frame's background and collapsing its width to `0`. This is a workaround, not a true disable — confirmed by direct investigation, CustomTkinter's native scrollbar has no disabled state to lock in the first place, even on an unwrapped `CTkScrollableFrame`. Matching colors and zeroing width is the closest achievable approximation.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
@@ -5445,7 +5715,8 @@ if __name__ == "__main__":
 - Disabling this widget is purely cosmetic — it does not lock interactivity, and does not cascade to child widgets automatically.
 - The internal scrollbar cannot be truly disabled (a CustomTkinter limitation, confirmed by direct investigation, not something this wrapper can work around) — only visually hidden via color-matching and zero width.
 - `winfo_children()`'s default filtering is a class-name check, not an identity check — see the Methods table above for the specific edge case this can miss.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
+- **Not selectable by clicking on the design canvas** — see [In Pygubu Designer](#designer).
 
 [Return to Table of Contents](#contents)
 
@@ -5457,6 +5728,7 @@ if __name__ == "__main__":
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [In Pygubu Designer](#designer)
 * [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
 * [Example](#example)
 * [Known Limitations](#known-limitations)
@@ -5507,6 +5779,17 @@ notes_panel.pack(expand=True, fill="both", padx=25, pady=25)
 
 ---
 
+<a name="designer"></a>
+### In Pygubu Designer
+
+**`state` is now a property in the inspector.** The widget has always implemented it, but the builder object never declared it — so a panel could only be disabled from code. It offers `normal` and `disabled`, defaulting to `normal`.
+
+**This panel cannot be selected by clicking it on the canvas.** Select it in the widget tree instead. A widget dropped *inside* it selects normally, so this affects only the container itself.
+
+That is a dead end rather than an open bug. `CTkScrollableFrame` — which this widget is built on — makes the widget the *inner* frame inside a canvas owned by a separate outer frame, so the surface you click is the widget's parent and it has no real children of its own. Forwarding the click, binding the canvas, and a transparent overlay were each tried and each is closed off by something specific; `dev/docs/Developing.md` records which.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 - **Applied once, at construction** — every key in the widget's theme block is merged with any matching keyword arguments and applied when the widget is built.
@@ -5530,6 +5813,8 @@ notes_panel.pack(expand=True, fill="both", padx=25, pady=25)
 ```
 
 **On the internal scrollbar:** same situation as `sCTkFrameLabeledPrimary` — a scrollbar exists internally since this is built on `CTkScrollableFrame`, even though scrolling isn't the intent. It's suppressed by matching its colors to the frame's background and collapsing its width to `0`, since CustomTkinter's native scrollbar has no disabled state to lock in the first place.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
@@ -5578,7 +5863,8 @@ if __name__ == "__main__":
 - Disabling this widget is purely cosmetic — it does not lock interactivity, and does not cascade to child widgets automatically.
 - The internal scrollbar cannot be truly disabled (a CustomTkinter limitation, confirmed by direct investigation) — only visually hidden via color-matching and zero width.
 - `winfo_children()`'s default filtering is a class-name check, not an identity check — see `sCTkFrameLabeledPrimary`'s docs for the specific edge case this can miss.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
+- **Not selectable by clicking on the design canvas** — see [In Pygubu Designer](#designer).
 
 [Return to Table of Contents](#contents)
 
@@ -5815,6 +6101,7 @@ if __name__ == "__main__":
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [Typing a path](#typing)
 * [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
 * [Example](#example)
 * [Known Limitations](#known-limitations)
@@ -5844,10 +6131,11 @@ sCTkPathChooser(master=None, initialdir=None, initialfile=None, type="file",
 | Parameter | Type | Description |
 |---|---|---|
 | `master` | widget | Parent container. |
-| `initialdir` / `initialfile` | `str` | Starting directory/filename for the browser popup. |
+| `initialdir` | `str` | Starting directory for the browser popup, and where a bare `initialfile` is resolved. |
+| `initialfile` | `str` | File to seed the entry with. A bare name resolves against `initialdir`; an absolute path or one starting with `~` is used as given. It does **not** have to exist — see [Typing a path](#typing). |
 | `type` | `"file"` / `"directory"` | Whether individual files are selectable, or only directories. |
 | `filetypes` | `list[str]` | File extension filter. |
-| `justify` | `str` | Text alignment inside the entry. |
+| `justify` | `str` | Which end of a long path stays visible: `"right"` to see the filename, `"left"` to see the root. See [Typing a path](#typing). |
 | `btn_text` | `str` | The browse button's label. |
 | `**kwargs` | — | Any native `CTkFrame` argument, or a theme-key override (see [Theming](#theming-sctkthemesjson)). |
 
@@ -5865,10 +6153,31 @@ save_path.pack(fill="x", padx=20, pady=10)
 | `get()` | `str` | Current path text. |
 | `set(path)` | `None` | Sets the displayed path, normalizing and expanding it. |
 | `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`, dimming both the entry and the browse button. |
-| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, accepting `state`, `type`, `title`, `justify`, `btn_text`, `entry_height`, `btn_width` and `btn_height` as first-class properties. |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, accepting `state`, `type`, `title`, `justify`, `btn_text`, `entry_height`, `btn_width`, `btn_height`, and — newly — `initialdir`, `initialfile` and `filetypes` as first-class properties. Those three had **no `configure()` branch at all** and were constructor-only, so setting any of them in the Designer, which applies every property through `configure()`, did nothing. |
 | `configure(name)` | `tuple` | Pygubu-style single-argument query for any of the eight properties above. **Previously broken:** the implementation read `pname = args` rather than `args[0]`, so every comparison tested a tuple against a string and failed — all eight queries fell through to the native widget and Pygubu could read none of them. The dict form of `configure()` was dead for the same reason (`isinstance(args, dict)` on a tuple is never true). |
 
 Clicking "Browse..." opens an `sCTkFileExplorer` in a modal popup; selecting a path there calls `self.set(...)` on this widget automatically.
+
+---
+
+<a name="typing"></a>
+### Typing a path
+
+The entry is editable, and a path typed into it is applied on **Return**, on keypad Enter, or when focus leaves the field.
+
+A value is accepted only if it exists. Focus-out fires whenever you click elsewhere, so a half-typed path must not replace a good one. `~` is expanded. A directory becomes the new `initialdir`, so browsing afterwards opens there; anything else is treated as a file selection.
+
+The entry previously had **no bindings at all**, so a typed path was never applied — it stayed as loose text, nothing navigated, and pressing Browse then replaced it with the real value, which made the typing appear to vanish.
+
+`sCTkFileExplorer` behaves identically. The two are the same control, one with a button.
+
+**`justify` decides which end of a long path you see.** A Tk entry only honours the option when the text is *shorter* than the field; a longer path scrolls, and what shows is governed by the view position. `"right"` therefore moves the view to the end so the filename is visible.
+
+That needed two fixes. The move was applied to the `CTkEntry` rather than the real `tk.Entry` it wraps, which does not reliably forward it. And it ran before the entry had recomputed the width of its new text, so a long path stopped part-way through the filename — it is now re-applied once Tk is idle.
+
+Changing `justify` no longer calls `set()`, so it does not fire `command`. Changing alignment is not a path selection.
+
+**A nonexistent `initialfile` is still displayed.** Naming a file that has yet to be created is legitimate — a "save as" field being the obvious case — and the browser opens on `initialdir` regardless. The visible consequence is that the entry shows a file while the browser behaves as though only the directory were set.
 
 ---
 
@@ -5899,6 +6208,8 @@ Clicking "Browse..." opens an `sCTkFileExplorer` in a modal popup; selecting a p
 ```
 
 Every key the code references is present in both the top-level block and `disabled_map` — confirmed by direct cross-check against the actual source, nothing missing.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 Every top-level key is now required and validated at construction, matching `sCTkFileExplorer`/`sCTkTableview`/`sCTkSpinbox`/`sCTkSelector` — missing any raises immediately, naming the exact key. `disabled_map` entries deliberately keep their original, more lenient behavior: gracefully falling back to the top-level/normal value if not overridden, rather than hard-failing, since that's intentional and already correct.
 
@@ -6368,6 +6679,8 @@ channel_selector.pack(expand=True, fill="both", padx=20, pady=20)
 
 **`border_color` is also shared with this widget's two internal sub-widgets** (the search field and the checkbox-list frame), passed in once at construction so their *normal*-state border visually matches this widget's own border — confirmed by direct testing that these two sub-widgets' own independent default themes can otherwise visibly mismatch, especially in dark mode. This only establishes the shared normal-state value; each sub-widget's own state-driven color changes (the search field's readonly/disabled coloring in particular) are left completely untouched afterward.
 
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
 Every color is passed through as a raw `(light, dark)` tuple, letting CustomTkinter's native appearance-mode tracking handle repaints automatically, consistent with the approach used throughout this project.
 
 ---
@@ -6418,7 +6731,7 @@ Passing it still works and is ignored, so existing code does not raise.
 ### Known Limitations
 
 - **Disabling this widget routes the search field to `"readonly"`, not `"disabled"`** — deliberate, so its text remains selectable/copyable, but worth knowing if you expected a uniform `"disabled"` state across every sub-component.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** single-argument queries used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair, so the Designer reads a usable value.
 - **`.config()` previously bypassed this widget entirely.** Tkinter binds `.config` to `.configure` as a separate class attribute rather than tracking a subclass's override, and this class had no `config = configure` line — so `.config(...)` skipped the `items`/`searchBox`/`multiple_choices`/`state` handling and landed on `sCTkFrame`'s `configure()` instead. Fixed. Note this widget uses the older `(self, cnf=None, **kwargs)` signature rather than `*args`; that's correct here and is *not* the shape that caused the tuple-comparison bugs found elsewhere in the library, since `cnf` is a real parameter holding the value itself.
 - `items` must not contain duplicate labels — `configure(items=[...])` raises `ValueError` if it does, since selection tracking is index-based and duplicate labels would make search filtering ambiguous.
 
@@ -6760,7 +7073,15 @@ The scale labels are placed by angle around the arc, so an oversized `scale_font
 
 `font` is used for the "SIGNAL" and "RF OUTPUT" captions; `scale_font` for the numeric tick labels and the "S" marker. They're separate keys because the widget makes that distinction, even though the default values happen to match.
 
-> **Font size has layout consequences.** Label positions are computed from fixed pixel offsets tuned for 10pt text. A noticeably larger font will overlap the tick marks and the arc — the widget does not measure text and adjust. Change these values in small steps and look at the result.
+> **Superseded.** This page used to warn that label positions were fixed pixel offsets tuned for 10pt text and that a larger font would overlap the scale. They are now derived from the font's own metrics — see [Fonts and Label Placement](#fonts) for what still constrains a large font.
+
+**`fg_color` is a property as well as a theme key,** and it paints the **canvas** rather than the frame behind it — the canvas covers the whole widget, so the frame is never visible. Set it in the inspector or through `configure()`; blank returns to the theme's value.
+
+The other frame properties are deliberately **not** offered. `border_color`, `border_width` and `corner_radius` were added to the inspector at one point and taken back out: they appeared and did nothing at all, for the same reason. A property that cannot work is worse than an absent one.
+
+`corner_radius` is the real loss. Rounding the meter would mean rounding the canvas, which Tk cannot do — it would have to be drawn, as a rounded rectangle filling the corners in the parent's colour. Possible, not free, and not done.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme rather than to the previous value. See [Theming](Theming.md#changing-values-at-runtime).
 
 **Fixed:** the configured `fg_color` never actually rendered. It was popped out of the resolved defaults in the constructor (correctly — the native frame takes it separately) and then read back afterwards from the dictionary it had been removed from, so the background always fell through to a hardcoded value. Light mode is where this was visible.
 
@@ -6977,7 +7298,15 @@ The right-hand margin is sized for the widest scale label, `"+60 dB"`, which is 
 
 `font` is used for the "SIG", "SWR" and "PWR" section labels; `scale_font` for the numeric scale markings — S units, SWR values and power percentages. These were previously hardcoded across eight separate `create_text` calls and never consulted the theme.
 
-> **Font size has layout consequences.** Label positions are computed from fixed pixel offsets tuned for 9pt and 10pt text. A noticeably larger font will overlap the tick marks and the LED rows — the widget does not measure text and adjust. Change these values in small steps and look at the result.
+> **Superseded.** This page used to warn that label positions were fixed pixel offsets tuned for 9pt and 10pt text and that a larger font would overlap the scale. They are now derived from the font's own metrics — see [Fonts and Label Placement](#fonts) for what still constrains a large font.
+
+**`fg_color` is a property as well as a theme key,** and it paints the **canvas** rather than the frame behind it — the canvas covers the whole widget, so the frame is never visible. Set it in the inspector or through `configure()`; blank returns to the theme's value.
+
+The other frame properties are deliberately **not** offered. `border_color`, `border_width` and `corner_radius` were added to the inspector at one point and taken back out: they appeared and did nothing at all, for the same reason. A property that cannot work is worse than an absent one.
+
+`corner_radius` is the real loss. Rounding the meter would mean rounding the canvas, which Tk cannot do — it would have to be drawn, as a rounded rectangle filling the corners in the parent's colour. Possible, not free, and not done.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme rather than to the previous value. See [Theming](Theming.md#changing-values-at-runtime).
 
 **Fixed:** the configured `fg_color` never actually rendered. It was popped out of the resolved defaults in the constructor (correctly — the native frame takes it separately) and then read back afterwards from the dictionary it had been removed from, so the background always fell through to a hardcoded value. Light mode is where this was visible.
 
@@ -7161,7 +7490,11 @@ freq_spinbox.pack(pady=10)
 }
 ```
 
-`entry_color`/`border_color`/`text_color` override the internal entry's own colors for all three states, a deliberate design choice: this widget controls its entry's look via its own theme keys rather than the entry's independent defaults. `readonly_map` requires `entry_color`, `border_color`, and `text_color` whenever readonly is actually requested — missing any raises immediately. No readonly-specific `button_color` exists or is needed, since buttons always use normal `button_color`/`button_hover_color` whenever they aren't disabled — they're meant to look completely ordinary in readonly mode.
+`entry_color`/`border_color`/`text_color` override the internal entry's own colors for all three states, a deliberate design choice: this widget controls its entry's look via its own theme keys rather than the entry's independent defaults.
+
+**`text_color` reaches the entry in every state.** It used to be applied only for readonly, with normal and disabled delegated to `sCTkEntryPrimary`'s own block — so setting `disabled_map.text_color` here coloured the **arrows** and left the number in the box using the entry's colour. One key appearing to affect the wrong part of the widget. Note this can shift the normal appearance too, wherever the two blocks disagree; that is the point, since the spinbox block is the source of truth for a spinbox. `readonly_map` requires `entry_color`, `border_color`, and `text_color` whenever readonly is actually requested — missing any raises immediately. No readonly-specific `button_color` exists or is needed, since buttons always use normal `button_color`/`button_hover_color` whenever they aren't disabled — they're meant to look completely ordinary in readonly mode.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 **`values` accepts the library's standard list formats** — `["Porsche", "VW", "Tesla"]`, a bare comma-separated string, or a real Python list. See [List Properties](ListProperties.md).
 
@@ -7220,7 +7553,8 @@ if __name__ == "__main__":
 - **Setting `placeholder_text` after construction only clears the field if it still holds the initial value.** That is intentional — a placeholder must not wipe a value the user has typed. An earlier version compared the entry text against `str(from_)` while the entry actually held the *formatted* initial value, so with a `format` set the two never matched and the placeholder never appeared.
 - **The disable/enable-cycle cursor-position fix is not independently confirmed for readonly transitions** — the underlying entry inherits this caveat from `sCTkEntryPrimary`; see that widget's docs for the full explanation.
 - **`readonly` mode's placeholder behavior follows `sCTkEntryPrimary`'s** — a readonly field showing placeholder text never clears it on focus, since native CustomTkinter deliberately never deactivates a placeholder while `state` is `"readonly"`.
-- Calling `configure("propname")` for most single-argument property queries returns a Tkinter-style tuple whose `current` value may be `str()` of a `(light, dark)` color tuple rather than a single resolved color — the same known gap as elsewhere in this project's Pygubu-query investigation.
+- **Fixed:** single-argument queries used to report `str()` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
+- **Fixed:** building a spinbox already disabled raised `ValueError: ['state'] are not supported arguments`. The constructor called `super().configure(state="disabled")`, and this widget is a `CTkFrame` subclass with no such option. It only fired when the state came from the constructor rather than a later call — which is what a Designer preview does.
 
 [Return to Table of Contents](#contents)
 

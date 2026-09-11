@@ -9,6 +9,7 @@ UI source file: colorTestOverride4.ui
 from scustomtkinter.sctk_core import sCTk
 from scustomtkinter.sctk_file_explorer import sCTkFileExplorer
 from scustomtkinter.sctk_selector import sCTkSelector
+from scustomtkinter.sctk_slider import sCTkSlider
 from scustomtkinter.sctk_smeter import sCTkSMeter
 from scustomtkinter.sctk_smeter_bar import sCTkSMeterBar
 
@@ -70,6 +71,9 @@ class testColorOverride4UI:
         sctkfileexplorer1 = sCTkFileExplorer(sctk1)
         sctkfileexplorer1.configure(state="disabled")
         sctkfileexplorer1.pack(side="top")
+        sctkslider1 = sCTkSlider(sctk1)
+        sctkslider1.configure(state="disabled")
+        sctkslider1.pack(side="top")
 
         # Main widget
         self.mainwindow = sctk1

@@ -155,18 +155,47 @@ Read from `self._widget_disabled_map`, **not** from `final_kw` or `_local_defaul
 
 ### Runtime overrides must survive the repaint
 
-If your widget has a repaint routine that re-pushes colours from stored defaults — most do, for appearance-mode switches and state changes — then `configure()` must write overrides into those defaults *before* repainting, or the repaint reverts them on the next line:
+If your widget has a repaint routine that re-pushes colours from stored defaults — most do, for appearance-mode switches and state changes — then a value set through `configure()` has to be written into those defaults, or the repaint reverts it on the next line.
+
+Call the shared helper near the top of `configure()`, before the values are consumed or forwarded:
 
 ```python
-_THEME_TRACKED_KEYS = frozenset({"fg_color", "border_color"})
+def configure(self, *args, **kwargs):
+    ...
+    self._record_theme_overrides(kwargs)
 
-for key in self._THEME_TRACKED_KEYS:
-    if key in kwargs:
-        self._local_defaults[key] = kwargs[key]
-if kwargs:
-    super().configure(**kwargs)
-    self._update_current_visual_state()
+    if "state" in kwargs:
+        self.state(kwargs.pop("state"))
+    ...
 ```
+
+That is the whole contract. `ThemeableWidget._record_theme_overrides()` handles five things a hand-written loop tends to miss:
+
+| It does | Because |
+| :--- | :--- |
+| Records only keys the theme block defines | That is exactly the set a repaint reapplies. No per-widget key list to maintain, and native options the theme says nothing about are left alone. |
+| Normalises the value into theme shape | The Designer supplies a plain string. Several widgets call `tuple()` on a colour, and `tuple("red")` is `('r','e','d')` — which CustomTkinter rejects. A string becomes `(value, value)` when the map holds a pair. |
+| Snapshots the theme before the first override | Otherwise `_local_defaults` no longer holds the theme's value, and a query reports the override as its own default — so clearing a field in the Designer restores the override instead of the theme. |
+| Triggers a repaint | Derived values are the reason. `sCTkOptionMenuSecondary` computes `button_color` from `fg_color`; those are worked out in the repaint, not in `configure()`. Without this, clearing `fg_color` restored the background and left the arrow on the override. |
+| Maps `text_color_disabled` onto `disabled_map.text_color` | They are one value under two names — CustomTkinter's native option and this library's theme key. Recorded separately, a repaint would overwrite whichever was set last. |
+
+**Report the pristine value as a query default.** If your widget has its own branch in the single-argument query form, take the default from `_theme_default(pname)`, not from `_local_defaults`:
+
+```python
+return (pname, pname, pname,
+        self._query_value(self._theme_default(pname)),
+        self._query_value(val))
+```
+
+Four widgets were missed on this because their query never reached `_configure_query` — `sCTkSwitch`, `sCTkSpinbox`, `sCTkTableview` and `sCTkSlider` each had a private branch with its own default table. A shared fix does not reach a private path.
+
+**Fall back to the current value when the theme has nothing.** `_theme_default()` returns `None` for a key the block does not define, and pygubu hands that `None` straight back to the widget:
+
+```
+color is None, for transparency set color='transparent'
+```
+
+**Canvas-drawing widgets need their key list consulted too.** If your widget reads theme keys that are not native options — the dials, the S-meters — `configure()` must consume them before forwarding, or `CTkFrame` raises `['text_color'] are not supported arguments`. Popping any key present in `_local_defaults` covers it without a second list to maintain.
 
 ### Subclasses and theme block names
 
@@ -430,6 +459,29 @@ class MyApp(baseui.MyAppUI):
     def __init__(self, master=None):
         super().__init__(master)
         self.my_entry.bind("<KeyRelease>", self.on_key)
+```
+
+### A widget that rebinds in `state()` undoes the preview setup
+
+`configure_for_preview()` runs **once**, at construction. Anything the widget does to its own bindings afterwards replaces what the plugin installed.
+
+The dials are the worked example, and they broke it twice over. `state()` rebinds `<Button-1>`, `<Button-2>`, `<Button-3>` and the scroll sequences every time it returns to normal, so a dial stopped being selectable the moment its state was touched and did not recover when set back. And `_inject_private_layer_bindings()` is scheduled 50ms after construction with `add="+"`, so it runs after the plugin has finished and *appends* to the no-ops rather than being displaced by them — which is why a dial still turned under a trackpad in the design canvas.
+
+Two rules follow. If a widget rebinds on a state change, its preview subclass must override `state()` and re-apply the plugin's bindings afterwards, deferred to idle so it runs after the widget's own rebinding. If a widget schedules a deferred binding pass, the preview subclass should override that method to do nothing.
+
+Worth checking for any widget you add: `grep -n "\.bind(" ` your widget, and ask whether any of those calls can run more than once.
+
+### Neutralize the right canvas
+
+A widget that draws on its own canvas has **two**: `_canvas`, which `CTkFrame` draws its background on, and whatever the widget created for itself. `CTkFrame.bind()` routes the Designer's click handler to `_canvas`, so neutralizing `<Button-1>` there removes the selection binding itself and the widget cannot be selected at all.
+
+Neutralize the widget's own canvas, and **forward** `<Button-1>` from it to `_canvas` rather than swallowing it — a no-op stops the click before it reaches the handler:
+
+```python
+face = getattr(widget, "canvas", None)
+sequences = tuple(s for s in (_HOVER_CLICK + _SCROLL) if s != "<Button-1>")
+_neutralize(face, sequences)
+face.bind("<Button-1>", _select_dial)   # generates on widget._canvas
 ```
 
 ### What the Designer cannot do

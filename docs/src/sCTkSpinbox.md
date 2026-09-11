@@ -102,7 +102,11 @@ freq_spinbox.pack(pady=10)
 }
 ```
 
-`entry_color`/`border_color`/`text_color` override the internal entry's own colors for all three states, a deliberate design choice: this widget controls its entry's look via its own theme keys rather than the entry's independent defaults. `readonly_map` requires `entry_color`, `border_color`, and `text_color` whenever readonly is actually requested — missing any raises immediately. No readonly-specific `button_color` exists or is needed, since buttons always use normal `button_color`/`button_hover_color` whenever they aren't disabled — they're meant to look completely ordinary in readonly mode.
+`entry_color`/`border_color`/`text_color` override the internal entry's own colors for all three states, a deliberate design choice: this widget controls its entry's look via its own theme keys rather than the entry's independent defaults.
+
+**`text_color` reaches the entry in every state.** It used to be applied only for readonly, with normal and disabled delegated to `sCTkEntryPrimary`'s own block — so setting `disabled_map.text_color` here coloured the **arrows** and left the number in the box using the entry's colour. One key appearing to affect the wrong part of the widget. Note this can shift the normal appearance too, wherever the two blocks disagree; that is the point, since the spinbox block is the source of truth for a spinbox. `readonly_map` requires `entry_color`, `border_color`, and `text_color` whenever readonly is actually requested — missing any raises immediately. No readonly-specific `button_color` exists or is needed, since buttons always use normal `button_color`/`button_hover_color` whenever they aren't disabled — they're meant to look completely ordinary in readonly mode.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 **`values` accepts the library's standard list formats** — `["Porsche", "VW", "Tesla"]`, a bare comma-separated string, or a real Python list. See [List Properties](ListProperties.md).
 
@@ -161,6 +165,7 @@ if __name__ == "__main__":
 - **Setting `placeholder_text` after construction only clears the field if it still holds the initial value.** That is intentional — a placeholder must not wipe a value the user has typed. An earlier version compared the entry text against `str(from_)` while the entry actually held the *formatted* initial value, so with a `format` set the two never matched and the placeholder never appeared.
 - **The disable/enable-cycle cursor-position fix is not independently confirmed for readonly transitions** — the underlying entry inherits this caveat from `sCTkEntryPrimary`; see that widget's docs for the full explanation.
 - **`readonly` mode's placeholder behavior follows `sCTkEntryPrimary`'s** — a readonly field showing placeholder text never clears it on focus, since native CustomTkinter deliberately never deactivates a placeholder while `state` is `"readonly"`.
-- Calling `configure("propname")` for most single-argument property queries returns a Tkinter-style tuple whose `current` value may be `str()` of a `(light, dark)` color tuple rather than a single resolved color — the same known gap as elsewhere in this project's Pygubu-query investigation.
+- **Fixed:** single-argument queries used to report `str()` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
+- **Fixed:** building a spinbox already disabled raised `ValueError: ['state'] are not supported arguments`. The constructor called `super().configure(state="disabled")`, and this widget is a `CTkFrame` subclass with no such option. It only fired when the state came from the constructor rather than a later call — which is what a Designer preview does.
 
 [Return to Table of Contents](#contents)

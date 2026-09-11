@@ -4,6 +4,7 @@
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [In Pygubu Designer](#designer)
 * [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
 * [Example](#example)
 * [Known Limitations](#known-limitations)
@@ -54,6 +55,17 @@ channel_panel.pack(expand=True, fill="both", padx=25, pady=25)
 
 ---
 
+<a name="designer"></a>
+### In Pygubu Designer
+
+**`state` is now a property in the inspector.** The widget has always implemented it, but the builder object never declared it — so a panel could only be disabled from code. It offers `normal` and `disabled`, defaulting to `normal`.
+
+**This panel cannot be selected by clicking it on the canvas.** Select it in the widget tree instead. A widget dropped *inside* it selects normally, so this affects only the container itself.
+
+That is a dead end rather than an open bug. `CTkScrollableFrame` — which this widget is built on — makes the widget the *inner* frame inside a canvas owned by a separate outer frame, so the surface you click is the widget's parent and it has no real children of its own. Forwarding the click, binding the canvas, and a transparent overlay were each tried and each is closed off by something specific; `dev/docs/Developing.md` records which.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 - **Applied once, at construction** — every key in the widget's theme block, including `label_font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
@@ -77,6 +89,8 @@ channel_panel.pack(expand=True, fill="both", padx=25, pady=25)
 ```
 
 **On the internal scrollbar:** since this widget is built on `CTkScrollableFrame`, a scrollbar exists internally even though scrolling isn't the intent. It's suppressed by matching its colors to the frame's background and collapsing its width to `0`. This is a workaround, not a true disable — confirmed by direct investigation, CustomTkinter's native scrollbar has no disabled state to lock in the first place, even on an unwrapped `CTkScrollableFrame`. Matching colors and zeroing width is the closest achievable approximation.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
 Colors are stored and passed through as raw `(light, dark)` tuples rather than resolved to a single value ahead of time, so they should correctly follow system/app appearance-mode changes automatically — the same approach validated on `sCTkComboBox`, `sCTkSegmentedButton`, and the button family, though not separately re-confirmed for this specific widget.
 
@@ -125,6 +139,7 @@ if __name__ == "__main__":
 - Disabling this widget is purely cosmetic — it does not lock interactivity, and does not cascade to child widgets automatically.
 - The internal scrollbar cannot be truly disabled (a CustomTkinter limitation, confirmed by direct investigation, not something this wrapper can work around) — only visually hidden via color-matching and zero width.
 - `winfo_children()`'s default filtering is a class-name check, not an identity check — see the Methods table above for the specific edge case this can miss.
-- Calling `configure("fg_color")` (or similar) returns `str(value)` where `value` may itself be a `(light, dark)` tuple rather than a single resolved color. Known gap shared with the wider Pygubu single-argument query investigation set aside elsewhere in this project.
+- **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
+- **Not selectable by clicking on the design canvas** — see [In Pygubu Designer](#designer).
 
 [Return to Table of Contents](#contents)

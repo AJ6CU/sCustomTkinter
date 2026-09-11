@@ -5,6 +5,7 @@
 * [Constructor](#constructor)
 * [Sizing and Label Placement](#sizing)
 * [Callbacks](#callbacks)
+* [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
 * [Example](#example)
@@ -101,6 +102,22 @@ def on_volume_level_changed(active_value: int):
     print(f"Active Selected Option Value position tracker = {active_value}")
 ```
 
+### Colours you can set per instance
+
+Three of this widget's colours are properties as well as theme keys — set them in the constructor, through `configure()`, or in the Designer's inspector, and leave blank for the theme's value.
+
+| Property | Applies to |
+| :--- | :--- |
+| `text_color` | The labels **and** the tick marks — both are drawn with this one key. |
+| `dial_color` | The knob face. |
+| `pointer_color` | The pointer line on the knob. |
+
+The remaining five — `dial_highlight_color`, `dial_shadow_color`, `dial_rim_light_color`, `dial_rim_shadow_color` and `shadow_color` — stay theme-only on purpose. They produce the shaded dome together, and changing one in isolation tends to read as broken rather than different.
+
+There is no separate tick colour. If you want ticks and labels to differ, that needs a new theme key and a change to the draw code.
+
+---
+
 ### Theming (`sCTkThemes.json`)
 
 ```json
@@ -124,7 +141,9 @@ def on_volume_level_changed(active_value: int):
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing. See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
+Every key above is required — construction raises `KeyError` naming any that are missing.
+**A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+ See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
 `pointer_color` is **specific to this variant and its Selector sibling**, and colours the pointer line. It was present in the theme file for a long time but read by no code path at all — the pointer drew in `text_color` instead. It is now live, so the pointer can differ from the tick labels. It has no `disabled_map` entry; a disabled pointer falls back to the disabled `text_color`.
 
