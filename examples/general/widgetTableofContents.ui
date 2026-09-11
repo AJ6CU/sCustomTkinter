@@ -233,9 +233,19 @@
     </child>
     <child>
       <object class="scustomtkinter.sCTkFrameLabeledPrimary" id="sctkframelabeledprimary7">
+        <property name="label_text">Single or Multi Selector</property>
         <layout manager="grid">
           <property name="row">2</property>
         </layout>
+        <child>
+          <object class="scustomtkinter.sCTkSelector" id="sctkselector1">
+            <property name="height">50</property>
+            <property name="items">["VW","Porsche","240Z"]</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
     <child>
