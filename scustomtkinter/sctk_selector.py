@@ -266,8 +266,19 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             new_fg = self.final_kw.get("fg_color")
             if hasattr(self, "checkboxes_frame"): self.checkboxes_frame.configure(fg_color=new_fg)
 
-        w_val = int(self.final_kw.get("width", 0))
-        h_val = int(self.final_kw.get("height", 0))
+        # FIX: these read final_kw only, and width/height never arrive there.
+        #
+        # The loop above moves a keyword into final_kw only if it is a key this
+        # widget's THEME block defines, and the sCTkSelector block has no width
+        # or height. So an explicit height stayed in kwargs, h_val came back 0,
+        # and the else branch below ran -- setting 200x150 and, worse, turning
+        # ON pack_propagate. The height was then applied to the frame and
+        # immediately overridden by the frame shrinking to fit its children.
+        #
+        # The symptom was a height property that appeared to do nothing, in the
+        # Designer and in generated code alike.
+        w_val = int(kwargs.get("width", self.final_kw.get("width", 0)) or 0)
+        h_val = int(kwargs.get("height", self.final_kw.get("height", 0)) or 0)
         if w_val > 0 or h_val > 0:
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", False)
         else:
