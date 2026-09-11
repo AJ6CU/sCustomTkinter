@@ -111,8 +111,14 @@ class sCTkScrollbar(ctk.CTkScrollbar, ThemeableWidget):
             else:
                 pname = args[0]
                 if pname in self._THEME_TRACKED_KEYS:
-                    val = self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(val), self._query_value(val))
+                    # The DEFAULT comes from the untouched theme, the CURRENT
+                    # from the live map. Both slots used to read
+                    # _local_defaults, which configure() writes overrides into
+                    # -- so clearing a colour in the Designer reported the
+                    # override as its own default and put it straight back.
+                    return (pname, pname, pname,
+                            self._query_value(self._theme_default(pname)),
+                            self._query_value(self._local_defaults.get(pname)))
                 return self._configure_query(pname)
 
         # FIX: record theme overrides BEFORE the repaint below.
@@ -131,9 +137,13 @@ class sCTkScrollbar(ctk.CTkScrollbar, ThemeableWidget):
         # it rather than revert it, and makes it survive later appearance-mode
         # changes -- matching CustomTkinter's own semantics, where
         # configure(button_color=...) sticks.
-        for key in self._THEME_TRACKED_KEYS:
-            if key in kwargs:
-                self._local_defaults[key] = kwargs[key]
+        # Through the shared helper now rather than a local loop. This widget
+        # was where the pattern started; ThemeableWidget._record_theme_overrides()
+        # generalised it and adds two things this loop lacked -- it normalises
+        # a value from the Designer into the (light, dark) shape the theme maps
+        # hold, and it snapshots the theme before the first override so the
+        # query above has a real default to report.
+        self._record_theme_overrides(kwargs)
 
         if kwargs:
             super().configure(**kwargs)

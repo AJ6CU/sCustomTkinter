@@ -132,9 +132,14 @@ class sCTkSlider(ctk.CTkSlider, ThemeableWidget):
                 if pname in ["fg_color", "progress_color", "button_color", "button_hover_color"]:
                     current_state = str(self.state()).lower()
                     val = self._custom_disabled_map.get(pname) if current_state == "disabled" else self._local_defaults.get(pname)
-                    return (pname, pname, pname, self._query_value(self._local_defaults.get(pname)), self._query_value(val))
+                    return (pname, pname, pname, self._query_value(self._theme_default(pname)), self._query_value(val))
 
                 return self._configure_query(pname)
+
+        # Runtime overrides have to reach the map a repaint reads, or
+        # _apply_custom_theme_colors() puts the theme value straight back --
+        # see ThemeableWidget._record_theme_overrides().
+        self._record_theme_overrides(kwargs)
 
         if "command" in kwargs: super().configure(command=kwargs.pop("command"))
         if "variable" in kwargs: super().configure(variable=kwargs.pop("variable"))
