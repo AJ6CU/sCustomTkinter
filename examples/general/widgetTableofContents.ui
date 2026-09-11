@@ -239,7 +239,7 @@
         </layout>
         <child>
           <object class="scustomtkinter.sCTkSelector" id="sctkselector1">
-            <property name="height">50</property>
+            <property name="height">25</property>
             <property name="items">["VW","Porsche","240Z"]</property>
             <layout manager="pack">
               <property name="side">top</property>
