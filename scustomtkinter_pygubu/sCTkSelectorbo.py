@@ -105,7 +105,6 @@ class sCTkSelectorBO(BuilderObject):
         """
         print("[selbo] set_property:", name, repr(value))
         super().set_property(name, value)
-        super().set_property(name, value)
 
         if name in ("width", "height", "items", "pack_propagate"):
             if hasattr(self, "builder") and hasattr(self.builder, "recreate_widget"):
@@ -116,6 +115,9 @@ class sCTkSelectorBO(BuilderObject):
                     # offer the call. Losing the rebuild costs a stale canvas,
                     # not correctness -- the .ui data is already updated.
                     pass
+    def _set_property(self, target_widget, pname, value):
+        print("[selbo] _set_property:", pname, repr(value))
+        super()._set_property(target_widget, pname, value)
 
     def _code_set_property(self, targetid, pname, value, code_bag):
         """
