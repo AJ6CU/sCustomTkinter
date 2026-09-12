@@ -69,6 +69,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     PAGE_INSET = 8          # gap between the outline and a page's contents
     BORDER_WIDTH = 2        # page outline thickness
     STRIP_MARGIN = 6        # space above the first tab
+    SEPARATOR_INSET = 5     # how far a separator stops short of each edge
 
     def __init__(self, master=None, side="left", tab_width=34,
                  tab_style="rounded", text_orientation="auto",
@@ -364,7 +365,15 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # An unselected tab must NOT, and did at first. Every tab covered the
         # border where it sat while the gaps between them left it showing,
         # which turned a continuous edge into a dashed one.
-        overlap = self._sx(self.BORDER_WIDTH) if selected else 0
+        # The selected tab crosses the outline; an unselected one reaches
+        # only to the middle of it.
+        #
+        # The outline is stroked, so it straddles its path -- half inside the
+        # page, half out. A tab stopping at the path's coordinate leaves that
+        # outer half uncovered, which reads as the border being a pixel
+        # thinner beside the tabs than it is elsewhere.
+        bw = self._sx(self.BORDER_WIDTH)
+        overlap = bw if selected else (bw / 2.0)
         if self._side == "left":
             x_in = strip + overlap
             direction = 1
@@ -376,7 +385,13 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             # A trapezium: the outer edge is shorter than the inner one, so
             # the tab leans in at top and bottom. The shape of a real
             # notebook divider.
-            slant = self._sx(self.TAB_SLANT)
+            #
+            # Capped at a quarter of the tab's length. With rotated text a tab
+            # is as long as its label and the constant is a small part of it;
+            # with horizontal text it is barely taller than one line, and a
+            # fixed 7px at each end consumed a third of the tab and left
+            # something closer to a flag than a divider.
+            slant = min(self._sx(self.TAB_SLANT), (y1 - y0) * 0.25)
             return [x_in, y0,
                     x_out + (slant * direction), y0 + slant,
                     x_out + (slant * direction), y1 - slant,
@@ -553,6 +568,12 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             sx0 = 0 if self._side == "left" else self._canvas.winfo_width() - strip
             sx1 = strip if self._side == "left" else self._canvas.winfo_width()
             half = self._sx(self.TAB_GAP) / 2.0
+            # Stopped short at both ends. A separator running the full width
+            # of the strip reads as a division of the whole panel rather than
+            # a line between two tabs, and collides with the page border at
+            # its inner end.
+            inset = self._sx(self.SEPARATOR_INSET)
+            sx0, sx1 = sx0 + inset, sx1 - inset
             names = list(self._tab_bounds)
             for i, name in enumerate(names[:-1]):
                 y_between = self._tab_bounds[name][1] + half
