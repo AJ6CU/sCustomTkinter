@@ -33,14 +33,28 @@ def refresh_armed_display():
     if lbl_armed.winfo_exists():
         lbl_armed.configure(
             text="ARMED -- dial is live" if volume_pot.is_pressed()
-            else "OFF -- double-click the dial to arm it")
+            else "OFF -- double-click to arm")
 
 
 def on_double_click(dial):
-    """Wired to double_click_command. Toggling the latch is our decision."""
-    dial.toggle_pressed()
+    """
+    Wired to double_click_command: ARMS the dial.
+
+    Arming only, not toggling. Every mouse button steps the dial, so a plain
+    double-click competes with ordinary clicking to turn the knob -- but only
+    once the dial is live. While it is off nothing is bound, so this gesture
+    cannot collide with anything.
+    """
+    dial.set_pressed(True)
     refresh_armed_display()
     print(f"double-click -> pressed = {dial.is_pressed()}")
+
+
+def on_shift_double_click(dial):
+    """Wired to shift_double_click_command: DISARMS the dial."""
+    dial.set_pressed(False)
+    refresh_armed_display()
+    print(f"shift-double-click -> pressed = {dial.is_pressed()}")
 
 
 def my_custom_left_click():
@@ -97,6 +111,7 @@ if __name__ == "__main__":
         # --- the opt-in. Remove these two lines for the old behaviour. ---
         latching=True,
         double_click_command=on_double_click,
+        shift_double_click_command=on_shift_double_click,
     )
     volume_pot.pack(expand=True, fill="none", padx=10, pady=10)
     volume_pot.set(5)
@@ -110,7 +125,7 @@ if __name__ == "__main__":
     print("--- boot ---")
     print(f"state   = {volume_pot.get_state()}")
     print(f"pressed = {volume_pot.is_pressed()}   (False: latching dials start off)")
-    print("Try the wheel before double-clicking -- it should do nothing.")
+    print("Try the wheel before double-clicking -- it should do nothing.\nShift-double-click to switch it back off.")
     print("------------\n")
 
     root.mainloop()

@@ -77,14 +77,26 @@ def refresh_armed_labels():
 
 def on_dial_double_clicked(dial):
     """
-    Shared double_click_command for the two latching dials.
+    Shared double_click_command for the two latching dials: ARMS them.
+
+    Arming only, not toggling. Every mouse button steps the dial, so a plain
+    double-click competes with ordinary clicking to turn the knob -- but only
+    once the dial is live. While it is off nothing is bound, so this gesture
+    cannot collide with anything. Disarming gets its own gesture below.
 
     The widget passes the dial itself, so one handler serves both without a
     closure over either name.
     """
-    dial.toggle_pressed()
+    dial.set_pressed(True)
     refresh_armed_labels()
-    print(f"double-click -> {type(dial).__name__} pressed = {dial.is_pressed()}")
+    print(f"double-click -> {type(dial).__name__} armed")
+
+
+def on_dial_shift_double_clicked(dial):
+    """Shared shift_double_click_command: DISARMS the two latching dials."""
+    dial.set_pressed(False)
+    refresh_armed_labels()
+    print(f"shift-double-click -> {type(dial).__name__} off")
 
 
 def my_custom_left_click():
@@ -128,7 +140,8 @@ if __name__ == "__main__":
     dial_selector = sCTkDialSelector(
         frame_selector, labels=OPERATING_MODES, arc_angle=270,
         command=on_mode_switch_rotated, knob_diameter=110,
-        latching=True, double_click_command=on_dial_double_clicked)
+        latching=True, double_click_command=on_dial_double_clicked,
+        shift_double_click_command=on_dial_shift_double_clicked)
     dial_selector.pack(pady=10)
     dial_selector.set(0)
 
@@ -154,7 +167,8 @@ if __name__ == "__main__":
     dial_range = sCTkDialRange(
         frame_range, from_=0, to=100, arc_angle=270, divisions=5,
         command=on_volume_pot_rotated, knob_diameter=110,
-        latching=True, double_click_command=on_dial_double_clicked)
+        latching=True, double_click_command=on_dial_double_clicked,
+        shift_double_click_command=on_dial_shift_double_clicked)
     dial_range.pack(pady=10)
     dial_range.set(audio_volume_pct)
 

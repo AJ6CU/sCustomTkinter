@@ -38,11 +38,13 @@ class sCTkDialContinuousBO(BuilderObject):
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("divisions", "knob_diameter", "command", "left_click_callback", "right_click_callback",
-                      "double_click_command", "latching", "pressed",
+                      "double_click_command", "shift_double_click_command",
+                      "latching", "pressed",
                       "text_color", "dial_color", "pointer_glow_color")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback",
-                          "right_click_callback", "double_click_command")
+                          "right_click_callback", "double_click_command",
+                          "shift_double_click_command")
 
     def _code_define_callback_args(self, cmd_pname, cmd):
         """
@@ -57,7 +59,7 @@ class sCTkDialContinuousBO(BuilderObject):
         The two click callbacks genuinely take nothing, so only `command` gets
         a parameter. Continuous reports a signed step delta rather than a position, since it has none.
         """
-        if cmd_pname == "double_click_command":
+        if cmd_pname in ("double_click_command", "shift_double_click_command"):
             # Called with the dial itself, so a handler can act on it without
             # a closure over the variable name -- typically to arm a latching
             # dial:
@@ -106,11 +108,13 @@ class sCTkDialRangeBO(BuilderObject):
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("from_", "to", "divisions", "knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "label_font",
-                      "double_click_command", "latching", "pressed",
+                      "double_click_command", "shift_double_click_command",
+                      "latching", "pressed",
                       "text_color", "dial_color", "pointer_color")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback",
-                          "right_click_callback", "double_click_command")
+                          "right_click_callback", "double_click_command",
+                          "shift_double_click_command")
 
     def _code_define_callback_args(self, cmd_pname, cmd):
         """
@@ -125,7 +129,7 @@ class sCTkDialRangeBO(BuilderObject):
         The two click callbacks genuinely take nothing, so only `command` gets
         a parameter. Range reports the new value.
         """
-        if cmd_pname == "double_click_command":
+        if cmd_pname in ("double_click_command", "shift_double_click_command"):
             # Called with the dial itself, so a handler can act on it without
             # a closure over the variable name -- typically to arm a latching
             # dial:
@@ -166,11 +170,13 @@ class sCTkDialSelectorBO(BuilderObject):
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels", "label_font",
-                      "double_click_command", "latching", "pressed",
+                      "double_click_command", "shift_double_click_command",
+                      "latching", "pressed",
                       "text_color", "dial_color", "pointer_color")  # Labels handles lists, usually initialized in code
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback",
-                          "right_click_callback", "double_click_command")
+                          "right_click_callback", "double_click_command",
+                          "shift_double_click_command")
 
     def _code_define_callback_args(self, cmd_pname, cmd):
         """
@@ -185,7 +191,7 @@ class sCTkDialSelectorBO(BuilderObject):
         The two click callbacks genuinely take nothing, so only `command` gets
         a parameter. Selector reports the index of the chosen label, not the label itself.
         """
-        if cmd_pname == "double_click_command":
+        if cmd_pname in ("double_click_command", "shift_double_click_command"):
             # Called with the dial itself, so a handler can act on it without
             # a closure over the variable name -- typically to arm a latching
             # dial:
@@ -283,6 +289,13 @@ register_custom_property(id_continuous, "knob_diameter", "naturalnumber", defaul
                          help="Diameter of the knob itself, in pixels. Set width and height for the canvas around it.")
 register_custom_property(id_continuous, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_continuous, "left_click_callback", "commandentry", help="Callback for left mouse click.")
+register_custom_property(id_continuous, "double_click_command", "commandentry",
+                         help="Callback for a double-click on the knob. Receives the dial itself. "
+                              "Wire it to toggle_pressed() to arm a latching dial.")
+register_custom_property(id_continuous, "shift_double_click_command", "commandentry",
+                         help="Callback for a shift-double-click on the knob. Receives the dial itself. "
+                              "Its own gesture because a plain double-click competes with click-stepping; "
+                              "wire it to disarm a latching dial.")
 register_custom_property(id_continuous, "right_click_callback", "commandentry", help="Callback for right mouse click.")
 
 # --- 2. RANGED POTENTIOMETER MATRIX REGISTRY ---
@@ -312,6 +325,13 @@ register_custom_property(id_range, "knob_diameter", "naturalnumber", default_val
 register_custom_property(id_range, "arc_angle", "naturalnumber", default_value=270, help="Symmetrical active arc sweep.")
 register_custom_property(id_range, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_range, "left_click_callback", "commandentry", help="Callback for left mouse click.")
+register_custom_property(id_range, "double_click_command", "commandentry",
+                         help="Callback for a double-click on the knob. Receives the dial itself. "
+                              "Wire it to toggle_pressed() to arm a latching dial.")
+register_custom_property(id_range, "shift_double_click_command", "commandentry",
+                         help="Callback for a shift-double-click on the knob. Receives the dial itself. "
+                              "Its own gesture because a plain double-click competes with click-stepping; "
+                              "wire it to disarm a latching dial.")
 register_custom_property(id_range, "right_click_callback", "commandentry", help="Callback for right mouse click.")
 
 # --- 3. MODE SELECTOR MATRIX REGISTRY ---
@@ -338,6 +358,13 @@ register_custom_property(id_selector, "knob_diameter", "naturalnumber", default_
 register_custom_property(id_selector, "arc_angle", "naturalnumber", default_value=270, help="Symmetrical active arc sweep.")
 register_custom_property(id_selector, "command", "commandentry", help="Callback for knob turn by mousewheel.")
 register_custom_property(id_selector, "left_click_callback", "commandentry", help="Callback for left mouse click.")
+register_custom_property(id_selector, "double_click_command", "commandentry",
+                         help="Callback for a double-click on the knob. Receives the dial itself. "
+                              "Wire it to toggle_pressed() to arm a latching dial.")
+register_custom_property(id_selector, "shift_double_click_command", "commandentry",
+                         help="Callback for a shift-double-click on the knob. Receives the dial itself. "
+                              "Its own gesture because a plain double-click competes with click-stepping; "
+                              "wire it to disarm a latching dial.")
 register_custom_property(id_selector, "right_click_callback", "commandentry", help="Callback for right mouse click.")
 register_custom_property(id_selector, "labels", "entry", help='Preferred: ["A", "B", "C"]. Bare comma-separated (A, B, C) also works, but cannot contain a comma inside a value.')
 

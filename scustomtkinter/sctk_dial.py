@@ -43,6 +43,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         _pressed_init = _as_bool(kw.pop("pressed", False))
         _latching_init = _as_bool(kw.pop("latching", False))
         _dbl_init = kw.pop("double_click_command", None)
+        _sdbl_init = kw.pop("shift_double_click_command", None)
 
         ThemeableWidget.__init__(self, kw)
         # THEME SOURCE -- read the RAW block, not final_kw.
@@ -138,6 +139,22 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         # sCTkDial.md, which wires exactly that. Called with the dial itself,
         # so a handler can act on it without a closure over the name.
         self._double_click_command = _dbl_init
+
+        # A SECOND double-click callback, on Shift.
+        #
+        # Every mouse button steps the dial, so a plain double-click competes
+        # with ordinary use: clicking left repeatedly to turn the knob trips it
+        # sooner or later. That only matters in one direction -- while the dial
+        # is switched off nothing is bound, so arming by double-click is always
+        # safe. It is DISARMING that collides.
+        #
+        # Shift is already the drag modifier, but a shift-double-click only
+        # fires <Shift-ButtonPress-1> twice, which records a drag origin and
+        # nothing else. So the gesture is free.
+        #
+        # The widget still decides nothing about meaning. The convention the
+        # examples follow is arm on double-click, disarm on shift-double-click.
+        self._shift_double_click_command = _sdbl_init
         self._current_value = 0
         self._scroll_cooldown_seconds = 0.060
         self._last_scroll_time = 0.0
@@ -402,6 +419,21 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         """Flips the switched-on state. What a double-click does."""
         return self.set_pressed(not self.is_pressed())
 
+    def _on_shift_double_click(self, event=None):
+        """
+        Fires shift_double_click_command, if one was given.
+
+        See __init__ for why disarming wants its own gesture.
+        """
+        if str(self._state).lower() == "disabled":
+            return "break"
+        if callable(self._shift_double_click_command):
+            try:
+                self._shift_double_click_command(self)
+            except Exception:
+                pass
+        return "break"
+
     def _on_double_click(self, event=None):
         """
         Fires double_click_command, if one was given.
@@ -482,8 +514,11 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
 
             if enabled:
                 self.canvas.bind("<Double-Button-1>", self._on_double_click)
+                self.canvas.bind("<Shift-Double-Button-1>",
+                                 self._on_shift_double_click)
             else:
                 self.canvas.unbind("<Double-Button-1>")
+                self.canvas.unbind("<Shift-Double-Button-1>")
         except Exception:
             pass
 
@@ -640,6 +675,9 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         if "double_click_command" in kwargs:
             self._double_click_command = kwargs.pop("double_click_command")
 
+        if "shift_double_click_command" in kwargs:
+            self._shift_double_click_command = kwargs.pop("shift_double_click_command")
+
         if "latching" in kwargs:
             _l = kwargs.pop("latching")
             if isinstance(_l, str):
@@ -730,6 +768,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         if attribute_name == "pressed": return self.is_pressed()
         if attribute_name == "latching": return bool(getattr(self, "_latching", False))
         if attribute_name == "double_click_command": return self._double_click_command
+        if attribute_name == "shift_double_click_command": return self._shift_double_click_command
         if attribute_name == "state": return getattr(self, "_state", "normal")
         if attribute_name == "knob_diameter": return self._knob_diameter
         if attribute_name == "divisions": return getattr(self, "_divisions", 24)
