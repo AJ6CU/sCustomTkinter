@@ -304,6 +304,10 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             self.final_kw["height"] = 150
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", True)
 
+        print("[sel] pack_prop_val:", pack_prop_val,
+              " _pack_propagate_val:", getattr(self, "_pack_propagate_val", "unset"),
+              " -> use_pack_p:", use_pack_p)
+
         if isinstance(use_pack_p, str): use_pack_p = use_pack_p.lower() in ['true', '1', 'yes']
         if use_pack_p is not None: self.pack_propagate(use_pack_p)
 
