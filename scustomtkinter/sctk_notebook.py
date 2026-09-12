@@ -163,7 +163,18 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # size, the notebook takes the cell's -- while lower() keeps the
         # canvas behind them.
         self.canvas.grid(row=0, column=0, columnspan=2, sticky="nsew")
-        self.canvas.lower()
+        # tk.Misc.lower, NOT self.canvas.lower().
+        #
+        # Canvas overrides lower() with its own item method -- it lowers a
+        # TAG within the canvas, not the widget in its parent's stacking
+        # order -- so the bare call raises:
+        #
+        #     TclError: wrong # args: should be "... lower tagOrId ?belowThis?"
+        #
+        # Reaching past the override gets the widget-stacking one. Third
+        # CustomTkinter/Tk method this widget has had to work around, after
+        # _draw() and place().
+        tk.Misc.lower(self.canvas)
 
         # Pages sit ON TOP of the canvas, inside the outline.
         self._page_host = ctk.CTkFrame(self, fg_color="transparent",
