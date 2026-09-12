@@ -66,8 +66,10 @@ class sCTkNotebookBO(CTkFrameBO):
         """
 
         master = parent.widget if hasattr(parent, "widget") else parent
-        print("[tab] realize on", type(master).__name__,
-              "label:", self.wmeta.properties.get("label"))
+        print("[tab] parent bo:", type(parent).__name__,
+              " master:", type(master).__name__,
+              " has add:", hasattr(master, "add"),
+              " props:", dict(self.wmeta.properties))
 
 
         if extra_init_args is None:
