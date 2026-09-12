@@ -56,20 +56,14 @@ class sCTkNotebookBO(CTkFrameBO):
     container_layout = False
 
     def realize(self, parent, extra_init_args: dict = None):
-        master = parent.widget if hasattr(parent, "widget") else parent
-        print("[tab] master repr:", repr(master))
-        print("[tab] master path:", getattr(master, "_w", "no _w"))
-        print("[tab] wmeta      :", self.wmeta.identifier,
-              self.wmeta.classname, dict(self.wmeta.properties))
-        result = super_result = None
-        try:
-            result = master.add(self.wmeta.properties.get("label", self.wmeta.identifier))
-            print("[tab] add ->", repr(result))
-        except Exception as exc:
-            print("[tab] add FAILED:", type(exc).__name__, exc)
-        raise SystemExit("stop here")
+        """
+        Builds the notebook with its own properties as constructor arguments.
 
-
+        side and tab_style are validated by the widget and raise on a bad
+        value, so they have to arrive as real values rather than being set
+        afterwards -- a half-built widget in the Designer is worse than a
+        clear error.
+        """
         if extra_init_args is None:
             extra_init_args = {}
 
@@ -164,7 +158,19 @@ class sCTkNotebookTabBO(BuilderObject):
         field. Same accommodation sCTkTabviewbo makes.
         """
         master = parent.widget if hasattr(parent, "widget") else parent
+
+        # DEBUG -- remove once the tab labels are sorted.
+        print("[TAB] realize")
+        print("      master     :", type(master).__name__,
+              " has add:", hasattr(master, "add"))
+        print("      identifier :", self.wmeta.identifier)
+        print("      classname  :", self.wmeta.classname)
+        print("      properties :", dict(self.wmeta.properties))
+        print("      wmeta attrs:", [a for a in dir(self.wmeta)
+                                     if not a.startswith("_")])
+
         label = self.wmeta.properties.get("label", self.wmeta.identifier)
+        print("      label used :", repr(label))
 
         existing = master.tabs()
         if label in existing:
@@ -193,6 +199,7 @@ class sCTkNotebookTabBO(BuilderObject):
         edits a property through the former, and the latter is never called.
         """
         if pname == "label":
+            print("[TAB] _set_property label ->", repr(value))
             # CONSUMED HERE, never delegated.
             #
             # The base implementation forwards an unknown property to

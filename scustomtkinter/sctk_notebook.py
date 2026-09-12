@@ -691,10 +691,6 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             y0, y1 = self._tab_bounds[self._current]
             self._paint_tab(self._current, y0, y1, font, angle)
 
-        print("[nb] draw:", len(self._pages), "pages,",
-              f"canvas {self.canvas.winfo_width()}x{self.canvas.winfo_height()}",
-              " bounds:", {k: (int(a), int(b)) for k, (a, b) in self._tab_bounds.items()})
-
     def _paint_tab(self, name, y0, y1, font, angle):
         """Draws one tab and its label."""
         if name == self._current:
@@ -852,6 +848,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         page = sCTkFrame(self._page_host, fg_color="transparent",
                          border_width=0)
         page.grid(row=0, column=0, sticky="nsew")
+        # DEBUG -- remove once the tab labels are sorted.
+        print("[NB] add() called with:", repr(name))
         self._pages[name] = page
         if self._current is None:
             self._current = name
