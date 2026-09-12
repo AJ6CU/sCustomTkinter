@@ -84,7 +84,7 @@ class sCTkSelectorBO(BuilderObject):
         self.widget = self.class_(real_master, **init_args)
         return self.widget
 
-    def set_property(self, name, value):
+    def _set_property(self, target_widget, pname, value):
         """
         Rebuilds the widget after a structural change.
 
@@ -98,15 +98,20 @@ class sCTkSelectorBO(BuilderObject):
 
         recreate_widget() is what the Designer itself does when you add or
         delete a widget, which is why doing that by hand made the change
-        appear. sCTkTableviewBO uses the same call for the same reason.
+        appear.
+
+        This hangs off _set_property, NOT set_property. The Designer edits a
+        property through the former -- confirmed by tracing, and it is the one
+        named in its own error messages ("Failed to set property 'x' on class
+        ..."). set_property is never called, so sCTkTableviewBO's identical
+        rebuild, which hangs off that, has probably never fired either.
 
         Deliberately NOT used for colours: rebuilding on every keystroke in a
         colour field would be unpleasant, and a colour needs no rebuild.
         """
-        print("[selbo] set_property:", name, repr(value))
-        super().set_property(name, value)
+        super()._set_property(target_widget, pname, value)
 
-        if name in ("width", "height", "items", "pack_propagate"):
+        if pname in ("width", "height", "items", "pack_propagate"):
             if hasattr(self, "builder") and hasattr(self.builder, "recreate_widget"):
                 try:
                     self.builder.recreate_widget(self)
@@ -115,9 +120,6 @@ class sCTkSelectorBO(BuilderObject):
                     # offer the call. Losing the rebuild costs a stale canvas,
                     # not correctness -- the .ui data is already updated.
                     pass
-    def _set_property(self, target_widget, pname, value):
-        print("[selbo] _set_property:", pname, repr(value))
-        super()._set_property(target_widget, pname, value)
 
     def _code_set_property(self, targetid, pname, value, code_bag):
         """

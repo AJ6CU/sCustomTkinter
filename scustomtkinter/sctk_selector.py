@@ -147,6 +147,22 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
     def configure(self, cnf=None, **kwargs):
         if cnf is not None and not kwargs and isinstance(cnf, str):
             pname = cnf
+            # width and height report this widget's OWN defaults.
+            #
+            # Neither is in the theme block, so the shared query fell back to
+            # the current value -- and pygubu uses that as the default when a
+            # field is cleared. Clearing a height of 100 therefore set it to
+            # 100 again, which looked like the clear doing nothing.
+            #
+            # 200x150 is what the constructor falls back to when no size is
+            # given; see the else branch in configure().
+            if pname == "width":
+                return ("width", "width", "Width", 200,
+                        int(self.final_kw.get("width", 200)))
+            if pname == "height":
+                return ("height", "height", "Height", 150,
+                        int(self.final_kw.get("height", 150)))
+
             if pname == "state": return ("state", "state", "state", "normal", str(self.state()))
             if pname == "multiple_choices": return ("multiple_choices", "multiple_choices", "multiple_choices", "True", str(self.multiple_choices))
             if pname == "searchBox": return ("searchBox", "searchBox", "searchBox", "True", str(self._search_box_visible))
