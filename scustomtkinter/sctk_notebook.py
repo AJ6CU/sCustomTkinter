@@ -254,10 +254,21 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         bw = self._sx(self.BORDER_WIDTH) if self._show_page_border else 0
         pad = inset + bw
 
-        width = max(int(x1 - x0 - (pad * 2)), 1)
-        height = max(int(y1 - y0 - (pad * 2)), 1)
+        # Sized RELATIVELY, not absolutely.
+        #
+        # CTkBaseClass.place() rejects width and height outright -- "must be
+        # passed to the constructor of the widget, not the place method" --
+        # because CustomTkinter tracks a widget's size itself for scaling.
+        # relwidth and relheight it does accept, so the pixel figures are
+        # converted to fractions of this widget.
+        total_w = max(self._canvas.winfo_width(), 1)
+        total_h = max(self._canvas.winfo_height(), 1)
+        width = max(x1 - x0 - (pad * 2), 1)
+        height = max(y1 - y0 - (pad * 2), 1)
+
         self._page_host.place(x=int(x0 + pad), y=int(y0 + pad),
-                              width=width, height=height)
+                              relwidth=min(width / total_w, 1.0),
+                              relheight=min(height / total_h, 1.0))
         self._draw_notebook()
 
     # ------------------------------------------------------------------
