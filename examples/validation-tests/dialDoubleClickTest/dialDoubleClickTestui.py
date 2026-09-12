@@ -56,30 +56,34 @@ class dialDoubleClickTestUI:
         on_first_object_cb(sctk1)
 
         sctkdialcontinuous1 = sCTkDialContinuous(sctk1)
-        sctkdialcontinuous1.configure(pressed=True)
         sctkdialcontinuous1.pack(side="top")
         sctkdialcontinuous1.configure(command=self.contValueChanged_CB)
-        sctkdialcontinuous1.configure(left_click_callback=self.contLeft_CB)
-        sctkdialcontinuous1.configure(right_click_callback=self.contRight_CB)
-        sctkdialcontinuous1.configure(double_click_command=self.contDouble_CB)
         sctkdialcontinuous1.configure(
-            shift_double_click_command=self.contShiftDouble_CB)
+            left_click_callback=self.contLeftClick_CB)
+        sctkdialcontinuous1.configure(
+            right_click_callback=self.contRightClick_CB)
+        sctkdialcontinuous1.configure(
+            double_click_command=self.contDoubleClick_CB)
+        sctkdialcontinuous1.configure(
+            shift_double_click_command=self.contShiftDoubleClick_CB)
         sctkdialrange1 = sCTkDialRange(sctk1)
         sctkdialrange1.pack(side="top")
         sctkdialrange1.configure(command=self.rangeValueChanged_CB)
-        sctkdialrange1.configure(left_click_callback=self.rangeLeft_CB)
-        sctkdialrange1.configure(right_click_callback=self.rangeRight_CB)
-        sctkdialrange1.configure(double_click_command=self.rangeDouble_CB)
+        sctkdialrange1.configure(left_click_callback=self.rangeLeftClick)
+        sctkdialrange1.configure(right_click_callback=self.rangeRightClick_CB)
+        sctkdialrange1.configure(double_click_command=self.rangeDoubleClick_CB)
         sctkdialrange1.configure(
-            shift_double_click_command=self.rangeShiftDouble_CB)
+            shift_double_click_command=self.rangeShiftDoubleClick_CB)
         sctkdialselector1 = sCTkDialSelector(sctk1)
+        sctkdialselector1.configure(latching=True, pressed=False)
         sctkdialselector1.pack(side="top")
         sctkdialselector1.configure(command=self.selValueChanged_CB)
-        sctkdialselector1.configure(left_click_callback=self.selLeft_CB)
-        sctkdialselector1.configure(right_click_callback=self.selRight_CB)
-        sctkdialselector1.configure(double_click_command=self.selDouble_CB)
+        sctkdialselector1.configure(left_click_callback=self.selLeftClick)
+        sctkdialselector1.configure(right_click_callback=self.selRightClick_CB)
         sctkdialselector1.configure(
-            shift_double_click_command=self.selShiftDouble_CB)
+            double_click_command=self.selDoubleClick_CB)
+        sctkdialselector1.configure(
+            shift_double_click_command=self.selShiftDoubleClick_CB)
 
         # Main widget
         self.mainwindow = sctk1
@@ -90,46 +94,46 @@ class dialDoubleClickTestUI:
     def contValueChanged_CB(self, step_delta):
         pass
 
-    def contLeft_CB(self):
+    def contLeftClick_CB(self):
         pass
 
-    def contRight_CB(self):
+    def contRightClick_CB(self):
         pass
 
-    def contDouble_CB(self, dial):
+    def contDoubleClick_CB(self, dial):
         pass
 
-    def contShiftDouble_CB(self, dial):
+    def contShiftDoubleClick_CB(self, dial):
         pass
 
     def rangeValueChanged_CB(self, value):
         pass
 
-    def rangeLeft_CB(self):
+    def rangeLeftClick(self):
         pass
 
-    def rangeRight_CB(self):
+    def rangeRightClick_CB(self):
         pass
 
-    def rangeDouble_CB(self, dial):
+    def rangeDoubleClick_CB(self, dial):
         pass
 
-    def rangeShiftDouble_CB(self, dial):
+    def rangeShiftDoubleClick_CB(self, dial):
         pass
 
     def selValueChanged_CB(self, selected_index):
         pass
 
-    def selLeft_CB(self):
+    def selLeftClick(self):
         pass
 
-    def selRight_CB(self):
+    def selRightClick_CB(self):
         pass
 
-    def selDouble_CB(self, dial):
+    def selDoubleClick_CB(self, dial):
         pass
 
-    def selShiftDouble_CB(self, dial):
+    def selShiftDoubleClick_CB(self, dial):
         pass
 
 

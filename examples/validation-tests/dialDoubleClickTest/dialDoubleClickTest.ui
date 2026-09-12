@@ -23,5 +23,42 @@
     <customwidgets />
     <resources />
   </project>
-  <object class="scustomtkinter.sCTk" id="sctk1" />
+  <object class="scustomtkinter.sCTk" id="sctk1">
+    <child>
+      <object class="scustomtkinter.sCTkDialContinuous" id="sctkdialcontinuous1">
+        <property name="command" type="command" cbtype="simple">contValueChanged_CB</property>
+        <property name="double_click_command" type="command" cbtype="simple">contDoubleClick_CB</property>
+        <property name="left_click_callback" type="command" cbtype="simple">contLeftClick_CB</property>
+        <property name="right_click_callback" type="command" cbtype="simple">contRightClick_CB</property>
+        <property name="shift_double_click_command" type="command" cbtype="simple">contShiftDoubleClick_CB</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkDialRange" id="sctkdialrange1">
+        <property name="command" type="command" cbtype="simple">rangeValueChanged_CB</property>
+        <property name="double_click_command" type="command" cbtype="simple">rangeDoubleClick_CB</property>
+        <property name="left_click_callback" type="command" cbtype="simple">rangeLeftClick</property>
+        <property name="right_click_callback" type="command" cbtype="simple">rangeRightClick_CB</property>
+        <property name="shift_double_click_command" type="command" cbtype="simple">rangeShiftDoubleClick_CB</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkDialSelector" id="sctkdialselector1">
+        <property name="command" type="command" cbtype="simple">selValueChanged_CB</property>
+        <property name="double_click_command" type="command" cbtype="simple">selDoubleClick_CB</property>
+        <property name="left_click_callback" type="command" cbtype="simple">selLeftClick</property>
+        <property name="right_click_callback" type="command" cbtype="simple">selRightClick_CB</property>
+        <property name="shift_double_click_command" type="command" cbtype="simple">selShiftDoubleClick_CB</property>
+        <layout manager="pack">
+          <property name="side">top</property>
+        </layout>
+      </object>
+    </child>
+  </object>
 </interface>

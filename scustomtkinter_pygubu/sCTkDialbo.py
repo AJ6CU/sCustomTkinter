@@ -39,7 +39,7 @@ class sCTkDialContinuousBO(BuilderObject):
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("divisions", "knob_diameter", "command", "left_click_callback", "right_click_callback",
                       "double_click_command", "shift_double_click_command",
-                      "latching", "pressed",
+                      "latching",
                       "text_color", "dial_color", "pointer_glow_color")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback",
@@ -109,7 +109,7 @@ class sCTkDialRangeBO(BuilderObject):
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("from_", "to", "divisions", "knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "label_font",
                       "double_click_command", "shift_double_click_command",
-                      "latching", "pressed",
+                      "latching",
                       "text_color", "dial_color", "pointer_color")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback",
@@ -171,7 +171,7 @@ class sCTkDialSelectorBO(BuilderObject):
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels", "label_font",
                       "double_click_command", "shift_double_click_command",
-                      "latching", "pressed",
+                      "latching",
                       "text_color", "dial_color", "pointer_color")  # Labels handles lists, usually initialized in code
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
     command_properties = ("command", "left_click_callback",
@@ -277,10 +277,16 @@ register_widget(id_continuous, sCTkDialContinuousBO, "sCTkDialContinuous", ("ttk
 register_custom_property(id_continuous, "text_color", "colorentry", help="Colour of the labels AND the tick marks -- both are drawn with this one key. Blank uses the theme's text_color.")
 register_custom_property(id_continuous, "dial_color", "colorentry", help="Colour of the knob face. Blank uses the theme's dial_color.")
 register_custom_property(id_continuous, "pointer_glow_color", "colorentry", help="Colour of the glow around the pointer. Blank uses the theme's pointer_glow_color.")
+# `pressed` is deliberately NOT a Designer property.
+#
+# It is the dial's initial armed state, and the inspector reflects the LIVE
+# widget -- so double-clicking a dial on the design canvas set it True, and
+# pygubu then wrote pressed=True into the generated code as a non-default.
+# The application started armed, which is the opposite of what latching is
+# for. It remains a constructor argument for code that genuinely wants a dial
+# to start switched on.
 register_custom_property(id_continuous, "latching", "choice", values=("True", "False"),
                          default_value="False", help="Opt-in. True makes the dial start switched off and ignore clicks, drags and the wheel until armed -- typically by wiring double_click_command to toggle_pressed(). It then draws from the theme's pressed_map. False, the default, is always live.")
-register_custom_property(id_continuous, "pressed", "choice", values=("True", "False"),
-                         default_value="False", help='Initial armed state, only meaningful when latching is True. Normally left False so the dial starts off.')
 register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_continuous, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_continuous, "height", "naturalnumber", help="Height in pixels.")
@@ -312,8 +318,6 @@ register_custom_property(id_range, "dial_color", "colorentry", help="Colour of t
 register_custom_property(id_range, "pointer_color", "colorentry", help="Colour of the pointer on the knob. Blank uses the theme's pointer_color.")
 register_custom_property(id_range, "latching", "choice", values=("True", "False"),
                          default_value="False", help="Opt-in. True makes the dial start switched off and ignore clicks, drags and the wheel until armed -- typically by wiring double_click_command to toggle_pressed(). It then draws from the theme's pressed_map. False, the default, is always live.")
-register_custom_property(id_range, "pressed", "choice", values=("True", "False"),
-                         default_value="False", help='Initial armed state, only meaningful when latching is True. Normally left False so the dial starts off.')
 register_custom_property(id_range, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_range, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_range, "height", "naturalnumber", help="Height in pixels.")
@@ -348,8 +352,6 @@ register_custom_property(id_selector, "dial_color", "colorentry", help="Colour o
 register_custom_property(id_selector, "pointer_color", "colorentry", help="Colour of the pointer on the knob. Blank uses the theme's pointer_color.")
 register_custom_property(id_selector, "latching", "choice", values=("True", "False"),
                          default_value="False", help="Opt-in. True makes the dial start switched off and ignore clicks, drags and the wheel until armed -- typically by wiring double_click_command to toggle_pressed(). It then draws from the theme's pressed_map. False, the default, is always live.")
-register_custom_property(id_selector, "pressed", "choice", values=("True", "False"),
-                         default_value="False", help='Initial armed state, only meaningful when latching is True. Normally left False so the dial starts off.')
 register_custom_property(id_selector, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_selector, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_selector, "height", "naturalnumber", help="Height in pixels.")
@@ -367,4 +369,3 @@ register_custom_property(id_selector, "shift_double_click_command", "commandentr
                               "wire it to disarm a latching dial.")
 register_custom_property(id_selector, "right_click_callback", "commandentry", help="Callback for right mouse click.")
 register_custom_property(id_selector, "labels", "entry", help='Preferred: ["A", "B", "C"]. Bare comma-separated (A, B, C) also works, but cannot contain a comma inside a value.')
-

@@ -19,47 +19,56 @@ class dialDoubleClickTest(baseui.dialDoubleClickTestUI):
         print("contValueChanged_CB", step_delta)
 
 
-    def contLeft_CB(self):
-        print("contLeft_CB")
-
-    def contRight_CB(self):
-        print("contRight_CB")
-
-    def contDouble_CB(self, dial):
-        print("contDouble_CB", dial)
-
-    def contShiftDouble_CB(self, dial):
-        print("contShiftDouble_CB", dial)
-
     def rangeValueChanged_CB(self, value):
         print("rangeValueChanged_CB", value)
 
-    def rangeLeft_CB(self):
-        print("rangeLeft_CB")
 
-    def rangeRight_CB(self):
-        print("rangeRight_CB")
 
-    def rangeDouble_CB(self, dial):
-        print("rangeDouble_CB", dial)
-
-    def rangeShiftDouble_CB(self, dial):
-        print("rangeShiftDouble_CB", dial)
 
     def selValueChanged_CB(self, selected_index):
         print("selValueChanged_CB", selected_index)
 
-    def selLeft_CB(self):
-        print("selLeft_CB")
 
-    def selRight_CB(self):
-        print("selRight_CB")
 
-    def selDouble_CB(self, dial):
-        print("selDouble_CB", dial)
 
-    def selShiftDouble_CB(self, dial):
-        print("selShiftDouble_CB", dial)
+    def selLeftClick(self):
+        print("selLeftClick")
+
+    def selRightClick_CB(self):
+        print("selRightClick_CB")
+
+    def selDoubleClick_CB(self, dial):
+        print("selDoubleClick_CB", dial)
+
+    def selShiftDoubleClick_CB(self, dial):
+        print("selShiftDoubleClick_CB", dial)
+
+    def contLeftClick_CB(self):
+        print("contLeftClick_CB")
+
+    def contRightClick_CB(self):
+        print("contRightClick_CB")
+
+    def contDoubleClick_CB(self, dial):
+        print("contDoubleClick_CB", dial)
+
+    def contShiftDoubleClick_CB(self, dial):
+        print("contShiftDoubleClick_CB", dial)
+
+    def rangeValueChanged_CB(self, value):
+        print("rangeValueChanged_CB", value)
+
+    def rangeLeftClick(self):
+        print("rangeLeftClick")
+
+    def rangeRightClick_CB(self):
+        print("rangeRightClick_CB")
+
+    def rangeDoubleClick_CB(self, dial):
+        print("rangeDoubleClick_CB", dial)
+
+    def rangeShiftDoubleClick_CB(self, dial):
+        print("rangeShiftDoubleClick_CB", dial)
 
 
 if __name__ == "__main__":
