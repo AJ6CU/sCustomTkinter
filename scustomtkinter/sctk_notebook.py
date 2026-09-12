@@ -163,22 +163,24 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # size, the notebook takes the cell's -- while lower() keeps the
         # canvas behind them.
         self.canvas.grid(row=0, column=0, columnspan=2, sticky="nsew")
-        # tk.Misc.lower, NOT self.canvas.lower().
+# NOT lowered.
         #
-        # Canvas overrides lower() with its own item method -- it lowers a
-        # TAG within the canvas, not the widget in its parent's stacking
-        # order -- so the bare call raises:
+        # Lowering this canvas put it beneath CTkFrame's OWN background
+        # canvas, and "transparent" in CustomTkinter does not mean "do not
+        # paint" -- it means "paint the parent's colour". So the frame's
+        # background covered the tab strip completely and the widget rendered
+        # as an empty rectangle, while every print said the tabs were there.
         #
-        #     TclError: wrong # args: should be "... lower tagOrId ?belowThis?"
-        #
-        # Reaching past the override gets the widget-stacking one. Third
-        # CustomTkinter/Tk method this widget has had to work around, after
-        # _draw() and place().
-        tk.Misc.lower(self.canvas)
+        # Nothing needs lowering anyway: this canvas is created before the
+        # page host, so it is already below it in the stacking order, which is
+        # the only relationship that matters.
 
         # Pages sit ON TOP of the canvas, inside the outline.
+        # Created AFTER the canvas, so it stacks above it -- see the note
+        # there. lift() states it rather than relying on creation order.
         self._page_host = ctk.CTkFrame(self, fg_color="transparent",
                                        border_width=0)
+        self._page_host.lift()
         self._page_host.grid_rowconfigure(0, weight=1)
         self._page_host.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -848,8 +850,6 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         page = sCTkFrame(self._page_host, fg_color="transparent",
                          border_width=0)
         page.grid(row=0, column=0, sticky="nsew")
-        # DEBUG -- remove once the tab labels are sorted.
-        print("[NB] add() called with:", repr(name))
         self._pages[name] = page
         if self._current is None:
             self._current = name
