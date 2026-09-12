@@ -29,6 +29,11 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         # None means "use the theme's label_font".
         self._label_font_override = kw.pop("label_font", None)
 
+        # Same reason: these are this widget's own, not CTkFrame options.
+        _pressed_init = bool(kw.pop("pressed", False))
+        _latching_init = bool(kw.pop("latching", False))
+        _dbl_init = kw.pop("double_click_command", None)
+
         ThemeableWidget.__init__(self, kw)
         # THEME SOURCE -- read the RAW block, not final_kw.
         #
@@ -70,6 +75,9 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         self._local_defaults.update(self.final_kw)
 
         self._custom_disabled_map = dict(self._widget_disabled_map)
+        # pressed_map is already resolved by ThemeableWidget for every widget,
+        # so this needs nothing added there.
+        self._custom_pressed_map = dict(self._widget_pressed_map)
         self._validate_theme_keys()
 
         # knob_diameter names the KNOB. width and height name the CANVAS.
@@ -93,6 +101,33 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
 
         self._divisions = int(divisions) if int(divisions) > 0 else 24
         self._state = "normal" if state.lower() == "normal" else "disabled"
+
+        # LATCHING IS OPT-IN, and off by default.
+        #
+        # With latching=False -- the default -- a dial behaves exactly as it
+        # always has: always live, top-level colours, pressed_map ignored and
+        # not required. That matters because an armed/inert rotary control is
+        # an unusual pattern: someone reaching for sCTkDialRange as a volume
+        # knob would find it inert with nothing on screen to say why.
+        #
+        # With latching=True the dial starts switched off and ignores clicks,
+        # drags and the wheel until set_pressed(True). pressed_map then
+        # supplies the operational colours and the top-level block is the
+        # resting, dimmed look.
+        #
+        # Named for the mute or lock button it behaves like: pressed and it
+        # stays pressed. The button family's own pressed_map is momentary --
+        # a different meaning in a different block.
+        self._latching = _latching_init
+        self._pressed = _pressed_init if _latching_init else False
+
+        # Double-click is a PLAIN CALLBACK, not wired to the latch.
+        #
+        # Toggling on double-click is one use and a natural one, but it is the
+        # application's decision rather than the widget's -- see the example in
+        # sCTkDial.md, which wires exactly that. Called with the dial itself,
+        # so a handler can act on it without a closure over the name.
+        self._double_click_command = _dbl_init
         self._current_value = 0
         self._scroll_cooldown_seconds = 0.060
         self._last_scroll_time = 0.0
@@ -104,11 +139,13 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         self.grid_propagate(False)
 
         self.canvas.bind("<Enter>", lambda e: self._on_mouse_enter())
-        self.canvas.bind("<Button-1>", self._on_left_click_step)
-        self.canvas.bind("<Button-2>", self._on_right_click_step)
-        self.canvas.bind("<Button-3>", self._on_right_click_step)
+        # Interactive bindings are NOT installed unconditionally any more --
+        # a dial starts switched off and must be inert until double-clicked.
+        # _apply_input_bindings() installs whatever the current state calls
+        # for, including the double-click that switches it on.
         self.canvas.bind("<Shift-ButtonPress-1>", self._on_button_press)
         self.canvas.bind("<Shift-B1-Motion>", self._on_button_motion)
+        self._apply_input_bindings()
         self.canvas.bind("<Configure>", lambda e: self._draw_dial_base())
         self.after(50, self._inject_private_layer_bindings)
 
@@ -123,6 +160,11 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     # background does NOT dim when disabled, the knob face and text carry the
     # signal. Matches the choice made for sCTkScrollableFrame.
     _REQUIRED_DISABLED_KEYS = ("text_color", "dial_color")
+
+    # Required inside pressed_map -- the latched switched-on state. Same two
+    # keys as disabled_map: enough to tell the states apart at a glance,
+    # without forcing every shading key to be restated.
+    _REQUIRED_PRESSED_KEYS = ("text_color", "dial_color")
 
     def _label_font(self):
         """
@@ -301,6 +343,139 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                 raise KeyError(
                     f"'{name}' theme block is missing '{key}' in disabled_map."
                 )
+        # pressed_map is only required when latching is in use. A dial that
+        # is always live never reads it, so demanding it would force the key
+        # into every theme block for a feature most dials do not use.
+        if not getattr(self, "_latching", False):
+            return
+        for key in self._REQUIRED_PRESSED_KEYS + getattr(self, "_EXTRA_PRESSED_KEYS", ()):
+            if self._custom_pressed_map.get(key) is None:
+                raise KeyError(
+                    f"'{name}' theme block is missing '{key}' in pressed_map."
+                )
+
+    # ------------------------------------------------------------------
+    # Latched "pressed" state
+    # ------------------------------------------------------------------
+    _SCROLL_EVENTS = ("<MouseWheel>", "<TouchpadScroll>", "<Button-4>",
+                      "<Button-5>", "<Shift-ButtonPress-1>", "<Shift-B1-Motion>")
+
+    def is_pressed(self) -> bool:
+        """True when the dial is switched on and will respond to input."""
+        return bool(getattr(self, "_pressed", False))
+
+    def set_pressed(self, pressed: bool) -> bool:
+        """
+        Switches the dial on or off, repainting and re-gating input.
+
+        Off is the resting state: the dial shows its top-level theme colours
+        and ignores clicks, drags and the wheel. On shows pressed_map and
+        responds normally.
+
+        Returns:
+            The resulting value, so a caller can act on what actually happened.
+        """
+        if not self._latching:
+            # Nothing to switch: the dial is always live. Silently ignored
+            # rather than raising, so generic code that arms every dial on a
+            # panel does not have to know which ones latch.
+            return False
+        pressed = bool(pressed)
+        if pressed == self.is_pressed():
+            return pressed
+        self._pressed = pressed
+        self._apply_input_bindings()
+        self._process_theme_repaint()
+        return pressed
+
+    def toggle_pressed(self) -> bool:
+        """Flips the switched-on state. What a double-click does."""
+        return self.set_pressed(not self.is_pressed())
+
+    def _on_double_click(self, event=None):
+        """
+        Fires double_click_command, if one was given.
+
+        Deliberately does NOT touch the latch. Wiring a double-click to
+        toggle_pressed() is the application's choice:
+
+            dial = sCTkDialRange(parent, latching=True,
+                                 double_click_command=lambda d: d.toggle_pressed())
+
+        Returns "break" so the click does not also reach anything bound
+        further up.
+        """
+        if str(self._state).lower() == "disabled":
+            return "break"
+        if callable(self._double_click_command):
+            try:
+                self._double_click_command(self)
+            except Exception:
+                # A raising callback must not leave the binding broken for
+                # the next click.
+                pass
+        return "break"
+
+    def _apply_input_bindings(self):
+        """
+        Installs or removes the interactive bindings for the current state.
+
+        Gating here rather than guarding inside each handler: there are six
+        handlers on each of the three variants, and a missed guard would be a
+        dial that still turns while switched off. Not binding at all cannot be
+        got wrong.
+
+        The double-click binding survives while the widget is enabled -- it is
+        how the dial gets switched on in the first place.
+        """
+        if not hasattr(self, "canvas"):
+            return
+        try:
+            if not self.canvas.winfo_exists():
+                return
+        except Exception:
+            return
+
+        enabled = str(self._state).lower() != "disabled"
+        # Without latching the dial is live whenever it is enabled, which is
+        # how it has always behaved.
+        live = enabled and (self.is_pressed() if self._latching else True)
+
+        try:
+            if live:
+                self.canvas.bind("<Button-1>", self._on_left_click_step)
+                self.canvas.bind("<Button-2>", self._on_right_click_step)
+                self.canvas.bind("<Button-3>", self._on_right_click_step)
+                # The shift-drag handlers are part of the interactive set and
+                # have to come back with it. _inject_private_layer_bindings()
+                # covers only the scroll events.
+                self.canvas.bind("<Shift-ButtonPress-1>", self._on_button_press)
+                self.canvas.bind("<Shift-B1-Motion>", self._on_button_motion)
+                self._inject_private_layer_bindings()
+            else:
+                self.canvas.unbind("<Button-1>")
+                self.canvas.unbind("<Button-2>")
+                self.canvas.unbind("<Button-3>")
+                # Unbound on EVERY layer the injection binds, not just the
+                # canvas. _inject_private_layer_bindings() installs the scroll
+                # handlers on the canvas, the widget and CTkFrame's own canvas;
+                # clearing one of the three left a dial that still scrolled
+                # while switched off. The old disabled path had the same gap.
+                for _layer in (self.canvas, self, getattr(self, "_canvas", None)):
+                    if _layer is None:
+                        continue
+                    for ev in self._SCROLL_EVENTS:
+                        try:
+                            _layer.unbind(ev)
+                        except Exception:
+                            pass
+
+            if enabled:
+                self.canvas.bind("<Double-Button-1>", self._on_double_click)
+            else:
+                self.canvas.unbind("<Double-Button-1>")
+        except Exception:
+            pass
 
     def _inject_private_layer_bindings(self):
         layers_to_bind = [self.canvas, self]
@@ -369,6 +544,14 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             # Same one-character bug found in sCTkFileExplorer, sCTkSMeterBar
             # and sCTkPathChooser.
             pname = args[0]
+            if pname == "latching":
+                return ("latching", "latching", "Latching", "False",
+                        str(bool(getattr(self, "_latching", False))))
+
+            if pname == "pressed":
+                return ("pressed", "pressed", "Pressed", "False",
+                        str(self.is_pressed()))
+
             if pname == "width":
                 return ('width', 'width', 'Width', 120, super().cget("width") if hasattr(self, "cget") else 120)
             if pname == "height":
@@ -428,6 +611,26 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         # ThemeableWidget._record_theme_overrides().
         self._record_theme_overrides(kwargs)
 
+        if "double_click_command" in kwargs:
+            self._double_click_command = kwargs.pop("double_click_command")
+
+        if "latching" in kwargs:
+            _l = kwargs.pop("latching")
+            if isinstance(_l, str):
+                _l = _l.strip().lower() in ("true", "1", "yes")
+            self._latching = bool(_l)
+            if not self._latching:
+                self._pressed = False
+            self._apply_input_bindings()
+            self._process_theme_repaint()
+
+        if "pressed" in kwargs:
+            _p = kwargs.pop("pressed")
+            # The Designer sends strings.
+            if isinstance(_p, str):
+                _p = _p.strip().lower() in ("true", "1", "yes")
+            self.set_pressed(bool(_p))
+
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 
@@ -477,32 +680,30 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             # 🔑 1. REPAINT CANVAS LAYERS FIRST: Let Tkinter settle its color configurations
             self._process_theme_repaint()
 
-            # 🔑 2. HARDWARE RE-BINDING MATRIX: Clamp the mouse listeners on top of the settled surface!
-            try:
-                self.canvas.bind("<Button-1>", self._on_left_click_step)
-                self.canvas.bind("<Button-2>", self._on_right_click_step)
-                self.canvas.bind("<Button-3>", self._on_right_click_step)
-                self._inject_private_layer_bindings()
-            except Exception:
-                pass
+            # Bindings follow BOTH conditions: enabling a dial that is
+            # switched off must not make it responsive. Disabling cleared the
+            # latch, so a dial always comes back from a lock switched off.
+            self._apply_input_bindings()
 
         elif mode == "disabled":
             self._state = "disabled"
             self._custom_current_state = "disabled"
-            SCROLL_EVENTS = ["<MouseWheel>", "<TouchpadScroll>", "<Button-4>", "<Button-5>", "<Shift-ButtonPress-1>",
-                             "<Shift-B1-Motion>"]
-            try:
-                self.canvas.unbind("<Button-1>")
-                self.canvas.unbind("<Button-2>")
-                self.canvas.unbind("<Button-3>")
-                for ev in SCROLL_EVENTS: self.canvas.unbind(ev)
-            except Exception:
-                pass
+            # Disabling switches the dial OFF as well as locking it, so
+            # re-enabling leaves it inert until deliberately double-clicked.
+            #
+            # This is what makes a panel lock useful: unlocking gives you a
+            # screen of dials that cannot be nudged by accident, rather than
+            # one that comes back live because it was live before the lock.
+            self._pressed = False
+            self._apply_input_bindings()
             self._process_theme_repaint()
 
         return str(self._state).lower()
 
     def cget(self, attribute_name: str) -> any:
+        if attribute_name == "pressed": return self.is_pressed()
+        if attribute_name == "latching": return bool(getattr(self, "_latching", False))
+        if attribute_name == "double_click_command": return self._double_click_command
         if attribute_name == "state": return getattr(self, "_state", "normal")
         if attribute_name == "knob_diameter": return self._knob_diameter
         if attribute_name == "divisions": return getattr(self, "_divisions", 24)
@@ -653,6 +854,27 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         rim_light = self._resolve_color(self._local_defaults.get("dial_rim_light_color"))
         rim_shadow = self._resolve_color(self._local_defaults.get("dial_rim_shadow_color"))
 
+        if self._pressed and self._state != "disabled":
+            # SWITCHED ON. pressed_map holds the operational look; the top
+            # level above is the resting, dimmed one. Each key falls back to
+            # the top-level value, so a pressed_map that names only the few
+            # colours that should brighten is a valid block.
+            _pm = self._custom_pressed_map
+
+            def _pressed_or(key, current):
+                val = _pm.get(key)
+                return self._resolve_color(val) if val is not None else current
+
+            text_color = _pressed_or("text_color", text_color)
+            dial_color = _pressed_or("dial_color", dial_color)
+            shadow_paint = _pressed_or("shadow_color", shadow_paint)
+            knob_highlight = _pressed_or("dial_highlight_color", knob_highlight)
+            knob_shadow = _pressed_or("dial_shadow_color", knob_shadow)
+            rim_light = _pressed_or("dial_rim_light_color", rim_light)
+            rim_shadow = _pressed_or("dial_rim_shadow_color", rim_shadow)
+            # fg_color deliberately not switched: the background stays put and
+            # the knob face carries the signal, as it does when disabled.
+
         if self._state == "disabled":
             text_color = self._resolve_color(self._custom_disabled_map.get("text_color"))
             # FIX: this previously read "fg_color" for BOTH the dial face and
@@ -764,9 +986,18 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             px = center_x + (knob_radius - self.POINTER_RIM_INSET) * math.cos(pointer_rad)
             py = center_y - (knob_radius - self.POINTER_RIM_INSET) * math.sin(pointer_rad)
             pointer_key = "pointer_color"
-            raw_pointer = (self._custom_disabled_map.get(pointer_key) or self._custom_disabled_map.get("text_color")
-                           if self._state == "disabled"
-                           else self._local_defaults.get(pointer_key) or self._local_defaults.get("text_color"))
+            if self._state == "disabled":
+                raw_pointer = (self._custom_disabled_map.get(pointer_key)
+                               or self._custom_disabled_map.get("text_color"))
+            elif self._pressed:
+                # Switched on: pressed_map first, then the resting value.
+                raw_pointer = (self._custom_pressed_map.get(pointer_key)
+                               or self._custom_pressed_map.get("text_color")
+                               or self._local_defaults.get(pointer_key)
+                               or self._local_defaults.get("text_color"))
+            else:
+                raw_pointer = (self._local_defaults.get(pointer_key)
+                               or self._local_defaults.get("text_color"))
             self.canvas.create_line(center_x, center_y, px, py,
                                     fill=self._resolve_color(raw_pointer),
                                     width=self.POINTER_WIDTH, capstyle="round",
