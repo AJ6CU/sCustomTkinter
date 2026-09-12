@@ -258,7 +258,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         height = max(int(y1 - y0 - (pad * 2)), 1)
         self._page_host.place(x=int(x0 + pad), y=int(y0 + pad),
                               width=width, height=height)
-        self._draw()
+        self._draw_notebook()
 
     # ------------------------------------------------------------------
     # Drawing
@@ -398,8 +398,20 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         overflow = self._total_tab_length() - max(self._canvas.winfo_height(), 1)
         return max(int(overflow), 0)
 
-    def _draw(self):
-        """Repaints outline and tabs, and recomputes the hit-test bounds."""
+    def _draw_notebook(self):
+        """
+        Repaints outline and tabs, and recomputes the hit-test bounds.
+
+        NOT named _draw(). CTkFrame has its own _draw(no_color_updates=...)
+        and calls it from its constructor, so a method of that name here
+        overrides it and the widget fails to build:
+
+            TypeError: _draw() got an unexpected keyword argument
+            'no_color_updates'
+
+        Worth knowing for any widget that subclasses a CustomTkinter class
+        and wants a drawing method of its own.
+        """
         if not hasattr(self, "_canvas"):
             return
         try:
@@ -492,12 +504,12 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         name = self._tab_at(event.x, event.y)
         if name != self._hover:
             self._hover = name
-            self._draw()
+            self._draw_notebook()
 
     def _on_leave(self, event=None):
         if self._hover is not None:
             self._hover = None
-            self._draw()
+            self._draw_notebook()
 
     def _on_wheel(self, event):
         """
@@ -522,7 +534,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         new = min(max(self._scroll + delta * self._sx(24), 0), ceiling)
         if new != self._scroll:
             self._scroll = new
-            self._draw()
+            self._draw_notebook()
         return "break"
 
     # ------------------------------------------------------------------
@@ -588,7 +600,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                        for k, v in self._pages.items()}
         if self._current == old_name:
             self._current = new_name
-        self._draw()
+        self._draw_notebook()
 
     def set(self, name):
         """Selects a tab and raises its page."""
@@ -597,7 +609,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             raise KeyError(f"no tab named '{name}'")
         self._current = name
         self._pages[name].tkraise()
-        self._draw()
+        self._draw_notebook()
 
     def get(self):
         """The selected tab's name, or None when there are no tabs."""
@@ -627,7 +639,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         mode = str(mode).lower()
         self._state = "disabled" if mode == "disabled" else "normal"
         self._hover = None
-        self._draw()
+        self._draw_notebook()
         return self._state
 
     # ------------------------------------------------------------------
@@ -716,8 +728,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                 super()._set_appearance_mode(mode_string)
             except Exception:
                 pass
-        self._draw()
+        self._draw_notebook()
 
     def _update_current_visual_state(self):
         """Repaint hook, found by ThemeableWidget._repaint_after_override()."""
-        self._draw()
+        self._draw_notebook()
