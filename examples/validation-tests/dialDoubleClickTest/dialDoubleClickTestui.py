@@ -75,7 +75,6 @@ class dialDoubleClickTestUI:
         sctkdialrange1.configure(
             shift_double_click_command=self.rangeShiftDoubleClick_CB)
         sctkdialselector1 = sCTkDialSelector(sctk1)
-        sctkdialselector1.configure(latching=True, pressed=False)
         sctkdialselector1.pack(side="top")
         sctkdialselector1.configure(command=self.selValueChanged_CB)
         sctkdialselector1.configure(left_click_callback=self.selLeftClick)

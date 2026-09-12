@@ -528,12 +528,30 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                         except Exception:
                             pass
 
-            if enabled:
+            # The plain double-click is NOT bound on an armed latching dial.
+            #
+            # Tk gives <Double-Button-1> precedence over the second
+            # <Button-1>, so while both are bound an accidental double-click
+            # while clicking to step the dial costs a step -- two clicks, one
+            # step. Harmless but irritating on a control you click repeatedly.
+            #
+            # On a latching dial the plain double-click means "arm", which is
+            # only ever needed while it is off. Not binding it once armed
+            # removes the collision outright rather than compensating for it.
+            # Disarming has its own gesture and stays bound throughout.
+            #
+            # A non-latching dial keeps it bound always: there
+            # double_click_command is a general-purpose callback with no
+            # arming role, and silently dropping it would be wrong.
+            if enabled and not (self._latching and self.is_pressed()):
                 self.canvas.bind("<Double-Button-1>", self._on_double_click)
+            else:
+                self.canvas.unbind("<Double-Button-1>")
+
+            if enabled:
                 self.canvas.bind("<Shift-Double-Button-1>",
                                  self._on_shift_double_click)
             else:
-                self.canvas.unbind("<Double-Button-1>")
                 self.canvas.unbind("<Shift-Double-Button-1>")
         except Exception:
             pass

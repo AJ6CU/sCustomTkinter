@@ -12,6 +12,7 @@ Note the spelling: the class is `sCTKDialBase` with a capital K. It is never ins
 * [Knob rendering](#knob-rendering)
 * [Theme contract](#theme-contract)
 * [Reading theme colours](#reading-theme-colours)
+* [Latching](#latching)
 * [Shared API](#shared-api)
 * [Redraw model](#redraw-model)
 * [Known limitations](#known-limitations)
@@ -88,12 +89,84 @@ The registry is reached as a **module attribute**, not a direct name import, bec
 
 ---
 
+<a name="latching"></a>
+### Latching: arming a dial before it responds
+
+**Opt-in, and off by default.** A dial built without `latching` behaves as it always has: always live, `pressed_map` ignored and not required in its theme block.
+
+With `latching=True` the dial starts switched off. Clicks, drags and the wheel are ignored — the bindings are simply not installed — and it draws the resting colours from the top level of its theme block. Arming it swaps to `pressed_map` and restores the input.
+
+```python
+def arm(dial):
+    dial.set_pressed(True)
+
+def disarm(dial):
+    dial.set_pressed(False)
+
+mode_switch = sCTkDialSelector(
+    panel,
+    labels=["AM", "FM", "LSB", "USB", "CW"],
+    latching=True,
+    double_click_command=arm,
+    shift_double_click_command=disarm,
+)
+```
+
+This exists for controls where an accidental brush of the wheel does real damage — changing band or sideband, slamming the volume. It is not the right default for a plain volume knob: an inert rotary control with nothing on screen to explain itself is a discoverability problem, which is why opting in is deliberate.
+
+#### The two callbacks
+
+Both are plain callbacks. **The widget wires neither of them to the latch** — toggling on a double-click is one use and a natural one, but the decision belongs to the application. Each is called with the dial itself, so one handler can serve several dials without a closure over any name.
+
+| Property | Gesture | Bound when |
+| :--- | :--- | :--- |
+| `double_click_command` | `<Double-Button-1>` | Enabled, **and** not an armed latching dial |
+| `shift_double_click_command` | `<Shift-Double-Button-1>` | Enabled |
+
+#### Why arming and disarming use different gestures
+
+Every mouse button steps a dial, so a plain double-click competes with ordinary clicking to turn the knob. Tk gives `<Double-Button-1>` precedence over the second `<Button-1>`, so while both are bound an accidental double-click costs a step — two clicks, one step.
+
+That only matters in one direction. While a latching dial is **off**, nothing is bound, so arming by double-click cannot collide with anything. It is disarming that is unsafe, which is why it has its own gesture.
+
+The plain double-click is therefore **not bound at all on an armed latching dial**, removing the collision rather than compensating for it. One consequence: `double_click_command` does not fire while a latching dial is armed. A non-latching dial keeps it bound throughout, since there it is a general-purpose callback with no arming role.
+
+Shift is already the drag modifier, but a shift-double-click only fires `<Shift-ButtonPress-1>` twice, which records a drag origin and nothing else — so the gesture is free.
+
+A dial you never click, driven by the wheel or from code, can ignore all of this and put `toggle_pressed()` on the plain double-click.
+
+#### Disabling clears the latch
+
+`state("disabled")` switches a latching dial **off** as well as locking it, so re-enabling leaves it inert until armed again. That is what makes a panel lock useful: unlocking gives you a screen of dials that cannot be nudged by accident, rather than one that comes back live because it was live before the lock.
+
+#### API
+
+| Member | Description |
+| :--- | :--- |
+| `latching` | Constructor argument and property. `True` opts in. Available in the Designer. |
+| `pressed` | Initial armed state. Constructor argument and property, **not** offered in the Designer — see below. |
+| `is_pressed()` | Whether the dial is currently armed. `False` on a non-latching dial. |
+| `set_pressed(value)` | Arms or disarms. A no-op returning `False` on a non-latching dial, so code that arms every dial on a panel needs no special cases. |
+| `toggle_pressed()` | Flips the state. |
+
+`pressed` is deliberately absent from the Designer. The inspector reflects the **live** widget, so double-clicking a dial on the design canvas set it `True` and pygubu wrote `pressed=True` into the generated code as a non-default — the application then started armed, the opposite of what latching is for.
+
+#### Theme
+
+`pressed_map` holds the operational colours; the top-level block holds the resting, dimmed ones. Each key falls back to the top level, so a `pressed_map` naming only the few colours that should brighten is valid.
+
+A **non-latching dial draws from `pressed_map` too**, because it is permanently on. That keeps opting out from changing how a dial looks — and a theme block with no `pressed_map` at all falls through to the top level, which in the older theme shape holds the bright values. Both shapes therefore behave correctly.
+
+`pressed_map` is required only when `latching=True`. `text_color` and `dial_color` must be present, matching `disabled_map`.
+
+---
+
 <a name="shared-api"></a>
 ### Shared API
 
 | Member | Type | Description |
 | :--- | :--- | :--- |
-| `state(mode=None)` | method | Getter with no argument; setter with `"normal"` or `"disabled"`. Unbinds clicks, wheel and trackpad input, and repaints from `disabled_map`. |
+| `state(mode=None)` | method | Getter with no argument; setter with `"normal"` or `"disabled"`. Unbinds clicks, wheel and trackpad input, and repaints from `disabled_map`. On a latching dial it also clears the latch — see [Latching](#latching). |
 | `get_state()` | method | Equivalent to `state()` with no argument. |
 | `configure(state=...)` | method | Same effect as `state()`. Both routes are supported. |
 | `configure(name)` | method | Pygubu-style single-argument query. |

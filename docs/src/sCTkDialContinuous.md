@@ -4,6 +4,7 @@
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Callbacks](#callbacks)
+* [Latching](sCTkDial.md#latching)
 * [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
@@ -26,9 +27,12 @@ An infinite flywheel tuning encoder module tracking signed velocity delta step i
 | **File Mapping** | *Inheritance Tree* | Inherits vector math mechanics and 3D knob rendering directly out of `sCTkDial.py`. |
 | `_scroll_cooldown_seconds`| `float` | Throttle limiting touchpad refresh rates to stabilize fast tuning rolls. |
 | `set_position_index(delta)`| `Method (int)` | Manually advances the 3D dimple coordinates via an integer step. |
-| `left_click_callback` | `Callable / None` | **Custom Accelerated Click Hook:** Overrides standard single-step decrements to execute accelerated jumping intervals when clicking the left canvas edge. |
-| `right_click_callback` | `Callable / None` | **Custom Accelerated Click Hook:** Overrides standard single-step increments to execute accelerated jumping intervals when clicking the right canvas edge. |
-| **State**                 | `dial.state("disabled")`<br>**OR**<br>`dial.configure(state="disabled")` | **Dual-Routing State Pipeline:** Handles both syntaxes natively. Freezes canvas mouse-wheel scrolling, disables click jump hooks, and shifts visual themes out of `disabled_map` guidelines via a strict sequential re-binding engine. |
+| `left_click_callback` | `Callable / None` | Replaces the built-in single step taken when the left half of the canvas is clicked. Use it to move by more than one position per click. |
+| `right_click_callback` | `Callable / None` | Replaces the built-in single step taken when the right half of the canvas is clicked. |
+| `state(mode)` | `str` | `"normal"` or `"disabled"`. `configure(state=...)` does the same thing. Disabling removes the click, wheel and trackpad bindings and repaints from `disabled_map`. On a latching dial it also clears the latch. |
+| `latching` | `bool` | Opt-in. The dial starts switched off and ignores input until armed — see [Latching](sCTkDial.md#latching). Default `False`. |
+| `double_click_command` | `Callable / None` | Called on a double-click, with the dial itself. Not wired to anything by the widget; typically used to arm a latching dial. |
+| `shift_double_click_command` | `Callable / None` | Called on a shift-double-click, with the dial itself. Typically used to disarm. |
 
 ---
 
@@ -86,14 +90,26 @@ There is no separate tick colour. If you want ticks and labels to differ, that n
 {
     "sCTkDialContinuous": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "shadow_color": ["#CBD5E1", "#02040A"],
-        "dial_color": ["#9E9E9E", "#2A2F3D"],
-        "dial_highlight_color": ["#E4E8EC", "#42454B"],
-        "dial_shadow_color": ["#5C6165", "#050507"],
-        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
-        "dial_rim_shadow_color": ["#3E4245", "#000000"],
-        "pointer_glow_color": ["#CBD5E1", "#3A455C"],
+        "text_color": ["#7B93B0", "#915404"],
+        "shadow_color": ["#DCE3EC", "#06070A"],
+        "dial_color": ["#C3C5C7", "#1C1E26"],
+        "dial_highlight_color": ["#EAEEF2", "#292A2E"],
+        "dial_shadow_color": ["#9FA4A8", "#070708"],
+        "dial_rim_light_color": ["#F9FAFC", "#53565A"],
+        "dial_rim_shadow_color": ["#8F9396", "#040404"],
+        "pointer_glow_color": ["#DCE3EC", "#242A37"],
+
+        "pressed_map": {
+            "text_color": ["#1A4375", "#FF9100"],
+            "shadow_color": ["#CBD5E1", "#02040A"],
+            "dial_color": ["#9E9E9E", "#2A2F3D"],
+            "dial_highlight_color": ["#E4E8EC", "#42454B"],
+            "dial_shadow_color": ["#5C6165", "#050507"],
+            "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+            "dial_rim_shadow_color": ["#3E4245", "#000000"],
+            "pointer_glow_color": ["#CBD5E1", "#3A455C"]
+        },
+
         "disabled_map": {
             "text_color": ["#94A3B8", "#4B5563"],
             "dial_color": ["#E2E8F0", "#1A1D24"],
@@ -103,7 +119,10 @@ There is no separate tick colour. If you want ticks and labels to differ, that n
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing.
+Every key above is required — construction raises `KeyError` naming any that are missing. `pressed_map` is the exception: it is read only when the dial is built with `latching=True`.
+
+**A dial can be made to require arming before it responds.** Opt in with `latching=True` and wire the double-click callbacks; the dial then starts switched off, ignores input, and draws the resting colours until armed. The `pressed_map` above holds the operational set. See [Latching](sCTkDial.md#latching) on the base class page for the whole mechanism, including why arming and disarming use different gestures.
+
 **A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
  See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
@@ -121,9 +140,9 @@ The dark-mode values above give a black anodised knob. For a brushed-aluminium l
 * **Knob rendering:** the body is a shaded dome and the indicator is a recessed finger dimple, sized at 36% of the knob radius with 6% rim clearance — a VFO operator puts a finger in it to spin the dial quickly. Both scale with the knob. See [the base class page](sCTkDial.md#knob-rendering).
 * **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
 * **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
-* **Latching Override Independence:** Infinite flywheel dimples loop continuously around the chassis ring, ignoring arc boundary restrictions.
-* **Custom Accelerated Steps:** Attaching optional click callbacks allows click events to jump values by wider intervals (e.g., jumping 2 full indices per tap via `set_position_index(2)`) rather than dropping onto the baseline single-step tracking paths.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
+* **No end stops.** The dimple travels continuously around the knob. There is no `arc_angle`, no first or last position, and scrolling never reaches a boundary — this variant reports a signed step delta rather than a position, so there is nothing to clamp.
+* **Click callbacks replace the single step,** rather than adding to it. `set_position_index(2)` inside one moves two positions per click instead of the built-in one.
+* **`_finalize_themeable_lifecycle()` fires at the end of the constructor,** which is what tells a Pygubu-style consumer the widget is ready. Every widget in the library does this; a missing call means an `on_first_object_cb` callback silently never runs.
 
 ---
 
@@ -166,14 +185,14 @@ def on_vfo_dial_rotated(clicks_delta):
 
 
 def my_custom_left_click():
-    """Accelerated Jump: Moves 2 complete indexing steps left per click tap."""
+    """Moves two positions left per click, instead of the built-in one."""
     if tuning_dial.cget("state") == "disabled":
         return
     tuning_dial.set_position_index(-2)  # Jump 2 steps left natively
 
 
 def my_custom_right_click():
-    """Accelerated Jump: Moves 2 complete indexing steps right per click tap."""
+    """Moves two positions right per click, instead of the built-in one."""
     if tuning_dial.cget("state") == "disabled":
         return
     tuning_dial.set_position_index(2)  # Jump 2 steps right natively

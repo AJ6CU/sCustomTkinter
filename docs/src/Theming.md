@@ -13,7 +13,7 @@ Every colour, font, and several structural values in this library come from a si
 ---
 
 <a name="where-the-file-lives"></a>
-### Where the file lives
+## Where the file lives
 
 Two locations are checked, in this order:
 
@@ -33,7 +33,7 @@ The file is read once, at import time. Changes require a restart.
 ---
 
 <a name="block-structure"></a>
-### Block structure
+## Block structure
 
 One block per widget class, keyed by the exact class name:
 
@@ -63,14 +63,14 @@ You mostly don't need to know which is which. It matters in one place: see [addi
 ---
 
 <a name="state-maps"></a>
-### State maps
+## State maps
 
 Nested inside a block, a state map overrides specific keys when the widget is in that state. Anything not listed keeps its normal value.
 
 | Map | Applies when |
 |---|---|
 | `disabled_map` | The widget is disabled via `state("disabled")` or `configure(state="disabled")`. |
-| `pressed_map` | A button is being held down. |
+| `pressed_map` | A button is being held down, **or** a latching dial is armed. Two different meanings in two different widget families: momentary for the buttons, latched for the dials. |
 | `alarm_map` | A widget is in an alert condition. |
 | `readonly_map` | An entry or spinbox is readonly — arrows still work, typing is blocked. |
 
@@ -83,7 +83,7 @@ Some keys exist *only* inside a state map, because they have no normal-state equ
 ---
 
 <a name="light-and-dark"></a>
-### Light and dark
+## Light and dark
 
 Colours are written as a two-element list: **`[light_mode, dark_mode]`**.
 
@@ -97,7 +97,7 @@ A single string is also accepted, and means the same colour in both modes. The l
 
 Fonts are `[family, size]` or `[family, size, weight]`.
 
-#### One place the theme does not reach
+### One place the theme does not reach
 
 **Dropdown menus ignore both your appearance mode and your colours**, on `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary`.
 
@@ -120,7 +120,7 @@ If your application sets an appearance mode explicitly rather than following the
 ---
 
 <a name="changing-values-at-runtime"></a>
-### Changing values at runtime
+## Changing values at runtime
 
 `configure()` accepts theme keys directly, and the override **sticks**:
 
@@ -149,11 +149,11 @@ frame.configure(fg_color=("#FFFFFF", "#111827"))
 ---
 
 <a name="things-that-will-break-your-theme"></a>
-### Things that will break your theme
+## Things that will break your theme
 
 This section is the important one. JSON is unforgiving and the failure modes are not always obvious.
 
-#### Syntax errors take out the entire file
+### Syntax errors take out the entire file
 
 A missing comma, a stray trailing comma before a `}`, an unclosed brace, or a smart quote pasted in from a document — any one of these makes the whole file unparseable. The library catches the error, prints a warning, and **continues with an empty theme registry**. Every widget then fails to construct.
 
@@ -171,7 +171,7 @@ python -m json.tool sCTkThemes.json > /dev/null
 
 Silence means it parsed. Any editor with JSON support will also flag these as you type — worth using one.
 
-#### Deleting a key is not the same as leaving it at default
+### Deleting a key is not the same as leaving it at default
 
 There is no "default" to fall back to. Widgets validate their required keys at construction and raise immediately:
 
@@ -183,7 +183,7 @@ That message names the exact key and whether it belongs at the top level or in a
 
 If you genuinely don't want a widget's block, don't delete it — you'll break that widget. Change its values instead.
 
-#### Misspelling a key is worse than deleting it
+### Misspelling a key is worse than deleting it
 
 A misspelled key is not an error. It's an unrecognised key that gets ignored, while the *correct* key is now missing:
 
@@ -195,7 +195,7 @@ That produces a `KeyError` about `text_color` being missing — which is confusi
 
 A misspelling inside a state map is quieter still: state maps aren't validated as strictly, so a typo there usually means "that property just doesn't change when disabled," with no error at all.
 
-#### A widget with no block at all is themed by CustomTkinter
+### A widget with no block at all is themed by CustomTkinter
 
 Not a crash, and easy to miss. A widget whose block is absent gets no values from this file, so it renders in CustomTkinter's own defaults and its state maps are empty — meaning it never dims when disabled.
 
@@ -217,20 +217,20 @@ Compare that list against the widget pages. Six absences are correct: `sCTk` its
 
 ---
 
-#### Renaming a block orphans it
+### Renaming a block orphans it
 
 Rename `sCTkSlider` to `sCTkSliders` and the block becomes dead data while every slider fails to construct. Block names must match class names exactly.
 
 The reverse also happens: a block for a widget that no longer exists, or was renamed, sits in the file doing nothing. Harmless, but it accumulates.
 
-#### Adding a key that isn't read does nothing
+### Adding a key that isn't read does nothing
 
 Adding `"hover_glow_color"` to a block will not make anything glow. Widgets read a fixed set of keys; extra ones are ignored silently. If you want a new visual property, the widget's drawing code has to read it.
 
 ---
 
 <a name="adding-a-theme-block-for-your-own-widget"></a>
-### Adding a theme block for your own widget
+## Adding a theme block for your own widget
 
 If you subclass `ThemeableWidget`, your block is found automatically by class name. Three things to know:
 
