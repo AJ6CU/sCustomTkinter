@@ -739,6 +739,23 @@ class ThemeableWidget:
         through untouched. Deliberately NOT str() -- a number must stay a
         number, or the widget receives "10" where it expects 10.
         """
+        # NOTHING becomes "", not None.
+        #
+        # A theme block need not define every property a widget's query
+        # branch lists -- sCTkButtonPrimary has no border_color at all,
+        # because it is a solid-fill button, and sCTkProgressBar the same.
+        # The default reported for such a key was None, and pygubu APPLIES
+        # the default when a field is cleared:
+        #
+        #     Failed to set property 'border_color' ...
+        #     Error: color is None, for transparency set color='transparent'
+        #
+        # An empty string is dropped by every configure() in this library --
+        # they all filter `if v == ""` before forwarding -- so clearing an
+        # undefined property becomes the no-op it should always have been.
+        if value is None:
+            return ""
+
         # A list property is JSON, whatever its length. Checked FIRST, because
         # a two-option list is indistinguishable from a colour pair by
         # inspection alone.

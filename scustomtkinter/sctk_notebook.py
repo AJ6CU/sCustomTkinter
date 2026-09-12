@@ -154,13 +154,23 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # its _draw() would then paint on this widget's canvas instead. The
         # dials and the S-meters use the bare name for exactly this reason.
         self.canvas = ctk.CTkCanvas(self, highlightthickness=0, bd=0)
-        self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        # GRIDDED, not placed, and lowered behind the pages.
+        #
+        # place() takes a widget out of the geometry negotiation entirely: a
+        # placed page contributes nothing to what its parent requests, so the
+        # notebook asked for nothing and every size had to be set by hand.
+        # Grid keeps the propagation -- the cell takes the pages' requested
+        # size, the notebook takes the cell's -- while lower() keeps the
+        # canvas behind them.
+        self.canvas.grid(row=0, column=0, columnspan=2, sticky="nsew")
+        self.canvas.lower()
 
         # Pages sit ON TOP of the canvas, inside the outline.
         self._page_host = ctk.CTkFrame(self, fg_color="transparent",
                                        border_width=0)
         self._page_host.grid_rowconfigure(0, weight=1)
         self._page_host.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
         self.canvas.bind("<Button-1>", self._on_click)
         self.canvas.bind("<Motion>", self._on_motion)
@@ -323,27 +333,23 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         return 0, 0, w - strip, h
 
     def _relayout(self):
-        """Repositions the page host to sit inside the outline, then redraws."""
-        x0, y0, x1, y1 = self._content_rect()
-        inset = self._geom("page_inset") if self._show_page_border else 0
-        bw = self._geom("border_width") if self._show_page_border else 0
-        pad = inset + bw
+        """
+        Reserves the strip's column, insets the page host, then redraws.
 
-        # Sized RELATIVELY, not absolutely.
-        #
-        # CTkBaseClass.place() rejects width and height outright -- "must be
-        # passed to the constructor of the widget, not the place method" --
-        # because CustomTkinter tracks a widget's size itself for scaling.
-        # relwidth and relheight it does accept, so the pixel figures are
-        # converted to fractions of this widget.
-        total_w = max(self.canvas.winfo_width(), 1)
-        total_h = max(self.canvas.winfo_height(), 1)
-        width = max(x1 - x0 - (pad * 2), 1)
-        height = max(y1 - y0 - (pad * 2), 1)
+        The strip is a grid column with a minimum size rather than a placed
+        rectangle, so the pages keep contributing their requested size to the
+        notebook's own -- see the note where the canvas is gridded.
+        """
+        strip = int(self._sx(self._tab_width))
+        pad = int(self._geom("page_inset") + self._geom("border_width")) \
+            if self._show_page_border else 0
 
-        self._page_host.place(x=int(x0 + pad), y=int(y0 + pad),
-                              relwidth=min(width / total_w, 1.0),
-                              relheight=min(height / total_h, 1.0))
+        strip_col, page_col = (0, 1) if self._side == "left" else (1, 0)
+        self.grid_columnconfigure(strip_col, minsize=strip, weight=0)
+        self.grid_columnconfigure(page_col, weight=1)
+
+        self._page_host.grid(row=0, column=page_col, sticky="nsew",
+                             padx=pad, pady=pad)
         self._draw_notebook()
 
     # ------------------------------------------------------------------

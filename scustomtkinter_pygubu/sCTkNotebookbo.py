@@ -172,6 +172,32 @@ class sCTkNotebookTabBO(BuilderObject):
         self.widget = master.add(label)
         return self.widget
 
+    def _set_property(self, target_widget, pname, value):
+        """
+        Rebuilds the notebook when a tab is renamed.
+
+        A tab's label is consumed by realize() -- it is the name add() was
+        called with -- so changing it afterwards cannot be expressed by
+        configuring the existing page. Without a rebuild the strip went on
+        showing the old caption until some unrelated edit forced a repaint.
+
+        recreate_widget() is what the Designer itself does when you add or
+        delete a widget, which is why doing that by hand made the change
+        appear. It hangs off _set_property, NOT set_property: the Designer
+        edits a property through the former, and the latter is never called.
+        """
+        super()._set_property(target_widget, pname, value)
+
+        if pname == "label":
+            if hasattr(self, "builder") and hasattr(self.builder, "recreate_widget"):
+                try:
+                    self.builder.recreate_widget(self)
+                except Exception:
+                    # Not yet realized, or a builder without the call. A stale
+                    # caption costs a repaint, not correctness -- the .ui data
+                    # is already updated.
+                    pass
+
     def configure(self, target=None):
         """Nothing to configure: the label was consumed by realize()."""
         pass
