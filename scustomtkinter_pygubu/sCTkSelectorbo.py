@@ -103,6 +103,8 @@ class sCTkSelectorBO(BuilderObject):
         Deliberately NOT used for colours: rebuilding on every keystroke in a
         colour field would be unpleasant, and a colour needs no rebuild.
         """
+        print("[selbo] set_property:", name, repr(value))
+        super().set_property(name, value)
         super().set_property(name, value)
 
         if name in ("width", "height", "items", "pack_propagate"):
