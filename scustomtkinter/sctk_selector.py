@@ -369,7 +369,18 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         if use_pack_p is not None: self.pack_propagate(use_pack_p)
 
         if hasattr(self, "checkboxes_frame") and hasattr(self.checkboxes_frame, "_parent_frame"):
-            if use_pack_p is not None: self.checkboxes_frame._parent_frame.pack_propagate(use_pack_p)
+            # The INNER frame stays non-propagating, always.
+            #
+            # FIX: this used to follow use_pack_p, the outer frame's setting.
+            # Construction deliberately pins it to False (see __init__), which
+            # is what gives a fresh selector its full scroll area however few
+            # checkboxes it holds. Setting it True made the inner frame shrink
+            # to its contents, so clearing a height produced a selector smaller
+            # than a freshly placed one -- the same logical state, two sizes.
+            #
+            # The outer frame's propagate is the one that means anything to a
+            # caller: it decides whether an explicit height is honoured.
+            self.checkboxes_frame._parent_frame.pack_propagate(False)
 
         self.final_kw.pop("pack_propagate", None)
         self.final_kw.pop("grid_propagate", None)   # harmless if it was passed

@@ -36,7 +36,7 @@
           <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary1">
             <property name="text" translatable="yes">Primary</property>
             <layout manager="pack">
-              <property name="pady">10</property>
+              <property name="pady">0 10</property>
               <property name="side">top</property>
             </layout>
           </object>
@@ -55,6 +55,16 @@
             <property name="text" translatable="yes">Ghost	</property>
             <layout manager="pack">
               <property name="pady">10</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkSegmentedButton" id="sctksegmentedbutton2">
+            <property name="unselected_color">gray</property>
+            <property name="values">["one","two", "three"]</property>
+            <layout manager="pack">
+              <property name="pady">10 0</property>
               <property name="side">top</property>
             </layout>
           </object>
@@ -262,6 +272,14 @@
         <layout manager="grid">
           <property name="column">1</property>
           <property name="row">2</property>
+        </layout>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkSelector" id="sctkselector2">
+        <layout manager="grid">
+          <property name="column">0</property>
+          <property name="row">3</property>
         </layout>
       </object>
     </child>
