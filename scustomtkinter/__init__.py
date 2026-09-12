@@ -73,6 +73,7 @@ from .sctk_spinbox import sCTkSpinbox
 from .sctk_switch import sCTkSwitch
 from .sctk_tableview import sCTkTableview
 from .sctk_tabview import sCTkTabview
+from .sctk_notebook import sCTkNotebook
 from .sctk_textbox_primary import sCTkTextboxPrimary
 from .sctk_textbox_secondary import sCTkTextboxSecondary
 from .sctk_toplevel import sCTkToplevel
