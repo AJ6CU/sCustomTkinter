@@ -72,7 +72,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
 
     def __init__(self, master=None, side="left", tab_width=34,
                  tab_style="rounded", text_orientation="auto",
-                 show_page_border=True, state="normal", **kw):
+                 show_page_border=True, show_tab_separators=False,
+                 state="normal", **kw):
         """
         Args:
             master: Parent container.
@@ -91,6 +92,10 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                 the longest label.
             show_page_border: Whether to draw the outline around the page,
                 broken where the selected tab meets it.
+            show_tab_separators: Draws a line across the strip between
+                adjacent tabs. Useful with horizontal text, where stacked
+                labels can otherwise run together; less so with rotated text,
+                where the gap alone reads clearly. Off by default.
             state: "normal" or "disabled".
             **kw: Native CTkFrame arguments, or theme-key overrides.
         """
@@ -99,6 +104,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         self._tab_style = self._check_style(tab_style)
         self._text_orientation = self._check_orientation(text_orientation)
         self._show_page_border = bool(show_page_border)
+        self._show_tab_separators = bool(show_tab_separators)
 
         ThemeableWidget.__init__(self, kw)
 
@@ -339,7 +345,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             # <Configure> redraw measures properly.
             return self._sx((len(str(text)) * 8) + (self.TAB_PAD * 2))
 
-    def _tab_polygon(self, y0, y1):
+    def _tab_polygon(self, y0, y1, selected=False):
         """
         Points for one tab, in the current style.
 
@@ -349,15 +355,16 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         """
         x_out = 0 if self._side == "left" else self._canvas.winfo_width()
         strip = self._sx(self._tab_width)
-        # The inner edge OVERLAPS the page outline by the border width.
+        # Only the SELECTED tab overlaps the page outline.
         #
-        # Butting the tab exactly against the outline leaves a hairline where
-        # the two meet -- the outline is a stroked line centred on its path,
-        # so half its width sits inside the page and half outside, and the
-        # tab covers only up to the path. Reaching past it closes the join.
-        # Most visible on the right-hand strip, where the seam fell on the
-        # tab's rounded corner.
-        overlap = self._sx(self.BORDER_WIDTH)
+        # It needs to: the outline is a stroked line centred on its path, so
+        # butting exactly against it leaves a hairline, and reaching past it
+        # closes the join.
+        #
+        # An unselected tab must NOT, and did at first. Every tab covered the
+        # border where it sat while the gaps between them left it showing,
+        # which turned a continuous edge into a dashed one.
+        overlap = self._sx(self.BORDER_WIDTH) if selected else 0
         if self._side == "left":
             x_in = strip + overlap
             direction = 1
@@ -384,8 +391,20 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         r = self._sx(self.TAB_CORNER)
         cx = x_out + (r * direction)
         pts = [x_in, y0]
-        pts += self._arc_points(cx, y0 + r, 270, 180 if direction > 0 else 360, r)
-        pts += self._arc_points(cx, y1 - r, 180 if direction > 0 else 360, 90, r)
+        if direction > 0:
+            # Left strip: top corner sweeps 270 -> 180, bottom 180 -> 90.
+            pts += self._arc_points(cx, y0 + r, 270, 180, r)
+            pts += self._arc_points(cx, y1 - r, 180, 90, r)
+        else:
+            # Right strip: 270 -> 360, then 360 -> 450.
+            #
+            # 450, not 90. _arc_points interpolates linearly between the two
+            # angles, so 360 -> 90 sweeps BACKWARDS through 300, 200, 100 --
+            # 270 degrees the long way round instead of 90 the short way. The
+            # polygon looped back on itself and left a white notch at the
+            # corner of every right-hand tab.
+            pts += self._arc_points(cx, y0 + r, 270, 360, r)
+            pts += self._arc_points(cx, y1 - r, 360, 450, r)
         pts += [x_in, y1]
         return pts
 
@@ -527,6 +546,20 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                 width=self._sx(self.BORDER_WIDTH),
                 capstyle="round", joinstyle="round", smooth=False)
 
+        # Separators go under the tabs, so a selected tab covers the two
+        # beside it and reads as sitting in front.
+        if self._show_tab_separators:
+            strip = self._sx(self._tab_width)
+            sx0 = 0 if self._side == "left" else self._canvas.winfo_width() - strip
+            sx1 = strip if self._side == "left" else self._canvas.winfo_width()
+            half = self._sx(self.TAB_GAP) / 2.0
+            names = list(self._tab_bounds)
+            for i, name in enumerate(names[:-1]):
+                y_between = self._tab_bounds[name][1] + half
+                self._canvas.create_line(sx0, y_between, sx1, y_between,
+                                         fill=self._colour("border_color"),
+                                         width=max(self._sx(1), 1))
+
         for name, (y0, y1) in self._tab_bounds.items():
             if name == self._current:
                 fill = self._colour("tab_selected_color")
@@ -540,7 +573,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
 
             outline = self._colour("border_color") if name == self._current else fill
             self._canvas.create_polygon(
-                self._tab_polygon(y0, y1), fill=fill, outline=outline,
+                self._tab_polygon(y0, y1, selected=(name == self._current)),
+                fill=fill, outline=outline,
                 width=self._sx(self.BORDER_WIDTH) if name == self._current else 1)
 
             strip = self._sx(self._tab_width)
@@ -791,6 +825,10 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                 if pname == "text_orientation":
                     return ("text_orientation", "text_orientation",
                             "TextOrientation", "auto", self._text_orientation)
+                if pname == "show_tab_separators":
+                    return ("show_tab_separators", "show_tab_separators",
+                            "ShowTabSeparators", "False",
+                            str(self._show_tab_separators))
                 if pname == "show_page_border":
                     return ("show_page_border", "show_page_border",
                             "ShowPageBorder", "True", str(self._show_page_border))
@@ -815,6 +853,12 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         if "text_orientation" in kwargs:
             self._text_orientation = self._check_orientation(
                 kwargs.pop("text_orientation"))
+
+        if "show_tab_separators" in kwargs:
+            val = kwargs.pop("show_tab_separators")
+            if isinstance(val, str):
+                val = val.strip().lower() in ("true", "1", "yes", "on")
+            self._show_tab_separators = bool(val)
 
         if "show_page_border" in kwargs:
             val = kwargs.pop("show_page_border")
@@ -851,6 +895,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             return self._tab_style
         if attribute_name == "text_orientation":
             return self._text_orientation
+        if attribute_name == "show_tab_separators":
+            return self._show_tab_separators
         if attribute_name == "show_page_border":
             return self._show_page_border
         if attribute_name == "tab_width":

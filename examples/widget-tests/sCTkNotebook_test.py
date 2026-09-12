@@ -17,6 +17,8 @@ bottom exercise the things most likely to be wrong:
                  needs a wider strip
   * border    -- the page outline, drawn with a gap where the selected tab
                  meets it
+  * seps      -- a line between adjacent tabs, which earns its keep with
+                 horizontal text and rarely otherwise
   * theme     -- light and dark, since the strip is canvas-drawn and does not
                  get CustomTkinter's automatic repaint for free
 
@@ -127,6 +129,15 @@ if __name__ == "__main__":
     btn_border = sCTkButtonPrimary(tray, text="Border: on",
                                    command=toggle_border, width=110)
     btn_border.pack(side="left", padx=4)
+
+    def toggle_separators():
+        on = not notebook.cget("show_tab_separators")
+        notebook.configure(show_tab_separators=on)
+        btn_sep.configure(text=f"Seps: {'on' if on else 'off'}")
+
+    btn_sep = sCTkButtonPrimary(tray, text="Seps: off",
+                                command=toggle_separators, width=95)
+    btn_sep.pack(side="left", padx=4)
 
     def toggle_state():
         target = "disabled" if notebook.get_state() == "normal" else "normal"
