@@ -266,6 +266,23 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             new_fg = self.final_kw.get("fg_color")
             if hasattr(self, "checkboxes_frame"): self.checkboxes_frame.configure(fg_color=new_fg)
 
+        # A CLEARED width or height means "go back to the default size".
+        #
+        # The Designer sends an empty string, and the blank-value filter at the
+        # end of this method simply drops it -- so nothing told the widget to
+        # revert and the last size stayed on the frame. Clearing the field
+        # looked like it did nothing until some other change forced a repaint.
+        #
+        # Removing it from final_kw as well is what matters: the lookup below
+        # falls back to that dict, so a stale entry there would keep the old
+        # size alive.
+        _cleared_size = False
+        for _size_key in ("width", "height"):
+            if _size_key in kwargs and str(kwargs[_size_key]).strip() == "":
+                kwargs.pop(_size_key)
+                self.final_kw.pop(_size_key, None)
+                _cleared_size = True
+
         # FIX: these read final_kw only, and width/height never arrive there.
         #
         # The loop above moves a keyword into final_kw only if it is a key this
@@ -291,6 +308,9 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             kwargs["width"] = w_val
         if "height" in kwargs:
             kwargs["height"] = h_val
+        if _cleared_size:
+            w_val = h_val = 0          # forces the default branch below
+
         if w_val > 0 or h_val > 0:
             # An explicit size means propagate OFF, unless this very call says
             # otherwise.
@@ -312,6 +332,11 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         else:
             self.final_kw["width"] = 200
             self.final_kw["height"] = 150
+            if _cleared_size:
+                # Forwarded explicitly: the frame is still carrying whatever
+                # size was set before the field was cleared.
+                kwargs["width"] = 200
+                kwargs["height"] = 150
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", True)
 
         if isinstance(use_pack_p, str): use_pack_p = use_pack_p.lower() in ['true', '1', 'yes']

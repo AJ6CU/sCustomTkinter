@@ -239,11 +239,18 @@
         </layout>
         <child>
           <object class="scustomtkinter.sCTkSelector" id="sctkselector1">
-            <property name="height">75</property>
             <property name="items">["VW","Porsche","240Z"]</property>
             <layout manager="pack">
               <property name="expand">false</property>
               <property name="fill">x</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkLabelTertiary" id="sctklabeltertiary2">
+            <property name="text" translatable="yes">sctklabeltertiary2</property>
+            <layout manager="pack">
               <property name="side">top</property>
             </layout>
           </object>
@@ -255,16 +262,6 @@
         <layout manager="grid">
           <property name="column">1</property>
           <property name="row">2</property>
-        </layout>
-      </object>
-    </child>
-    <child>
-      <object class="scustomtkinter.sCTkSelector" id="sctkselector2">
-        <property name="height">50</property>
-        <property name="width">500</property>
-        <layout manager="grid">
-          <property name="column">0</property>
-          <property name="row">3</property>
         </layout>
       </object>
     </child>
