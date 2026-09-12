@@ -382,6 +382,13 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             # caller: it decides whether an explicit height is honoured.
             self.checkboxes_frame._parent_frame.pack_propagate(False)
 
+        self.after(300, lambda: print(
+            "[sel] outer req:", self.winfo_reqheight(),
+            " actual:", self.winfo_height(),
+            " inner req:", self.checkboxes_frame._parent_frame.winfo_reqheight(),
+            " inner actual:", self.checkboxes_frame._parent_frame.winfo_height(),
+            " propagate:", self.pack_propagate()))
+
         self.final_kw.pop("pack_propagate", None)
         self.final_kw.pop("grid_propagate", None)   # harmless if it was passed
         self.final_kw.pop("state", None)
