@@ -64,9 +64,15 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     TAB_GAP = 2             # space between adjacent tabs
     TAB_PAD = 18            # space either end of a label, along the tab
     TAB_CORNER = 6          # corner rounding on the outer edge of a tab
-    TAB_SLANT = 7           # how far an angled tab's edge leans in
-    TAB_SLANT_MAX_FRACTION = 0.12   # ceiling on that, per end, as a fraction
-                                    # of the tab's length -- see _tab_polygon
+    # An angled tab's corners are CHAMFERED -- a straight cut between a point
+    # measured in from the corner along each edge. Independent, because the
+    # two edges are not equivalent: x runs across the strip, whose width is
+    # fixed, while y runs along the tab, whose length depends on the label
+    # and on whether the text is rotated.
+    TAB_CHAMFER_X = 6       # in from the outer corner, across the strip
+    TAB_CHAMFER_Y = 7       # in from the outer corner, along the tab
+    TAB_CHAMFER_MAX_FRACTION = 0.25   # ceiling on the Y cut, per end, as a
+                                      # fraction of the tab's length
     PAGE_CORNER = 8         # corner rounding on the page outline
     PAGE_INSET = 8          # gap between the outline and a page's contents
     BORDER_WIDTH = 2        # page outline thickness
@@ -384,26 +390,26 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             direction = -1
 
         if self._tab_style == "angled":
-            # A trapezium: the outer edge is shorter than the inner one, so
-            # the tab leans in at top and bottom. The shape of a real
-            # notebook divider.
+            # A rectangle with its two OUTER corners cut off.
             #
-            # Capped as a FRACTION of the tab's length, so the outer edge
-            # keeps most of it.
+            # The cut runs between a point dx in from the corner along the
+            # outer edge and a point dy in from it along the top or bottom
+            # edge -- so the tab still reaches the edge of the strip, and only
+            # the corners are missing.
             #
-            # With rotated text a tab is as long as its label and a fixed 7px
-            # at each end is a ninth of it -- a chamfer. With horizontal text
-            # it is barely taller than one line, the same 7px is nearly a
-            # fifth at each end, and what should read as a rectangle with its
-            # corners cut reads as a triangle.
-            #
-            # TAB_SLANT remains the ceiling, so the constant still governs
-            # long tabs; this only stops short ones from collapsing.
-            slant = min(self._sx(self.TAB_SLANT),
-                        (y1 - y0) * self.TAB_SLANT_MAX_FRACTION)
+            # This replaces a trapezium whose entire outer edge was inset by
+            # the slant, leaving the tab floating clear of the strip edge
+            # rather than sitting against it. At small slants the shape read
+            # as wrong without it being obvious why.
+            dx = min(self._sx(self.TAB_CHAMFER_X),
+                     abs(x_in - x_out) * 0.4)
+            dy = min(self._sx(self.TAB_CHAMFER_Y),
+                     (y1 - y0) * self.TAB_CHAMFER_MAX_FRACTION)
             return [x_in, y0,
-                    x_out + (slant * direction), y0 + slant,
-                    x_out + (slant * direction), y1 - slant,
+                    x_out + (dx * direction), y0,
+                    x_out, y0 + dy,
+                    x_out, y1 - dy,
+                    x_out + (dx * direction), y1,
                     x_in, y1]
 
         # Genuine quarter circles, not a chamfer.
@@ -575,8 +581,11 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             # separator runs on past the curve into empty strip and the two
             # disagree by a pixel or two. The inner end just clears the page
             # border.
-            outer_inset = max(self._sx(self.TAB_CORNER),
-                              self._sx(self.SEPARATOR_INSET))
+            # Matched to the shape actually being drawn, so the separator
+            # ends where the corners start rather than a pixel or two out.
+            shape_inset = self._sx(self.TAB_CORNER) \
+                if self._tab_style == "rounded" else self._sx(self.TAB_CHAMFER_X)
+            outer_inset = max(shape_inset, self._sx(self.SEPARATOR_INSET))
             inner_inset = self._sx(self.SEPARATOR_INSET)
             if self._side == "left":
                 sx0, sx1 = sx0 + outer_inset, sx1 - inner_inset

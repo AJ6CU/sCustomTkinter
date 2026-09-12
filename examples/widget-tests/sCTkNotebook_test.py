@@ -19,6 +19,15 @@ bottom exercise the things most likely to be wrong:
                  meets it
   * seps      -- a line between adjacent tabs, which earns its keep with
                  horizontal text and rarely otherwise
+  * chamfer   -- how far an ANGLED tab's corners are cut, measured
+                 separately across the strip (x) and along the tab (y). The
+                 two are independent because the edges are not equivalent:
+                 the strip's width is fixed while a tab's length depends on
+                 its label and on whether the text is rotated. Equal values
+                 give a 45-degree cut; a small x with a larger y gives the
+                 shallow lean of a real notebook divider. Both are class
+                 attributes rather than properties, so the bench sets them
+                 directly and forces a repaint.
   * theme     -- light and dark, since the strip is canvas-drawn and does not
                  get CustomTkinter's automatic repaint for free
 
@@ -129,6 +138,31 @@ if __name__ == "__main__":
     btn_border = sCTkButtonPrimary(tray, text="Border: on",
                                    command=toggle_border, width=110)
     btn_border.pack(side="left", padx=4)
+
+    def force_redraw():
+        """
+        TAB_SLANT and its cap are tuning constants rather than properties, so
+        nothing watches them. Re-setting a real property triggers the repaint.
+        """
+        notebook.configure(tab_style=notebook.cget("tab_style"))
+
+    def on_chamfer_x_changed(choice):
+        notebook.TAB_CHAMFER_X = int(choice.replace("x", ""))
+        force_redraw()
+
+    chamfer_x_box = sCTkComboBox(tray, values=["0x", "3x", "6x", "10x", "16x"],
+                                 command=on_chamfer_x_changed, width=70)
+    chamfer_x_box.pack(side="left", padx=4)
+    chamfer_x_box.set("6x")
+
+    def on_chamfer_y_changed(choice):
+        notebook.TAB_CHAMFER_Y = int(choice.replace("y", ""))
+        force_redraw()
+
+    chamfer_y_box = sCTkComboBox(tray, values=["0y", "3y", "7y", "12y", "20y"],
+                                 command=on_chamfer_y_changed, width=70)
+    chamfer_y_box.pack(side="left", padx=4)
+    chamfer_y_box.set("7y")
 
     def toggle_separators():
         on = not notebook.cget("show_tab_separators")
