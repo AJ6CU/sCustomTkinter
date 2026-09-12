@@ -84,6 +84,37 @@ class sCTkSelectorBO(BuilderObject):
         self.widget = self.class_(real_master, **init_args)
         return self.widget
 
+    def set_property(self, name, value):
+        """
+        Rebuilds the widget after a structural change.
+
+        Some properties cannot be expressed by configuring the existing
+        widget. A size only takes effect once Tk runs a geometry pass, and
+        turning pack_propagate back on merely tells it what to do at the next
+        one -- in an application the next event triggers that invisibly, but in
+        the Designer nothing else happens, so clearing a height appeared to do
+        nothing until an unrelated edit forced a repaint. `items` rebuilds the
+        checkbox list outright.
+
+        recreate_widget() is what the Designer itself does when you add or
+        delete a widget, which is why doing that by hand made the change
+        appear. sCTkTableviewBO uses the same call for the same reason.
+
+        Deliberately NOT used for colours: rebuilding on every keystroke in a
+        colour field would be unpleasant, and a colour needs no rebuild.
+        """
+        super().set_property(name, value)
+
+        if name in ("width", "height", "items", "pack_propagate"):
+            if hasattr(self, "builder") and hasattr(self.builder, "recreate_widget"):
+                try:
+                    self.builder.recreate_widget(self)
+                except Exception:
+                    # A widget not yet realized, or a builder that does not
+                    # offer the call. Losing the rebuild costs a stale canvas,
+                    # not correctness -- the .ui data is already updated.
+                    pass
+
     def _code_set_property(self, targetid, pname, value, code_bag):
         """
         The low-level code generation interception layer.

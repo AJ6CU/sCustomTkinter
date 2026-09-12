@@ -351,27 +351,7 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
 
         for k, v in list(kwargs.items()):
             if v == "": kwargs.pop(k)
-        result = super().configure(**kwargs) if kwargs else None
-
-        # Nudge Tk into re-laying out after a size change.
-        #
-        # Turning pack_propagate back on does not resize the frame by itself --
-        # it only tells Tk what to do at the next geometry pass, and nothing
-        # requests one. In an application the next event triggers it and the
-        # delay is invisible; in the Designer nothing else happens, so a
-        # cleared size appeared to do nothing until some unrelated edit forced
-        # a repaint.
-        #
-        # Guarded on the widget still existing: configure() can run during
-        # teardown, when scheduling geometry work would raise.
-        if _cleared_size or "width" in kwargs or "height" in kwargs:
-            try:
-                if self.winfo_exists():
-                    self.update_idletasks()
-            except Exception:
-                pass
-
-        return result
+        if kwargs: return super().configure(**kwargs)
         return None
 
     # Tkinter/CTk convention binds .config to .configure as a SEPARATE class

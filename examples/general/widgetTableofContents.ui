@@ -247,6 +247,14 @@
             </layout>
           </object>
         </child>
+        <child>
+          <object class="scustomtkinter.sCTkLabelTertiary" id="sctklabeltertiary2">
+            <property name="text" translatable="yes">sctklabeltertiary2</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
     <child>
