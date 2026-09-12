@@ -156,12 +156,24 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             #
             # 200x150 is what the constructor falls back to when no size is
             # given; see the else branch in configure().
+            # The reported default is 0, meaning "no size asked for".
+            #
+            # Pygubu does not send an empty string when a field is cleared --
+            # it asks the widget for the default and sets THAT. Reporting 150
+            # therefore sent height=150, which is indistinguishable from the
+            # user typing 150, so the widget honoured it: propagate off, height
+            # exactly 150. A freshly placed selector sends no height at all,
+            # takes the no-size branch, and fits its contents instead -- so the
+            # same logical state gave two different sizes.
+            #
+            # Zero is treated as "not asked for" below, which makes clearing
+            # land in the same branch a fresh load does.
             if pname == "width":
-                return ("width", "width", "Width", 200,
-                        int(self.final_kw.get("width", 200)))
+                return ("width", "width", "Width", 0,
+                        int(self.final_kw.get("width", 0) or 0))
             if pname == "height":
-                return ("height", "height", "Height", 150,
-                        int(self.final_kw.get("height", 150)))
+                return ("height", "height", "Height", 0,
+                        int(self.final_kw.get("height", 0) or 0))
 
             if pname == "state": return ("state", "state", "state", "normal", str(self.state()))
             if pname == "multiple_choices": return ("multiple_choices", "multiple_choices", "multiple_choices", "True", str(self.multiple_choices))
@@ -294,7 +306,9 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         # size alive.
         _cleared_size = False
         for _size_key in ("width", "height"):
-            if _size_key in kwargs and str(kwargs[_size_key]).strip() == "":
+            # Blank or zero both mean "no size asked for" -- see the query
+            # branch above for why a cleared field arrives as 0 rather than "".
+            if _size_key in kwargs and str(kwargs[_size_key]).strip() in ("", "0"):
                 kwargs.pop(_size_key)
                 self.final_kw.pop(_size_key, None)
                 _cleared_size = True
@@ -381,13 +395,6 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             # The outer frame's propagate is the one that means anything to a
             # caller: it decides whether an explicit height is honoured.
             self.checkboxes_frame._parent_frame.pack_propagate(False)
-
-        self.after(300, lambda: print(
-            "[sel] outer req:", self.winfo_reqheight(),
-            " actual:", self.winfo_height(),
-            " inner req:", self.checkboxes_frame._parent_frame.winfo_reqheight(),
-            " inner actual:", self.checkboxes_frame._parent_frame.winfo_height(),
-            " propagate:", self.pack_propagate()))
 
         self.final_kw.pop("pack_propagate", None)
         self.final_kw.pop("grid_propagate", None)   # harmless if it was passed
