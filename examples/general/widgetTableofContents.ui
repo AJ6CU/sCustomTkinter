@@ -252,14 +252,58 @@
             <property name="items">["VW","Porsche","240Z"]</property>
             <layout manager="pack">
               <property name="expand">false</property>
-              <property name="fill">x</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="scustomtkinter.sCTkFrameLabeledPrimary" id="sctkframelabeledprimary3">
+        <property name="label_text">Slider,Separator, Progress</property>
+        <layout manager="grid">
+          <property name="column">1</property>
+          <property name="row">2</property>
+        </layout>
+        <child>
+          <object class="scustomtkinter.sCTkLabelTertiary" id="sctklabeltertiary3">
+            <property name="text" translatable="yes">slider</property>
+            <layout manager="pack">
+              <property name="pady">10 0</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkSlider" id="sctkslider1">
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkSeparator" id="sctkseparator1">
+            <property name="length">300</property>
+            <property name="orientation">horizontal</property>
+            <property name="text" translatable="yes">Separator</property>
+            <layout manager="pack">
+              <property name="ipady">10</property>
+              <property name="pady">20</property>
               <property name="side">top</property>
             </layout>
           </object>
         </child>
         <child>
           <object class="scustomtkinter.sCTkLabelTertiary" id="sctklabeltertiary2">
-            <property name="text" translatable="yes">sctklabeltertiary2</property>
+            <property name="text" translatable="yes">Progress Bar</property>
+            <layout manager="pack">
+              <property name="pady">10 0</property>
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
+        <child>
+          <object class="scustomtkinter.sCTkProgressBar" id="sctkprogressbar1">
             <layout manager="pack">
               <property name="side">top</property>
             </layout>
@@ -268,19 +312,20 @@
       </object>
     </child>
     <child>
-      <object class="scustomtkinter.sCTkFrameLabeledPrimary" id="sctkframelabeledprimary8">
+      <object class="scustomtkinter.sCTkScrollableFrame" id="sctkscrollableframe1">
+        <property name="label_text">scrollable frame</property>
         <layout manager="grid">
-          <property name="column">1</property>
+          <property name="column">2</property>
           <property name="row">2</property>
         </layout>
-      </object>
-    </child>
-    <child>
-      <object class="scustomtkinter.sCTkSelector" id="sctkselector2">
-        <layout manager="grid">
-          <property name="column">0</property>
-          <property name="row">3</property>
-        </layout>
+        <child>
+          <object class="scustomtkinter.sCTkLabelTertiary" id="sctklabeltertiary4">
+            <property name="text" translatable="yes">stuff can scroll x or y</property>
+            <layout manager="pack">
+              <property name="side">top</property>
+            </layout>
+          </object>
+        </child>
       </object>
     </child>
   </object>
