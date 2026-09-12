@@ -158,19 +158,7 @@ class sCTkNotebookTabBO(BuilderObject):
         field. Same accommodation sCTkTabviewbo makes.
         """
         master = parent.widget if hasattr(parent, "widget") else parent
-
-        # DEBUG -- remove once the tab labels are sorted.
-        print("[TAB] realize")
-        print("      master     :", type(master).__name__,
-              " has add:", hasattr(master, "add"))
-        print("      identifier :", self.wmeta.identifier)
-        print("      classname  :", self.wmeta.classname)
-        print("      properties :", dict(self.wmeta.properties))
-        print("      wmeta attrs:", [a for a in dir(self.wmeta)
-                                     if not a.startswith("_")])
-
         label = self.wmeta.properties.get("label", self.wmeta.identifier)
-        print("      label used :", repr(label))
 
         existing = master.tabs()
         if label in existing:
@@ -199,7 +187,6 @@ class sCTkNotebookTabBO(BuilderObject):
         edits a property through the former, and the latter is never called.
         """
         if pname == "label":
-            print("[TAB] _set_property label ->", repr(value))
             # CONSUMED HERE, never delegated.
             #
             # The base implementation forwards an unknown property to
@@ -208,20 +195,52 @@ class sCTkNotebookTabBO(BuilderObject):
             #     Failed to set property 'label' on class 'None'.
             #     Error: ['label'] are not supported arguments.
             #
-            # The label is not a property of the page at all -- it is the name
-            # its notebook filed it under, consumed by realize(). Renaming
-            # therefore needs the widget rebuilt rather than configured.
-            if hasattr(self, "builder") and hasattr(self.builder, "recreate_widget"):
+            # The label is not a property of the page -- it is the name its
+            # notebook filed it under, consumed by realize().
+            #
+            # RENAMED THROUGH THE NOTEBOOK, not by rebuilding the tab.
+            # Rebuilding re-runs realize(), which calls add() again while the
+            # old name is still registered -- so the strip kept the old
+            # caption until something forced a repaint. rename() re-keys the
+            # page in place and redraws, which is what the widget provides it
+            # for.
+            new_label = str(value)
+            old_label = getattr(self, "_label", None)
+            if old_label and new_label and new_label != old_label:
                 try:
-                    self.builder.recreate_widget(self)
+                    notebook = self._find_notebook(target_widget)
+                    if notebook is not None:
+                        notebook.rename(old_label, new_label)
+                        self._label = new_label
                 except Exception:
-                    # Not yet realized, or a builder without the call. A stale
-                    # caption costs a repaint, not correctness -- the .ui data
-                    # is already updated.
+                    # A duplicate name, or a page not yet attached. The .ui
+                    # data is already updated either way.
                     pass
             return
 
         super()._set_property(target_widget, pname, value)
+
+    @staticmethod
+    def _find_notebook(page):
+        """
+        Climbs from a page to the notebook that owns it.
+
+        A page is parented to the notebook's internal page host, not to the
+        notebook, so the immediate parent is the wrong object.
+        """
+        try:
+            top = page.winfo_toplevel()
+            widget = page
+            for _ in range(4):
+                parent_name = widget.winfo_parent()
+                if not parent_name:
+                    return None
+                widget = top.nametowidget(parent_name)
+                if hasattr(widget, "rename") and hasattr(widget, "tabs"):
+                    return widget
+        except Exception:
+            pass
+        return None
 
     def configure(self, target=None):
         """Nothing to configure: the label was consumed by realize()."""

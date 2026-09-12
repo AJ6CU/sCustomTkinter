@@ -850,6 +850,12 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         page = sCTkFrame(self._page_host, fg_color="transparent",
                          border_width=0)
         page.grid(row=0, column=0, sticky="nsew")
+        # A page's own grid needs weights, or a child gridded into it lands in
+        # a cell with no room and collapses to nothing. A child frame survives
+        # that because it has a requested size of its own to insist on, which
+        # is why nesting one made the difference.
+        page.grid_rowconfigure(0, weight=1)
+        page.grid_columnconfigure(0, weight=1)
         self._pages[name] = page
         if self._current is None:
             self._current = name
