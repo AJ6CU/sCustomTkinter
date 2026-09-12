@@ -291,22 +291,28 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             kwargs["width"] = w_val
         if "height" in kwargs:
             kwargs["height"] = h_val
-
-        self.after(200, lambda: print(
-            "[sel] pack_slaves:", len(self.pack_slaves()),
-            " grid_slaves:", len(self.grid_slaves()),
-            " reqheight:", self.winfo_reqheight()))
-
         if w_val > 0 or h_val > 0:
-            use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", False)
+            # An explicit size means propagate OFF, unless this very call says
+            # otherwise.
+            #
+            # FIX: this used to fall back to self._pack_propagate_val, which is
+            # set to True at construction when no size was given -- and then
+            # outlives that situation. So a height set later was computed
+            # correctly, applied correctly, and then ignored, because the frame
+            # was still sizing itself to its children. winfo_reqheight() stayed
+            # at the content height no matter what was asked for.
+            #
+            # The `False` default in the old getattr never applied: the
+            # attribute always exists by this point.
+            #
+            # Asking for a size and asking the widget to size itself to its
+            # contents are contradictory. The explicit number is the more
+            # specific instruction, so it wins.
+            use_pack_p = pack_prop_val if pack_prop_val is not None else False
         else:
             self.final_kw["width"] = 200
             self.final_kw["height"] = 150
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", True)
-
-        print("[sel] pack_prop_val:", pack_prop_val,
-              " _pack_propagate_val:", getattr(self, "_pack_propagate_val", "unset"),
-              " -> use_pack_p:", use_pack_p)
 
         if isinstance(use_pack_p, str): use_pack_p = use_pack_p.lower() in ['true', '1', 'yes']
         if use_pack_p is not None: self.pack_propagate(use_pack_p)
