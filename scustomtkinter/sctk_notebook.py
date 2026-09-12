@@ -577,16 +577,18 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             # of the strip reads as a division of the whole panel rather than
             # a line between two tabs, and collides with the page border at
             # its inner end.
-            # The OUTER end stops where the tab corners start curving, or the
-            # separator runs on past the curve into empty strip and the two
-            # disagree by a pixel or two. The inner end just clears the page
-            # border.
-            # Matched to the shape actually being drawn, so the separator
-            # ends where the corners start rather than a pixel or two out.
+            # The OUTER end stops where the tab corners start -- matched to
+            # the shape actually being drawn, so it ends with the curve or the
+            # cut rather than a pixel or two past it.
+            #
+            # The INNER end runs all the way to the page border. Stopping
+            # short of it left the separator floating, most visibly on a
+            # right-hand strip: the tabs meet the frame, so a line between two
+            # of them should too.
             shape_inset = self._sx(self.TAB_CORNER) \
                 if self._tab_style == "rounded" else self._sx(self.TAB_CHAMFER_X)
             outer_inset = max(shape_inset, self._sx(self.SEPARATOR_INSET))
-            inner_inset = self._sx(self.SEPARATOR_INSET)
+            inner_inset = 0
             if self._side == "left":
                 sx0, sx1 = sx0 + outer_inset, sx1 - inner_inset
             else:
