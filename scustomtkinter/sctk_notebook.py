@@ -70,7 +70,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     # fixed, while y runs along the tab, whose length depends on the label
     # and on whether the text is rotated.
     TAB_CHAMFER_X = 6       # in from the outer corner, across the strip
-    TAB_CHAMFER_Y = 7       # in from the outer corner, along the tab
+    TAB_CHAMFER_Y = 6       # in from the outer corner, along the tab
     TAB_CHAMFER_MAX_FRACTION = 0.25   # ceiling on the Y cut, per end, as a
                                       # fraction of the tab's length
     PAGE_CORNER = 8         # corner rounding on the page outline
@@ -147,8 +147,14 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         self._tab_bounds = {}       # name -> (y_top, y_bottom), for hit-testing
         self._scroll = 0            # strip scroll offset, in pixels
 
-        self._canvas = ctk.CTkCanvas(self, highlightthickness=0, bd=0)
-        self._canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        # NAMED self.canvas, NOT self._canvas.
+        #
+        # CTkFrame keeps its own background canvas in self._canvas, so
+        # assigning that name here replaces the frame's reference to it and
+        # its _draw() would then paint on this widget's canvas instead. The
+        # dials and the S-meters use the bare name for exactly this reason.
+        self.canvas = ctk.CTkCanvas(self, highlightthickness=0, bd=0)
+        self.canvas.place(x=0, y=0, relwidth=1, relheight=1)
 
         # Pages sit ON TOP of the canvas, inside the outline.
         self._page_host = ctk.CTkFrame(self, fg_color="transparent",
@@ -156,19 +162,19 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         self._page_host.grid_rowconfigure(0, weight=1)
         self._page_host.grid_columnconfigure(0, weight=1)
 
-        self._canvas.bind("<Button-1>", self._on_click)
-        self._canvas.bind("<Motion>", self._on_motion)
-        self._canvas.bind("<Leave>", self._on_leave)
-        self._canvas.bind("<Configure>", lambda e: self._relayout())
+        self.canvas.bind("<Button-1>", self._on_click)
+        self.canvas.bind("<Motion>", self._on_motion)
+        self.canvas.bind("<Leave>", self._on_leave)
+        self.canvas.bind("<Configure>", lambda e: self._relayout())
         for seq in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
-            self._canvas.bind(seq, self._on_wheel)
+            self.canvas.bind(seq, self._on_wheel)
         # macOS trackpads deliver <TouchpadScroll>, a separate event from
         # <MouseWheel>, with far more of them and far finer values. Binding
         # only the wheel means a real mouse scrolls the strip and a trackpad
         # does nothing at all. Same split ScrollBindingMixin handles for the
         # scrolling containers.
         if sys.platform == "darwin":
-            self._canvas.bind("<TouchpadScroll>", self._on_touchpad)
+            self.canvas.bind("<TouchpadScroll>", self._on_touchpad)
 
         self._finalize_themeable_lifecycle()
 
@@ -219,6 +225,36 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     # ------------------------------------------------------------------
     # Scaling helpers
     # ------------------------------------------------------------------
+    # Geometry keys the theme may override. Absent from a block, the class
+    # attribute of the same name in upper case applies -- so a theme need
+    # only mention the ones it wants to change, and none of them are
+    # required.
+    _THEMEABLE_GEOMETRY = {
+        "tab_corner": "TAB_CORNER",
+        "tab_chamfer_x": "TAB_CHAMFER_X",
+        "tab_chamfer_y": "TAB_CHAMFER_Y",
+        "tab_gap": "TAB_GAP",
+        "tab_pad": "TAB_PAD",
+        "page_corner": "PAGE_CORNER",
+        "page_inset": "PAGE_INSET",
+        "border_width": "BORDER_WIDTH",
+        "separator_inset": "SEPARATOR_INSET",
+        "strip_margin": "STRIP_MARGIN",
+    }
+
+    def _geom(self, key):
+        """
+        A geometry value, scaled, from the theme or the class attribute.
+
+        Theme first so a palette can carry its own proportions -- a squarer
+        theme wants a smaller tab_corner -- while the class attributes stay
+        the defaults and remain settable per instance for one-off tuning.
+        """
+        value = self._local_defaults.get(key)
+        if value is None:
+            value = getattr(self, self._THEMEABLE_GEOMETRY[key])
+        return self._apply_widget_scaling(float(value))
+
     def _sx(self, value):
         """Scales a dimension for drawing. Used on every geometry constant."""
         return self._apply_widget_scaling(value)
@@ -279,8 +315,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         The strip occupies tab_width on the chosen side; the page area is
         everything else.
         """
-        w = max(self._canvas.winfo_width(), 1)
-        h = max(self._canvas.winfo_height(), 1)
+        w = max(self.canvas.winfo_width(), 1)
+        h = max(self.canvas.winfo_height(), 1)
         strip = self._sx(self._tab_width)
         if self._side == "left":
             return strip, 0, w, h
@@ -289,8 +325,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     def _relayout(self):
         """Repositions the page host to sit inside the outline, then redraws."""
         x0, y0, x1, y1 = self._content_rect()
-        inset = self._sx(self.PAGE_INSET) if self._show_page_border else 0
-        bw = self._sx(self.BORDER_WIDTH) if self._show_page_border else 0
+        inset = self._geom("page_inset") if self._show_page_border else 0
+        bw = self._geom("border_width") if self._show_page_border else 0
         pad = inset + bw
 
         # Sized RELATIVELY, not absolutely.
@@ -300,8 +336,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # because CustomTkinter tracks a widget's size itself for scaling.
         # relwidth and relheight it does accept, so the pixel figures are
         # converted to fractions of this widget.
-        total_w = max(self._canvas.winfo_width(), 1)
-        total_h = max(self._canvas.winfo_height(), 1)
+        total_w = max(self.canvas.winfo_width(), 1)
+        total_h = max(self.canvas.winfo_height(), 1)
         width = max(x1 - x0 - (pad * 2), 1)
         height = max(y1 - y0 - (pad * 2), 1)
 
@@ -346,13 +382,13 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                 # it is the line height, not the label's width. The width
                 # becomes tab_width's problem -- see the note in the
                 # constructor.
-                return probe.metrics("linespace") + self._sx(self.TAB_PAD)
-            return probe.measure(str(text)) + self._sx(self.TAB_PAD * 2)
+                return probe.metrics("linespace") + self._geom("tab_pad")
+            return probe.measure(str(text)) + self._geom("tab_pad") * 2
         except Exception:
             # Before the widget is mapped, or with a font Tk cannot resolve.
             # Eight pixels a character is wrong but bounded, and the next
             # <Configure> redraw measures properly.
-            return self._sx((len(str(text)) * 8) + (self.TAB_PAD * 2))
+            return self._sx((len(str(text)) * 8) + (self._geom("tab_pad") * 2))
 
     def _tab_polygon(self, y0, y1, selected=False):
         """
@@ -362,7 +398,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         selected tab reads as continuous with the page beside it. Only the
         outer edge is shaped.
         """
-        x_out = 0 if self._side == "left" else self._canvas.winfo_width()
+        x_out = 0 if self._side == "left" else self.canvas.winfo_width()
         strip = self._sx(self._tab_width)
         # Only the SELECTED tab overlaps the page outline.
         #
@@ -380,13 +416,13 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # page, half out. A tab stopping at the path's coordinate leaves that
         # outer half uncovered, which reads as the border being a pixel
         # thinner beside the tabs than it is elsewhere.
-        bw = self._sx(self.BORDER_WIDTH)
+        bw = self._geom("border_width")
         overlap = bw if selected else (bw / 2.0)
         if self._side == "left":
             x_in = strip + overlap
             direction = 1
         else:
-            x_in = self._canvas.winfo_width() - strip - overlap
+            x_in = self.canvas.winfo_width() - strip - overlap
             direction = -1
 
         if self._tab_style == "angled":
@@ -401,9 +437,9 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             # the slant, leaving the tab floating clear of the strip edge
             # rather than sitting against it. At small slants the shape read
             # as wrong without it being obvious why.
-            dx = min(self._sx(self.TAB_CHAMFER_X),
+            dx = min(self._geom("tab_chamfer_x"),
                      abs(x_in - x_out) * 0.4)
-            dy = min(self._sx(self.TAB_CHAMFER_Y),
+            dy = min(self._geom("tab_chamfer_y"),
                      (y1 - y0) * self.TAB_CHAMFER_MAX_FRACTION)
             return [x_in, y0,
                     x_out + (dx * direction), y0,
@@ -418,7 +454,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # this did first -- reads as a 45-degree cut, visibly different from
         # the rounded corners on a CTkButton sitting beside it. Six segments
         # per corner is enough to look like a curve at any sane tab width.
-        r = self._sx(self.TAB_CORNER)
+        r = self._geom("tab_corner")
         cx = x_out + (r * direction)
         pts = [x_in, y0]
         if direction > 0:
@@ -457,8 +493,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         is what makes the outline appear to curve into the tab.
         """
         x0, y0, x1, y1 = self._content_rect()
-        r = self._sx(self.PAGE_CORNER)
-        bw = self._sx(self.BORDER_WIDTH)
+        r = self._geom("page_corner")
+        bw = self._geom("border_width")
         # Half the stroke, so the drawn line sits inside the rectangle rather
         # than straddling its edge and clipping at the widget boundary.
         h = bw / 2.0
@@ -506,8 +542,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
 
     def _total_tab_length(self):
         """Pixels the tabs need along the strip, including the gaps."""
-        gap = self._sx(self.TAB_GAP)
-        total = self._sx(self.STRIP_MARGIN)
+        gap = self._geom("tab_gap")
+        total = self._geom("strip_margin")
         for name in self._pages:
             total += self._measure(name) + gap
         return total
@@ -521,11 +557,11 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         fill="both" decides its size regardless. Use it to set a minimum on
         the containing window, or ignore it and let the strip scroll.
         """
-        return int(self._total_tab_length() + self._sx(self.STRIP_MARGIN))
+        return int(self._total_tab_length() + self._geom("strip_margin"))
 
     def _max_scroll(self):
         """How far the strip can scroll before the last tab is flush."""
-        overflow = self._total_tab_length() - max(self._canvas.winfo_height(), 1)
+        overflow = self._total_tab_length() - max(self.canvas.winfo_height(), 1)
         return max(int(overflow), 0)
 
     def _draw_notebook(self):
@@ -545,22 +581,22 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         if not hasattr(self, "_canvas"):
             return
         try:
-            if not self._canvas.winfo_exists():
+            if not self.canvas.winfo_exists():
                 return
         except Exception:
             return
 
-        self._canvas.delete("all")
+        self.canvas.delete("all")
         self._tab_bounds.clear()
-        self._canvas.configure(bg=self._page_background())
+        self.canvas.configure(bg=self._page_background())
 
         font = self._scaled_font()
         angle = self._text_angle()
 
         # Pass one: work out where every tab sits, so the outline knows where
         # to leave its gap before anything is drawn.
-        gap_amount = self._sx(self.TAB_GAP)
-        y = self._sx(self.STRIP_MARGIN) - self._scroll
+        gap_amount = self._geom("tab_gap")
+        y = self._geom("strip_margin") - self._scroll
         for name in self._pages:
             length = self._measure(name)
             self._tab_bounds[name] = (y, y + length)
@@ -570,9 +606,9 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # beside it and reads as sitting in front.
         if self._show_tab_separators:
             strip = self._sx(self._tab_width)
-            sx0 = 0 if self._side == "left" else self._canvas.winfo_width() - strip
-            sx1 = strip if self._side == "left" else self._canvas.winfo_width()
-            half = self._sx(self.TAB_GAP) / 2.0
+            sx0 = 0 if self._side == "left" else self.canvas.winfo_width() - strip
+            sx1 = strip if self._side == "left" else self.canvas.winfo_width()
+            half = self._geom("tab_gap") / 2.0
             # Stopped short at both ends. A separator running the full width
             # of the strip reads as a division of the whole panel rather than
             # a line between two tabs, and collides with the page border at
@@ -585,9 +621,9 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             # short of it left the separator floating, most visibly on a
             # right-hand strip: the tabs meet the frame, so a line between two
             # of them should too.
-            shape_inset = self._sx(self.TAB_CORNER) \
-                if self._tab_style == "rounded" else self._sx(self.TAB_CHAMFER_X)
-            outer_inset = max(shape_inset, self._sx(self.SEPARATOR_INSET))
+            shape_inset = self._geom("tab_corner") \
+                if self._tab_style == "rounded" else self._geom("tab_chamfer_x")
+            outer_inset = max(shape_inset, self._geom("separator_inset"))
             inner_inset = 0
             if self._side == "left":
                 sx0, sx1 = sx0 + outer_inset, sx1 - inner_inset
@@ -596,7 +632,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             names = list(self._tab_bounds)
             for i, name in enumerate(names[:-1]):
                 y_between = self._tab_bounds[name][1] + half
-                self._canvas.create_line(sx0, y_between, sx1, y_between,
+                self.canvas.create_line(sx0, y_between, sx1, y_between,
                                          fill=self._colour("border_color"),
                                          width=max(self._sx(1), 1))
 
@@ -619,10 +655,10 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
 
         if self._show_page_border:
             gap = self._tab_bounds.get(self._current) if self._current else None
-            self._canvas.create_line(
+            self.canvas.create_line(
                 *self._page_outline_points(gap),
                 fill=self._colour("border_color"),
-                width=self._sx(self.BORDER_WIDTH),
+                width=self._geom("border_width"),
                 capstyle="round", joinstyle="round", smooth=False)
 
         if self._current in self._tab_bounds:
@@ -642,15 +678,15 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             text_fill = self._colour("text_color")
 
         outline = self._colour("border_color") if name == self._current else fill
-        self._canvas.create_polygon(
+        self.canvas.create_polygon(
             self._tab_polygon(y0, y1, selected=(name == self._current)),
             fill=fill, outline=outline,
-            width=self._sx(self.BORDER_WIDTH) if name == self._current else 1)
+            width=self._geom("border_width") if name == self._current else 1)
 
         strip = self._sx(self._tab_width)
         cx = strip / 2 if self._side == "left" \
-            else self._canvas.winfo_width() - (strip / 2)
-        self._canvas.create_text(cx, (y0 + y1) / 2, text=str(name),
+            else self.canvas.winfo_width() - (strip / 2)
+        self.canvas.create_text(cx, (y0 + y1) / 2, text=str(name),
                                  angle=angle, fill=text_fill, font=font)
 
     # ------------------------------------------------------------------
@@ -661,7 +697,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         strip = self._sx(self._tab_width)
         if self._side == "left":
             return x <= strip
-        return x >= self._canvas.winfo_width() - strip
+        return x >= self.canvas.winfo_width() - strip
 
     def _tab_at(self, x, y):
         """The tab name at a canvas coordinate, or None."""

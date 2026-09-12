@@ -633,6 +633,17 @@
         "tab_hover_color": ["#CBD5E1", "#374151"],
         "border_color": ["#1A4375", "#2471A3"],
 
+        "border_width": 2,
+        "page_corner": 8,
+        "page_inset": 8,
+        "tab_corner": 6,
+        "tab_chamfer_x": 6,
+        "tab_chamfer_y": 6,
+        "tab_gap": 2,
+        "tab_pad": 18,
+        "separator_inset": 5,
+        "strip_margin": 6,
+
         "disabled_map": {
             "text_color": ["#94A3B8", "#64748B"],
             "tab_fg_color": ["#F1F5F9", "#1A1D24"],

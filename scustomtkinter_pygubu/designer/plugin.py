@@ -70,6 +70,9 @@ from scustomtkinter_pygubu.sCTkRadioButtonbo import (sCTkRadioButtonBO, builder_
 from scustomtkinter.sctk_tabview import sCTkTabview
 from scustomtkinter_pygubu.sCTkTabviewbo import (sCTkTabviewBO, builder_id as sCTkTabview_builder_id)
 
+from scustomtkinter.sctk_notebook import sCTkNotebook
+from scustomtkinter_pygubu.sCTkNotebookbo import (sCTkNotebookBO, builder_id as sCTkNotebook_builder_id)
+
 # TOP-LEVEL WIDGETS.
 #
 # NOTE the module name for sCTk: it lives in sctk_core, NOT sctk_sctk. The
@@ -578,6 +581,26 @@ class sCTkRadioButtonForPreview(sCTkRadioButton):
     bind its click handler, and the canvas is the only thing there is to click.
     """
     _THEME_BLOCK_NAME = "sCTkRadioButton"
+
+    def winfo_children(self):
+        return super(tk.Frame, self).winfo_children()
+
+
+class sCTkNotebookForPreview(sCTkNotebook):
+    """
+    Designer preview for sCTkNotebook.
+
+    The notebook draws itself on a canvas that fills the whole widget, and
+    CTkFrame hides its own background canvas from winfo_children() -- so the
+    Designer's binding walk found nothing to bind and the widget could not be
+    selected at all, empty or not.
+
+    Exposing the canvases is only half of it. Clicking a tab is a real
+    interaction: without configure_for_preview() neutralizing it, a click on
+    the strip switches tabs instead of selecting the notebook, and there is no
+    way to select the widget itself.
+    """
+    _THEME_BLOCK_NAME = "sCTkNotebook"
 
     def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
@@ -1126,6 +1149,10 @@ class sCTkRadioButtonForPreviewBO(sCTkRadioButtonBO):
     class_ = sCTkRadioButtonForPreview
 
 
+class sCTkNotebookForPreviewBO(sCTkNotebookBO):
+    class_ = sCTkNotebookForPreview
+
+
 class sCTkTabviewForPreviewBO(sCTkTabviewBO):
     class_ = sCTkTabviewForPreview
 
@@ -1430,6 +1457,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkSegmentedButtonForPreviewBO
         elif builder_uid == sCTkRadioButton_builder_id:
             return sCTkRadioButtonForPreviewBO
+        elif builder_uid == sCTkNotebook_builder_id:
+            return sCTkNotebookForPreviewBO
         elif builder_uid == sCTkTabview_builder_id:
             return sCTkTabviewForPreviewBO
         elif builder_uid == sCTkSelector_builder_id:
@@ -1538,7 +1567,11 @@ class sCTkDesignerPlugin(IDesignerPlugin):
         """
         tab_classes = ("scustomtkinter.sCTkTabviewTab",
                        "scustomtkinter.sCTkTabview.Tab",
-                       "customtkinter.CTkTabviewTab")
+                       "customtkinter.CTkTabviewTab",
+                       # sCTkNotebook's pages work the same way: stacked in
+                       # one cell with only the selected one raised, so the
+                       # tree and the canvas disagree without this.
+                       "scustomtkinter.sCTkNotebook.Tab")
 
         tabs = []
         for class_name in tab_classes:
@@ -1566,10 +1599,25 @@ class sCTkDesignerPlugin(IDesignerPlugin):
                 return
             try:
                 top = tab_builder.widget.winfo_toplevel()
-                tabview = top.nametowidget(tab_builder.widget.winfo_parent())
+                # CLIMBED, not taken as the immediate parent.
+                #
+                # A CTkTabview page's parent IS the tabview, but an
+                # sCTkNotebook page is parented to an internal frame, so the
+                # immediate parent has no set() to call. Walking up until
+                # something offers one covers both without asking which is
+                # which.
+                container = tab_builder.widget
+                for _ in range(4):
+                    parent_name = container.winfo_parent()
+                    if not parent_name:
+                        break
+                    container = top.nametowidget(parent_name)
+                    if hasattr(container, "set") and hasattr(container, "get"):
+                        break
                 tabname = tab_builder.wmeta.properties.get("label")
-                if tabname and tabview.get() != tabname:
-                    tabview.set(tabname)
+                if tabname and hasattr(container, "get") \
+                        and container.get() != tabname:
+                    container.set(tabname)
                     top.update()
             except Exception:
                 # A tab that is not realized yet, or a parent that is not the
@@ -1613,6 +1661,35 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             ".sCTkSelector",
         )
         if builder_uid.endswith(scrollable_family):
+            return
+
+        if builder_uid.endswith(".sCTkNotebook"):
+            # The notebook draws itself on `canvas` -- the tab strip, the page
+            # outline and all the hit-testing. Left bound, a click on a tab
+            # switches pages instead of selecting the notebook, and the wheel
+            # scrolls the strip.
+            #
+            # `_canvas` is a different object: CTkFrame's own background, and
+            # where CTkFrame.bind() puts the Designer's selection handler. So
+            # the click is FORWARDED to it rather than swallowed -- a no-op
+            # would stop the click before it ever reached the handler. Same
+            # treatment the dials needed, for the same reason.
+            face = getattr(widget, "canvas", None)
+            _neutralize(face, tuple(s for s in (_HOVER_CLICK + _SCROLL)
+                                    if s != "<Button-1>"))
+            if face is not None:
+                def _select_notebook(event, target=widget):
+                    try:
+                        bg = getattr(target, "_canvas", None)
+                        if bg is not None:
+                            bg.event_generate("<Button-1>", x=1, y=1, when="now")
+                    except Exception:
+                        pass
+                    return "break"
+                try:
+                    face.bind("<Button-1>", _select_notebook)
+                except Exception:
+                    pass
             return
 
         # --- Direct inheritors from CustomTkinter ------------------------
