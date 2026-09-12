@@ -186,9 +186,18 @@ class sCTkNotebookTabBO(BuilderObject):
         appear. It hangs off _set_property, NOT set_property: the Designer
         edits a property through the former, and the latter is never called.
         """
-        super()._set_property(target_widget, pname, value)
-
         if pname == "label":
+            # CONSUMED HERE, never delegated.
+            #
+            # The base implementation forwards an unknown property to
+            # widget.configure(), and a page is an ordinary sCTkFrame:
+            #
+            #     Failed to set property 'label' on class 'None'.
+            #     Error: ['label'] are not supported arguments.
+            #
+            # The label is not a property of the page at all -- it is the name
+            # its notebook filed it under, consumed by realize(). Renaming
+            # therefore needs the widget rebuilt rather than configured.
             if hasattr(self, "builder") and hasattr(self.builder, "recreate_widget"):
                 try:
                     self.builder.recreate_widget(self)
@@ -197,6 +206,9 @@ class sCTkNotebookTabBO(BuilderObject):
                     # caption costs a repaint, not correctness -- the .ui data
                     # is already updated.
                     pass
+            return
+
+        super()._set_property(target_widget, pname, value)
 
     def configure(self, target=None):
         """Nothing to configure: the label was consumed by realize()."""
