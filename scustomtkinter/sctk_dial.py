@@ -488,6 +488,22 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             pass
 
     def _inject_private_layer_bindings(self):
+        """
+        Installs the scroll handlers on every layer that can receive them.
+
+        Guarded on the dial actually being live. __init__ schedules this with
+        after(50, ...), so it fires AFTER _apply_input_bindings() has decided
+        what should be bound -- and without this check it put the scroll
+        handlers back on a dial that was meant to be inert. The symptom was a
+        freshly built latching dial that still responded to the wheel, while
+        one cycled on and off behaved correctly, because by then the gating
+        had run again with nothing scheduled behind it.
+        """
+        if getattr(self, "_latching", False) and not self.is_pressed():
+            return
+        if str(getattr(self, "_state", "normal")).lower() == "disabled":
+            return
+
         layers_to_bind = [self.canvas, self]
         if hasattr(self, "_canvas") and self._canvas is not None:
             layers_to_bind.append(self._canvas)
