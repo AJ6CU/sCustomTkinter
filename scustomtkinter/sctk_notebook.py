@@ -65,6 +65,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     TAB_PAD = 18            # space either end of a label, along the tab
     TAB_CORNER = 6          # corner rounding on the outer edge of a tab
     TAB_SLANT = 7           # how far an angled tab's edge leans in
+    TAB_SLANT_MAX_FRACTION = 0.12   # ceiling on that, per end, as a fraction
+                                    # of the tab's length -- see _tab_polygon
     PAGE_CORNER = 8         # corner rounding on the page outline
     PAGE_INSET = 8          # gap between the outline and a page's contents
     BORDER_WIDTH = 2        # page outline thickness
@@ -386,12 +388,19 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             # the tab leans in at top and bottom. The shape of a real
             # notebook divider.
             #
-            # Capped at a quarter of the tab's length. With rotated text a tab
-            # is as long as its label and the constant is a small part of it;
-            # with horizontal text it is barely taller than one line, and a
-            # fixed 7px at each end consumed a third of the tab and left
-            # something closer to a flag than a divider.
-            slant = min(self._sx(self.TAB_SLANT), (y1 - y0) * 0.25)
+            # Capped as a FRACTION of the tab's length, so the outer edge
+            # keeps most of it.
+            #
+            # With rotated text a tab is as long as its label and a fixed 7px
+            # at each end is a ninth of it -- a chamfer. With horizontal text
+            # it is barely taller than one line, the same 7px is nearly a
+            # fifth at each end, and what should read as a rectangle with its
+            # corners cut reads as a triangle.
+            #
+            # TAB_SLANT remains the ceiling, so the constant still governs
+            # long tabs; this only stops short ones from collapsing.
+            slant = min(self._sx(self.TAB_SLANT),
+                        (y1 - y0) * self.TAB_SLANT_MAX_FRACTION)
             return [x_in, y0,
                     x_out + (slant * direction), y0 + slant,
                     x_out + (slant * direction), y1 - slant,
