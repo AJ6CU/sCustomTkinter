@@ -8,16 +8,22 @@ a double-click arms it.
     mode_selector = sCTkDialSelector(
         base,
         latching=True,
-        double_click_command=lambda d: d.toggle_pressed(),
+        double_click_command=on_double_click,          # arms it
+        shift_double_click_command=on_shift_double_click,   # disarms it
     )
 
 `latching=True` makes the dial start switched off, ignoring clicks, drags and
 the wheel until set_pressed(True). It draws from the top-level theme colours
 while off and from pressed_map while on.
 
-`double_click_command` is a plain callback -- the widget does not wire it to
-the latch. Toggling on a double-click is the application's choice, and this
-bench makes that choice explicitly.
+Both callbacks are plain -- the widget wires neither to the latch. Arming and
+disarming are split across two gestures on purpose: every mouse button steps
+the dial, so a plain double-click competes with ordinary clicking once the
+dial is live. While it is off nothing is bound, so arming cannot collide.
+
+A dial you never click -- driven by the wheel or from code -- can use
+toggle_pressed() on the plain double-click and skip the shift gesture
+entirely.
 
 A mode switch is the case where this earns its keep: changing band or
 sideband by accidentally brushing the wheel is worse than having to arm the
@@ -69,13 +75,13 @@ def on_mode_changed(index):
 
 
 def my_custom_left_click():
-    """Accelerated jump: two positions left per click."""
-    mode_selector.set(mode_selector.get() - 2)
+    """Steps one position left per click."""
+    mode_selector.set(mode_selector.get() - 1)
 
 
 def my_custom_right_click():
-    """Accelerated jump: two positions right per click."""
-    mode_selector.set(mode_selector.get() + 2)
+    """Steps one position right per click."""
+    mode_selector.set(mode_selector.get() + 1)
 
 
 def toggle_widget_lock():
@@ -116,7 +122,7 @@ if __name__ == "__main__":
         command=on_mode_changed,
         left_click_callback=my_custom_left_click,
         right_click_callback=my_custom_right_click,
-        # --- the opt-in. Remove these two lines for the old behaviour. ---
+        # --- the opt-in. Remove these three lines for the old behaviour. ---
         latching=True,
         double_click_command=on_double_click,
         shift_double_click_command=on_shift_double_click,

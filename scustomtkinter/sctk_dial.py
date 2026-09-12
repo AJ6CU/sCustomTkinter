@@ -387,6 +387,22 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     _SCROLL_EVENTS = ("<MouseWheel>", "<TouchpadScroll>", "<Button-4>",
                       "<Button-5>", "<Shift-ButtonPress-1>", "<Shift-B1-Motion>")
 
+    def _draws_active(self) -> bool:
+        """
+        Whether to draw the operational colours.
+
+        A NON-LATCHING dial is permanently on, so it draws from pressed_map
+        like an armed one. Without this, opting out of latching changed how a
+        dial looked: the bright values live in pressed_map now, and the
+        top-level block holds the resting, dimmed set -- so a plain dial
+        rendered dim, which is not what opting out should mean.
+
+        Disabled always wins over both.
+        """
+        if str(getattr(self, "_state", "normal")).lower() == "disabled":
+            return False
+        return True if not getattr(self, "_latching", False) else self.is_pressed()
+
     def is_pressed(self) -> bool:
         """True when the dial is switched on and will respond to input."""
         return bool(getattr(self, "_pressed", False))
@@ -919,7 +935,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         rim_light = self._resolve_color(self._local_defaults.get("dial_rim_light_color"))
         rim_shadow = self._resolve_color(self._local_defaults.get("dial_rim_shadow_color"))
 
-        if self._pressed and self._state != "disabled":
+        if self._draws_active():
             # SWITCHED ON. pressed_map holds the operational look; the top
             # level above is the resting, dimmed one. Each key falls back to
             # the top-level value, so a pressed_map that names only the few
@@ -1054,8 +1070,9 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             if self._state == "disabled":
                 raw_pointer = (self._custom_disabled_map.get(pointer_key)
                                or self._custom_disabled_map.get("text_color"))
-            elif self._pressed:
-                # Switched on: pressed_map first, then the resting value.
+            elif self._draws_active():
+                # Switched on, or never latching: pressed_map first, then the
+                # resting value.
                 raw_pointer = (self._custom_pressed_map.get(pointer_key)
                                or self._custom_pressed_map.get("text_color")
                                or self._local_defaults.get(pointer_key)

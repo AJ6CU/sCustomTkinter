@@ -136,7 +136,6 @@ if __name__ == "__main__":
         latching=True,
         double_click_command=on_double_click,
         shift_double_click_command=on_shift_double_click,
-        shift_double_click_command=on_shift_double_click,
     )
     tuning_dial.pack(pady=10)
 
