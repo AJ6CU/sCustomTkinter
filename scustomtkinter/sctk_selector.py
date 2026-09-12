@@ -292,8 +292,11 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         if "height" in kwargs:
             kwargs["height"] = h_val
 
-        self.after(200, lambda: print("[sel] requested:", self.cget("height"),
-                                      " actual:", self.winfo_height()))
+        self.after(200, lambda: print(
+            "[sel] pack_slaves:", len(self.pack_slaves()),
+            " grid_slaves:", len(self.grid_slaves()),
+            " reqheight:", self.winfo_reqheight()))
+
         if w_val > 0 or h_val > 0:
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", False)
         else:
