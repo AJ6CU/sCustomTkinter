@@ -64,6 +64,12 @@ class sCTkNotebookBO(CTkFrameBO):
         afterwards -- a half-built widget in the Designer is worse than a
         clear error.
         """
+
+        master = parent.widget if hasattr(parent, "widget") else parent
+        print("[tab] realize on", type(master).__name__,
+              "label:", self.wmeta.properties.get("label"))
+
+
         if extra_init_args is None:
             extra_init_args = {}
 
