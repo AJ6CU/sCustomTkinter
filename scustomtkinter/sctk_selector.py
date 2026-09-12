@@ -363,20 +363,20 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             self.final_kw["width"] = 200
             self.final_kw["height"] = 150
             if _cleared_size:
-                # Do NOT push 200x150 onto the frame here.
+                # Reset the frame's stored size as well as the propagate flag.
                 #
-                # Clearing the field means "no size requested", which is the
-                # same state as a fresh load -- and a fresh load lets
-                # pack_propagate size the widget to its checkboxes. Forwarding
-                # the numbers made the two paths disagree: loading a .ui with
-                # no height gave the content height, while clearing the field
-                # gave exactly 150.
+                # The frame remembers whatever it was last told. Turning
+                # propagate back on only MASKS that: the widget fits its
+                # contents and looks right, but the old number is still there,
+                # and the next explicit size turns propagate off and lets it
+                # reappear. Setting width 400, clearing it, then setting a
+                # height brought the 400 back.
                 #
-                # pack_propagate goes back on just below, and that is what
-                # discards the old size: the frame recomputes from its
-                # children rather than keeping what it was last told.
-                kwargs.pop("width", None)
-                kwargs.pop("height", None)
+                # Safe to forward here because propagate is on in this branch,
+                # so these do not fight the content sizing -- which is why a
+                # fresh load and a cleared field still agree.
+                kwargs["width"] = 200
+                kwargs["height"] = 150
             use_pack_p = pack_prop_val if pack_prop_val is not None else getattr(self, "_pack_propagate_val", True)
 
         if isinstance(use_pack_p, str): use_pack_p = use_pack_p.lower() in ['true', '1', 'yes']
