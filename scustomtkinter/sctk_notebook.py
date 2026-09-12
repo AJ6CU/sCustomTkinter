@@ -197,6 +197,15 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         if sys.platform == "darwin":
             self.canvas.bind("<TouchpadScroll>", self._on_touchpad)
 
+        # Laid out ONCE at construction, not only when a tab is added.
+        #
+        # _relayout() is what configures the grid columns -- the strip's
+        # minsize and the page column's weight. Without this call an empty
+        # notebook had neither, so both columns collapsed and the canvas,
+        # gridded across them, had no width to draw in. The widget rendered
+        # as nothing at all until the first tab arrived.
+        self._relayout()
+
         self._finalize_themeable_lifecycle()
 
     # ------------------------------------------------------------------
