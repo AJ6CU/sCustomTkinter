@@ -12,6 +12,9 @@ bottom exercise the things most likely to be wrong:
                  disable what is on the pages
   * tab_style -- rounded, matching the rest of the library, or angled, the
                  shape of a real notebook divider
+  * text      -- "auto" reads outside-in and flips with the side; "up" and
+                 "down" pin the direction; "horizontal" lays it flat, which
+                 needs a wider strip
   * border    -- the page outline, drawn with a gap where the selected tab
                  meets it
   * theme     -- light and dark, since the strip is canvas-drawn and does not
@@ -89,7 +92,7 @@ if __name__ == "__main__":
     def on_width_changed(choice):
         notebook.configure(tab_width=int(choice.replace("px", "")))
 
-    width_box = sCTkComboBox(tray, values=["28px", "34px", "44px", "60px"],
+    width_box = sCTkComboBox(tray, values=["28px", "34px", "44px", "60px", "100px"],
                              command=on_width_changed, width=90)
     width_box.pack(side="left", padx=4)
     width_box.set("34px")
@@ -102,6 +105,19 @@ if __name__ == "__main__":
     btn_style = sCTkButtonPrimary(tray, text="Tabs: rounded",
                                   command=flip_style, width=120)
     btn_style.pack(side="left", padx=4)
+
+    def on_orientation_changed(choice):
+        notebook.configure(text_orientation=choice)
+        # Flat text needs room across the strip rather than along it.
+        if choice == "horizontal" and notebook.cget("tab_width") < 90:
+            notebook.configure(tab_width=100)
+            width_box.set("100px")
+
+    orient_box = sCTkComboBox(
+        tray, values=["auto", "up", "down", "horizontal"],
+        command=on_orientation_changed, width=110)
+    orient_box.pack(side="left", padx=4)
+    orient_box.set("auto")
 
     def toggle_border():
         on = not notebook.cget("show_page_border")

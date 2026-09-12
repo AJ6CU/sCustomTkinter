@@ -71,8 +71,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     STRIP_MARGIN = 6        # space above the first tab
 
     def __init__(self, master=None, side="left", tab_width=34,
-                 tab_style="rounded", show_page_border=True,
-                 state="normal", **kw):
+                 tab_style="rounded", text_orientation="auto",
+                 show_page_border=True, state="normal", **kw):
         """
         Args:
             master: Parent container.
@@ -83,6 +83,12 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                 caller sets.
             tab_style: "rounded" or "angled". Rounded matches the rest of the
                 library; angled is the shape of a real notebook divider.
+            text_orientation: How the labels sit on the tabs.
+                "auto" reads outside-in -- up a left strip, down a right one,
+                the way a book's spine is set. "up" and "down" force one
+                direction whichever side the strip is on. "horizontal" lays
+                the text flat, which needs a tab_width wide enough to hold
+                the longest label.
             show_page_border: Whether to draw the outline around the page,
                 broken where the selected tab meets it.
             state: "normal" or "disabled".
@@ -91,6 +97,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         self._side = self._check_side(side)
         self._tab_width = int(tab_width)
         self._tab_style = self._check_style(tab_style)
+        self._text_orientation = self._check_orientation(text_orientation)
         self._show_page_border = bool(show_page_border)
 
         ThemeableWidget.__init__(self, kw)
@@ -167,6 +174,15 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             raise ValueError(
                 f'tab_style must be "rounded" or "angled", not "{value}"')
         return style
+
+    @staticmethod
+    def _check_orientation(value):
+        orientation = str(value).lower()
+        if orientation not in ("auto", "up", "down", "horizontal"):
+            raise ValueError(
+                'text_orientation must be "auto", "up", "down" or '
+                f'"horizontal", not "{value}"')
+        return orientation
 
     def _validate_theme_keys(self):
         """
@@ -282,6 +298,24 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     # ------------------------------------------------------------------
     # Drawing
     # ------------------------------------------------------------------
+    def _text_angle(self):
+        """
+        The canvas rotation for a label, in degrees.
+
+        "auto" reads outside-in: up a left-hand strip, down a right-hand one,
+        which is how a book's spine is set and stays readable whichever side
+        the strip moves to. The other three override that -- "up" and "down"
+        pin the direction regardless of side, which matters if a panel has
+        notebooks on both edges and you want their labels to match.
+        """
+        if self._text_orientation == "horizontal":
+            return 0
+        if self._text_orientation == "up":
+            return 90
+        if self._text_orientation == "down":
+            return 270
+        return 90 if self._side == "left" else 270
+
     def _measure(self, text):
         """
         Length a label needs ALONG the strip, in pixels.
@@ -292,6 +326,12 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         """
         try:
             probe = tkfont.Font(font=self._scaled_font())
+            if self._text_orientation == "horizontal":
+                # Flat text runs ACROSS the strip, so what a tab needs along
+                # it is the line height, not the label's width. The width
+                # becomes tab_width's problem -- see the note in the
+                # constructor.
+                return probe.metrics("linespace") + self._sx(self.TAB_PAD)
             return probe.measure(str(text)) + self._sx(self.TAB_PAD * 2)
         except Exception:
             # Before the widget is mapped, or with a font Tk cannot resolve.
@@ -308,9 +348,22 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         outer edge is shaped.
         """
         x_out = 0 if self._side == "left" else self._canvas.winfo_width()
-        x_in = self._sx(self._tab_width) if self._side == "left" \
-            else self._canvas.winfo_width() - self._sx(self._tab_width)
-        direction = 1 if self._side == "left" else -1
+        strip = self._sx(self._tab_width)
+        # The inner edge OVERLAPS the page outline by the border width.
+        #
+        # Butting the tab exactly against the outline leaves a hairline where
+        # the two meet -- the outline is a stroked line centred on its path,
+        # so half its width sits inside the page and half outside, and the
+        # tab covers only up to the path. Reaching past it closes the join.
+        # Most visible on the right-hand strip, where the seam fell on the
+        # tab's rounded corner.
+        overlap = self._sx(self.BORDER_WIDTH)
+        if self._side == "left":
+            x_in = strip + overlap
+            direction = 1
+        else:
+            x_in = self._canvas.winfo_width() - strip - overlap
+            direction = -1
 
         if self._tab_style == "angled":
             # A trapezium: the outer edge is shorter than the inner one, so
@@ -453,10 +506,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         self._canvas.configure(bg=self._page_background())
 
         font = self._scaled_font()
-        # Rotated so the text runs UP a left-hand strip and DOWN a right-hand
-        # one -- in both cases reading from the outside in, which is how a
-        # book's spine is set.
-        angle = 90 if self._side == "left" else 270
+        angle = self._text_angle()
 
         # Pass one: work out where every tab sits, so the outline knows where
         # to leave its gap before anything is drawn.
@@ -738,6 +788,9 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                 if pname == "tab_style":
                     return ("tab_style", "tab_style", "TabStyle", "rounded",
                             self._tab_style)
+                if pname == "text_orientation":
+                    return ("text_orientation", "text_orientation",
+                            "TextOrientation", "auto", self._text_orientation)
                 if pname == "show_page_border":
                     return ("show_page_border", "show_page_border",
                             "ShowPageBorder", "True", str(self._show_page_border))
@@ -758,6 +811,10 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
 
         if "tab_style" in kwargs:
             self._tab_style = self._check_style(kwargs.pop("tab_style"))
+
+        if "text_orientation" in kwargs:
+            self._text_orientation = self._check_orientation(
+                kwargs.pop("text_orientation"))
 
         if "show_page_border" in kwargs:
             val = kwargs.pop("show_page_border")
@@ -792,6 +849,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             return self._side
         if attribute_name == "tab_style":
             return self._tab_style
+        if attribute_name == "text_orientation":
+            return self._text_orientation
         if attribute_name == "show_page_border":
             return self._show_page_border
         if attribute_name == "tab_width":
