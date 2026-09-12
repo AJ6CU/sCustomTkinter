@@ -38,9 +38,11 @@ class sCTkDialContinuousBO(BuilderObject):
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("divisions", "knob_diameter", "command", "left_click_callback", "right_click_callback",
+                      "double_click_command", "latching", "pressed",
                       "text_color", "dial_color", "pointer_glow_color")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
-    command_properties = ("command", "left_click_callback", "right_click_callback")
+    command_properties = ("command", "left_click_callback",
+                          "right_click_callback", "double_click_command")
 
     def _code_define_callback_args(self, cmd_pname, cmd):
         """
@@ -55,6 +57,14 @@ class sCTkDialContinuousBO(BuilderObject):
         The two click callbacks genuinely take nothing, so only `command` gets
         a parameter. Continuous reports a signed step delta rather than a position, since it has none.
         """
+        if cmd_pname == "double_click_command":
+            # Called with the dial itself, so a handler can act on it without
+            # a closure over the variable name -- typically to arm a latching
+            # dial:
+            #
+            #     def on_double_click(self, dial):
+            #         dial.toggle_pressed()
+            return ("dial",)
         if cmd_pname in ("left_click_callback", "right_click_callback"):
             # Deferred to the base rather than returning () -- pygubu joins the
             # names onto "self, ", so an empty tuple left the separator with
@@ -96,9 +106,11 @@ class sCTkDialRangeBO(BuilderObject):
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("from_", "to", "divisions", "knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "label_font",
+                      "double_click_command", "latching", "pressed",
                       "text_color", "dial_color", "pointer_color")
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
-    command_properties = ("command", "left_click_callback", "right_click_callback")
+    command_properties = ("command", "left_click_callback",
+                          "right_click_callback", "double_click_command")
 
     def _code_define_callback_args(self, cmd_pname, cmd):
         """
@@ -113,6 +125,14 @@ class sCTkDialRangeBO(BuilderObject):
         The two click callbacks genuinely take nothing, so only `command` gets
         a parameter. Range reports the new value.
         """
+        if cmd_pname == "double_click_command":
+            # Called with the dial itself, so a handler can act on it without
+            # a closure over the variable name -- typically to arm a latching
+            # dial:
+            #
+            #     def on_double_click(self, dial):
+            #         dial.toggle_pressed()
+            return ("dial",)
         if cmd_pname in ("left_click_callback", "right_click_callback"):
             # Deferred to the base rather than returning () -- pygubu joins the
             # names onto "self, ", so an empty tuple left the separator with
@@ -146,9 +166,11 @@ class sCTkDialSelectorBO(BuilderObject):
     # property invisible, listing alone leaves it with no editor.
     OPTIONS_STANDARD = ("state",)
     OPTIONS_CUSTOM = ("knob_diameter", "arc_angle","command", "left_click_callback", "right_click_callback", "labels", "label_font",
+                      "double_click_command", "latching", "pressed",
                       "text_color", "dial_color", "pointer_color")  # Labels handles lists, usually initialized in code
     properties = CTkFrameBO.properties + OPTIONS_STANDARD + OPTIONS_CUSTOM
-    command_properties = ("command", "left_click_callback", "right_click_callback")
+    command_properties = ("command", "left_click_callback",
+                          "right_click_callback", "double_click_command")
 
     def _code_define_callback_args(self, cmd_pname, cmd):
         """
@@ -163,6 +185,14 @@ class sCTkDialSelectorBO(BuilderObject):
         The two click callbacks genuinely take nothing, so only `command` gets
         a parameter. Selector reports the index of the chosen label, not the label itself.
         """
+        if cmd_pname == "double_click_command":
+            # Called with the dial itself, so a handler can act on it without
+            # a closure over the variable name -- typically to arm a latching
+            # dial:
+            #
+            #     def on_double_click(self, dial):
+            #         dial.toggle_pressed()
+            return ("dial",)
         if cmd_pname in ("left_click_callback", "right_click_callback"):
             # Deferred to the base rather than returning () -- pygubu joins the
             # names onto "self, ", so an empty tuple left the separator with
@@ -241,6 +271,10 @@ register_widget(id_continuous, sCTkDialContinuousBO, "sCTkDialContinuous", ("ttk
 register_custom_property(id_continuous, "text_color", "colorentry", help="Colour of the labels AND the tick marks -- both are drawn with this one key. Blank uses the theme's text_color.")
 register_custom_property(id_continuous, "dial_color", "colorentry", help="Colour of the knob face. Blank uses the theme's dial_color.")
 register_custom_property(id_continuous, "pointer_glow_color", "colorentry", help="Colour of the glow around the pointer. Blank uses the theme's pointer_glow_color.")
+register_custom_property(id_continuous, "latching", "choice", values=("True", "False"),
+                         default_value="False", help="Opt-in. True makes the dial start switched off and ignore clicks, drags and the wheel until armed -- typically by wiring double_click_command to toggle_pressed(). It then draws from the theme's pressed_map. False, the default, is always live.")
+register_custom_property(id_continuous, "pressed", "choice", values=("True", "False"),
+                         default_value="False", help='Initial armed state, only meaningful when latching is True. Normally left False so the dial starts off.')
 register_custom_property(id_continuous, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_continuous, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_continuous, "height", "naturalnumber", help="Height in pixels.")
@@ -263,6 +297,10 @@ register_custom_property(id_range, "label_font", "fontentry", help="Font for the
 register_custom_property(id_range, "text_color", "colorentry", help="Colour of the labels AND the tick marks -- both are drawn with this one key. Blank uses the theme's text_color.")
 register_custom_property(id_range, "dial_color", "colorentry", help="Colour of the knob face. Blank uses the theme's dial_color.")
 register_custom_property(id_range, "pointer_color", "colorentry", help="Colour of the pointer on the knob. Blank uses the theme's pointer_color.")
+register_custom_property(id_range, "latching", "choice", values=("True", "False"),
+                         default_value="False", help="Opt-in. True makes the dial start switched off and ignore clicks, drags and the wheel until armed -- typically by wiring double_click_command to toggle_pressed(). It then draws from the theme's pressed_map. False, the default, is always live.")
+register_custom_property(id_range, "pressed", "choice", values=("True", "False"),
+                         default_value="False", help='Initial armed state, only meaningful when latching is True. Normally left False so the dial starts off.')
 register_custom_property(id_range, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_range, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_range, "height", "naturalnumber", help="Height in pixels.")
@@ -288,6 +326,10 @@ register_custom_property(id_selector, "label_font", "fontentry", help="Font for 
 register_custom_property(id_selector, "text_color", "colorentry", help="Colour of the labels AND the tick marks -- both are drawn with this one key. Blank uses the theme's text_color.")
 register_custom_property(id_selector, "dial_color", "colorentry", help="Colour of the knob face. Blank uses the theme's dial_color.")
 register_custom_property(id_selector, "pointer_color", "colorentry", help="Colour of the pointer on the knob. Blank uses the theme's pointer_color.")
+register_custom_property(id_selector, "latching", "choice", values=("True", "False"),
+                         default_value="False", help="Opt-in. True makes the dial start switched off and ignore clicks, drags and the wheel until armed -- typically by wiring double_click_command to toggle_pressed(). It then draws from the theme's pressed_map. False, the default, is always live.")
+register_custom_property(id_selector, "pressed", "choice", values=("True", "False"),
+                         default_value="False", help='Initial armed state, only meaningful when latching is True. Normally left False so the dial starts off.')
 register_custom_property(id_selector, "state", "choice", values=("normal", "disabled"), help="Enabled or dimmed and inert.")
 register_custom_property(id_selector, "width", "naturalnumber", help="Width in pixels.")
 register_custom_property(id_selector, "height", "naturalnumber", help="Height in pixels.")

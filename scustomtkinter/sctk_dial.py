@@ -30,8 +30,18 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         self._label_font_override = kw.pop("label_font", None)
 
         # Same reason: these are this widget's own, not CTkFrame options.
-        _pressed_init = bool(kw.pop("pressed", False))
-        _latching_init = bool(kw.pop("latching", False))
+        # Parsed rather than bool()'d: the Designer passes strings, and
+        # bool("False") is True -- which would have made every dial placed in
+        # the Designer latch whatever the dropdown said.
+        def _as_bool(v, default=False):
+            if v is None:
+                return default
+            if isinstance(v, str):
+                return v.strip().lower() in ("true", "1", "yes", "on")
+            return bool(v)
+
+        _pressed_init = _as_bool(kw.pop("pressed", False))
+        _latching_init = _as_bool(kw.pop("latching", False))
         _dbl_init = kw.pop("double_click_command", None)
 
         ThemeableWidget.__init__(self, kw)
