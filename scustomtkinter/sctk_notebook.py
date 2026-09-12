@@ -560,16 +560,6 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             self._tab_bounds[name] = (y, y + length)
             y += length + gap_amount
 
-        # The outline first, so the selected tab can overlap its lips and
-        # close the join cleanly.
-        if self._show_page_border:
-            gap = self._tab_bounds.get(self._current) if self._current else None
-            self._canvas.create_line(
-                *self._page_outline_points(gap),
-                fill=self._colour("border_color"),
-                width=self._sx(self.BORDER_WIDTH),
-                capstyle="round", joinstyle="round", smooth=False)
-
         # Separators go under the tabs, so a selected tab covers the two
         # beside it and reads as sitting in front.
         if self._show_tab_separators:
@@ -581,8 +571,17 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             # of the strip reads as a division of the whole panel rather than
             # a line between two tabs, and collides with the page border at
             # its inner end.
-            inset = self._sx(self.SEPARATOR_INSET)
-            sx0, sx1 = sx0 + inset, sx1 - inset
+            # The OUTER end stops where the tab corners start curving, or the
+            # separator runs on past the curve into empty strip and the two
+            # disagree by a pixel or two. The inner end just clears the page
+            # border.
+            outer_inset = max(self._sx(self.TAB_CORNER),
+                              self._sx(self.SEPARATOR_INSET))
+            inner_inset = self._sx(self.SEPARATOR_INSET)
+            if self._side == "left":
+                sx0, sx1 = sx0 + outer_inset, sx1 - inner_inset
+            else:
+                sx0, sx1 = sx0 + inner_inset, sx1 - outer_inset
             names = list(self._tab_bounds)
             for i, name in enumerate(names[:-1]):
                 y_between = self._tab_bounds[name][1] + half
@@ -590,28 +589,58 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                                          fill=self._colour("border_color"),
                                          width=max(self._sx(1), 1))
 
+        # DRAW ORDER MATTERS, and this is the third arrangement.
+        #
+        # Unselected tabs, then the page outline, then the selected tab. The
+        # outline running OVER the unselected tabs is what keeps it crisp
+        # along the strip edge: any attempt to have the tabs meet it exactly
+        # leaves a half-pixel of the stroke uncovered, because the stroke
+        # straddles its own path. Letting the border win is simpler than
+        # trying to butt against it.
+        #
+        # The selected tab goes last, so it covers the border and reads as
+        # sitting in front of the page -- and the outline is drawn with a gap
+        # there anyway, so there is nothing to cover but the lips.
         for name, (y0, y1) in self._tab_bounds.items():
             if name == self._current:
-                fill = self._colour("tab_selected_color")
-                text_fill = self._colour("selected_text_color")
-            elif name == self._hover and self._state != "disabled":
-                fill = self._colour("tab_hover_color")
-                text_fill = self._colour("text_color")
-            else:
-                fill = self._colour("tab_fg_color")
-                text_fill = self._colour("text_color")
+                continue
+            self._paint_tab(name, y0, y1, font, angle)
 
-            outline = self._colour("border_color") if name == self._current else fill
-            self._canvas.create_polygon(
-                self._tab_polygon(y0, y1, selected=(name == self._current)),
-                fill=fill, outline=outline,
-                width=self._sx(self.BORDER_WIDTH) if name == self._current else 1)
+        if self._show_page_border:
+            gap = self._tab_bounds.get(self._current) if self._current else None
+            self._canvas.create_line(
+                *self._page_outline_points(gap),
+                fill=self._colour("border_color"),
+                width=self._sx(self.BORDER_WIDTH),
+                capstyle="round", joinstyle="round", smooth=False)
 
-            strip = self._sx(self._tab_width)
-            cx = strip / 2 if self._side == "left" \
-                else self._canvas.winfo_width() - (strip / 2)
-            self._canvas.create_text(cx, (y0 + y1) / 2, text=str(name),
-                                     angle=angle, fill=text_fill, font=font)
+        if self._current in self._tab_bounds:
+            y0, y1 = self._tab_bounds[self._current]
+            self._paint_tab(self._current, y0, y1, font, angle)
+
+    def _paint_tab(self, name, y0, y1, font, angle):
+        """Draws one tab and its label."""
+        if name == self._current:
+            fill = self._colour("tab_selected_color")
+            text_fill = self._colour("selected_text_color")
+        elif name == self._hover and self._state != "disabled":
+            fill = self._colour("tab_hover_color")
+            text_fill = self._colour("text_color")
+        else:
+            fill = self._colour("tab_fg_color")
+            text_fill = self._colour("text_color")
+
+        outline = self._colour("border_color") if name == self._current else fill
+        self._canvas.create_polygon(
+            self._tab_polygon(y0, y1, selected=(name == self._current)),
+            fill=fill, outline=outline,
+            width=self._sx(self.BORDER_WIDTH) if name == self._current else 1)
+
+        strip = self._sx(self._tab_width)
+        cx = strip / 2 if self._side == "left" \
+            else self._canvas.winfo_width() - (strip / 2)
+        self._canvas.create_text(cx, (y0 + y1) / 2, text=str(name),
+                                 angle=angle, fill=text_fill, font=font)
 
     # ------------------------------------------------------------------
     # Interaction
