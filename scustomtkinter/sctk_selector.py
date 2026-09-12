@@ -304,14 +304,27 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         # Removing it from final_kw as well is what matters: the lookup below
         # falls back to that dict, so a stale entry there would keep the old
         # size alive.
-        _cleared_size = False
+        # Clearing is decided PER KEY, not for both at once.
+        #
+        # The Designer sends every property when any one of them changes, so
+        # editing the width also delivers height=0. Treating that as "the size
+        # was cleared" turned propagate back on and pushed the default width
+        # over the 400 just asked for -- setting a width made the height
+        # collapse to its contents and the width not take at all.
+        #
+        # Blank or zero both mean "no size asked for" here; see the query
+        # branch above for why a cleared field arrives as 0 rather than "".
+        _SIZE_DEFAULTS = {"width": 200, "height": 150}
+        _cleared = set()
         for _size_key in ("width", "height"):
-            # Blank or zero both mean "no size asked for" -- see the query
-            # branch above for why a cleared field arrives as 0 rather than "".
             if _size_key in kwargs and str(kwargs[_size_key]).strip() in ("", "0"):
                 kwargs.pop(_size_key)
                 self.final_kw.pop(_size_key, None)
-                _cleared_size = True
+                _cleared.add(_size_key)
+                # Reset the frame's stored value too. It remembers whatever it
+                # was last told, and turning propagate on only masks that --
+                # the next explicit size would let the old number reappear.
+                kwargs[_size_key] = _SIZE_DEFAULTS[_size_key]
 
         # FIX: these read final_kw only, and width/height never arrive there.
         #
@@ -338,10 +351,12 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
             kwargs["width"] = w_val
         if "height" in kwargs:
             kwargs["height"] = h_val
-        if _cleared_size:
-            w_val = h_val = 0          # forces the default branch below
+        # Propagate goes back on only when NEITHER size was asked for, which
+        # is the state a freshly placed selector is in.
+        _explicit = {k for k in ("width", "height")
+                     if k not in _cleared and (k in kwargs or k in self.final_kw)}
 
-        if w_val > 0 or h_val > 0:
+        if _explicit:
             # An explicit size means propagate OFF, unless this very call says
             # otherwise.
             #
@@ -362,7 +377,7 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         else:
             self.final_kw["width"] = 200
             self.final_kw["height"] = 150
-            if _cleared_size:
+            if _cleared:
                 # Reset the frame's stored size as well as the propagate flag.
                 #
                 # The frame remembers whatever it was last told. Turning
