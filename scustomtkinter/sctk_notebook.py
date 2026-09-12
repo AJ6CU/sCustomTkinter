@@ -22,6 +22,7 @@ spanning the whole widget, and the content pages are placed on top of it.
 Selection, hover and hit-testing are consequently this class's own code
 rather than a button's.
 """
+import sys
 import tkinter as tk
 import tkinter.font as tkfont
 import math
@@ -139,6 +140,13 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         self._canvas.bind("<Configure>", lambda e: self._relayout())
         for seq in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
             self._canvas.bind(seq, self._on_wheel)
+        # macOS trackpads deliver <TouchpadScroll>, a separate event from
+        # <MouseWheel>, with far more of them and far finer values. Binding
+        # only the wheel means a real mouse scrolls the strip and a trackpad
+        # does nothing at all. Same split ScrollBindingMixin handles for the
+        # scrolling containers.
+        if sys.platform == "darwin":
+            self._canvas.bind("<TouchpadScroll>", self._on_touchpad)
 
         self._finalize_themeable_lifecycle()
 
@@ -314,13 +322,28 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
                     x_out + (slant * direction), y1 - slant,
                     x_in, y1]
 
+        # Genuine quarter circles, not a chamfer.
+        #
+        # Joining the two corner points with a straight line -- which is what
+        # this did first -- reads as a 45-degree cut, visibly different from
+        # the rounded corners on a CTkButton sitting beside it. Six segments
+        # per corner is enough to look like a curve at any sane tab width.
         r = self._sx(self.TAB_CORNER)
-        return [x_in, y0,
-                x_out + (r * direction), y0,
-                x_out, y0 + r,
-                x_out, y1 - r,
-                x_out + (r * direction), y1,
-                x_in, y1]
+        cx = x_out + (r * direction)
+        pts = [x_in, y0]
+        pts += self._arc_points(cx, y0 + r, 270, 180 if direction > 0 else 360, r)
+        pts += self._arc_points(cx, y1 - r, 180 if direction > 0 else 360, 90, r)
+        pts += [x_in, y1]
+        return pts
+
+    @staticmethod
+    def _arc_points(cx, cy, start_deg, end_deg, radius, steps=6):
+        """Points along a circular arc, for building rounded polygons."""
+        pts = []
+        for i in range(steps + 1):
+            a = math.radians(start_deg + (end_deg - start_deg) * i / steps)
+            pts.extend([cx + radius * math.cos(a), cy + radius * math.sin(a)])
+        return pts
 
     def _page_outline_points(self, gap):
         """
@@ -339,13 +362,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         h = bw / 2.0
         x0, y0, x1, y1 = x0 + h, y0 + h, x1 - h, y1 - h
 
-        def arc(cx, cy, start_deg, end_deg, radius, steps=6):
-            pts = []
-            for i in range(steps + 1):
-                a = math.radians(start_deg + (end_deg - start_deg) * i / steps)
-                pts.extend([cx + radius * math.cos(a),
-                            cy + radius * math.sin(a)])
-            return pts
+        arc = self._arc_points
 
         if self._side == "left":
             edge = x0              # the strip-side edge
@@ -542,11 +559,62 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         else:
             delta = -1 if getattr(event, "delta", 0) > 0 else 1
 
-        new = min(max(self._scroll + delta * self._sx(24), 0), ceiling)
+        self._scroll_by(delta)
+        return "break"
+
+    # Accumulated trackpad movement, and the threshold it must cross before
+    # the strip moves. Acting on every event is unusably fast -- the same
+    # reason ScrollBindingMixin accumulates.
+    TOUCHPAD_THRESHOLD = 12.0
+
+    @staticmethod
+    def _decode_touchpad_delta(raw_delta):
+        """
+        Pulls the signed Y component out of a packed <TouchpadScroll> delta.
+
+        Tk packs X and Y into one 32-bit value. The low sixteen bits are Y,
+        two's complement -- so the test is `>= 0x8000`, not `> 32768`. Those
+        differ at exactly 32768, the smallest NEGATIVE value, which the looser
+        test reads as positive and inverts the direction.
+        """
+        raw = raw_delta & 0xFFFFFFFF
+        delta_y = raw & 0xFFFF
+        if delta_y >= 0x8000:
+            delta_y -= 0x10000
+        return delta_y
+
+    def _on_touchpad(self, event):
+        """Trackpad equivalent of _on_wheel, gated by an accumulator."""
+        if not self._on_strip(getattr(event, "x", 0)):
+            return
+        if self._max_scroll() <= 0:
+            return
+
+        delta_y = self._decode_touchpad_delta(getattr(event, "delta", 0))
+        if delta_y == 0:
+            return
+
+        accumulated = getattr(self, "_touch_accum", 0.0)
+        # Reversing direction resets, so a change of direction responds at
+        # once rather than having to cancel out what built up going the other
+        # way.
+        if (accumulated > 0) != (delta_y > 0):
+            accumulated = 0.0
+        accumulated += delta_y
+
+        if abs(accumulated) >= self.TOUCHPAD_THRESHOLD:
+            self._scroll_by(-1 if accumulated > 0 else 1)
+            accumulated = 0.0
+        self._touch_accum = accumulated
+        return "break"
+
+    def _scroll_by(self, steps):
+        """Moves the strip, clamped to what there is to scroll."""
+        ceiling = self._max_scroll()
+        new = min(max(self._scroll + steps * self._sx(24), 0), ceiling)
         if new != self._scroll:
             self._scroll = new
             self._draw_notebook()
-        return "break"
 
     # ------------------------------------------------------------------
     # Public API -- mirrors sCTkTabview where the two overlap
