@@ -10,8 +10,15 @@ bottom exercise the things most likely to be wrong:
   * tab_width -- the strip is an explicit width, not measured
   * state     -- disabled dims the strip and stops selection, but does NOT
                  disable what is on the pages
+  * tab_style -- rounded, matching the rest of the library, or angled, the
+                 shape of a real notebook divider
+  * border    -- the page outline, drawn with a gap where the selected tab
+                 meets it
   * theme     -- light and dark, since the strip is canvas-drawn and does not
                  get CustomTkinter's automatic repaint for free
+
+Shrink the window vertically until the tabs no longer fit: the strip scrolls
+under the wheel. required_length() reports the height it would rather have.
 
 Also worth trying while it runs: hover across the tabs, and resize the window
 to check the pages follow.
@@ -26,9 +33,15 @@ TAB_NAMES = ["Receiver", "Transmitter", "Audio", "Filters", "System Logs"]
 
 
 def build_page(page, name):
-    """Puts one labelled frame on a page, as the brief asks."""
-    panel = sCTkFrame(page, border_width=1, corner_radius=8)
-    panel.pack(expand=True, fill="both", padx=12, pady=12)
+    """
+    Puts one labelled frame on a page.
+
+    The frame is borderless on purpose. The notebook draws the page outline
+    itself, broken where the selected tab meets it -- a second border here
+    would sit just inside the first and hide the join.
+    """
+    panel = sCTkFrame(page, border_width=0, fg_color="transparent")
+    panel.pack(expand=True, fill="both")
 
     sCTkLabelPrimary(panel, text=f"This is the {name} tab").pack(
         expand=True, padx=20, pady=20)
@@ -42,7 +55,8 @@ if __name__ == "__main__":
     base = sCTkFrame(root, border_width=0, fg_color="transparent")
     base.pack(expand=True, fill="both", padx=16, pady=(16, 8))
 
-    notebook = sCTkNotebook(base, side="left", tab_width=34)
+    notebook = sCTkNotebook(base, side="left", tab_width=34,
+                            tab_style="rounded", show_page_border=True)
     notebook.pack(expand=True, fill="both")
 
     for tab_name in TAB_NAMES:
@@ -80,6 +94,24 @@ if __name__ == "__main__":
     width_box.pack(side="left", padx=4)
     width_box.set("34px")
 
+    def flip_style():
+        new_style = "angled" if notebook.cget("tab_style") == "rounded" else "rounded"
+        notebook.configure(tab_style=new_style)
+        btn_style.configure(text=f"Tabs: {new_style}")
+
+    btn_style = sCTkButtonPrimary(tray, text="Tabs: rounded",
+                                  command=flip_style, width=120)
+    btn_style.pack(side="left", padx=4)
+
+    def toggle_border():
+        on = not notebook.cget("show_page_border")
+        notebook.configure(show_page_border=on)
+        btn_border.configure(text=f"Border: {'on' if on else 'off'}")
+
+    btn_border = sCTkButtonPrimary(tray, text="Border: on",
+                                   command=toggle_border, width=110)
+    btn_border.pack(side="left", padx=4)
+
     def toggle_state():
         target = "disabled" if notebook.get_state() == "normal" else "normal"
         notebook.configure(state=target)
@@ -107,6 +139,8 @@ if __name__ == "__main__":
     # ------------------------------------------------------------------
     print("--- boot ---")
     print("tabs      :", notebook.tabs())
+    print("wants     :", notebook.required_length(),
+          "px of height for all tabs without scrolling")
     print("selected  :", notebook.get())
 
     notebook.set("Audio")
