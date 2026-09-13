@@ -631,10 +631,46 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                 current_parent = getattr(current_parent, "master", None)
 
             if resolved_bg == "transparent":
-                resolved_bg = "#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark" else "#F1F5F9"
+                resolved_bg = self._opaque_fallback()
 
         self.canvas.configure(bg=resolved_bg)
         if hasattr(self, "_draw_dial_base"): self._draw_dial_base()
+
+    def _opaque_fallback(self):
+        """A drawable colour for when everything above resolves transparent."""
+        return ("#1C1C1C" if str(ctk.get_appearance_mode()).lower() == "dark"
+                else "#F1F5F9")
+
+    def _canvas_background(self):
+        """
+        A colour the CANVAS can actually be set to.
+
+        fg_color may legitimately be "transparent" -- it is how a widget says
+        it should take its parent's colour, and a dial dropped into a themed
+        panel wants exactly that. A raw canvas cannot render the word, so it
+        has to be turned into whatever is really behind the widget:
+
+            TclError: unknown color name "transparent"
+
+        The same accommodation sCTkNotebook and sCTkFileExplorer make for
+        their canvases.
+        """
+        colour = self._resolve_color(self._local_defaults.get("fg_color"))
+        if colour != "transparent":
+            return colour
+
+        parent = getattr(self, "master", None)
+        for _ in range(6):
+            if parent is None:
+                break
+            try:
+                candidate = self._resolve_color(parent.cget("fg_color"))
+                if candidate and candidate != "transparent":
+                    return candidate
+            except Exception:
+                pass
+            parent = getattr(parent, "master", None)
+        return self._opaque_fallback()
 
     def _decode_mac_touchpad_delta(self, raw_delta):
         raw = raw_delta & 0xFFFFFFFF
@@ -954,7 +990,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         # at construction if any of these were missing, so every lookup here is
         # guaranteed to resolve. A fallback would only reintroduce the silent
         # substitution that made an incomplete theme block invisible.
-        bg_color = self._resolve_color(self._local_defaults.get("fg_color"))
+        bg_color = self._canvas_background()
         shadow_paint = self._resolve_color(self._local_defaults.get("shadow_color"))
         text_color = self._resolve_color(self._local_defaults.get("text_color"))
         dial_color = self._resolve_color(self._local_defaults.get("dial_color"))
