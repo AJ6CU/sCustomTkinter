@@ -187,7 +187,7 @@ class sCTkNotebookTabBO(BuilderObject):
         edits a property through the former, and the latter is never called.
         """
         if pname == "label":
-            # CONSUMED HERE, never delegated.
+            # CONSUMED, not delegated, and not acted on here either.
             #
             # The base implementation forwards an unknown property to
             # widget.configure(), and a page is an ordinary sCTkFrame:
@@ -195,32 +195,8 @@ class sCTkNotebookTabBO(BuilderObject):
             #     Failed to set property 'label' on class 'None'.
             #     Error: ['label'] are not supported arguments.
             #
-            # The label is not a property of the page -- it is the name its
-            # notebook filed it under, consumed by realize().
-            #
-            # RENAMED THROUGH THE NOTEBOOK, not by rebuilding the tab.
-            # Rebuilding re-runs realize(), which calls add() again while the
-            # old name is still registered -- so the strip kept the old
-            # caption until something forced a repaint. rename() re-keys the
-            # page in place and redraws, which is what the widget provides it
-            # for.
-            # DEBUG
-            print("[TAB] _set_property label:", repr(value),
-                  " target:", type(target_widget).__name__,
-                  " stored _label:", repr(getattr(self, "_label", None)))
-            new_label = str(value)
-            old_label = getattr(self, "_label", None)
-            if old_label and new_label and new_label != old_label:
-                try:
-                    notebook = self._find_notebook(target_widget)
-                    print("[TAB] found notebook:", type(notebook).__name__
-                          if notebook else None,
-                          " tabs:", notebook.tabs() if notebook else None)
-                    if notebook is not None:
-                        notebook.rename(old_label, new_label)
-                        self._label = new_label
-                except Exception as exc:
-                    print("[TAB] rename FAILED:", type(exc).__name__, exc)
+            # The rename itself happens in configure(), which is the call the
+            # Designer makes after updating the metadata -- see there.
             return
 
         super()._set_property(target_widget, pname, value)
@@ -248,8 +224,58 @@ class sCTkNotebookTabBO(BuilderObject):
         return None
 
     def configure(self, target=None):
-        """Nothing to configure: the label was consumed by realize()."""
-        pass
+        """
+        Applies a changed `label` by renaming the live tab.
+
+        THIS IS WHERE THE RENAME BELONGS, not in _set_property. The Designer
+        edits the metadata and then calls configure(); a no-op here left the
+        design canvas showing the old caption while the preview, which
+        rebuilds from scratch, showed the new one. sCTkTabviewTabBO learned
+        the same lesson and its docstring records it.
+
+        EVERYTHING IS DERIVED FROM self.widget, deliberately. Pygubu calls
+        configure() on builder objects whose realize() never ran, so any state
+        stashed during realize() -- the notebook, the name it was filed under
+        -- may simply not be there. The page is the only reliable anchor: walk
+        up from it to the notebook, then find the page in that notebook's
+        registry BY IDENTITY to learn what it is currently called.
+        """
+        widget = getattr(self, "widget", None)
+        if widget is None:
+            return
+
+        notebook = self._find_notebook(widget)
+        if notebook is None:
+            return
+
+        # Found by identity rather than by trusting a stored name.
+        old_name = None
+        for name, page in getattr(notebook, "_pages", {}).items():
+            if page is widget:
+                old_name = name
+                break
+        if old_name is None:
+            return
+
+        new_name = str(self.wmeta.properties.get("label", old_name))
+        if not new_name or new_name == old_name:
+            return
+
+        existing = [n for n in notebook.tabs() if n != old_name]
+        if new_name in existing:
+            suffix = 2
+            while f"{new_name}_{suffix}" in existing:
+                suffix += 1
+            new_name = f"{new_name}_{suffix}"
+            self.wmeta.properties["label"] = new_name
+
+        try:
+            notebook.rename(old_name, new_name)
+            self._label = new_name
+        except Exception:
+            # Torn down mid-edit. The preview rebuild still shows the new
+            # label, so this degrades rather than breaks.
+            return
 
     def layout(self, target=None, *args, **kwargs):
         """The notebook grids its own pages; a tab takes no layout."""
