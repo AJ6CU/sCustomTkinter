@@ -403,7 +403,16 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
         return str(self.entry.get()) if (hasattr(self, "entry") and self.entry.winfo_exists()) else str(
             getattr(self, "_from", "0.0"))
 
-    def set(self, value):
+    def set(self, value, _emit=False):
+        """
+        Sets the value. Does NOT fire the command.
+
+        Args:
+            value: The new value.
+            _emit: Internal. True only for the paths driven by the USER --
+                the arrows, typing, the wheel -- which do fire the command.
+                Not part of the public interface.
+        """
         try:
             if not getattr(self, "_values", None):
                 num = float(value)
@@ -421,7 +430,25 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             self.entry.delete(0, "end");
             self.entry.insert(0, display_text);
             self.entry.configure(state=old)
-            if self._command:
+
+            # DELIBERATELY DOES NOT FIRE THE COMMAND.
+            #
+            # This used to call self._command(callback_val), and it made
+            # construction order load-bearing: setting an initial value while
+            # building an interface called back into one that did not exist
+            # yet, and the traceback named a widget rather than the real
+            # cause. It also risks a loop where a command sets the value back.
+            #
+            # CustomTkinter's own widgets behave this way for the same reason
+            # -- CTkSlider.set(), CTkSegmentedButton.set() and
+            # CTkOptionMenu.set() all update quietly. A programmatic set is
+            # the application saying what the value is, and the application
+            # already knows.
+            #
+            # The command still fires for anything the USER does: the arrows,
+            # typing in the field, the mouse wheel. Those paths call this
+            # method with _emit=True.
+            if _emit and self._command:
                 try:
                     self._command(callback_val)
                 except TypeError:
@@ -449,14 +476,14 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             i = self._current_index + 1
             if i >= len(self._values): i = 0 if self._wrap else (len(self._values) - 1)
             self._current_index = i;
-            self.set(self._values[i]);
+            self.set(self._values[i], _emit=True);
             return
         try:
             n = self._current_numeric_value + self._step_size
             if n > self._to: n = self._from if self._wrap else self._to
-            self.set(n)
+            self.set(n, _emit=True)
         except Exception:
-            self.set(self._from)
+            self.set(self._from, _emit=True)
 
     def _decrement_callback(self):
         if self._state == "disabled": return
@@ -464,14 +491,14 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             i = self._current_index - 1
             if i < 0: i = (len(self._values) - 1) if self._wrap else 0
             self._current_index = i;
-            self.set(self._values[i]);
+            self.set(self._values[i], _emit=True);
             return
         try:
             n = self._current_numeric_value - self._step_size
             if n < self._from: n = self._to if self._wrap else self._from
-            self.set(n)
+            self.set(n, _emit=True)
         except Exception:
-            self.set(self._from)
+            self.set(self._from, _emit=True)
 
     def _validate_and_sanitize_input(self):
         if getattr(self, "_values", None):
@@ -479,12 +506,15 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
             return
         try:
             raw = self.get().strip()
-            if not raw: self.set(self._from); return
+            # _emit=True throughout: this runs when the USER has typed
+            # something and committed it, which is exactly the case the
+            # command exists for.
+            if not raw: self.set(self._from, _emit=True); return
             for clean_token in [self._format, "kHz", "MHz", "dB", "%", "Hz", "{", "}", " "]:
                 if clean_token: raw = raw.replace(clean_token, "")
-            self.set(float(raw))
+            self.set(float(raw), _emit=True)
         except ValueError:
-            self.set(self._current_numeric_value)
+            self.set(self._current_numeric_value, _emit=True)
 
     def _set_appearance_mode(self, mode_string: str):
         if hasattr(super(), "_set_appearance_mode"):
