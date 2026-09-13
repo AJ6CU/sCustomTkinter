@@ -856,6 +856,19 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # is why nesting one made the difference.
         page.grid_rowconfigure(0, weight=1)
         page.grid_columnconfigure(0, weight=1)
+        # DEBUG -- report what the page looks like once Tk has laid it out.
+        def _report(pg=page, nm=name):
+            try:
+                print(f"[NB] page {nm!r}: {pg.winfo_width()}x{pg.winfo_height()}"
+                      f" mapped={bool(pg.winfo_ismapped())}"
+                      f" children={[type(c).__name__ for c in pg.winfo_children()]}")
+                host = self._page_host
+                print(f"[NB]   host: {host.winfo_width()}x{host.winfo_height()}"
+                      f" mapped={bool(host.winfo_ismapped())}")
+            except Exception as exc:
+                print("[NB] report failed:", exc)
+        self.after(600, _report)
+
         self._pages[name] = page
         if self._current is None:
             self._current = name

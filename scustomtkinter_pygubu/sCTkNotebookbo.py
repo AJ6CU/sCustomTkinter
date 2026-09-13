@@ -204,18 +204,23 @@ class sCTkNotebookTabBO(BuilderObject):
             # caption until something forced a repaint. rename() re-keys the
             # page in place and redraws, which is what the widget provides it
             # for.
+            # DEBUG
+            print("[TAB] _set_property label:", repr(value),
+                  " target:", type(target_widget).__name__,
+                  " stored _label:", repr(getattr(self, "_label", None)))
             new_label = str(value)
             old_label = getattr(self, "_label", None)
             if old_label and new_label and new_label != old_label:
                 try:
                     notebook = self._find_notebook(target_widget)
+                    print("[TAB] found notebook:", type(notebook).__name__
+                          if notebook else None,
+                          " tabs:", notebook.tabs() if notebook else None)
                     if notebook is not None:
                         notebook.rename(old_label, new_label)
                         self._label = new_label
-                except Exception:
-                    # A duplicate name, or a page not yet attached. The .ui
-                    # data is already updated either way.
-                    pass
+                except Exception as exc:
+                    print("[TAB] rename FAILED:", type(exc).__name__, exc)
             return
 
         super()._set_property(target_widget, pname, value)
