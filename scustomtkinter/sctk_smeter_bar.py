@@ -27,7 +27,7 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
     _REQUIRED_DISABLED_KEYS = ("text_color", "alarm_color",
                                "led_on_color", "led_off_color")
 
-    def __init__(self, master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True, hide_lower_row=False, width=320, height=110, state="normal", **kw):
+    def __init__(self, master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True, hide_lower_row=False, hide_sig_row=False, width=320, height=110, state="normal", **kw):
         # 1. Initialize our Themeable mixin tracker cleanly
         ThemeableWidget.__init__(self, kw)
         self._local_defaults = dict(self.final_kw)
@@ -70,12 +70,20 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         self._default_swr_visible = True
         self._default_pwr_visible = True
         self._default_hide_lower_row = False
+        self._default_hide_sig_row = False
         self._default_width = 320
         self._default_height = 110
 
         self._swr_visible = bool(swr_visible)
         self._pwr_visible = bool(pwr_visible)
         self._hide_lower_row = bool(hide_lower_row)
+        # Hides the S row, leaving SWR and PWR.
+        #
+        # The mirror of hide_lower_row, and it exists for the split-meter
+        # layout: an S bar under the receive frequency and a PWR/SWR bar under
+        # the transmit one, each half the instrument rather than two full ones
+        # with a dead half each.
+        self._hide_sig_row = bool(hide_sig_row)
 
         self._current_s_value = 0.0
         self._current_swr_value = 1.0
@@ -156,11 +164,12 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             self._draw_meter()
         return self._state
 
-    def configure_visibility(self, swr_visible=None, pwr_visible=None, hide_lower_row=None):
+    def configure_visibility(self, swr_visible=None, pwr_visible=None, hide_lower_row=None, hide_sig_row=None):
         """Public configuration mapping hook to alter the lower row layout matrix states live."""
         if swr_visible is not None: self._swr_visible = bool(swr_visible)
         if pwr_visible is not None: self._pwr_visible = bool(pwr_visible)
         if hide_lower_row is not None: self._hide_lower_row = bool(hide_lower_row)
+        if hide_sig_row is not None: self._hide_sig_row = bool(hide_sig_row)
         if self.canvas.winfo_exists(): self._draw_meter()
 
     def configure(self, *args, **kwargs):
@@ -173,13 +182,15 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             pname = args[0]
             if pname == "state":
                 return ("state", "state", "state", "normal", self._state)
-            if pname in ("swr_visible", "pwr_visible", "hide_lower_row"):
+            if pname in ("swr_visible", "pwr_visible", "hide_lower_row", "hide_sig_row"):
                 defaults = {"swr_visible": self._default_swr_visible,
                             "pwr_visible": self._default_pwr_visible,
-                            "hide_lower_row": self._default_hide_lower_row}
+                            "hide_lower_row": self._default_hide_lower_row,
+                            "hide_sig_row": self._default_hide_sig_row}
                 currents = {"swr_visible": self._swr_visible,
                             "pwr_visible": self._pwr_visible,
-                            "hide_lower_row": self._hide_lower_row}
+                            "hide_lower_row": self._hide_lower_row,
+                            "hide_sig_row": self._hide_sig_row}
                 return (pname, pname, pname,
                         str(defaults[pname]), str(currents[pname]))
 
@@ -272,6 +283,7 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             "swr_visible": ("_swr_visible", self._default_swr_visible),
             "pwr_visible": ("_pwr_visible", self._default_pwr_visible),
             "hide_lower_row": ("_hide_lower_row", self._default_hide_lower_row),
+            "hide_sig_row": ("_hide_sig_row", self._default_hide_sig_row),
         }
         _visibility_changed = False
         for _key, (_attr, _fallback) in _visibility.items():
@@ -303,6 +315,7 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         if attribute_name == "swr_visible": return self._swr_visible
         if attribute_name == "pwr_visible": return self._pwr_visible
         if attribute_name == "hide_lower_row": return self._hide_lower_row
+        if attribute_name == "hide_sig_row": return self._hide_sig_row
         return super().cget(attribute_name)
 
     def _set_appearance_mode(self, mode_string: str):
@@ -382,32 +395,44 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         last_label = "+60 dB"
         start_x, end_x = 10, width - max(30, int(scale_measure(last_label) / 2) + 12)
         total_length = end_x - start_x
-        sig_y = int(height * 0.50) if self._hide_lower_row else int(height * 0.28)
-        lower_y = int(height * 0.70)
+        # Row positions follow which rows are actually drawn, so a
+        # single-row meter is centred rather than sitting where it would
+        # have been in a two-row one.
+        show_sig = not self._hide_sig_row
+        show_lower = not self._hide_lower_row
+        if show_sig and show_lower:
+            sig_y, lower_y = int(height * 0.28), int(height * 0.70)
+        elif show_sig:
+            sig_y, lower_y = int(height * 0.50), int(height * 0.70)
+        else:
+            sig_y, lower_y = int(height * 0.28), int(height * 0.50)
         segment_width = (total_length / num_led_segments) - 1.5
 
-        val = self._current_s_value
-        s_fraction = (max(0.0, val) / 9.0) * 0.60 if val <= 9.0 else 0.60 + ((min(69.0, val) - 9.0) / 60.0) * 0.40
-        active_sig_segments = int(num_led_segments * max(0.0, min(1.0, s_fraction)))
+        if show_sig:
+            val = self._current_s_value
+            s_fraction = (max(0.0, val) / 9.0) * 0.60 if val <= 9.0 else 0.60 + ((min(69.0, val) - 9.0) / 60.0) * 0.40
+            active_sig_segments = int(num_led_segments * max(0.0, min(1.0, s_fraction)))
 
-        for i in range(num_led_segments):
-            seg_start_x = start_x + (i * (total_length / num_led_segments))
-            is_sig_redzone = i >= int(num_led_segments * 0.60)
-            fill = (red_color if is_sig_redzone else led_on_color) if i < active_sig_segments else led_off_color
-            self.canvas.create_rectangle(seg_start_x, sig_y - 4, seg_start_x + segment_width, sig_y + 1, fill=fill, outline="")
+            for i in range(num_led_segments):
+                seg_start_x = start_x + (i * (total_length / num_led_segments))
+                is_sig_redzone = i >= int(num_led_segments * 0.60)
+                fill = (red_color if is_sig_redzone else led_on_color) if i < active_sig_segments else led_off_color
+                self.canvas.create_rectangle(seg_start_x, sig_y - 4, seg_start_x + segment_width, sig_y + 1, fill=fill, outline="")
 
-        bar_scale_mappings = [(0.0, ""), (0.066, "1"), (0.20, "3"), (0.333, "5"), (0.466, "7"), (0.60, "9"), (0.733, "+20"), (0.866, "+40"), (1.0, "+60 dB")]
-        for pct, label_str in bar_scale_mappings:
-            tx = start_x + (total_length * pct)
-            color = red_color if pct >= 0.60 else amber_color
-            self.canvas.create_line(tx, sig_y, tx, sig_y - 6, fill=color, width=1)
-            # Above the tick, clear of it by the label's own height.
-            if label_str: self.canvas.create_text(tx, sig_y - 8 - (scale_h / 2), text=label_str, fill=color, font=scale_font, anchor="center")
+            bar_scale_mappings = [(0.0, ""), (0.066, "1"), (0.20, "3"), (0.333, "5"), (0.466, "7"), (0.60, "9"), (0.733, "+20"), (0.866, "+40"), (1.0, "+60 dB")]
+            for pct, label_str in bar_scale_mappings:
+                tx = start_x + (total_length * pct)
+                color = red_color if pct >= 0.60 else amber_color
+                self.canvas.create_line(tx, sig_y, tx, sig_y - 6, fill=color, width=1)
+                # Above the tick, clear of it by the label's own height.
+                if label_str: self.canvas.create_text(tx, sig_y - 8 - (scale_h / 2), text=label_str, fill=color, font=scale_font, anchor="center")
 
-        self.canvas.create_text(start_x, sig_y - 8 - (scale_h / 2), text="S", fill=amber_color, font=scale_font, anchor="center")
-        self.canvas.create_text(start_x + (total_length * 0.5), sig_y + 5, text="SIG", fill=amber_color, font=label_font, anchor="n")
+            self.canvas.create_text(start_x, sig_y - 8 - (scale_h / 2), text="S", fill=amber_color, font=scale_font, anchor="center")
+            self.canvas.create_text(start_x + (total_length * 0.5), sig_y + 5, text="SIG", fill=amber_color, font=label_font, anchor="n")
 
-        if self._hide_lower_row: return
+
+        if not show_lower:
+            return
 
         mid_gap_start, mid_gap_end = 13, 17
         def get_swr_fraction(swr_val):

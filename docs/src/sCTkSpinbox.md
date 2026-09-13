@@ -108,6 +108,8 @@ freq_spinbox.pack(pady=10)
 
 **A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
+**Reading `values` back** through `configure("values")` or the Designer gives the bracketed form, whatever you typed in. That is the form the field accepts, so a value read out can be pasted straight back.
+
 **`values` accepts the library's standard list formats** — `["Porsche", "VW", "Tesla"]`, a bare comma-separated string, or a real Python list. See [List Properties](ListProperties.md).
 
 Note that **space is no longer a separator**. An earlier version used `shlex.split()` whenever the input contained no comma, which made `Meat Loaf` two values here and one value in every other widget. Quote a value if it needs to contain a comma.
@@ -166,6 +168,10 @@ if __name__ == "__main__":
 - **The disable/enable-cycle cursor-position fix is not independently confirmed for readonly transitions** — the underlying entry inherits this caveat from `sCTkEntryPrimary`; see that widget's docs for the full explanation.
 - **`readonly` mode's placeholder behavior follows `sCTkEntryPrimary`'s** — a readonly field showing placeholder text never clears it on focus, since native CustomTkinter deliberately never deactivates a placeholder while `state` is `"readonly"`.
 - **Fixed:** single-argument queries used to report `str()` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
+<<<<<<< Updated upstream
 - **Fixed:** building a spinbox already disabled raised `ValueError: ['state'] are not supported arguments`. The constructor called `super().configure(state="disabled")`, and this widget is a `CTkFrame` subclass with no such option. It only fired when the state came from the constructor rather than a later call — which is what a Designer preview does.
+=======
+- **Fixed:** `configure("values")` reported a space-joined string — `160m 80m "Meat Loaf" 40m` — quoting only the values containing a space. No other widget uses that shape and nothing reads it back, since space stopped being a separator when the list parsing was unified. It now reports the bracketed form the inspector's own help text recommends.
+>>>>>>> Stashed changes
 
 [Return to Table of Contents](#contents)

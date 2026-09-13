@@ -213,7 +213,22 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
                 "placeholder_text": ("placeholder_text", "placeholder_text", "placeholder_text", "", str(getattr(self, "_placeholder_text", ""))),
                 "format": ("format", "format", "format", "", str(getattr(self, "_format", ""))),
                 "wrap": ("wrap", "wrap", "wrap", "False", str(getattr(self, "_wrap", False))),
-                "values": ("values", "values", "values", "", " ".join([f'"{v}"' if ' ' in v else v for v in getattr(self, "_values", [])]))
+                # FIX: was a hand-rolled space-joined string, quoting only the
+                # values that contained a space:
+                #
+                #     160m 80m "Meat Loaf" 40m
+                #
+                # Nothing else in the library uses that shape, and nothing
+                # reads it back -- parse_list_property() dropped space as a
+                # separator precisely so `Meat Loaf` would not become two
+                # values here and one everywhere else. So the Designer showed
+                # a format it could not itself accept.
+                #
+                # _query_value() already knows how: `values` is in
+                # ThemeableWidget._LIST_PROPERTIES, and it emits the bracketed
+                # JSON form the inspector's own help text recommends.
+                "values": ("values", "values", "values", "",
+                           self._query_value(getattr(self, "_values", []), "values"))
             }
             if require_redraw in mapping: return mapping[require_redraw]
             # FIX: this used to be `return super().configure(require_redraw)`.

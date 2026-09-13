@@ -30,7 +30,7 @@ class sCTkSMeterBarBO(BuilderObject):
     class_ = sCTkSMeterBar
 
     # Expose custom compound parameters alongside theme state configurations
-    OPTIONS_CUSTOM = ("width", "height", "fg_color", "swr_max_value", "swr_visible", "pwr_visible", "hide_lower_row", "font", "scale_font")
+    OPTIONS_CUSTOM = ("width", "height", "fg_color", "swr_max_value", "swr_visible", "pwr_visible", "hide_lower_row", "hide_sig_row", "font", "scale_font")
 
     # NOT CTkFrameBO.properties.
     #
@@ -61,7 +61,7 @@ class sCTkSMeterBarBO(BuilderObject):
             return int(value)
         elif pname == "swr_max_value":
             return float(value)
-        elif pname in ("swr_visible", "pwr_visible", "hide_lower_row"):
+        elif pname in ("swr_visible", "pwr_visible", "hide_lower_row", "hide_sig_row"):
             if value == "True":
                 return True
             else:
@@ -124,6 +124,16 @@ register_custom_property(
     "choice",values=("True","False"),
     default_value="False",
     help="Hides the PWR/SWR if True"
+)
+
+register_custom_property(
+    builder_id,
+    "hide_sig_row",
+    "choice", values=("True","False"),
+    default_value="False",
+    help="Hides the S row, leaving SWR and PWR. The mirror of hide_lower_row: "
+         "the two together let one meter be split across two panels -- signal "
+         "under the receive frequency, power under the transmit one."
 )
 
 register_custom_property(
