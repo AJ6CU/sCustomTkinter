@@ -7542,6 +7542,7 @@ if __name__ == "__main__":
 * [Overview](#geometry)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [Splitting the meter](#splitting-the-meter)
 * [State](#state)
 * [Fonts and Label Placement](#fonts)
 * [Centralized Stylesheet Integration](#theming)
@@ -7563,6 +7564,7 @@ The `sCTkSMeterBar` is a standalone, low-profile horizontal discrete 30-segment 
 The discrete LED matrix map shifts automatically based on the device operational path constraints:
 *   **The S-Meter Track (Top Row):** Maps incoming telemetry values across 30 linear segments. Signals from `0.0` to `9.0` utilize the first 60% of the bar, while advanced signal ranges up to `+60dB` expand into the remaining 40% redline warning zone.
 *   **The Transmitter Track (Split Bottom Row):** Splices the lower segment path down the center into two separate monitoring zones. The left half maps a logarithmic SWR reflection track up to your custom `swr_max_value`, while the right half tracks forward RF power from `0%` to `100%`.
+*   **Either Row Can Be Hidden:** `hide_lower_row` leaves the S bar alone, `hide_sig_row` leaves SWR and PWR. Using both across two instances splits one meter between two panels — see [Splitting the meter](#splitting-the-meter).
 *   **Post-Boot Geometry Flattening:** Overrides native internal grid layout constraints programmatically to force all 30 LED rectangles to sit perfectly flush. This completely removes horizontal spacing holes, keeping your panel elements locked into a solid hardware console bar.
 
 ---
@@ -7572,7 +7574,8 @@ The discrete LED matrix map shifts automatically based on the device operational
 
 ```python
 sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True,
-              hide_lower_row=False, width=320, height=110, state="normal", **kw)
+              hide_lower_row=False, hide_sig_row=False,
+              width=320, height=110, state="normal", **kw)
 ```
 
 | Parameter Name | Data Type | Default Value | Description |
@@ -7581,7 +7584,8 @@ sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True
 | `swr_max_value` | `float` | `5.0` | The explicit maximum scale boundary representing the far right edge limit tracking your transmitter's SWR track. |
 | `swr_visible` | `bool` | `True` | Visibility flag for the SWR cluster. `False` greys its text, ticks and LEDs to `inactive_color`. Distinct from widget state — see [State](#state). |
 | `pwr_visible` | `bool` | `True` | Visibility flag for the PWR cluster. `False` greys its text, ticks and LEDs to `inactive_color`. Distinct from widget state — see [State](#state). |
-| `hide_lower_row` | `bool` | `False` | Layout override command. When `True`, the entire lower instrumentation cluster collapses and vanishes, pushing the `SIG` bar to the true vertical center of the card footprint. |
+| `hide_lower_row` | `bool` | `False` | Hides the SWR and PWR row, leaving the S bar alone and centred. |
+| `hide_sig_row` | `bool` | `False` | Hides the S row, leaving SWR and PWR. The mirror of `hide_lower_row` — see [Splitting the meter](#splitting-the-meter). |
 | `width` | `int` | `320` | Panel width in pixels. Supports Pygubu geometry-default reset queries. |
 | `height` | `int` | `110` | Panel height in pixels. Supports Pygubu geometry-default reset queries. |
 | `state` | `str` | `"normal"` | `"normal"` or `"disabled"`. See [State](#state) below. |
@@ -7601,10 +7605,11 @@ led_bar_gauge.set(s_value=9.2, swr_value=1.4, pwr_value=45.0)
 #### Live Layout Configuration Modifier
 ```python
 # Updates layout presentation properties on the fly without reconstruction overhead.
-led_bar_gauge.configure_visibility(swr_visible=False, pwr_visible=True, hide_lower_row=False)
+led_bar_gauge.configure_visibility(swr_visible=False, pwr_visible=True,
+                                   hide_lower_row=False, hide_sig_row=False)
 ```
 
-The same three flags also go through the standard `configure()` call, which is what the Designer's inspector uses:
+The same four flags also go through the standard `configure()` call, which is what the Designer's inspector uses:
 
 ```python
 led_bar_gauge.configure(swr_visible=False, hide_lower_row=True)
@@ -7612,6 +7617,30 @@ led_bar_gauge.configure(swr_visible="")      # back to the constructor default
 ```
 
 They were constructor arguments with `cget()` support but **no `configure()` branch**, so setting one in the inspector reached native `CTkFrame` and raised `['pwr_visible'] are not supported arguments`. `swr_max_value` had a branch, which is why only these three failed.
+
+---
+
+<a name="splitting" id="splitting"></a>
+### Splitting the meter
+
+`hide_lower_row` and `hide_sig_row` are mirrors of each other, and using both gives you one instrument in two places:
+
+```python
+sCTkSMeterBar(rx_panel, hide_lower_row=True, height=40)   # S only
+sCTkSMeterBar(tx_panel, hide_sig_row=True,  height=40)    # SWR and PWR only
+```
+
+This exists for a transceiver panel showing two frequencies at once — signal under the one receiving, power and SWR under the one transmitting. The alternative is two full meters with a dead half each, or one meter that has to sit somewhere between the two readouts and belong to neither.
+
+**Set the height down when you use one row.** The default 110 is sized for two, and a single row in that space looks stranded. Around 40 is right.
+
+**Whichever rows are shown are centred** in the height available, so a one-row meter sits in the middle rather than where it would have been in a two-row one.
+
+Hiding both leaves an empty meter rather than raising. That follows how the other visibility flags behave, but it is almost certainly a mistake if you find yourself doing it.
+
+Note the difference between *hiding* and *switching off*: `hide_sig_row` and `hide_lower_row` change the layout, while `swr_visible` and `pwr_visible` grey their cluster to `inactive_color` and leave it in place. Hiding is for a panel that will never show that row; switching off is for a row that has nothing to report just now.
+
+---
 
 <a name="state"></a>
 ### State
@@ -7878,6 +7907,8 @@ freq_spinbox.pack(pady=10)
 
 **A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 
+**Reading `values` back** through `configure("values")` or the Designer gives the bracketed form, whatever you typed in. That is the form the field accepts, so a value read out can be pasted straight back.
+
 **`values` accepts the library's standard list formats** — `["Porsche", "VW", "Tesla"]`, a bare comma-separated string, or a real Python list. See [List Properties](ListProperties.md).
 
 Note that **space is no longer a separator**. An earlier version used `shlex.split()` whenever the input contained no comma, which made `Meat Loaf` two values here and one value in every other widget. Quote a value if it needs to contain a comma.
@@ -7936,7 +7967,11 @@ if __name__ == "__main__":
 - **The disable/enable-cycle cursor-position fix is not independently confirmed for readonly transitions** — the underlying entry inherits this caveat from `sCTkEntryPrimary`; see that widget's docs for the full explanation.
 - **`readonly` mode's placeholder behavior follows `sCTkEntryPrimary`'s** — a readonly field showing placeholder text never clears it on focus, since native CustomTkinter deliberately never deactivates a placeholder while `state` is `"readonly"`.
 - **Fixed:** single-argument queries used to report `str()` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
+<<<<<<< Updated upstream
 - **Fixed:** building a spinbox already disabled raised `ValueError: ['state'] are not supported arguments`. The constructor called `super().configure(state="disabled")`, and this widget is a `CTkFrame` subclass with no such option. It only fired when the state came from the constructor rather than a later call — which is what a Designer preview does.
+=======
+- **Fixed:** `configure("values")` reported a space-joined string — `160m 80m "Meat Loaf" 40m` — quoting only the values containing a space. No other widget uses that shape and nothing reads it back, since space stopped being a separator when the list parsing was unified. It now reports the bracketed form the inspector's own help text recommends.
+>>>>>>> Stashed changes
 
 [Return to Table of Contents](#contents)
 
