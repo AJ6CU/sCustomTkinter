@@ -25,23 +25,119 @@
   </project>
   <object class="scustomtkinter.sCTk" id="sctk1">
     <child>
-      <object class="scustomtkinter.sCTkNotebook" id="sctknotebook1">
+      <object class="scustomtkinter.sCTkNotebook" id="sctknotebook2">
         <layout manager="pack">
           <property name="side">top</property>
         </layout>
         <child>
-          <object class="scustomtkinter.sCTkNotebook.Tab" id="tab1">
-            <property name="label" translatable="yes">tab1</property>
+          <object class="scustomtkinter.sCTkNotebookTab" id="sctknotebooktab1">
+            <property name="label" translatable="yes">sue</property>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary1">
+                <property name="text" translatable="yes">sctkbuttonsecondary1</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary2">
+                <property name="text" translatable="yes">sctkbuttonsecondary2</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary3">
+                <property name="text" translatable="yes">sctkbuttonsecondary3</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary4">
+                <property name="text" translatable="yes">sctkbuttonsecondary4</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary5">
+                <property name="text" translatable="yes">sctkbuttonsecondary5</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary6">
+                <property name="text" translatable="yes">sctkbuttonsecondary6</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary7">
+                <property name="text" translatable="yes">sctkbuttonsecondary7</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary8">
+                <property name="text" translatable="yes">sctkbuttonsecondary8</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary9">
+                <property name="text" translatable="yes">sctkbuttonsecondary9</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary10">
+                <property name="text" translatable="yes">sctkbuttonsecondary10</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary11">
+                <property name="text" translatable="yes">sctkbuttonsecondary11</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
+            <child>
+              <object class="scustomtkinter.sCTkButtonSecondary" id="sctkbuttonsecondary12">
+                <property name="text" translatable="yes">sctkbuttonsecondary12</property>
+                <layout manager="pack">
+                  <property name="side">top</property>
+                </layout>
+              </object>
+            </child>
           </object>
         </child>
         <child>
-          <object class="scustomtkinter.sCTkNotebook.Tab" id="tab2">
+          <object class="scustomtkinter.sCTkNotebookTab" id="sctknotebooktab2">
             <property name="label" translatable="yes">joe</property>
             <child>
               <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary1">
                 <property name="text" translatable="yes">sctkbuttonprimary1</property>
                 <layout manager="pack">
-                  <property name="side">top</property>
+                  <property name="side">left</property>
                 </layout>
               </object>
             </child>
@@ -49,7 +145,7 @@
               <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary2">
                 <property name="text" translatable="yes">sctkbuttonprimary2</property>
                 <layout manager="pack">
-                  <property name="side">top</property>
+                  <property name="side">left</property>
                 </layout>
               </object>
             </child>
@@ -57,23 +153,7 @@
               <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary3">
                 <property name="text" translatable="yes">sctkbuttonprimary3</property>
                 <layout manager="pack">
-                  <property name="side">top</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary4">
-                <property name="text" translatable="yes">sctkbuttonprimary4</property>
-                <layout manager="pack">
-                  <property name="side">top</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary5">
-                <property name="text" translatable="yes">sctkbuttonprimary5</property>
-                <layout manager="pack">
-                  <property name="side">top</property>
+                  <property name="side">left</property>
                 </layout>
               </object>
             </child>
@@ -81,59 +161,19 @@
               <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary6">
                 <property name="text" translatable="yes">sctkbuttonprimary6</property>
                 <layout manager="pack">
-                  <property name="side">top</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary7">
-                <property name="text" translatable="yes">sctkbuttonprimary7</property>
-                <layout manager="pack">
-                  <property name="side">top</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary8">
-                <property name="text" translatable="yes">sctkbuttonprimary8</property>
-                <layout manager="pack">
-                  <property name="side">top</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary9">
-                <property name="text" translatable="yes">sctkbuttonprimary9</property>
-                <layout manager="pack">
-                  <property name="side">top</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary10">
-                <property name="text" translatable="yes">sctkbuttonprimary10</property>
-                <layout manager="pack">
-                  <property name="side">top</property>
-                </layout>
-              </object>
-            </child>
-            <child>
-              <object class="scustomtkinter.sCTkButtonPrimary" id="sctkbuttonprimary11">
-                <property name="text" translatable="yes">sctkbuttonprimary11</property>
-                <layout manager="pack">
-                  <property name="side">top</property>
+                  <property name="side">left</property>
                 </layout>
               </object>
             </child>
           </object>
         </child>
         <child>
-          <object class="scustomtkinter.sCTkNotebook.Tab" id="tab3">
-            <property name="label" translatable="yes">tab3</property>
+          <object class="scustomtkinter.sCTkNotebookTab" id="sctknotebooktab3">
+            <property name="label" translatable="yes">one</property>
           </object>
         </child>
         <child>
-          <object class="scustomtkinter.sCTkNotebook.Tab" id="tab4">
+          <object class="scustomtkinter.sCTkNotebookTab" id="sctknotebooktab4">
             <property name="label" translatable="yes">mark</property>
           </object>
         </child>
