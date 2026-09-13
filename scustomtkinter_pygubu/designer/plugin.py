@@ -1571,7 +1571,7 @@ class sCTkDesignerPlugin(IDesignerPlugin):
                        # sCTkNotebook's pages work the same way: stacked in
                        # one cell with only the selected one raised, so the
                        # tree and the canvas disagree without this.
-                       "scustomtkinter.sCTkNotebook.Tab")
+                       "scustomtkinter.sCTkNotebookTab")
 
         tabs = []
         for class_name in tab_classes:

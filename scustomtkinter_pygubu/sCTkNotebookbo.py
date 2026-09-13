@@ -294,9 +294,19 @@ class sCTkNotebookTabBO(BuilderObject):
         return tuple()
 
 
-tab_builder_id = f"{builder_id}.Tab"
-register_widget(tab_builder_id, sCTkNotebookTabBO, "sCTkNotebook.Tab",
-                ("ttk", section_name))
+# ONE dot in the id, not two.
+#
+# pygubu splits a classname on "." to work out which module to import, so
+# "scustomtkinter.sCTkNotebook.Tab" made that split return a list and the
+# generated code failed on load:
+#
+#     AttributeError: 'list' object has no attribute 'startswith'
+#
+# The DISPLAY name still reads "sCTkNotebook.Tab" -- that is what appears in
+# the palette. sCTkTabviewbo uses exactly this pairing.
+tab_builder_id = f"{builder_namespace}.sCTkNotebookTab"
+register_widget(tab_builder_id, sCTkNotebookTabBO,
+                f"{widget_classname}.Tab", ("ttk", section_name))
 
 # A tab has nowhere else to live, so it is offered only inside a notebook.
 sCTkNotebookTabBO.allowed_parents = (builder_id,)
