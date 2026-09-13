@@ -585,10 +585,15 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                 #
                 # The wheel bindings below still work; only the finer trackpad
                 # events are lost. ScrollBindingMixin guards the same bind.
+                # Exception, not tk.TclError: this module does not import
+                # tkinter, so naming the specific class raised NameError from
+                # inside the handler -- which aborted the whole injection and
+                # took the <MouseWheel> bindings below with it. The dial then
+                # responded to clicks and not to the wheel.
                 try:
                     target_layer.bind("<TouchpadScroll>",
                                       self._process_mac_touchpad_scroll, add="+")
-                except tk.TclError:
+                except Exception:
                     pass
             target_layer.bind("<MouseWheel>", self._process_scroll_wheel, add="+")
             target_layer.bind("<Button-4>", self._process_scroll_wheel, add="+")
