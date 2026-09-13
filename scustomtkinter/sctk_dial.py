@@ -578,7 +578,18 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             layers_to_bind.append(self._canvas)
         for target_layer in layers_to_bind:
             if sys.platform == "darwin":
-                target_layer.bind("<TouchpadScroll>", self._process_mac_touchpad_scroll, add="+")
+                # GUARDED: <TouchpadScroll> arrived in Tk 8.7, so a macOS on an
+                # older Tk raises here and the dial cannot be built at all:
+                #
+                #     TclError: bad event type or keysym "TouchpadScroll"
+                #
+                # The wheel bindings below still work; only the finer trackpad
+                # events are lost. ScrollBindingMixin guards the same bind.
+                try:
+                    target_layer.bind("<TouchpadScroll>",
+                                      self._process_mac_touchpad_scroll, add="+")
+                except tk.TclError:
+                    pass
             target_layer.bind("<MouseWheel>", self._process_scroll_wheel, add="+")
             target_layer.bind("<Button-4>", self._process_scroll_wheel, add="+")
             target_layer.bind("<Button-5>", self._process_scroll_wheel, add="+")

@@ -196,8 +196,22 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # only the wheel means a real mouse scrolls the strip and a trackpad
         # does nothing at all. Same split ScrollBindingMixin handles for the
         # scrolling containers.
+        # GUARDED: <TouchpadScroll> does not exist on every Tk build.
+        #
+        # It arrived in Tk 8.7, so a macOS running an older Tk raises here and
+        # the widget cannot be constructed at all:
+        #
+        #     TclError: bad event type or keysym "TouchpadScroll"
+        #
+        # The wheel bindings above still work there; only the finer trackpad
+        # events are lost, which is a degradation rather than a failure.
+        # ScrollBindingMixin has guarded this all along, which is why the
+        # scrolling containers never showed the fault.
         if sys.platform == "darwin":
-            self.canvas.bind("<TouchpadScroll>", self._on_touchpad)
+            try:
+                self.canvas.bind("<TouchpadScroll>", self._on_touchpad)
+            except tk.TclError:
+                pass
 
         # Laid out ONCE at construction, not only when a tab is added.
         #
