@@ -391,6 +391,42 @@ properties = CTkFrameBO.properties + OPTIONS_CUSTOM
 
 and add the builder id to the matching copy loop in `designer/properties.py`.
 
+### A new widget needs registering in FOUR places
+
+Three of them fail loudly. The fourth does not, which is why it is the one that gets forgotten.
+
+| File | What it does | How it fails |
+| :--- | :--- | :--- |
+| `scustomtkinter/__init__.py` | Exports the class | ImportError, immediately |
+| `scustomtkinter_pygubu/<Widget>bo.py` | Builder object and properties | Absent from the palette |
+| `scustomtkinter_pygubu/designer/plugin.py` | Preview class and Designer hooks | Odd behaviour while designing |
+| `scustomtkinter_pygubu/sCTkWidgetSetForPygubuDesigner.py` | **Runtime** registration | Designer fine, generated code crashes |
+
+The last one is a plain list of imports, and it is what registers the builder objects when an **application** loads a `.ui` file. The Designer never uses it — it imports the builder objects directly through `plugin.py` — so a widget missing from that list works perfectly throughout design and fails the moment the generated code runs:
+
+```
+AttributeError: 'list' object has no attribute 'startswith'
+```
+
+raised from `importlib`, several frames deep, naming nothing useful.
+
+**Where that message comes from.** Pygubu falls back to `get_module_for()` for a class it has no registration for, and hands the result to `importlib`, which calls `name.startswith(".")`. That method must return a **string**; `get_all_modules()` beside it returns a **list**, and the two had been confused. Every widget was registered by the imports at the top of the file, so the fallback never ran and the mistake sat there unnoticed until the first widget missing from the list reached it.
+
+`sCTkNotebook`, `sCTkDialog` and `sCTkFileExplorer` were all in that state at once. The latter two were commented out with reasons that had stopped being true — one said "missing bo file" about a file that exists.
+
+**Check the two lists agree** after adding anything:
+
+```bash
+grep -o "scustomtkinter_pygubu\.sCTk[A-Za-z]*bo" scustomtkinter_pygubu/designer/plugin.py |
+    sed 's/.*\.//' | sort -u > /tmp/designer.txt
+grep -o "^import scustomtkinter_pygubu\.sCTk[A-Za-z]*bo" \
+    scustomtkinter_pygubu/sCTkWidgetSetForPygubuDesigner.py |
+    sed 's/.*\.//' | sort -u > /tmp/runtime.txt
+comm -23 /tmp/designer.txt /tmp/runtime.txt
+```
+
+Anything printed works in the Designer and breaks when run.
+
 ### Registration order matters
 
 `copy_custom_property()` **overwrites** whatever definition is already registered for that name. So a deliberate override in a builder-object module is silently undone if a copy loop runs afterwards.

@@ -20,6 +20,13 @@ Where a page explains why something works the way it does, or records a limitati
 # Contents
 
 * [Theming](#theming)
+  * [Where the file lives](#where-the-file-lives)
+  * [Block structure](#block-structure)
+  * [State maps](#state-maps)
+  * [Light and dark](#light-and-dark)
+  * [Changing values at runtime](#changing-values-at-runtime)
+  * [Things that will break your theme](#things-that-will-break-your-theme)
+  * [Adding a theme block for your own widget](#adding-a-theme-block-for-your-own-widget)
 * [Scrolling](#scrolling)
 * [List Properties](#list-properties)
 * [Designer Hints](#designer-hints)
@@ -61,6 +68,7 @@ Where a page explains why something works the way it does, or records a limitati
   * [sCTkFrameLabeledPrimary](#sctkframelabeledprimary)
   * [sCTkFrameLabeledSecondary](#sctkframelabeledsecondary)
   * [sCTkMessagebox](#sctkmessagebox)
+  * [sCTkNotebook](#sctknotebook)
   * [sCTkPathChooser](#sctkpathchooser)
   * [sCTkScrollArea](#sctkscrollarea)
   * [ScrollBindingMixin](#scrollbindingmixin)
@@ -88,7 +96,7 @@ Every colour, font, and several structural values in this library come from a si
 ---
 
 <a name="where-the-file-lives"></a>
-### Where the file lives
+## Where the file lives
 
 Two locations are checked, in this order:
 
@@ -108,7 +116,7 @@ The file is read once, at import time. Changes require a restart.
 ---
 
 <a name="block-structure"></a>
-### Block structure
+## Block structure
 
 One block per widget class, keyed by the exact class name:
 
@@ -138,14 +146,14 @@ You mostly don't need to know which is which. It matters in one place: see [addi
 ---
 
 <a name="state-maps"></a>
-### State maps
+## State maps
 
 Nested inside a block, a state map overrides specific keys when the widget is in that state. Anything not listed keeps its normal value.
 
 | Map | Applies when |
 |---|---|
 | `disabled_map` | The widget is disabled via `state("disabled")` or `configure(state="disabled")`. |
-| `pressed_map` | A button is being held down. |
+| `pressed_map` | A button is being held down, **or** a latching dial is armed. Two different meanings in two different widget families: momentary for the buttons, latched for the dials. |
 | `alarm_map` | A widget is in an alert condition. |
 | `readonly_map` | An entry or spinbox is readonly — arrows still work, typing is blocked. |
 
@@ -158,7 +166,7 @@ Some keys exist *only* inside a state map, because they have no normal-state equ
 ---
 
 <a name="light-and-dark"></a>
-### Light and dark
+## Light and dark
 
 Colours are written as a two-element list: **`[light_mode, dark_mode]`**.
 
@@ -172,7 +180,7 @@ A single string is also accepted, and means the same colour in both modes. The l
 
 Fonts are `[family, size]` or `[family, size, weight]`.
 
-#### One place the theme does not reach
+### One place the theme does not reach
 
 **Dropdown menus ignore both your appearance mode and your colours**, on `sCTkComboBox`, `sCTkOptionMenuPrimary` and `sCTkOptionMenuSecondary`.
 
@@ -195,7 +203,7 @@ If your application sets an appearance mode explicitly rather than following the
 ---
 
 <a name="changing-values-at-runtime"></a>
-### Changing values at runtime
+## Changing values at runtime
 
 `configure()` accepts theme keys directly, and the override **sticks**:
 
@@ -224,11 +232,11 @@ frame.configure(fg_color=("#FFFFFF", "#111827"))
 ---
 
 <a name="things-that-will-break-your-theme"></a>
-### Things that will break your theme
+## Things that will break your theme
 
 This section is the important one. JSON is unforgiving and the failure modes are not always obvious.
 
-#### Syntax errors take out the entire file
+### Syntax errors take out the entire file
 
 A missing comma, a stray trailing comma before a `}`, an unclosed brace, or a smart quote pasted in from a document — any one of these makes the whole file unparseable. The library catches the error, prints a warning, and **continues with an empty theme registry**. Every widget then fails to construct.
 
@@ -246,7 +254,7 @@ python -m json.tool sCTkThemes.json > /dev/null
 
 Silence means it parsed. Any editor with JSON support will also flag these as you type — worth using one.
 
-#### Deleting a key is not the same as leaving it at default
+### Deleting a key is not the same as leaving it at default
 
 There is no "default" to fall back to. Widgets validate their required keys at construction and raise immediately:
 
@@ -258,7 +266,7 @@ That message names the exact key and whether it belongs at the top level or in a
 
 If you genuinely don't want a widget's block, don't delete it — you'll break that widget. Change its values instead.
 
-#### Misspelling a key is worse than deleting it
+### Misspelling a key is worse than deleting it
 
 A misspelled key is not an error. It's an unrecognised key that gets ignored, while the *correct* key is now missing:
 
@@ -270,7 +278,7 @@ That produces a `KeyError` about `text_color` being missing — which is confusi
 
 A misspelling inside a state map is quieter still: state maps aren't validated as strictly, so a typo there usually means "that property just doesn't change when disabled," with no error at all.
 
-#### A widget with no block at all is themed by CustomTkinter
+### A widget with no block at all is themed by CustomTkinter
 
 Not a crash, and easy to miss. A widget whose block is absent gets no values from this file, so it renders in CustomTkinter's own defaults and its state maps are empty — meaning it never dims when disabled.
 
@@ -292,20 +300,20 @@ Compare that list against the widget pages. Six absences are correct: `sCTk` its
 
 ---
 
-#### Renaming a block orphans it
+### Renaming a block orphans it
 
 Rename `sCTkSlider` to `sCTkSliders` and the block becomes dead data while every slider fails to construct. Block names must match class names exactly.
 
 The reverse also happens: a block for a widget that no longer exists, or was renamed, sits in the file doing nothing. Harmless, but it accumulates.
 
-#### Adding a key that isn't read does nothing
+### Adding a key that isn't read does nothing
 
 Adding `"hover_glow_color"` to a block will not make anything glow. Widgets read a fixed set of keys; extra ones are ignored silently. If you want a new visual property, the widget's drawing code has to read it.
 
 ---
 
 <a name="adding-a-theme-block-for-your-own-widget"></a>
-### Adding a theme block for your own widget
+## Adding a theme block for your own widget
 
 If you subclass `ThemeableWidget`, your block is found automatically by class name. Three things to know:
 
@@ -4203,6 +4211,7 @@ Note the spelling: the class is `sCTKDialBase` with a capital K. It is never ins
 * [Knob rendering](#knob-rendering)
 * [Theme contract](#theme-contract)
 * [Reading theme colours](#reading-theme-colours)
+* [Latching](#latching)
 * [Shared API](#shared-api)
 * [Redraw model](#redraw-model)
 * [Known limitations](#known-limitations)
@@ -4279,12 +4288,84 @@ The registry is reached as a **module attribute**, not a direct name import, bec
 
 ---
 
+<a name="latching"></a>
+### Latching: arming a dial before it responds
+
+**Opt-in, and off by default.** A dial built without `latching` behaves as it always has: always live, `pressed_map` ignored and not required in its theme block.
+
+With `latching=True` the dial starts switched off. Clicks, drags and the wheel are ignored — the bindings are simply not installed — and it draws the resting colours from the top level of its theme block. Arming it swaps to `pressed_map` and restores the input.
+
+```python
+def arm(dial):
+    dial.set_pressed(True)
+
+def disarm(dial):
+    dial.set_pressed(False)
+
+mode_switch = sCTkDialSelector(
+    panel,
+    labels=["AM", "FM", "LSB", "USB", "CW"],
+    latching=True,
+    double_click_command=arm,
+    shift_double_click_command=disarm,
+)
+```
+
+This exists for controls where an accidental brush of the wheel does real damage — changing band or sideband, slamming the volume. It is not the right default for a plain volume knob: an inert rotary control with nothing on screen to explain itself is a discoverability problem, which is why opting in is deliberate.
+
+#### The two callbacks
+
+Both are plain callbacks. **The widget wires neither of them to the latch** — toggling on a double-click is one use and a natural one, but the decision belongs to the application. Each is called with the dial itself, so one handler can serve several dials without a closure over any name.
+
+| Property | Gesture | Bound when |
+| :--- | :--- | :--- |
+| `double_click_command` | `<Double-Button-1>` | Enabled, **and** not an armed latching dial |
+| `shift_double_click_command` | `<Shift-Double-Button-1>` | Enabled |
+
+#### Why arming and disarming use different gestures
+
+Every mouse button steps a dial, so a plain double-click competes with ordinary clicking to turn the knob. Tk gives `<Double-Button-1>` precedence over the second `<Button-1>`, so while both are bound an accidental double-click costs a step — two clicks, one step.
+
+That only matters in one direction. While a latching dial is **off**, nothing is bound, so arming by double-click cannot collide with anything. It is disarming that is unsafe, which is why it has its own gesture.
+
+The plain double-click is therefore **not bound at all on an armed latching dial**, removing the collision rather than compensating for it. One consequence: `double_click_command` does not fire while a latching dial is armed. A non-latching dial keeps it bound throughout, since there it is a general-purpose callback with no arming role.
+
+Shift is already the drag modifier, but a shift-double-click only fires `<Shift-ButtonPress-1>` twice, which records a drag origin and nothing else — so the gesture is free.
+
+A dial you never click, driven by the wheel or from code, can ignore all of this and put `toggle_pressed()` on the plain double-click.
+
+#### Disabling clears the latch
+
+`state("disabled")` switches a latching dial **off** as well as locking it, so re-enabling leaves it inert until armed again. That is what makes a panel lock useful: unlocking gives you a screen of dials that cannot be nudged by accident, rather than one that comes back live because it was live before the lock.
+
+#### API
+
+| Member | Description |
+| :--- | :--- |
+| `latching` | Constructor argument and property. `True` opts in. Available in the Designer. |
+| `pressed` | Initial armed state. Constructor argument and property, **not** offered in the Designer — see below. |
+| `is_pressed()` | Whether the dial is currently armed. `False` on a non-latching dial. |
+| `set_pressed(value)` | Arms or disarms. A no-op returning `False` on a non-latching dial, so code that arms every dial on a panel needs no special cases. |
+| `toggle_pressed()` | Flips the state. |
+
+`pressed` is deliberately absent from the Designer. The inspector reflects the **live** widget, so double-clicking a dial on the design canvas set it `True` and pygubu wrote `pressed=True` into the generated code as a non-default — the application then started armed, the opposite of what latching is for.
+
+#### Theme
+
+`pressed_map` holds the operational colours; the top-level block holds the resting, dimmed ones. Each key falls back to the top level, so a `pressed_map` naming only the few colours that should brighten is valid.
+
+A **non-latching dial draws from `pressed_map` too**, because it is permanently on. That keeps opting out from changing how a dial looks — and a theme block with no `pressed_map` at all falls through to the top level, which in the older theme shape holds the bright values. Both shapes therefore behave correctly.
+
+`pressed_map` is required only when `latching=True`. `text_color` and `dial_color` must be present, matching `disabled_map`.
+
+---
+
 <a name="shared-api"></a>
 ### Shared API
 
 | Member | Type | Description |
 | :--- | :--- | :--- |
-| `state(mode=None)` | method | Getter with no argument; setter with `"normal"` or `"disabled"`. Unbinds clicks, wheel and trackpad input, and repaints from `disabled_map`. |
+| `state(mode=None)` | method | Getter with no argument; setter with `"normal"` or `"disabled"`. Unbinds clicks, wheel and trackpad input, and repaints from `disabled_map`. On a latching dial it also clears the latch — see [Latching](#latching). |
 | `get_state()` | method | Equivalent to `state()` with no argument. |
 | `configure(state=...)` | method | Same effect as `state()`. Both routes are supported. |
 | `configure(name)` | method | Pygubu-style single-argument query. |
@@ -4329,6 +4410,7 @@ The body is now roughly twenty shaded ovals plus ticks and labels, none of which
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Callbacks](#callbacks)
+* [Latching](sCTkDial.md#latching)
 * [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
@@ -4351,9 +4433,12 @@ An infinite flywheel tuning encoder module tracking signed velocity delta step i
 | **File Mapping** | *Inheritance Tree* | Inherits vector math mechanics and 3D knob rendering directly out of `sCTkDial.py`. |
 | `_scroll_cooldown_seconds`| `float` | Throttle limiting touchpad refresh rates to stabilize fast tuning rolls. |
 | `set_position_index(delta)`| `Method (int)` | Manually advances the 3D dimple coordinates via an integer step. |
-| `left_click_callback` | `Callable / None` | **Custom Accelerated Click Hook:** Overrides standard single-step decrements to execute accelerated jumping intervals when clicking the left canvas edge. |
-| `right_click_callback` | `Callable / None` | **Custom Accelerated Click Hook:** Overrides standard single-step increments to execute accelerated jumping intervals when clicking the right canvas edge. |
-| **State**                 | `dial.state("disabled")`<br>**OR**<br>`dial.configure(state="disabled")` | **Dual-Routing State Pipeline:** Handles both syntaxes natively. Freezes canvas mouse-wheel scrolling, disables click jump hooks, and shifts visual themes out of `disabled_map` guidelines via a strict sequential re-binding engine. |
+| `left_click_callback` | `Callable / None` | Replaces the built-in single step taken when the left half of the canvas is clicked. Use it to move by more than one position per click. |
+| `right_click_callback` | `Callable / None` | Replaces the built-in single step taken when the right half of the canvas is clicked. |
+| `state(mode)` | `str` | `"normal"` or `"disabled"`. `configure(state=...)` does the same thing. Disabling removes the click, wheel and trackpad bindings and repaints from `disabled_map`. On a latching dial it also clears the latch. |
+| `latching` | `bool` | Opt-in. The dial starts switched off and ignores input until armed — see [Latching](sCTkDial.md#latching). Default `False`. |
+| `double_click_command` | `Callable / None` | Called on a double-click, with the dial itself. Not wired to anything by the widget; typically used to arm a latching dial. |
+| `shift_double_click_command` | `Callable / None` | Called on a shift-double-click, with the dial itself. Typically used to disarm. |
 
 ---
 
@@ -4411,14 +4496,26 @@ There is no separate tick colour. If you want ticks and labels to differ, that n
 {
     "sCTkDialContinuous": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "shadow_color": ["#CBD5E1", "#02040A"],
-        "dial_color": ["#9E9E9E", "#2A2F3D"],
-        "dial_highlight_color": ["#E4E8EC", "#42454B"],
-        "dial_shadow_color": ["#5C6165", "#050507"],
-        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
-        "dial_rim_shadow_color": ["#3E4245", "#000000"],
-        "pointer_glow_color": ["#CBD5E1", "#3A455C"],
+        "text_color": ["#7B93B0", "#915404"],
+        "shadow_color": ["#DCE3EC", "#06070A"],
+        "dial_color": ["#C3C5C7", "#1C1E26"],
+        "dial_highlight_color": ["#EAEEF2", "#292A2E"],
+        "dial_shadow_color": ["#9FA4A8", "#070708"],
+        "dial_rim_light_color": ["#F9FAFC", "#53565A"],
+        "dial_rim_shadow_color": ["#8F9396", "#040404"],
+        "pointer_glow_color": ["#DCE3EC", "#242A37"],
+
+        "pressed_map": {
+            "text_color": ["#1A4375", "#FF9100"],
+            "shadow_color": ["#CBD5E1", "#02040A"],
+            "dial_color": ["#9E9E9E", "#2A2F3D"],
+            "dial_highlight_color": ["#E4E8EC", "#42454B"],
+            "dial_shadow_color": ["#5C6165", "#050507"],
+            "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+            "dial_rim_shadow_color": ["#3E4245", "#000000"],
+            "pointer_glow_color": ["#CBD5E1", "#3A455C"]
+        },
+
         "disabled_map": {
             "text_color": ["#94A3B8", "#4B5563"],
             "dial_color": ["#E2E8F0", "#1A1D24"],
@@ -4428,7 +4525,10 @@ There is no separate tick colour. If you want ticks and labels to differ, that n
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing.
+Every key above is required — construction raises `KeyError` naming any that are missing. `pressed_map` is the exception: it is read only when the dial is built with `latching=True`.
+
+**A dial can be made to require arming before it responds.** Opt in with `latching=True` and wire the double-click callbacks; the dial then starts switched off, ignores input, and draws the resting colours until armed. The `pressed_map` above holds the operational set. See [Latching](sCTkDial.md#latching) on the base class page for the whole mechanism, including why arming and disarming use different gestures.
+
 **A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
  See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
@@ -4446,9 +4546,9 @@ The dark-mode values above give a black anodised knob. For a brushed-aluminium l
 * **Knob rendering:** the body is a shaded dome and the indicator is a recessed finger dimple, sized at 36% of the knob radius with 6% rim clearance — a VFO operator puts a finger in it to spin the dial quickly. Both scale with the knob. See [the base class page](sCTkDial.md#knob-rendering).
 * **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
 * **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
-* **Latching Override Independence:** Infinite flywheel dimples loop continuously around the chassis ring, ignoring arc boundary restrictions.
-* **Custom Accelerated Steps:** Attaching optional click callbacks allows click events to jump values by wider intervals (e.g., jumping 2 full indices per tap via `set_position_index(2)`) rather than dropping onto the baseline single-step tracking paths.
-* **Automated Lifecycle Handshake:** Triggers `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
+* **No end stops.** The dimple travels continuously around the knob. There is no `arc_angle`, no first or last position, and scrolling never reaches a boundary — this variant reports a signed step delta rather than a position, so there is nothing to clamp.
+* **Click callbacks replace the single step,** rather than adding to it. `set_position_index(2)` inside one moves two positions per click instead of the built-in one.
+* **`_finalize_themeable_lifecycle()` fires at the end of the constructor,** which is what tells a Pygubu-style consumer the widget is ready. Every widget in the library does this; a missing call means an `on_first_object_cb` callback silently never runs.
 
 ---
 
@@ -4491,14 +4591,14 @@ def on_vfo_dial_rotated(clicks_delta):
 
 
 def my_custom_left_click():
-    """Accelerated Jump: Moves 2 complete indexing steps left per click tap."""
+    """Moves two positions left per click, instead of the built-in one."""
     if tuning_dial.cget("state") == "disabled":
         return
     tuning_dial.set_position_index(-2)  # Jump 2 steps left natively
 
 
 def my_custom_right_click():
-    """Accelerated Jump: Moves 2 complete indexing steps right per click tap."""
+    """Moves two positions right per click, instead of the built-in one."""
     if tuning_dial.cget("state") == "disabled":
         return
     tuning_dial.set_position_index(2)  # Jump 2 steps right natively
@@ -4560,6 +4660,7 @@ if __name__ == "__main__":
 * [Constructor](#constructor)
 * [Sizing and Label Placement](#sizing)
 * [Callbacks](#callbacks)
+* [Latching](sCTkDial.md#latching)
 * [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
@@ -4585,9 +4686,12 @@ A concrete rotary encoder range variant designed for hard-bounded linear control
 | `divisions` | `int` | Quantized subdivision tick line count painted geometrically across the arc limit sweep. |
 | `_scroll_cooldown_seconds`| `float` | Throttle limiting touchpad refresh rates to stabilize fast range adjustments. |
 | `get()` / `set(val)` | `Methods -> int` | Unified index query mechanisms to get or force selected integer values. |
-| `left_click_callback` | `Callable / None` | **Custom Accelerated Click Hook:** Overrides standard single-step decrements to execute accelerated jumping intervals when clicking the left canvas edge. |
-| `right_click_callback` | `Callable / None` | **Custom Accelerated Click Hook:** Overrides standard single-step increments to execute accelerated jumping intervals when clicking the right canvas edge. |
-| **State**                 | `dial.state("disabled")`<br>**OR**<br>`dial.configure(state="disabled")` | **Dual-Routing State Pipeline:** Handles both syntaxes natively. Freezes canvas mouse-wheel scrolling, disables click jump hooks, and shifts visual themes out of `disabled_map` guidelines via a strict sequential re-binding engine. |
+| `left_click_callback` | `Callable / None` | Replaces the built-in single step taken when the left half of the canvas is clicked. Use it to move by more than one position per click. |
+| `right_click_callback` | `Callable / None` | Replaces the built-in single step taken when the right half of the canvas is clicked. |
+| `state(mode)` | `str` | `"normal"` or `"disabled"`. `configure(state=...)` does the same thing. Disabling removes the click, wheel and trackpad bindings and repaints from `disabled_map`. On a latching dial it also clears the latch. |
+| `latching` | `bool` | Opt-in. The dial starts switched off and ignores input until armed — see [Latching](sCTkDial.md#latching). Default `False`. |
+| `double_click_command` | `Callable / None` | Called on a double-click, with the dial itself. Not wired to anything by the widget; typically used to arm a latching dial. |
+| `shift_double_click_command` | `Callable / None` | Called on a shift-double-click, with the dial itself. Typically used to disarm. |
 
 ---
 
@@ -4679,15 +4783,27 @@ There is no separate tick colour. If you want ticks and labels to differ, that n
 {
     "sCTkDialRange": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "label_font": ["Arial", 9, "bold"],
-        "shadow_color": ["#CBD5E1", "#02040A"],
-        "dial_color": ["#9E9E9E", "#2A2F3D"],
-        "dial_highlight_color": ["#E4E8EC", "#42454B"],
-        "dial_shadow_color": ["#5C6165", "#050507"],
-        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
-        "dial_rim_shadow_color": ["#3E4245", "#000000"],
-        "pointer_color": ["#1A4375", "#FF9100"],
+        "text_color": ["#7B93B0", "#915404"],
+        "shadow_color": ["#DCE3EC", "#06070A"],
+        "label_font": ["Arial", "9"],
+        "dial_color": ["#C3C5C7", "#1C1E26"],
+        "dial_highlight_color": ["#EAEEF2", "#292A2E"],
+        "dial_shadow_color": ["#9FA4A8", "#070708"],
+        "dial_rim_light_color": ["#F9FAFC", "#53565A"],
+        "dial_rim_shadow_color": ["#8F9396", "#040404"],
+        "pointer_color": ["#7B93B0", "#915404"],
+
+        "pressed_map": {
+            "text_color": ["#1A4375", "#FF9100"],
+            "shadow_color": ["#CBD5E1", "#02040A"],
+            "dial_color": ["#9E9E9E", "#2A2F3D"],
+            "dial_highlight_color": ["#E4E8EC", "#42454B"],
+            "dial_shadow_color": ["#5C6165", "#050507"],
+            "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+            "dial_rim_shadow_color": ["#3E4245", "#000000"],
+            "pointer_color": ["#1A4375", "#FF9100"]
+        },
+
         "disabled_map": {
             "text_color": ["#94A3B8", "#4B5563"],
             "dial_color": ["#E2E8F0", "#1A1D24"]
@@ -4696,7 +4812,10 @@ There is no separate tick colour. If you want ticks and labels to differ, that n
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing.
+Every key above is required — construction raises `KeyError` naming any that are missing. `pressed_map` is the exception: it is read only when the dial is built with `latching=True`.
+
+**A dial can be made to require arming before it responds.** Opt in with `latching=True` and wire the double-click callbacks; the dial then starts switched off, ignores input, and draws the resting colours until armed. The `pressed_map` above holds the operational set. See [Latching](sCTkDial.md#latching) on the base class page for the whole mechanism, including why arming and disarming use different gestures.
+
 **A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
  See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
@@ -4706,9 +4825,9 @@ Every key above is required — construction raises `KeyError` naming any that a
 * **Knob rendering:** the body is a shaded dome, marked with a plain straight line from dead centre out to just short of the rim. An earlier version drew an arrowhead and a raised centre cap; both are gone, along with the cap's two hardcoded outline colours. See [the base class page](sCTkDial.md#knob-rendering).
 * **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
 * **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
-* **Bypassing the BaseUI Middleman:** This component inherits cleanly and directly from native CustomTkinter classes and `ThemeableWidget`, completely bypassing the intermediate template layout files entirely to avoid argument deadlocks.
-* **Automated Lifecycle Handshake:** At the absolute bottom of the initialization track, the constructor triggers `self._finalize_themeable_lifecycle()` to safely notify top-level Pygubu container managers that the widget is compiled.
-* **Absolute Threshold Dead Stops:** Unlike continuous or selector models, scrolling past upper or lower boundaries clips inputs securely using `max(self._from, min(self._to, value))`, blocking accidental overflow.
+* **Inherits `ctk.CTkFrame` and `ThemeableWidget` directly,** with no intermediate template class in between. That ordering matters: the native class comes first, so every `super()` call in the dial's own methods resolves to CustomTkinter rather than to the mixin.
+* **`_finalize_themeable_lifecycle()` fires at the end of the constructor,** which is what tells a Pygubu-style consumer the widget is ready. Every widget in the library does this; a missing call means an `on_first_object_cb` callback silently never runs.
+* **Hard end stops.** Scrolling past `from_` or `to` clamps rather than wrapping, unlike the Selector, which wraps around to the first position. A range dial that jumped from maximum to minimum on one extra click would be a hazard on a volume control.
 
 ---
 
@@ -4741,13 +4860,13 @@ if __name__ == "__main__":
 
 
     def my_custom_left_click():
-        """Accelerated Jump: Drops 3 units per click tap."""
+        """Drops three units per click, instead of the built-in one."""
         if volume_pot.get_state() == "disabled": return
         volume_pot.set(volume_pot.get() - 3)
 
 
     def my_custom_right_click():
-        """Accelerated Jump: Jumps 3 units per click tap."""
+        """Adds three units per click, instead of the built-in one."""
         if volume_pot.get_state() == "disabled": return
         volume_pot.set(volume_pot.get() + 3)
 
@@ -4803,6 +4922,7 @@ if __name__ == "__main__":
 * [Constructor](#constructor)
 * [Sizing and Label Placement](#sizing)
 * [Callbacks](#callbacks)
+* [Latching](sCTkDial.md#latching)
 * [Colours you can set per instance](#colours-you-can-set-per-instance)
 * [Centralized Stylesheet Setup](#theming-sctkthemesjson)
 * [Other Notes](#known-limitations)
@@ -4827,9 +4947,12 @@ A concrete rotary encoder switch variant designed for stepped selector controls 
 | `arc_angle`               | `float` | Angular geometric limit (default 270) restricting the pointer range sweep layout. |
 | `_scroll_cooldown_seconds`| `float` | Throttle limiting touchpad refresh rates to stabilize fast selector rolls. |
 | `get()` / `set(idx)`      | `Methods -> int` | Unified index query mechanisms to get or force selected positions. |
-| `left_click_callback`     | `Callable / None` | **Custom Accelerated Click Hook:** Overrides standard single-step decrements to execute accelerated jumping intervals when clicking the left canvas edge. |
-| `right_click_callback`    | `Callable / None` | **Custom Accelerated Click Hook:** Overrides standard single-step increments to execute accelerated jumping intervals when clicking the right canvas edge. |
-| **State**                 | `dial.state("disabled")`<br>**OR**<br>`dial.configure(state="disabled")` | **Dual-Routing State Pipeline:** Handles both syntaxes natively. Freezes canvas mouse-wheel scrolling, disables click jump hooks, and shifts visual themes out of `disabled_map` guidelines via a strict sequential re-binding engine. |
+| `left_click_callback` | `Callable / None` | Replaces the built-in single step taken when the left half of the canvas is clicked. Use it to move by more than one position per click. |
+| `right_click_callback` | `Callable / None` | Replaces the built-in single step taken when the right half of the canvas is clicked. |
+| `state(mode)` | `str` | `"normal"` or `"disabled"`. `configure(state=...)` does the same thing. Disabling removes the click, wheel and trackpad bindings and repaints from `disabled_map`. On a latching dial it also clears the latch. |
+| `latching` | `bool` | Opt-in. The dial starts switched off and ignores input until armed — see [Latching](sCTkDial.md#latching). Default `False`. |
+| `double_click_command` | `Callable / None` | Called on a double-click, with the dial itself. Not wired to anything by the widget; typically used to arm a latching dial. |
+| `shift_double_click_command` | `Callable / None` | Called on a shift-double-click, with the dial itself. Typically used to disarm. |
 
 ---
 
@@ -4919,15 +5042,27 @@ There is no separate tick colour. If you want ticks and labels to differ, that n
 {
     "sCTkDialSelector": {
         "fg_color": ["#F1F5F9", "#0A0A0A"],
-        "text_color": ["#1A4375", "#FF9100"],
-        "label_font": ["Arial", 9, "bold"],
-        "shadow_color": ["#CBD5E1", "#02040A"],
-        "dial_color": ["#9E9E9E", "#2A2F3D"],
-        "dial_highlight_color": ["#E4E8EC", "#42454B"],
-        "dial_shadow_color": ["#5C6165", "#050507"],
-        "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
-        "dial_rim_shadow_color": ["#3E4245", "#000000"],
-        "pointer_color": ["#1A4375", "#FF9100"],
+        "text_color": ["#7B93B0", "#915404"],
+        "shadow_color": ["#DCE3EC", "#06070A"],
+        "label_font": ["Arial", "9"],
+        "dial_color": ["#C3C5C7", "#1C1E26"],
+        "dial_highlight_color": ["#EAEEF2", "#292A2E"],
+        "dial_shadow_color": ["#9FA4A8", "#070708"],
+        "dial_rim_light_color": ["#F9FAFC", "#53565A"],
+        "dial_rim_shadow_color": ["#8F9396", "#040404"],
+        "pointer_color": ["#7B93B0", "#915404"],
+
+        "pressed_map": {
+            "text_color": ["#1A4375", "#FF9100"],
+            "shadow_color": ["#CBD5E1", "#02040A"],
+            "dial_color": ["#9E9E9E", "#2A2F3D"],
+            "dial_highlight_color": ["#E4E8EC", "#42454B"],
+            "dial_shadow_color": ["#5C6165", "#050507"],
+            "dial_rim_light_color": ["#FFFFFF", "#8E949C"],
+            "dial_rim_shadow_color": ["#3E4245", "#000000"],
+            "pointer_color": ["#1A4375", "#FF9100"]
+        },
+
         "disabled_map": {
             "text_color": ["#94A3B8", "#4B5563"],
             "dial_color": ["#E2E8F0", "#1A1D24"]
@@ -4936,7 +5071,10 @@ There is no separate tick colour. If you want ticks and labels to differ, that n
 }
 ```
 
-Every key above is required — construction raises `KeyError` naming any that are missing.
+Every key above is required — construction raises `KeyError` naming any that are missing. `pressed_map` is the exception: it is read only when the dial is built with `latching=True`.
+
+**A dial can be made to require arming before it responds.** Opt in with `latching=True` and wire the double-click callbacks; the dial then starts switched off, ignores input, and draws the resting colours until armed. The `pressed_map` above holds the operational set. See [Latching](sCTkDial.md#latching) on the base class page for the whole mechanism, including why arming and disarming use different gestures.
+
 **A colour set at runtime survives a state change.** Disable the widget and enable it again and your value is still there; clearing the property returns it to the theme's, not to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
  See [the base class page](sCTkDial.md#theme-contract) for the shared contract.
 
@@ -4946,9 +5084,9 @@ Every key above is required — construction raises `KeyError` naming any that a
 * **Knob rendering:** the body is a shaded dome, marked with a plain straight line from dead centre out to just short of the rim. An earlier version drew an arrowhead and a raised centre cap; both are gone, along with the cap's two hardcoded outline colours. See [the base class page](sCTkDial.md#knob-rendering).
 * **`.config()` now works.** This class previously had no `config = configure` alias, so `.config(...)` bypassed every override and landed on the native widget. If existing code called it expecting no effect, it will now have one.
 * **Theme colours are live for the first time.** Colours were previously read from `final_kw`, which never contained them, so every dial rendered in hardcoded fallbacks regardless of the theme file. See [reading theme colours](sCTkDial.md#reading-theme-colours).
-* **Bypassing the BaseUI Skeletons:** This component avoids all autogenerated Pygubu intermediate templates, connecting the component straight to CustomTkinter's appearance modes via programmatic multiple inheritance tracks.
-* **Automated Lifecycle Handshake:** Fires `self._finalize_themeable_lifecycle()` at the absolute end of the constructor initialization track to cleanly pass instance registration hooks straight back up to Pygubu parent controllers.
-* **Rolling Selector Loops:** When spinning scroll wheels beyond boundary edges, the index modulo calculates the length of the string array, snapping the cursor back around to index 0 smoothly.
+* **Inherits `ctk.CTkFrame` and `ThemeableWidget` directly,** with no intermediate template class in between. That ordering matters: the native class comes first, so every `super()` call in the dial's own methods resolves to CustomTkinter rather than to the mixin.
+* **`_finalize_themeable_lifecycle()` fires at the end of the constructor,** which is what tells a Pygubu-style consumer the widget is ready. Every widget in the library does this; a missing call means an `on_first_object_cb` callback silently never runs.
+* **Wraps around.** Scrolling past the last position returns to the first, unlike the Range dial, which clamps. A mode switch is a ring of choices with no natural end.
 
 ---
 
@@ -4982,14 +5120,14 @@ if __name__ == "__main__":
 
 
     def my_custom_left_click():
-        """Accelerated Jump: Moves 2 complete indexing steps left per click tap."""
+        """Moves two positions left per click, instead of the built-in one."""
         if mode_selector.get_state() == "disabled":
             return
         mode_selector.set(mode_selector.get() - 2)
 
 
     def my_custom_right_click():
-        """Accelerated Jump: Moves 2 complete indexing steps right per click tap."""
+        """Moves two positions right per click, instead of the built-in one."""
         if mode_selector.get_state() == "disabled":
             return
         mode_selector.set(mode_selector.get() + 2)
@@ -6092,6 +6230,250 @@ if __name__ == "__main__":
 ```
 
 [Return to Table of Contents](#table-of-contents)
+
+
+
+## sCTkNotebook
+
+### Table of Contents
+* [Overview](#overview)
+* [Constructor](#constructor)
+* [Methods](#methods)
+* [Tab Pages](#tab-pages)
+* [Appearance](#appearance)
+* [Pygubu Designer](#pygubu-designer)
+* [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
+* [Example](#example)
+* [Known Limitations](#known-limitations)
+
+---
+
+### Overview
+
+`sCTkNotebook` is a multi-page container with its tabs down the left or right edge, rather than across the top. The same idea as [`sCTkTabview`](sCTkTabview.md), turned ninety degrees.
+
+<img src="src/images/sCTkNotebook_Dark.png" alt="sCTkNotebook in dark mode" style="border: 2px solid #555555;">&emsp; &emsp; &emsp; &emsp;
+<img src="src/images/sCTkNotebook_Light.png" alt="sCTkNotebook in light mode" style="border: 2px solid #555555;">
+
+Use it when a panel has more pages than a horizontal strip can show, or when the layout has vertical space to spare and horizontal space to protect.
+
+**It is not a subclass of `sCTkTabview`.** Native `CTkTabview` builds its strip from a `CTkSegmentedButton`, which lays its buttons out in a single grid row and has no vertical mode. The geometry, the selection handling and the colours all come from that widget, so reusing it would mean overriding nearly all of it. This class owns its strip outright.
+
+**Everything is drawn on one canvas.** Tab labels run along the strip rather than across it, so the text is rotated — and a Tk button cannot rotate its text. That alone would only need a canvas for the strip, but the page outline has to break where the selected tab meets it, and a border drawn by a frame cannot have a gap cut in it. Outline and tabs are therefore drawn together, with the content pages placed on top.
+
+---
+
+### Constructor
+
+```python
+sCTkNotebook(master=None, side="left", tab_width=34, tab_style="rounded",
+             text_orientation="auto", show_page_border=True,
+             show_tab_separators=False, state="normal", **kw)
+```
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `master` | widget | `None` | Parent container. |
+| `side` | `str` | `"left"` | Which edge the strip sits on, `"left"` or `"right"`. |
+| `tab_width` | `int` | `34` | Width of the strip in pixels. See [Appearance](#appearance) for why this is explicit rather than measured. |
+| `tab_style` | `str` | `"rounded"` | `"rounded"` or `"angled"`. |
+| `text_orientation` | `str` | `"auto"` | `"auto"`, `"up"`, `"down"` or `"horizontal"`. |
+| `show_page_border` | `bool` | `True` | Draws the outline around the page, broken where the selected tab meets it. |
+| `show_tab_separators` | `bool` | `False` | A line between adjacent tabs. |
+| `state` | `str` | `"normal"` | `"normal"` or `"disabled"`. |
+| `**kw` | — | — | Native `CTkFrame` arguments, or theme-key overrides. |
+
+```python
+notebook = sCTkNotebook(panel, side="left", tab_width=34)
+notebook.pack(expand=True, fill="both")
+
+page = notebook.add("Receiver")
+sCTkLabelPrimary(page, text="Receiver settings").pack(padx=20, pady=20)
+```
+
+---
+
+### Methods
+
+| Method | Returns | Description |
+|---|---|---|
+| `add(name)` | `sCTkFrame` | Creates a tab and returns its content page directly — no separate `tab()` call needed. Raises `ValueError` on a name already in use. |
+| `tab(name)` | `sCTkFrame` | The page for an existing tab. Raises `KeyError` if there is none. |
+| `delete(name)` | — | Removes a tab and destroys its page. If it was selected, the next remaining tab is selected instead. |
+| `rename(old, new)` | — | Renames a tab, keeping its position and its page. Renaming by deleting and re-adding would move the tab to the end and destroy its children. |
+| `set(name)` | — | Selects a tab and raises its page. |
+| `get()` | `str` | The selected tab's name, or `None` when there are no tabs. |
+| `tabs()` | `list[str]` | Tab names, in order. |
+| `state(mode=None)` | `str` | Gets or sets `"normal"`/`"disabled"`. Disabling dims the strip and the outline and stops tab selection. |
+| `get_state()` | `str` | Equivalent to `state()` with no argument. |
+| `required_length()` | `int` | The height the widget wants so every tab is reachable without scrolling. See [Known Limitations](#known-limitations). |
+| `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus every constructor property above. `configure("propname")` returns a Pygubu-style query tuple. |
+
+---
+
+<a name="tab-pages"></a>
+### Tab Pages
+
+`add()` returns an `sCTkFrame`, and that is the page. Children go into it directly:
+
+```python
+page = notebook.add("Audio")
+sCTkFrame(page, border_width=1).pack(expand=True, fill="both", padx=10, pady=10)
+```
+
+Every page occupies the same grid cell, with the selected one raised. So a page keeps its children and its geometry between visits — switching tabs costs nothing and nothing is rebuilt.
+
+**All pages report `winfo_ismapped()` as true**, including the ones you cannot see. `tkraise()` changes stacking, not mapping, so that call is not a way to find out which tab is showing. Use `get()`.
+
+---
+
+<a name="appearance"></a>
+### Appearance
+
+#### Which way the labels read
+
+| `text_orientation` | Result |
+|---|---|
+| `"auto"` | Reads outside-in — up a left strip, down a right one, the way a book's spine is set — and flips when `side` changes. |
+| `"up"` | 90° regardless of side. |
+| `"down"` | 270° regardless of side. |
+| `"horizontal"` | Flat text. |
+
+`"up"` and `"down"` matter if a panel has notebooks on both edges and you want their labels to match rather than mirror.
+
+**`"horizontal"` needs a wider strip.** With rotated text, a tab's length along the strip comes from its label's width and `tab_width` only has to fit the text's height. Flat text inverts that: the tab is barely taller than one line, and the label's width becomes `tab_width`'s problem. The widget cannot solve this for you without overriding the width you asked for, so it does not — set `tab_width` to something that fits your longest label, around 100 for ordinary words.
+
+Orientation is a property of the notebook, not of a tab. Every tab in a strip reads the same way, which is deliberate: mixed orientations would need per-tab sizing along two axes and would look like a mistake.
+
+#### Tab shape
+
+`tab_style="rounded"` curves the two outer corners; `"angled"` cuts them off straight, the shape of a real notebook divider. The **inner** edge is square either way, so the selected tab reads as continuous with its page.
+
+The chamfer is measured separately across the strip and along the tab, because the two edges are not equivalent — the strip's width is fixed, while a tab's length depends on its label and on whether the text is rotated:
+
+```python
+sCTkNotebook.TAB_CHAMFER_X = 6      # in from the corner, across the strip
+sCTkNotebook.TAB_CHAMFER_Y = 6      # in from the corner, along the tab
+```
+
+Equal values give a 45-degree cut. A small x with a larger y gives a shallower lean.
+
+#### Why `tab_width` is explicit
+
+The strip takes its width from the page, so a strip that measured itself would resize the content area whenever a tab was renamed. A layout that shifts under you is worse than one you set.
+
+---
+
+<a name="pygubu-designer"></a>
+### Pygubu Designer
+
+Drop an `sCTkNotebook`, then drop `sCTkNotebook.Tab` onto it — the tab is offered only there, since it has nowhere else to live. Set each tab's `label` in the properties panel.
+
+A tab is not a widget you construct: it is created *by* its notebook, through `add()`. The generated code reads:
+
+```python
+tab1 = notebook1.add("Receiver")
+```
+
+**Duplicate names are renamed, not rejected.** `add()` raises `ValueError` on a name already in use, which is right for application code — but inside the Designer that exception surfaces only on the console where nobody sees it, and the tab silently fails to appear while the tree and the preview disagree. A numeric suffix is appended instead, visibly, in both the strip and the property field.
+
+**A tab cannot be selected by clicking it on the canvas.** Select it in the widget tree, which also switches the canvas to that tab. This is the same limitation as `sCTkTabview` and for the same reason: the strip is canvas-drawn, so a click there has no widget for the Designer to resolve. A widget dropped *inside* a tab is selectable by clicking as normal.
+
+---
+
+### Theming (`sCTkThemes.json`)
+
+```json
+{
+    "sCTkNotebook": {
+        "fg_color": ["#FFFFFF", "#111827"],
+        "font": ["Arial", 13, "normal"],
+        "corner_radius": 6,
+        "text_color": ["#1F2937", "#D1D5DB"],
+        "selected_text_color": ["#FFFFFF", "#FFFFFF"],
+        "tab_fg_color": ["#E2E8F0", "#1F2937"],
+        "tab_selected_color": ["#1A4375", "#2471A3"],
+        "tab_hover_color": ["#CBD5E1", "#374151"],
+        "border_color": ["#1A4375", "#2471A3"],
+
+        "border_width": 2,
+        "page_corner": 8,
+        "page_inset": 8,
+        "tab_corner": 6,
+        "tab_chamfer_x": 6,
+        "tab_chamfer_y": 6,
+        "tab_gap": 2,
+        "tab_pad": 18,
+        "separator_inset": 5,
+        "strip_margin": 6,
+
+        "disabled_map": {
+            "text_color": ["#94A3B8", "#64748B"],
+            "tab_fg_color": ["#F1F5F9", "#1A1D24"],
+            "tab_selected_color": ["#CBD5E1", "#374151"],
+            "selected_text_color": ["#94A3B8", "#64748B"],
+            "border_color": ["#CBD5E1", "#374151"]
+        }
+    }
+}
+```
+
+**The colours are required**, at the top level and in `disabled_map` — `fg_color`, `font`, `text_color`, `selected_text_color`, `tab_fg_color`, `tab_selected_color`, `tab_hover_color` and `border_color`. Construction raises `KeyError` naming the missing key and where it belongs.
+
+**The ten geometry values are optional.** Absent from a block, the class attribute of the same name in upper case applies, so a theme need only mention what it wants to change — a squarer palette might set `tab_corner` and nothing else. They remain settable per instance for one-off tuning:
+
+```python
+notebook.TAB_CHAMFER_Y = 10
+```
+
+`fg_color` is deliberately **not** in `disabled_map`: the page area does not dim, matching the dials and `sCTkScrollableFrame`. The content carries its own state, and a greyed page would hide it.
+
+**A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
+
+---
+
+### Example
+
+```python
+#!/usr/bin/python3
+import customtkinter as ctk
+from scustomtkinter import sCTk, sCTkFrame, sCTkLabelPrimary, sCTkNotebook
+
+TABS = ["Receiver", "Transmitter", "Audio", "Filters", "System Logs"]
+
+if __name__ == "__main__":
+    root = sCTk()
+    root.title("sCTkNotebook")
+    root.geometry("640x420")
+
+    base = sCTkFrame(root, fg_color="transparent", border_width=0)
+    base.pack(expand=True, fill="both", padx=16, pady=16)
+
+    notebook = sCTkNotebook(base, side="left", tab_width=34)
+    notebook.pack(expand=True, fill="both")
+
+    for name in TABS:
+        page = notebook.add(name)
+        sCTkLabelPrimary(page, text=f"This is the {name} tab").pack(
+            expand=True, padx=20, pady=20)
+
+    notebook.set("Audio")
+    print("tabs:", notebook.tabs(), " selected:", notebook.get())
+
+    root.mainloop()
+```
+
+---
+
+### Known Limitations
+
+- **Tabs are selected from the widget tree, not the design canvas** — see [Pygubu Designer](#pygubu-designer).
+- **The strip scrolls when the tabs do not fit,** under the wheel or a trackpad, and only when there is something to scroll — otherwise the wheel belongs to whatever is on the page. There is no scrollbar and no indication that more tabs exist below. `required_length()` reports the height that would show them all, but the widget cannot insist: a parent packing it with `fill="both"` decides its size regardless. Use the figure to set a minimum on the containing window, or let it scroll.
+- **Disabling does not cascade to children.** It dims the strip and the outline and locks tab selection; widgets on a page are unaffected, which is the caller's responsibility. Same as `sCTkTabview`.
+- **The page area is a raw canvas underneath.** `"transparent"` cannot be rendered on one, so a transparent `fg_color` falls back to whatever is actually behind the widget — the same accommodation `sCTkFileExplorer` makes for its canvas.
+- **`text_orientation` and `tab_style` are properties of the notebook, not of a tab.** Every tab in one strip shares them.
+
+[Return to Table of Contents](#contents)
 
 
 

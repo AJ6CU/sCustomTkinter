@@ -36,14 +36,17 @@ class sCTkToplevel(ctk.CTkToplevel, ThemeableWidget):
         toplevel.configure({"fg_color": "red"}) -- merged into keyword
         arguments and applied normally.
 
-    Unlike every other widget in this project, there's no single-argument
-    property query support here (no "state" or color-tuple special-casing) --
-    a bare positional string like configure("fg_color") is not intercepted
-    and currently has no effect at all, since the only positional-argument
-    handling implemented is the dict-merge case. Consistent with this
-    widget's overall minimalism; add single-argument passthrough
-    (`return super().configure(pname)`) here if Pygubu-style introspection is
-    ever needed for top-level windows specifically.
+    Single-argument property queries go to ThemeableWidget's shared
+    _configure_query(), like every other widget. This class ignored them
+    until recently, which mattered as soon as sCTkToplevel was registered
+    with the Designer: blanking a field there reads the property's default
+    first, and an unanswered query returns None, which pygubu then applies.
+
+    There is still no state()/get_state() and no per-state colour swapping.
+    A window has no enabled/disabled concept, and nothing in this class
+    reapplies colours after construction -- which is also why it needs no
+    override recording: with no repaint to revert them, a runtime change
+    simply stays.
 
     WHITELIST GUARD: if a composite widget inherits sCTkToplevel as its own
     base class and explicitly calls ThemeableWidget.__init__ itself before
@@ -102,27 +105,45 @@ class sCTkToplevel(ctk.CTkToplevel, ThemeableWidget):
         Standard widget configuration, with positional-dict support.
 
         Args:
-            *args: At most one positional argument is meaningful: a dict,
-                merged into kwargs and processed normally. Any other single
-                positional value (e.g. a property-name string) is currently
-                not handled at all -- see this class's docstring.
+            *args: At most one positional argument is meaningful:
+                - a dict: merged into kwargs and processed normally.
+                - a property name: returns a Tkinter-style
+                  (name, name, name, default, current) tuple from the shared
+                  query helper.
             **kwargs: Standard CTkToplevel configuration options.
 
         Returns:
-            Whatever super().configure() returns (typically None). Note this
-            method doesn't explicitly `return` that value -- preserved as-is
-            from the original.
+            The query tuple for the single-argument case, otherwise whatever
+            super().configure() returns.
         """
         # args is always a tuple, never a dict itself -- args[0] is the actual
         # dict if one was passed. An earlier version checked
         # `isinstance(args, dict)` directly on the tuple, which can never be
         # true; that dict-merge path was unreachable. Fixed here to check
         # args[0] instead.
-        if len(args) == 1 and isinstance(args[0], dict):
-            kwargs = {**args[0], **kwargs}
+        if len(args) == 1:
+            if isinstance(args[0], dict):
+                kwargs = {**args[0], **kwargs}
+            else:
+                # The single-argument query, which this widget used to ignore.
+                #
+                # Pygubu calls configure(name) to read a property's default
+                # whenever a field is blanked in the inspector. Falling through
+                # to the native configure() does not answer that: CustomTkinter
+                # declares configure(self, require_redraw=False, **kwargs), so
+                # the property NAME arrives as require_redraw and the call
+                # returns None -- which pygubu then applies.
+                #
+                # _configure_query() is the shared helper every other widget
+                # uses; this one simply never called it.
+                return self._configure_query(args[0])
 
         if kwargs:
-            super().configure(**kwargs)
+            # RETURNED, not discarded. The docstring noted this was preserved
+            # as-is from an earlier version; a caller reading the result got
+            # None whatever the native widget said.
+            return super().configure(**kwargs)
+        return None
 
     # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
     # attribute -- it does not automatically track whichever configure() a
