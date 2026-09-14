@@ -459,8 +459,24 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
 
         swr_label_color = amber_color if self._swr_visible else disabled_color
         pwr_label_color = amber_color if self._pwr_visible else disabled_color
-        self.canvas.create_text(start_x + (total_length * ((mid_gap_start / num_led_segments) * 0.5)), lower_y - 6 - label_h, text="SWR", fill=swr_label_color, font=label_font, anchor="n")
-        self.canvas.create_text(start_x + (total_length * ((mid_gap_end / num_led_segments) + ((1.0 - (mid_gap_end / num_led_segments)) * 0.5))), lower_y - 6 - label_h, text="PWR", fill=pwr_label_color, font=label_font, anchor="n")
+
+        # THE ROW FLIPS WHEN IT IS ALONE.
+        #
+        # With both rows drawn these two are mirror images on purpose: the S
+        # row puts its scale above and its caption below, this one puts its
+        # captions above and its scale below, so the captions meet in the
+        # middle and the two scales face outward. That only works as a pair.
+        #
+        # Hide the S row and this one is left upside down relative to a
+        # single-row S meter -- caption at the top, numbers at the bottom.
+        # Alone, it takes the same arrangement the S row uses.
+        caption_above = show_sig
+        caption_y = (lower_y - 6 - label_h) if caption_above else (lower_y + 5)
+        caption_anchor = "n"
+        scale_side = 1 if caption_above else -1
+
+        self.canvas.create_text(start_x + (total_length * ((mid_gap_start / num_led_segments) * 0.5)), caption_y, text="SWR", fill=swr_label_color, font=label_font, anchor=caption_anchor)
+        self.canvas.create_text(start_x + (total_length * ((mid_gap_end / num_led_segments) + ((1.0 - (mid_gap_end / num_led_segments)) * 0.5))), caption_y, text="PWR", fill=pwr_label_color, font=label_font, anchor=caption_anchor)
 
         swr_ticks = [1.0, 1.5, 2.0]
         if self.swr_max_value > 2.0:
@@ -470,14 +486,20 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             tx = start_x + (total_length * (get_swr_fraction(val) * (mid_gap_start / num_led_segments)))
             color = (red_color if val >= 2.0 else amber_color) if self._swr_visible else disabled_color
             label = (str(int(val)) if val.is_integer() else str(val)) + ("+" if val == self.swr_max_value else "")
-            self.canvas.create_line(tx, lower_y, tx, lower_y + 6, fill=color, width=1)
-            self.canvas.create_text(tx, lower_y + 8, text=label, fill=color, font=scale_font, anchor="n")
+            self.canvas.create_line(tx, lower_y, tx, lower_y + (6 * scale_side), fill=color, width=1)
+            if caption_above:
+                self.canvas.create_text(tx, lower_y + 8, text=label, fill=color, font=scale_font, anchor="n")
+            else:
+                self.canvas.create_text(tx, lower_y - 8 - (scale_h / 2), text=label, fill=color, font=scale_font, anchor="center")
 
         for val, label in [(0, "0"), (50, "50"), (100, "100%")]:
             tx = start_x + (total_length * ((mid_gap_end / num_led_segments) + ((val / 100.0) * (1.0 - (mid_gap_end / num_led_segments)))))
             color = (red_color if val >= 80 else amber_color) if self._pwr_visible else disabled_color
-            self.canvas.create_line(tx, lower_y, tx, lower_y + 6, fill=color, width=1)
-            self.canvas.create_text(tx - 4 if val == 100 else tx, lower_y + 8, text=label, fill=color, font=scale_font, anchor="n")
+            self.canvas.create_line(tx, lower_y, tx, lower_y + (6 * scale_side), fill=color, width=1)
+            if caption_above:
+                self.canvas.create_text(tx - 4 if val == 100 else tx, lower_y + 8, text=label, fill=color, font=scale_font, anchor="n")
+            else:
+                self.canvas.create_text(tx - 4 if val == 100 else tx, lower_y - 8 - (scale_h / 2), text=label, fill=color, font=scale_font, anchor="center")
     def set(self, s_value=None, swr_value=None, pwr_value=None):
         """Update any telemetry channel row independently."""
         if s_value is not None: self._current_s_value = float(s_value)
