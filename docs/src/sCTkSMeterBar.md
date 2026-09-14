@@ -99,6 +99,10 @@ This exists for a transceiver panel showing two frequencies at once — signal u
 
 **Whichever rows are shown are centred** in the height available, so a one-row meter sits in the middle rather than where it would have been in a two-row one.
 
+**The SWR and PWR row turns over when it is alone.** With both rows drawn the two are mirror images on purpose: the S row carries its scale above the bar and its caption below, this one carries its captions above and its scale below. That puts the captions together in the middle and the two scales facing outward, which reads as one instrument rather than two stacked ones.
+
+Alone, that arrangement is upside down — the caption ends up at the top of the widget and the numbers at the bottom, the reverse of a single-row S meter. So with `hide_sig_row` set, the row takes the S row's arrangement instead: scale above, `SWR` and `PWR` below, tick marks pointing the other way. Two single-row meters side by side therefore match each other, which is the whole point of splitting one.
+
 Hiding both leaves an empty meter rather than raising. That follows how the other visibility flags behave, but it is almost certainly a mistake if you find yourself doing it.
 
 Note the difference between *hiding* and *switching off*: `hide_sig_row` and `hide_lower_row` change the layout, while `swr_visible` and `pwr_visible` grey their cluster to `inactive_color` and leave it in place. Hiding is for a panel that will never show that row; switching off is for a row that has nothing to report just now.
