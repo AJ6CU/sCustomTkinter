@@ -1261,11 +1261,29 @@ class sCTkDialContinuous(sCTKDialBase):
         return "break"
 
     def _process_scroll_wheel(self, event):
-        if self._state == "disabled": return
-        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0): d = 1
-        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0): d = -1
-        else: return
+        """
+        One wheel detent, once.
+
+        RETURNS "break", and must. The scroll handlers are installed on THREE
+        layers -- the drawing canvas, the widget, and CTkFrame's own
+        background canvas -- so an event that is not consumed propagates to
+        each in turn and the dial steps two or three times for one notch.
+
+        The symptom is subtle where a caller coalesces its commands and
+        obvious where it does not: a receive frequency ran away at roughly
+        2.5 steps per detent while a transmit one, whose writes were being
+        merged, looked correct.
+        """
+        if self._state == "disabled":
+            return "break"
+        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0):
+            d = 1
+        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0):
+            d = -1
+        else:
+            return "break"
         self.set_position_index(d)
+        return "break"
 class sCTkDialSelector(sCTKDialBase):
     # This variant draws a plain line pointer rather than a dimple, so it
     # requires pointer_color instead of pointer_glow_color. pointer_color was
@@ -1379,11 +1397,23 @@ class sCTkDialSelector(sCTKDialBase):
         return "break"
 
     def _process_scroll_wheel(self, event):
-        if self._state == "disabled": return
-        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0): d = 1
-        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0): d = -1
-        else: return
+        """
+        One wheel detent, once.
+
+        Returns "break" on every path. The handler is bound on three layers --
+        the drawing canvas, the widget, and CTkFrame's own background
+        canvas -- so an unconsumed event steps the dial once per layer.
+        """
+        if self._state == "disabled":
+            return "break"
+        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0):
+            d = 1
+        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0):
+            d = -1
+        else:
+            return "break"
         self.set(self._current_value + d)
+        return "break"
 class sCTkDialRange(sCTKDialBase):
     # This variant draws a plain line pointer rather than a dimple, so it
     # requires pointer_color instead of pointer_glow_color. pointer_color was
@@ -1485,8 +1515,20 @@ class sCTkDialRange(sCTKDialBase):
         return "break"
 
     def _process_scroll_wheel(self, event):
-        if self._state == "disabled": return
-        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0): d = 1
-        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0): d = -1
-        else: return
+        """
+        One wheel detent, once.
+
+        Returns "break" on every path. The handler is bound on three layers --
+        the drawing canvas, the widget, and CTkFrame's own background canvas
+        -- so an unconsumed event steps the dial once per layer.
+        """
+        if self._state == "disabled":
+            return "break"
+        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0):
+            d = 1
+        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0):
+            d = -1
+        else:
+            return "break"
         self.set(self._current_value + d)
+        return "break"
