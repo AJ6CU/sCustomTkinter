@@ -312,16 +312,24 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         A canvas text item takes a plain font tuple, which CustomTkinter's own
         font scaling never sees -- so without this the labels would stay the
         same size while everything around them grew.
+
+        THE WHOLE TUPLE GOES IN, not the size. _apply_font_scaling takes a
+        font and returns it with its size scaled; handed a bare integer it
+        raises ValueError.
+
+        That mistake was here and invisible: the except below swallowed it
+        and returned the unscaled font, so the tab labels never scaled and
+        nothing ever said so. A try/except around a call you got wrong turns
+        a loud failure into a feature that quietly does not work.
         """
         font = self._local_defaults.get("font")
+        if not isinstance(font, (list, tuple)):
+            return font
         try:
-            if isinstance(font, (list, tuple)) and len(font) >= 2:
-                scaled = list(font)
-                scaled[1] = int(self._apply_font_scaling(font[1]))
-                return tuple(scaled)
+            return self._apply_font_scaling(tuple(font))
         except Exception:
-            pass
-        return font
+            # A genuine fallback now, rather than the normal path.
+            return tuple(font)
 
     # ------------------------------------------------------------------
     # Colour resolution

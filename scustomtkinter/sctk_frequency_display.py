@@ -178,7 +178,19 @@ class sCTkFrequencyDisplay(ctk.CTkFrame, ThemeableWidget):
         a house style, the other is how big this particular readout should be.
         """
         family, _, weight = self._font_parts()
-        return (family, int(self._apply_font_scaling(self._font_size)), weight)
+        # THE WHOLE TUPLE, not the size.
+        #
+        # _apply_font_scaling takes a font and returns it with its size
+        # scaled; handed a bare integer it raises:
+        #
+        #     ValueError: Can not scale font '38' of type <class 'int'>
+        #
+        # Which is easy to write and easy to miss, because a widget that
+        # wraps the call in try/except just silently stops scaling.
+        try:
+            return self._apply_font_scaling((family, self._font_size, weight))
+        except Exception:
+            return (family, self._font_size, weight)
 
     #
     # Tk guarantees exactly three family names on every platform -- Courier,
