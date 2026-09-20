@@ -50,6 +50,8 @@ import scustomtkinter_pygubu.sCTkFramebo
 import scustomtkinter_pygubu.sCTkFrameLabeledPrimarybo
 import scustomtkinter_pygubu.sCTkFrameLabeledSecondarybo
 
+import scustomtkinter_pygubu.sCTkFrequencyDisplaybo
+
 import scustomtkinter_pygubu.sCTkLabelPrimarybo
 import scustomtkinter_pygubu.sCTkLabelSecondarybo
 import scustomtkinter_pygubu.sCTkLabelTertiarybo

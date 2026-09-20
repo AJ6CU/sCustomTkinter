@@ -70,6 +70,10 @@ from scustomtkinter_pygubu.sCTkRadioButtonbo import (sCTkRadioButtonBO, builder_
 from scustomtkinter.sctk_tabview import sCTkTabview
 from scustomtkinter_pygubu.sCTkTabviewbo import (sCTkTabviewBO, builder_id as sCTkTabview_builder_id)
 
+from scustomtkinter.sctk_frequency_display import sCTkFrequencyDisplay
+from scustomtkinter_pygubu.sCTkFrequencyDisplaybo import (
+    sCTkFrequencyDisplayBO, builder_id as sCTkFrequencyDisplay_builder_id)
+
 from scustomtkinter.sctk_notebook import sCTkNotebook
 from scustomtkinter_pygubu.sCTkNotebookbo import (sCTkNotebookBO, builder_id as sCTkNotebook_builder_id)
 
@@ -581,6 +585,25 @@ class sCTkRadioButtonForPreview(sCTkRadioButton):
     bind its click handler, and the canvas is the only thing there is to click.
     """
     _THEME_BLOCK_NAME = "sCTkRadioButton"
+
+    def winfo_children(self):
+        return super(tk.Frame, self).winfo_children()
+
+
+class sCTkFrequencyDisplayForPreview(sCTkFrequencyDisplay):
+    """
+    Designer preview for sCTkFrequencyDisplay.
+
+    The readout draws itself on a canvas filling the whole widget, and
+    CTkFrame hides its own background canvas from winfo_children() -- so the
+    Designer's binding walk finds nothing to bind and the widget cannot be
+    selected at all.
+
+    Exposing the canvases is only half of it: clicking a digit is a real
+    interaction, so without neutralizing it a click selects a digit instead
+    of the widget and there is no way to select the widget itself.
+    """
+    _THEME_BLOCK_NAME = "sCTkFrequencyDisplay"
 
     def winfo_children(self):
         return super(tk.Frame, self).winfo_children()
@@ -1149,6 +1172,10 @@ class sCTkRadioButtonForPreviewBO(sCTkRadioButtonBO):
     class_ = sCTkRadioButtonForPreview
 
 
+class sCTkFrequencyDisplayForPreviewBO(sCTkFrequencyDisplayBO):
+    class_ = sCTkFrequencyDisplayForPreview
+
+
 class sCTkNotebookForPreviewBO(sCTkNotebookBO):
     class_ = sCTkNotebookForPreview
 
@@ -1457,6 +1484,8 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             return sCTkSegmentedButtonForPreviewBO
         elif builder_uid == sCTkRadioButton_builder_id:
             return sCTkRadioButtonForPreviewBO
+        elif builder_uid == sCTkFrequencyDisplay_builder_id:
+            return sCTkFrequencyDisplayForPreviewBO
         elif builder_uid == sCTkNotebook_builder_id:
             return sCTkNotebookForPreviewBO
         elif builder_uid == sCTkTabview_builder_id:
@@ -1661,6 +1690,33 @@ class sCTkDesignerPlugin(IDesignerPlugin):
             ".sCTkSelector",
         )
         if builder_uid.endswith(scrollable_family):
+            return
+
+        if builder_uid.endswith(".sCTkFrequencyDisplay"):
+            # The readout's canvas IS the widget: the digits and the
+            # hit-testing all live on it. Left bound, a click selects a digit
+            # instead of the widget.
+            #
+            # The click is FORWARDED rather than swallowed -- a no-op would
+            # stop it before it reached _canvas, where CTkFrame.bind() puts
+            # the Designer's own selection handler. Same treatment the dials
+            # and the notebook needed.
+            face = getattr(widget, "canvas", None)
+            _neutralize(face, tuple(s for s in (_HOVER_CLICK + _SCROLL)
+                                    if s != "<Button-1>"))
+            if face is not None:
+                def _select_readout(event, target=widget):
+                    try:
+                        bg = getattr(target, "_canvas", None)
+                        if bg is not None:
+                            bg.event_generate("<Button-1>", x=1, y=1, when="now")
+                    except Exception:
+                        pass
+                    return "break"
+                try:
+                    face.bind("<Button-1>", _select_readout)
+                except Exception:
+                    pass
             return
 
         if builder_uid.endswith(".sCTkNotebook"):

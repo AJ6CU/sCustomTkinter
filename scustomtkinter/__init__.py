@@ -32,10 +32,12 @@ from .sctk_file_explorer import sCTkFileExplorer
 from .sctk_frame import sCTkFrame
 from .sctk_frame_labeled_primary import sCTkFrameLabeledPrimary
 from .sctk_frame_labeled_secondary import sCTkFrameLabeledSecondary
+from .sctk_frequency_display import sCTkFrequencyDisplay
 from .sctk_label_primary import sCTkLabelPrimary
 from .sctk_label_secondary import sCTkLabelSecondary
 from .sctk_label_tertiary import sCTkLabelTertiary
 from .sctk_messagebox import sCTkMessagebox
+
 
 # =====================================================================
 # 📦 VIRTUAL MESSAGEBOX SUBMODULE PROXY NAMESPACE
