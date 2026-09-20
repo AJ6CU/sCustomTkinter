@@ -39,6 +39,7 @@
 ../docs/src/sCTkFileExplorer.md
 ../docs/src/sCTkFrameLabeledPrimary.md
 ../docs/src/sCTkFrameLabeledSecondary.md
+../docs/src/sCTkFrequencyDisplay.md
 ../docs/src/sCTkMessagebox.md
 ../docs/src/sCTkNotebook.md
 ../docs/src/sCTkPathChooser.md
