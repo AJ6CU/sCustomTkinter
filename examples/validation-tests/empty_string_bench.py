@@ -2,13 +2,19 @@
 """
 Test bench for the empty-string rule.
 
-Two things are checked on every widget that has content:
+Three things are checked on every widget that has content:
 
-  1. CONTENT CAN BE BLANKED. configure(<content key>="") must actually clear
+  1. NO PLACEHOLDER BY DEFAULT. A widget built WITHOUT its content key must
+     come up empty. CustomTkinter defaults `text` to the class name, so a
+     label built without text read "CTkLabel" -- and in the Designer,
+     clearing the field and letting the canvas rebuild the widget brought the
+     placeholder back in place of the blank that was asked for.
+
+  2. CONTENT CAN BE BLANKED. configure(<content key>="") must actually clear
      it -- cget() afterwards returns "". Before the fix this silently did
      nothing and the old text stayed on screen.
 
-  2. A CLEARED COLOUR IS STILL A NO-OP. configure(<colour>="") -- what the
+  3. A CLEARED COLOUR IS STILL A NO-OP. configure(<colour>="") -- what the
      Designer sends when a field is cleared -- must neither raise nor change
      the colour. This is the job the rule was written for, and the fix must
      not undo it.
@@ -60,6 +66,31 @@ def safe_cget(widget, key):
         return False, err
 
 
+def check_default(cls, parent, key, kwargs):
+    """
+    A widget built without its content key must come up empty.
+
+    Built separately from the widget the other checks use, and destroyed
+    straight away: those need the content present to prove it can be
+    removed, and this needs it absent from the start.
+    """
+    bare = {k: v for k, v in kwargs.items() if k != key}
+    try:
+        widget = cls(parent, **bare)
+    except Exception as err:
+        return False, f"built without {key}: raised {type(err).__name__}"
+    try:
+        ok, value = safe_cget(widget, key)
+    finally:
+        widget.destroy()
+    if not ok:
+        return False, f"cget({key!r}) raised {value}"
+    # None is as good as empty -- CTkEntry's placeholder_text defaults to it.
+    if value in ("", None):
+        return True, "no placeholder"
+    return False, f"built without {key}, reads {value!r}"
+
+
 def check_content(widget, key):
     """configure(key="") must leave cget(key) empty."""
     try:
@@ -102,15 +133,15 @@ class Bench(sCTk):
     def __init__(self):
         super().__init__()
         self.title("empty-string rule bench")
-        self.geometry("900x860")
+        self.geometry("1180x860")
 
         body = sCTkFrame(self, fg_color="transparent", border_width=0)
         body.pack(fill="both", expand=True, padx=12, pady=10)
         body.grid_columnconfigure(1, weight=1)
 
         failures = 0
-        print(f"\n{'widget':28} {'content':34} colour")
-        print("-" * 96)
+        print(f"\n{'widget':28} {'default':28} {'content':30} colour")
+        print("-" * 120)
 
         for row, (cls, key, kwargs) in enumerate(CASES):
             name = cls.__name__
@@ -119,32 +150,35 @@ class Bench(sCTk):
                 widget.grid(row=row, column=0, sticky="w", padx=4, pady=3)
             except Exception as err:
                 failures += 1
-                self._report(body, row, name, False,
-                             f"construction raised {type(err).__name__}: {err}", True, "")
+                self._report(body, row, name,
+                             (False, f"construction raised {type(err).__name__}: {err}"),
+                             (True, ""), (True, ""))
                 continue
 
             # Let it draw once, so cget reflects a real widget.
             self.update_idletasks()
 
-            content_ok, content_msg = check_content(widget, key)
-            colour_ok, colour_msg = check_colour(widget)
-            failures += (not content_ok) + (not colour_ok)
-            self._report(body, row, name, content_ok, content_msg,
-                         colour_ok, colour_msg)
+            default = check_default(cls, body, key, kwargs)
+            content = check_content(widget, key)
+            colour = check_colour(widget)
+            failures += sum(not ok for ok, _ in (default, content, colour))
+            self._report(body, row, name, default, content, colour)
 
-        print("-" * 96)
+        print("-" * 120)
         summary = ("ALL PASSED" if failures == 0
                    else f"{failures} FAILURE(S) -- see above")
         print(summary + "\n")
         self.title(f"empty-string rule bench -- {summary}")
 
-    def _report(self, parent, row, name, content_ok, content_msg,
-                colour_ok, colour_msg):
+    def _report(self, parent, row, name, default, content, colour):
+        """One line per widget, in the console and beside the widget."""
         tag = lambda ok: "PASS" if ok else "FAIL"
-        print(f"{name:28} {tag(content_ok)} {content_msg:29} "
-              f"{tag(colour_ok)} {colour_msg}")
-        text = f"{tag(content_ok)}  {content_msg}     {tag(colour_ok)}  {colour_msg}"
-        colour = ("#0F6E56", "#3FB68B") if content_ok and colour_ok \
+        (d_ok, d_msg), (c_ok, c_msg), (k_ok, k_msg) = default, content, colour
+        print(f"{name:28} {tag(d_ok)} {d_msg:23} {tag(c_ok)} {c_msg:25} "
+              f"{tag(k_ok)} {k_msg}")
+        text = (f"{tag(d_ok)}  {d_msg}     {tag(c_ok)}  {c_msg}     "
+                f"{tag(k_ok)}  {k_msg}")
+        colour = ("#0F6E56", "#3FB68B") if d_ok and c_ok and k_ok \
             else ("#B42318", "#F97066")
         ctk.CTkLabel(parent, text=text, text_color=colour, anchor="w",
                      font=("Arial", 11)).grid(row=row, column=1, sticky="w",

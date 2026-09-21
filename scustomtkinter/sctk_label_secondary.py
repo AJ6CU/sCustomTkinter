@@ -59,6 +59,13 @@ class sCTkLabelSecondary(ctk.CTkLabel, ThemeableWidget):
         # 1. Capture the initial state before ThemeableWidget's own kwargs pass,
         # so it doesn't get merged into final_kw and sent to the native
         # constructor.
+        # NO PLACEHOLDER TEXT. CustomTkinter defaults `text` to the class
+        # name, so a CTkLabel built without text reads "CTkLabel". Nothing wants
+        # that in a real interface, and the Designer made it worse: clearing
+        # the text field removes the property, the canvas rebuilds the widget
+        # from what is left, and the placeholder appeared in place of the
+        # blank that was asked for.
+        kwargs.setdefault("text", "")
         state_init = kwargs.pop("state", "normal")
 
         # 2. Fire our shared theme logic. This resolves final_kw

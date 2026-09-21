@@ -134,6 +134,13 @@ class sCTkSwitch(ctk.CTkSwitch, ThemeableWidget):
         # 1. Fire our shared theme logic. This resolves final_kw
         # (construction-time properties). See ThemeableWidget.__init__ for
         # what actually happens here.
+        # NO PLACEHOLDER TEXT. CustomTkinter defaults `text` to the class
+        # name, so a CTkSwitch built without text reads "CTkSwitch". Nothing wants
+        # that in a real interface, and the Designer made it worse: clearing
+        # the text field removes the property, the canvas rebuilds the widget
+        # from what is left, and the placeholder appeared in place of the
+        # blank that was asked for.
+        kw.setdefault("text", "")
         ThemeableWidget.__init__(self, kw)
 
         # 2. Store the resolved maps onto this instance.
