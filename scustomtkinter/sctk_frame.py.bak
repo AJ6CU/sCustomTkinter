@@ -177,7 +177,9 @@ class sCTkFrame(ctk.CTkFrame, ThemeableWidget):
             target_state = kwargs.pop("state")
             self.state(target_state)
 
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "":
+                kwargs.pop(k)
 
         if kwargs:
             return super().configure(**kwargs)

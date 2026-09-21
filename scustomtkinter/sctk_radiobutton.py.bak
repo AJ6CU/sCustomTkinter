@@ -214,7 +214,8 @@ class sCTkRadioButton(ctk.CTkRadioButton, ThemeableWidget):
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
 
         if kwargs:
             return super().configure(**kwargs)

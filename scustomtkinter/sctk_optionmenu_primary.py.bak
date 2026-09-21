@@ -200,7 +200,9 @@ class sCTkOptionMenuPrimary(sCTkOptionMenuBorderMixin, ctk.CTkOptionMenu,
             target_state = str(kwargs.pop("state")).lower()
             self.state(target_state)
 
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "":
+                kwargs.pop(k)
 
         if kwargs:
             result =  super().configure(**kwargs)

@@ -223,9 +223,7 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
             target_state = kwargs.pop("state")
             self.state(target_state)
 
-        for k, v in list(kwargs.items()):
-            if v == "":
-                kwargs.pop(k)
+        self._drop_cleared(kwargs)
 
         if kwargs:
             result = super().configure(**kwargs)

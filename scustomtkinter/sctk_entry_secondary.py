@@ -157,9 +157,7 @@ class sCTkEntrySecondary(ctk.CTkEntry, ThemeableWidget):
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 
-        for k, v in list(kwargs.items()):
-            if v == "":
-                kwargs.pop(k)
+        self._drop_cleared(kwargs)
 
         if kwargs:
             return super().configure(**kwargs)

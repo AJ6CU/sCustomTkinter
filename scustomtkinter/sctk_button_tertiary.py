@@ -153,12 +153,12 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
             target_state = kwargs.pop("state")
             self.state(target_state)
 
+        # Theme values cleared to "" are dropped; `text=""` is kept, so a
+        # button's caption can actually be blanked. See
+        # ThemeableWidget._CONTENT_KEYS.
+        self._drop_cleared(kwargs)
         if kwargs:
-            for k, v in list(kwargs.items()):
-                if v == "":
-                    kwargs.pop(k)
-            if kwargs:
-                return super().configure(**kwargs)
+            return super().configure(**kwargs)
         return None
 
     # Tkinter/CTk convention binds .config to .configure as a SEPARATE class

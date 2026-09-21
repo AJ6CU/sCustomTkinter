@@ -166,7 +166,8 @@ class sCTkSlider(ctk.CTkSlider, ThemeableWidget):
         # widget directly. has_state only tracks whether a repaint is needed
         # afterward.
         has_state = "state" in kwargs
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
 
         if kwargs:
             super().configure(**kwargs)

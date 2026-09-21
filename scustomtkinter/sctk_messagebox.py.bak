@@ -208,7 +208,8 @@ class sCTkMessagebox(ctk.CTkToplevel, ThemeableWidget):
                 # _configure_query() builds one -- see themeable_widget.py.
                 return self._configure_query(args[0])
 
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
         if kwargs: return super().configure(**kwargs)
         return None
 

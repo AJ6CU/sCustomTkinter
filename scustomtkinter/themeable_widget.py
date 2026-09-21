@@ -731,6 +731,45 @@ class ThemeableWidget:
     _LIST_PROPERTIES = frozenset({"values", "labels", "columns", "items",
                                   "filetypes"})
 
+    # Properties whose empty string is CONTENT, not a request to clear.
+    #
+    # Every configure() in this library drops `""`, and for theme values that
+    # is right: it is what the Designer sends to mean "fall back to the
+    # theme", and dropping it turns clearing an undefined property into a
+    # no-op rather than a `color is None` error (see _query_value).
+    #
+    # For these it is wrong. An empty string is an ordinary thing to ask for
+    # -- a label with nothing to say, an entry with no placeholder -- and
+    # dropping it left the OLD text in place. The call did nothing, silently,
+    # and the widget went on showing whatever it said last:
+    #
+    #     label.configure(text="")      # label still reads "vfo b 14.012.000"
+    #
+    # None of these is a theme key, so letting "" through cannot reach the
+    # theme maps: _record_theme_overrides only touches keys the theme block
+    # already defines.
+    #
+    # label_text is the caption of the labelled and scrollable frames --
+    # CTkScrollableFrame's own name for it.
+    _CONTENT_KEYS = frozenset({"text", "placeholder_text", "label_text"})
+
+    def _drop_cleared(self, kwargs):
+        """
+        Removes theme values cleared to "" from kwargs, in place.
+
+        Content keys are kept, so `configure(text="")` really does blank the
+        text. Call this instead of filtering `if v == ""` by hand -- the
+        hand-written version was in every widget, and every copy dropped
+        content along with the theme values.
+
+        Args:
+            kwargs: The keyword dict about to be forwarded to the native
+                widget. Modified in place.
+        """
+        for key, value in list(kwargs.items()):
+            if value == "" and key not in self._CONTENT_KEYS:
+                kwargs.pop(key)
+
     def _query_value(self, value, pname=None):
         """
         Renders one property value in a form a configure() call can accept.
@@ -751,8 +790,9 @@ class ThemeableWidget:
         #     Error: color is None, for transparency set color='transparent'
         #
         # An empty string is dropped by every configure() in this library --
-        # they all filter `if v == ""` before forwarding -- so clearing an
-        # undefined property becomes the no-op it should always have been.
+        # through _drop_cleared() -- so clearing an undefined property becomes
+        # the no-op it should always have been. Content keys such as `text`
+        # are the exception; see _CONTENT_KEYS.
         if value is None:
             return ""
 

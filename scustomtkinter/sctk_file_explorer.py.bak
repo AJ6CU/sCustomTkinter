@@ -661,7 +661,8 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
                 if resolved:
                     self.selected_path.set(resolved)
 
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
         if hasattr(self, "final_kw"):
             for custom_key in ["type", "filetypes", "double_click_command", "initialdir", "initialfile", "state"]:
                 self.final_kw.pop(custom_key, None)

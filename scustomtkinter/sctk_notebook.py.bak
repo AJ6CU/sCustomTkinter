@@ -1050,7 +1050,9 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             if key in self._local_defaults and key not in self._NATIVE_FRAME_KWARGS:
                 kwargs.pop(key)
 
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "":
+                kwargs.pop(k)
 
         result = super().configure(**kwargs) if kwargs else None
         self._relayout()

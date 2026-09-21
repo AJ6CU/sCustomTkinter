@@ -85,7 +85,9 @@ class sCTkComboBox(ctk.CTkComboBox, ThemeableWidget):
             self.state(kwargs.pop("state"))
 
         if kwargs:
-            self._drop_cleared(kwargs)
+            for k, v in list(kwargs.items()):
+                if v == "":
+                    kwargs.pop(k)
             if kwargs:
                 return super().configure(**kwargs)
         return None

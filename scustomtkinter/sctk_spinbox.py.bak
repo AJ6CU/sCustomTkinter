@@ -359,7 +359,8 @@ class sCTkSpinbox(ctk.CTkFrame, ThemeableWidget):
                 if hasattr(child, "winfo_exists") and child.winfo_exists(): child.configure(state=button_state)
 
         for pop_custom_key in ["from_", "to", "step_size", "button_width", "button_height", "button_side", "orientation", "arrow_font_size", "arrow_font", "format", "values", "wrap"]: kwargs.pop(pop_custom_key, None)
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
 
         if kwargs: super().configure(**kwargs)
         self._apply_custom_theme_colors()

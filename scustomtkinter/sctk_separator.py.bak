@@ -252,7 +252,8 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
             else:
                 kwargs["width"] = new_length
 
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
         if kwargs: super().configure(**kwargs)
         self._draw()
 

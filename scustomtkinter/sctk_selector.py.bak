@@ -415,7 +415,8 @@ class sCTkSelector(sCTkFrame, ThemeableWidget):
         self.final_kw.pop("grid_propagate", None)   # harmless if it was passed
         self.final_kw.pop("state", None)
 
-        self._drop_cleared(kwargs)
+        for k, v in list(kwargs.items()):
+            if v == "": kwargs.pop(k)
         if kwargs: return super().configure(**kwargs)
         return None
 

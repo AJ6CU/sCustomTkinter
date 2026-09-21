@@ -163,9 +163,9 @@ class sCTkLabelSecondary(ctk.CTkLabel, ThemeableWidget):
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
 
-        for k, v in list(kwargs.items()):
-            if v == "":
-                kwargs.pop(k)
+        # Theme values cleared to "" are dropped; `text=""` is kept, so a
+        # label can actually be blanked. See ThemeableWidget._CONTENT_KEYS.
+        self._drop_cleared(kwargs)
 
         if kwargs:
             return super().configure(**kwargs)

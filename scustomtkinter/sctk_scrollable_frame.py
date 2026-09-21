@@ -622,6 +622,17 @@ class sCTkScrollableFrame(ctk.CTkScrollableFrame, ScrollBindingMixin, ThemeableW
         #
         # disabled_map still wins while disabled -- an override here sets the
         # NORMAL-state color. See _update_current_visual_state()'s themed().
+        # The one widget that had NO empty-string rule at all.
+        #
+        # Every other configure() in the library drops a cleared theme value;
+        # this one forwarded it -- to the native widget, and into
+        # _local_defaults below, where the next repaint reapplied it. A
+        # Designer clear on a colour therefore reached CTkScrollableFrame as
+        # fg_color="". Called BEFORE the loop so a cleared value is never
+        # stored. label_text="" is kept, as a caption rather than a colour --
+        # see ThemeableWidget._CONTENT_KEYS.
+        self._drop_cleared(kwargs)
+
         for key in self._THEME_TRACKED_KEYS:
             if key in kwargs:
                 self._local_defaults[key] = kwargs[key]
