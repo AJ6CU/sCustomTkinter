@@ -267,8 +267,20 @@ class sCTkSeparator(ctk.CTkBaseClass, ThemeableWidget):
     def cget(self, attribute_name: str):
         if attribute_name == "height": raise ValueError("Use length and width arguments instead.")
         if attribute_name == "state": return self.get_state()
-        mapping = {"corner_radius": self._corner_radius, "fg_color": self._fg_color, "orientation": self._orientation, "text": self._text, "dash": self._dash}
-        return mapping.get(attribute_name, super().cget(attribute_name))
+        mapping = {"corner_radius": self._corner_radius, "fg_color": self._fg_color,
+                   "text_color": self._text_color, "orientation": self._orientation,
+                   "text": self._text, "dash": self._dash}
+        # CHECKED FIRST, not passed as get()'s default.
+        #
+        # This read `mapping.get(name, super().cget(name))`, and Python works
+        # out the default BEFORE calling get() -- so super().cget(name) ran on
+        # every call and raised for anything the native base class does not
+        # know, including every property listed above. cget("text") and
+        # cget("fg_color") both failed on a separator that knew their values
+        # perfectly well. text_color was also missing from the list.
+        if attribute_name in mapping:
+            return mapping[attribute_name]
+        return super().cget(attribute_name)
 
     def bind(self, sequence=None, command=None, add=True):
         """
