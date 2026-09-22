@@ -88,6 +88,9 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         self._current_s_value = 0.0
         self._current_swr_value = 1.0
         self._current_pwr_value = 0.0
+        # A reading in words, drawn at the right end of the S row's caption
+        # line -- "-63 dBFS", say. Empty draws nothing. See set().
+        self._current_sig_text = ""
 
         # 4. Resolve the frame backplane color string and build the Tkinter drawing canvas
         bg_resolved = self._resolve_color(theme_bg_raw)
@@ -429,6 +432,13 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
 
             self.canvas.create_text(start_x, sig_y - 8 - (scale_h / 2), text="S", fill=amber_color, font=scale_font, anchor="center")
             self.canvas.create_text(start_x + (total_length * 0.5), sig_y + 5, text="SIG", fill=amber_color, font=label_font, anchor="n")
+            # THE READING, IN WORDS, at the right end of the caption line --
+            # level with "SIG", aligned to the end of the bar. The bar shows
+            # roughly where a signal is; this says exactly, in whatever units
+            # the caller has (the meter does not know what they are).
+            if self._current_sig_text:
+                self.canvas.create_text(end_x, sig_y + 5, text=self._current_sig_text,
+                                        fill=amber_color, font=label_font, anchor="ne")
 
 
         if not show_lower:
@@ -500,8 +510,15 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
                 self.canvas.create_text(tx - 4 if val == 100 else tx, lower_y + 8, text=label, fill=color, font=scale_font, anchor="n")
             else:
                 self.canvas.create_text(tx - 4 if val == 100 else tx, lower_y - 8 - (scale_h / 2), text=label, fill=color, font=scale_font, anchor="center")
-    def set(self, s_value=None, swr_value=None, pwr_value=None):
-        """Update any telemetry channel row independently."""
+    def set(self, s_value=None, swr_value=None, pwr_value=None, sig_text=None):
+        """
+        Update any telemetry channel row independently.
+
+        sig_text: the S reading in words -- "-63 dBFS" -- drawn at the right
+            end of the S row's caption line. "" removes it; None leaves it as
+            it is. Runtime state like the values, not a property.
+        """
+        if sig_text is not None: self._current_sig_text = str(sig_text)
         if s_value is not None: self._current_s_value = float(s_value)
         if swr_value is not None: self._current_swr_value = float(swr_value)
         if pwr_value is not None: self._current_pwr_value = float(pwr_value)

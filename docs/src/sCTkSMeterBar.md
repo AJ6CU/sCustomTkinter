@@ -65,6 +65,19 @@ sCTkSMeterBar(master=None, swr_max_value=5.0, swr_visible=True, pwr_visible=True
 led_bar_gauge.set(s_value=9.2, swr_value=1.4, pwr_value=45.0)
 ```
 
+`s_value` is on the meter's own scale: `0` to `9` for S0 to S9, then `9` plus the decibels over S9, so `29` is S9+20 and `69` the top of the scale at S9+60.
+
+#### Show the Reading in Words
+```python
+# Drawn at the right end of the S row's caption line, level with "SIG".
+led_bar_gauge.set(s_value=6.2, sig_text="-63 dBFS")
+
+# An empty string removes it; leaving sig_text out keeps what is there.
+led_bar_gauge.set(sig_text="")
+```
+
+The bar shows roughly where a signal is; `sig_text` says exactly, in whatever units the caller has. The meter does not interpret it. Like the values, it is runtime state passed through `set()`, not a constructor or Designer property.
+
 #### Live Layout Configuration Modifier
 ```python
 # Updates layout presentation properties on the fly without reconstruction overhead.
