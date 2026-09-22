@@ -113,10 +113,16 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
 
         # OPTIONAL, unlike the colours above: a theme written before rows
         # could be selected has no such key, and requiring it would break
-        # every one of them. Absent, the header colour stands in -- still a
-        # theme value, never a hardcoded one.
+        # every one of them. Absent, the grid-line colour stands in -- still
+        # a theme value, never a hardcoded one.
+        #
+        # NOT the header colour, which this first used. In the library's own
+        # dark theme it differs from the rows by 6 (on a 0-765 scale), so the
+        # selected row was invisible. The grid-line colour stands clear of the
+        # rows in both modes. A theme should still set cell_selected_color:
+        # no existing colour was chosen to be a selection colour.
         self._selected_bg = (self._switch_theme_profile.get("cell_selected_color")
-                             or self._header_bg)
+                             or self._grid_line_color)
 
         # FIX (related bug found while eliminating the fallback above): an
         # earlier version of _apply_state_and_theme_updates() always reverted
@@ -773,9 +779,9 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         self._cell_fg = dis_map.get("cell_text_color") if is_disabled else normal_map.get("cell_text_color")
         self._grid_line_color = dis_map.get("grid_line_color") if is_disabled else normal_map.get("grid_line_color")
         # The selection colour follows the state too -- optional in both maps,
-        # falling back to the header colour, as at construction.
+        # falling back to the grid-line colour, as at construction.
         self._selected_bg = ((dis_map if is_disabled else normal_map).get("cell_selected_color")
-                             or self._header_bg)
+                             or self._grid_line_color)
 
         if hasattr(self, "table_outline_frame") and self.table_outline_frame:
             self.table_outline_frame.configure(fg_color=self._grid_line_color, border_color=self._grid_line_color)

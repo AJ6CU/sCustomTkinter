@@ -129,6 +129,15 @@ The dropdown opens already showing its list, so choosing takes the same clicks a
 
 A chosen value goes through validation and the edit callback like a typed one.
 
+**Where the list opens** is set by `CHOICE_LIST_POSITION`: `"below"` (the default) opens it just under the cell, leaving the current value in view; `"over"` starts it at the cell's top edge, as a native menu does. Set it on one table, or on the class for all of them:
+
+```python
+table.CHOICE_LIST_POSITION = "over"          # this table
+sCTkTableview.CHOICE_LIST_POSITION = "over"  # every table
+```
+
+The list is placed against the cell rather than the dropdown widget, because the widget has only just been created when the list opens and has not been laid out yet — its position on screen is not known, and CustomTkinter's own placement could put the list well away from the table.
+
 <a name="validating-an-edit"></a>
 #### Validating an edit
 
@@ -162,13 +171,15 @@ A rejected edit, or one that leaves the value unchanged, does not call the edit 
         "cell_text_color": ["#1E293B", "#E2E8F0"],
         "cell_font": ["Arial", 13, "normal"],
         "grid_line_color": ["#CBD5E1", "#334155"],
+        "cell_selected_color": ["#93C5FD", "#1E40AF"],
         "disabled_map": {
             "header_bg_color": ["#CBD5E1", "#1E293B"],
             "header_text_color": ["#94A3B8", "#64748B"],
             "cell_bg_color": ["#F1F5F9", "#1F2937"],
             "cell_alt_bg_color": ["#E2E8F0", "#263241"],
             "cell_text_color": ["#94A3B8", "#64748B"],
-            "grid_line_color": ["#E2E8F0", "#293548"]
+            "grid_line_color": ["#E2E8F0", "#293548"],
+            "cell_selected_color": ["#CBD5E1", "#334155"]
         }
     }
 }
@@ -176,7 +187,16 @@ A rejected edit, or one that leaves the value unchanged, does not call the edit 
 
 All six colors are required both at the top level and in `disabled_map` — missing any raises immediately at construction, naming the exact key.
 
-**`cell_selected_color` is optional**, at the top level and in `disabled_map` — it colours the selected row. A theme written before rows could be selected has no such key, and requiring it would break every one of them, so when it is absent the header colour stands in. That is still a theme value, never a hardcoded one. `header_font`/`cell_font` are required only at the top level; no widget in this project uses a disabled-state font variant.
+**`cell_selected_color` colours the selected row**, at the top level and in `disabled_map`. It is optional — a theme written before rows could be selected has no such key, and requiring it would break every one of them — but **a theme should set it**. When it is absent the grid-line colour stands in: still a theme value, and clear of the rows in the library's own theme, but not a colour anyone chose for selection.
+
+Choose it to stand well clear of *both* row colours, not just the plain one — with `grid_mode="zebra"` half the rows are the alternate colour — and to keep the cell text readable on top. The header colour is a poor choice for this: in the library's dark theme it is almost exactly the row colour.
+
+```json
+"cell_selected_color": ["#93C5FD", "#1E40AF"],
+"disabled_map": {
+    "cell_selected_color": ["#CBD5E1", "#334155"]
+}
+``` `header_font`/`cell_font` are required only at the top level; no widget in this project uses a disabled-state font variant.
 
 **`cell_bg_color`/`cell_alt_bg_color` are the two exceptions** — they can come from either the theme block *or* the constructor kwarg of the same name, so it's only a hard failure if *neither* provides a value. Whichever one this instance resolves to at construction is remembered and correctly restored on every return to `"normal"` — an earlier version always reverted to the theme's value on re-enable, silently discarding a constructor override after a disable/enable cycle.
 

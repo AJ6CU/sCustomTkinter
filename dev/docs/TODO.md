@@ -102,6 +102,38 @@ inherited by each builder object as it is touched. `sCTkSelectorBO` and
 `sCTkNotebookTabBO` already do this by hand for structural properties and
 would fold into it. Documented meanwhile in `DesignerHints.md`.
 
+**sCTkTableview's preview is empty.** It predates the editing work -- the
+original widget shows the same -- and nothing reaches the console, so pygubu
+is presumably catching an error while it builds the preview. Ruled out: the
+builder object's `layout()` signature, which took no `target` and has been
+fixed anyway, and the editing and selection changes. Next step: build a table
+in a short script outside the Designer, to separate the widget from the
+Designer path. `sCTkTableviewForPreview` in `plugin.py` is where the preview
+class lives.
+
+**Offer the rest of sCTkTableview in the Designer.** It already offers
+`editable_columns`, `edit_trigger` and `select_rows`. Not yet offered:
+
+* **The callbacks** -- selection, activate, edit, validation and cell
+  editability. Each could become a command property, so typing
+  `on_cell_editable` in the panel wires up that method, as the notebook's
+  `command` does. `bind_validation_callback` takes a `with_row` switch, which
+  needs a separate choice property, or a fixed three-argument form for
+  callbacks wired this way.
+* **`column_choices`** -- a list of values per column, which a single entry
+  field holds badly. Perhaps `3: LSB, USB, CWL` with one column per line, or
+  a small dialog.
+* **`CHOICE_LIST_POSITION`** -- `below` or `over`. A class attribute today,
+  settable per table in code; as a property it would be an ordinary choice.
+
+**Check every builder object that declares a command.** A command property
+must be listed in `properties` as well as `command_properties`: the Designer
+shows only what `properties` lists, and `command_properties` just marks which
+of those are commands. The notebook's `command` was invisible until this was
+fixed. `sCTkFrequencyDisplaybo.py` declares `command` the same way and very
+likely has the same problem. Worth a `grep` for `command_properties` across
+the builder objects.
+
 ---
 
 <a name="naming"></a>
@@ -132,8 +164,9 @@ first:
   full control over theming, state and the query form.
 * **Depend on it.** Less work, but users install a third package and the
   widget can only be themed from outside.
-* **Drop it.** `sCTkTableview` covers flat rows. The treeview earns its place
-  only if hierarchy or in-place cell editing is wanted.
+* **Drop it.** `sCTkTableview` now covers flat rows *and* in-place editing --
+  text, dropdowns, read-only columns and cells. The treeview earns its place
+  only if hierarchy is wanted.
 
 Worth knowing whichever way it goes: the upstream does **no ttk styling at
 all** -- not a single `ttk.Style` call in 900 lines -- so the tree renders in
@@ -275,14 +308,26 @@ and still refuse to run.
 target is wrong whenever a line contains the pattern twice. A count that goes
 *down* after an additive change is a reliable signal that something was lost.
 
-- **sCTkTableview: Designer preview is empty.** Pre-existing -- the original
-  widget shows the same. No error reaches the console, so pygubu is likely
-  swallowing one. Ruled out: the builder object's layout() signature (fixed
-  anyway) and today's editing/selection changes. Next step: build the table
-  standalone, outside the Designer, to separate widget from Designer path.
+**An empty string was dropped by every `configure()`.** Right for a theme
+value -- it is what the Designer sends to mean "fall back to the theme" -- but
+wrong for content: `label.configure(text="")` silently kept the old text.
+Content keys are now exempt through `ThemeableWidget._CONTENT_KEYS` and
+`_drop_cleared()`. A new widget should call `_drop_cleared()` rather than
+filter `""` by hand, and a new content key goes in that set.
 
-- **sCTkTableview: offer the callbacks in the Designer.** Selection,
-  activate, edit, validation and cell-editable are code-only today. Pygubu
-  can wire a named method as it does for `command` (see sCTkNotebookbo), so
-  each could become a command property -- type `on_cell_editable` in the
-  panel and pygubu connects it.
+**A frame given only a height is 200 pixels wide,** CustomTkinter's default.
+And `fg_color="transparent"` does not mean invisible -- it means "paint in the
+parent's colour" -- so a transparent spacer still hides whatever it covers.
+One at the foot of each Setup group painted over the group's border. For
+space, pad a neighbour instead; padding draws nothing.
+
+**A widget not yet laid out reports its parent's origin.** Asking a widget
+created a moment ago where it is on screen gives the corner of its parent, not
+its own place. The table's dropdown list opened at the table's top-left for
+that reason, until it was placed from the cell -- which has been on screen all
+along.
+
+**A builder object's `layout()` must accept `target`.** Pygubu's is
+`layout(self, target=None, *, forget=False)` and is not always called bare. An
+override written `layout(self)` raises `TypeError` when given one, inside code
+pygubu guards, so nothing is reported.
