@@ -15,6 +15,7 @@ from .sctk_scrollable_frame import sCTkScrollableFrame
 from .sctk_label_primary import sCTkLabelPrimary
 from .sctk_label_secondary import sCTkLabelSecondary
 from .sctk_entry_primary import sCTkEntryPrimary
+from .sctk_optionmenu_primary import sCTkOptionMenuPrimary
 
 
 
@@ -26,7 +27,8 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
                  cell_bg_color: Optional[Any] = None, cell_alt_bg_color: Optional[Any] = None,
                  editable_columns: Optional[Any] = None,
                  edit_trigger: Literal["double", "select"] = "double",
-                 select_rows: Any = False, *args, **kwargs):
+                 select_rows: Any = False, column_choices: Optional[dict] = None,
+                 *args, **kwargs):
 
         # 1. Run shared mixin logic first to parse master themes.json data maps safely
         ThemeableWidget.__init__(self, kwargs)
@@ -176,6 +178,10 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         self._selected_row = None
         self._activate_callback = None
         self._cell_editable_callback = None
+        # column index -> the values it may hold. Such a column is edited with
+        # a dropdown rather than typed: a fixed set of choices typed by hand
+        # invites typos, and each needs a rule for what counts as valid.
+        self._column_choices = {int(c): list(v) for c, v in (column_choices or {}).items()}
         self._validation_with_row = False
         self._editor = None
         self._pending_edit = None
@@ -317,6 +323,11 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
     def _on_cell_click(self, r_idx: int, c_idx: int):
         if self._state != "normal":
             return
+        # A text editor closes itself when it loses focus; a dropdown does
+        # not, so a click on any cell closes one left open -- keeping nothing
+        # unless a value was chosen.
+        if self._editor and getattr(self._editor[0], "_is_choice", False):
+            self._close_editor(save=True)
         was_selected = (self._selected_row == r_idx)
         if self._select_rows:
             self._set_selection(r_idx)
@@ -380,6 +391,11 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         self._close_editor(save=True)
         row_offset = 1 if (self._show_headers and self._grid_mode == "none" and self._header_line_width == 0) else (
             2 if self._show_headers else 0)
+        choices = self._column_choices.get(c_idx)
+        if choices:
+            self._spawn_choice_editor(r_idx, c_idx, choices, row_offset)
+            return
+
         # sCTkEntryPrimary, not a bare CTkEntry, so the editor follows the
         # theme like every other control in the library.
         entry = sCTkEntryPrimary(self.table_outline_frame, font=self._cell_font,
@@ -397,6 +413,37 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         entry.bind("<Escape>", lambda e: self._cancel_editor(entry))
         self._editor = (entry, r_idx, c_idx)
 
+    def _spawn_choice_editor(self, r_idx, c_idx, choices, row_offset):
+        """
+        A dropdown over the cell, open straight away.
+
+        ONLY A CHOICE IS KEPT. The menu has to show something when it opens,
+        and for a cell holding none of the choices -- empty, say -- that is
+        the first one. Closing it without choosing must not store that first
+        choice as though it had been picked, so the value is saved from the
+        menu's command, and nowhere else.
+        """
+        current = str(self._data_matrix[r_idx][c_idx])
+        menu = sCTkOptionMenuPrimary(self.table_outline_frame, values=list(choices),
+                                     width=self._column_widths[c_idx], height=24)
+        menu.set(current if current in choices else choices[0])
+        menu._is_choice = True
+        menu.configure(command=lambda value: self._choose(r_idx, c_idx, menu))
+        menu.grid(row=r_idx + row_offset, column=c_idx, sticky="ew", padx=1, pady=1)
+        menu.bind("<Escape>", lambda e: self._cancel_editor(menu))
+        self._editor = (menu, r_idx, c_idx)
+        # Open the list at once, so choosing takes one click, like typing.
+        # _open_dropdown_menu is CTkOptionMenu's own; guarded in case a
+        # future version renames it, when the menu simply opens on a click.
+        opener = getattr(menu, "_open_dropdown_menu", None)
+        if callable(opener):
+            self.after_idle(lambda: menu.winfo_exists() and opener())
+
+    def _choose(self, r_idx, c_idx, menu):
+        """A value was chosen from a dropdown editor: keep it."""
+        menu._chosen = True
+        self._save_edit(r_idx, c_idx, menu)
+
     def _cancel_editor(self, entry):
         entry._cancelled = True
         if self._editor and self._editor[0] is entry:
@@ -409,6 +456,9 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         if not self._editor:
             return
         entry, r_idx, c_idx = self._editor
+        # A dropdown is kept only if something was chosen from it.
+        if getattr(entry, "_is_choice", False) and not getattr(entry, "_chosen", False):
+            save = False
         if save:
             self._save_edit(r_idx, c_idx, entry)
         else:
@@ -734,6 +784,16 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
 
     def bind_edit_callback(self, callback: Callable):
         self._edit_callback = callback
+
+    def set_column_choices(self, column_index: int, choices: Optional[List[str]]):
+        """
+        Makes a column edited by choosing from a list rather than typing --
+        or, given None, typed again.
+        """
+        if choices:
+            self._column_choices[int(column_index)] = list(choices)
+        else:
+            self._column_choices.pop(int(column_index), None)
 
     def bind_cell_editable_callback(self, callback: Callable):
         """

@@ -30,7 +30,7 @@ sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra",
               state="normal", num_columns=3, num_rows=1, show_headers=True,
               cell_bg_color=None, cell_alt_bg_color=None,
               editable_columns=None, edit_trigger="double", select_rows=False,
-              *args, **kwargs)
+              column_choices=None, *args, **kwargs)
 ```
 
 | Parameter | Type | Default | Description |
@@ -48,6 +48,7 @@ sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra",
 | `editable_columns` | `list[int]` or `str` | `None` | Which columns can be edited, by index — `[1, 2]` or `"1, 2"`. `None` means every column. See [Editing and Selection](#editing-and-selection). |
 | `edit_trigger` | `"double"` / `"select"` | `"double"` | What opens a cell's editor. See [Editing and Selection](#editing-and-selection). |
 | `select_rows` | `bool` | `False` | Highlight the row last clicked. Always on when `edit_trigger` is `"select"`. |
+| `column_choices` | `dict` | `None` | `{column_index: [values]}` — columns edited by choosing from a list instead of typing. See [Choosing from a list](#choosing-from-a-list). |
 | `**kwargs` | — | — | Any native `CTkScrollableFrame` argument, or an override for one of the other theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
@@ -67,6 +68,7 @@ readings_table.pack(expand=True, fill="both", padx=20, pady=20)
 | `get_selected_row()` | `int` or `None` | The selected row's index. |
 | `clear_selection()` | — | Equivalent to `select_row(None)`. |
 | `bind_selection_callback(fn)` | — | `fn(row_index, row_values)` on every click on a row. |
+| `set_column_choices(index, choices)` | — | Makes a column edited from a list of `choices`, or typed again given `None`. |
 | `bind_cell_editable_callback(fn)` | — | `fn(row_index, column_index) -> bool`, for cells whose editability depends on the row. See [Editing and Selection](#editing-and-selection). |
 | `bind_activate_callback(fn)` | — | `fn(row_index, row_values)` on a double-click that does not open an editor. See [Editing and Selection](#editing-and-selection). |
 | `bind_edit_callback(fn)` | — | `fn(row_index, column_index, value)` after an edit that changed the cell. |
@@ -112,6 +114,20 @@ With `"double"`, a double-click on an editable column edits it, and one on a rea
 **`select_rows=True`** highlights the row last clicked. It is always on with `"select"`, which cannot work without a selection. `select_row()` sets the selection from code without calling the selection callback — the application already knows what it chose.
 
 **In the editor**, Return or clicking away keeps the change, and **Escape cancels it**, leaving the cell as it was. One editor is open at a time. Reloading the table with `load_dataset()` cancels an open editor rather than saving it, since the data it was editing is being replaced.
+
+<a name="choosing-from-a-list"></a>
+#### Choosing from a list
+
+A column whose values come from a fixed set is better chosen than typed — typing invites mistakes, and every value then needs checking. Give it choices, and its cells are edited with a dropdown instead:
+
+```python
+table = sCTkTableview(panel, columns=["Label", "Mode"], editable_columns=[0, 1],
+                      column_choices={1: ["LSB", "USB", "CWL", "CWU"]})
+```
+
+The dropdown opens already showing its list, so choosing takes the same clicks as typing. **Only a choice is kept.** The menu has to show something when it opens — for a cell holding none of the choices, the first one — so closing it without choosing, whether by Escape or by clicking another cell, changes nothing. Otherwise an empty cell would quietly take the first value just from being looked at.
+
+A chosen value goes through validation and the edit callback like a typed one.
 
 <a name="validating-an-edit"></a>
 #### Validating an edit
@@ -202,7 +218,7 @@ if __name__ == "__main__":
 - **`columns` passed to the constructor sets the column count.** Earlier versions only did so through the Designer or `configure()`, so a table built in code with five column names showed three — the default — and dropped the rest.
 - **A long table scrolls rather than growing.** Earlier versions sized the height to every row, so a table with many rows asked for enough room never to scroll and pushed its neighbours out of the window. The `height` given is now the most it will take.
 - **Changing `columns` clears the table.** The rebuild reloads with empty rows, the same as changing `num_columns`. Expected at design time; reload your data afterwards at runtime.
-- **Editing is by text only.** A cell has no dropdown or other editor; a value with a fixed set of choices is best set outside the table.
+- **Column choices are set in code.** The Designer's property panel has no way to hold a list per column, so `column_choices` is not offered there.
 - **The edit callback fires only when a value actually changes.** Retyping the same value, or leaving an editor without altering anything, is silent — as is an edit the validation callback rejects. An earlier version compared the cell against the value it had just written to that same cell, a condition that was always true, so the callback fired on every save regardless.
 - Missing a required theme key raises `KeyError` at construction, naming exactly which key and whether it's needed at the top level or in `disabled_map` — check the exact message if construction fails after a theme file change.
 - Calling `configure("propname")` for most single-argument property queries falls through to the native widget's `configure()`, which doesn't support arbitrary single-argument queries — the same known gap as elsewhere in this project's Pygubu-query investigation.

@@ -274,3 +274,15 @@ and still refuse to run.
 **`grep -c` counts lines, not occurrences.** A count quoted as a verification
 target is wrong whenever a line contains the pattern twice. A count that goes
 *down* after an additive change is a reliable signal that something was lost.
+
+- **sCTkTableview: Designer preview is empty.** Pre-existing -- the original
+  widget shows the same. No error reaches the console, so pygubu is likely
+  swallowing one. Ruled out: the builder object's layout() signature (fixed
+  anyway) and today's editing/selection changes. Next step: build the table
+  standalone, outside the Designer, to separate widget from Designer path.
+
+- **sCTkTableview: offer the callbacks in the Designer.** Selection,
+  activate, edit, validation and cell-editable are code-only today. Pygubu
+  can wire a named method as it does for `command` (see sCTkNotebookbo), so
+  each could become a command property -- type `on_cell_editable` in the
+  panel and pygubu connects it.
