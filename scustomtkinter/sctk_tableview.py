@@ -320,6 +320,12 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
     # it. The same pause file managers use before renaming.
     EDIT_DELAY_MS = 500
 
+    # Where a dropdown editor's list opens, relative to the cell it edits:
+    #   "below" -- just under the cell, leaving the value visible
+    #   "over"  -- starting at the cell's top edge, as a native menu does
+    # Settable per table, or for every table on the class.
+    CHOICE_LIST_POSITION = "below"
+
     def _on_cell_click(self, r_idx: int, c_idx: int):
         if self._state != "normal":
             return
@@ -424,8 +430,12 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         menu's command, and nowhere else.
         """
         current = str(self._data_matrix[r_idx][c_idx])
+        # The cell's font, for the box and its list alike, so the value does
+        # not jump in size the moment it becomes editable -- the option menu's
+        # own theme font was noticeably larger than the table's text.
         menu = sCTkOptionMenuPrimary(self.table_outline_frame, values=list(choices),
-                                     width=self._column_widths[c_idx], height=24)
+                                     width=self._column_widths[c_idx], height=24,
+                                     font=self._cell_font, dropdown_font=self._cell_font)
         menu.set(current if current in choices else choices[0])
         menu._is_choice = True
         menu.configure(command=lambda value: self._choose(r_idx, c_idx, menu))
@@ -433,11 +443,39 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         menu.bind("<Escape>", lambda e: self._cancel_editor(menu))
         self._editor = (menu, r_idx, c_idx)
         # Open the list at once, so choosing takes one click, like typing.
-        # _open_dropdown_menu is CTkOptionMenu's own; guarded in case a
-        # future version renames it, when the menu simply opens on a click.
+        self.after_idle(lambda: self._open_choice_list(menu, r_idx, c_idx))
+
+    def _open_choice_list(self, menu, r_idx, c_idx):
+        """
+        Opens a dropdown editor's list, placed against its CELL.
+
+        CustomTkinter places the list from the menu widget's own position on
+        screen -- but this menu was only just created, and has not been laid
+        out yet, so that position is not known and the list could open well
+        away from the table. The cell under it has been on screen all along,
+        so its position is right from the start.
+
+        Uses CTkOptionMenu's own dropdown, which is private. If a later
+        version renames it, this falls back to the menu's own opener -- the
+        list then opens where CustomTkinter puts it -- or, failing that, the
+        menu simply opens on a click.
+        """
+        if not menu.winfo_exists():
+            return
+        cell = self._cell_widgets[r_idx][c_idx]
+        cell.update_idletasks()
+        x = cell.winfo_rootx()
+        y = cell.winfo_rooty()
+        if str(self.CHOICE_LIST_POSITION).lower() != "over":
+            y += cell.winfo_height()
+
+        dropdown = getattr(menu, "_dropdown_menu", None)
+        if dropdown is not None and callable(getattr(dropdown, "open", None)):
+            dropdown.open(x, y)
+            return
         opener = getattr(menu, "_open_dropdown_menu", None)
         if callable(opener):
-            self.after_idle(lambda: menu.winfo_exists() and opener())
+            opener()
 
     def _choose(self, r_idx, c_idx, menu):
         """A value was chosen from a dropdown editor: keep it."""
