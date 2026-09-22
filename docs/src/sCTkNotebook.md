@@ -33,7 +33,8 @@ Use it when a panel has more pages than a horizontal strip can show, or when the
 ```python
 sCTkNotebook(master=None, side="left", tab_width=34, tab_style="rounded",
              text_orientation="auto", show_page_border=True,
-             show_tab_separators=False, state="normal", **kw)
+             show_tab_separators=False, state="normal", command=None,
+             **kw)
 ```
 
 | Parameter | Type | Default | Description |
@@ -46,6 +47,7 @@ sCTkNotebook(master=None, side="left", tab_width=34, tab_style="rounded",
 | `show_page_border` | `bool` | `True` | Draws the outline around the page, broken where the selected tab meets it. |
 | `show_tab_separators` | `bool` | `False` | A line between adjacent tabs. |
 | `state` | `str` | `"normal"` | `"normal"` or `"disabled"`. |
+| `command` | callable | `None` | Called with the tab's name when the operator clicks a tab. See [Reacting to a tab change](#reacting-to-a-tab-change). |
 | `**kw` | — | — | Native `CTkFrame` arguments, or theme-key overrides. |
 
 ```python
@@ -55,6 +57,24 @@ notebook.pack(expand=True, fill="both")
 page = notebook.add("Receiver")
 sCTkLabelPrimary(page, text="Receiver settings").pack(padx=20, pady=20)
 ```
+
+### Reacting to a tab change
+
+`command` is called with the name of the tab the operator clicked:
+
+```python
+def on_tab(name):
+    if name == "Channels" and not channels_loaded:
+        load_channels()          # fetched only when first looked at
+
+notebook = sCTkNotebook(panel, command=on_tab)
+```
+
+It fires **only for a click**, not when a tab is selected in code with `set()`. A programmatic selection is the application saying what it already knows, so being told about it again adds nothing — and firing there would make the order things are built in matter, since a `set()` during construction could reach a handler whose collaborators do not exist yet. This matches `CTkTabview`, and every other sCTk widget's `set()`.
+
+Clicking the tab that is already selected does not fire it either: nothing changed.
+
+`command` can also be set or replaced later with `configure(command=...)`, and in the Designer it appears as an ordinary command property.
 
 ---
 

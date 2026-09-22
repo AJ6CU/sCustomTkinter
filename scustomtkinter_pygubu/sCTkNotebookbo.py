@@ -41,6 +41,11 @@ class sCTkNotebookBO(CTkFrameBO):
     )
     properties = CTkFrameBO.properties + OPTIONS_CUSTOM
 
+    # Wired by pygubu after construction, through configure(command=...),
+    # rather than passed to the constructor -- so it stays out of
+    # OPTIONS_CUSTOM and realize() below.
+    command_properties = ("command",)
+
     OPTIONS_CUSTOM_DEFAULTS = {
         "side": "left",
         "tab_width": "34",
@@ -114,6 +119,17 @@ class sCTkNotebookBO(CTkFrameBO):
             code_bag[pname] = f"'{str(value).strip(chr(39) + chr(34))}'"
         else:
             super()._code_set_property(targetid, pname, value, code_bag)
+
+    def _code_define_callback_args(self, cmd_pname, cmd):
+        """
+        Declares that `command` receives the tab's name, so the generated
+        handler stub has a matching parameter.
+
+        Without it a handler written from the stub would have no indication
+        that the selected tab is being handed to it -- which is the entire
+        point of the callback.
+        """
+        return ("tab",)
 
     def code_imports(self):
         imports = [(widget_namespace, widget_classname)]
@@ -358,6 +374,12 @@ register_custom_property(
     state="readonly", default_value="normal",
     help="Disabled dims the strip and stops tab selection. It does not "
          "cascade to the widgets on a page.")
+
+register_custom_property(
+    builder_id, "command", "commandentry",
+    help="Called with the tab's name when the operator clicks a tab. Not "
+         "called when a tab is selected in code with set() -- the "
+         "application already knows what it chose.")
 
 register_custom_property(
     tab_builder_id, "label", "entry", default_value="Tab",

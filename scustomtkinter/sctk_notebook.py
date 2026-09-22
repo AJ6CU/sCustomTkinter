@@ -82,7 +82,7 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
     def __init__(self, master=None, side="left", tab_width=34,
                  tab_style="rounded", text_orientation="auto",
                  show_page_border=True, show_tab_separators=False,
-                 state="normal", **kw):
+                 state="normal", command=None, **kw):
         """
         Args:
             master: Parent container.
@@ -143,6 +143,13 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # and tab order is insertion order.
         self._pages = {}
         self._current = None
+
+        # Called with the tab's name when the OPERATOR selects it. Not fired
+        # by set(): a programmatic selection is the application saying what
+        # it already knows, and firing there makes construction order
+        # load-bearing -- the lesson sCTkSpinbox.set() taught. Matches
+        # CTkTabview, whose command also fires only on a click.
+        self._command = command
         self._hover = None          # name under the pointer, or None
         self._tab_bounds = {}       # name -> (y_top, y_bottom), for hit-testing
         self._scroll = 0            # strip scroll offset, in pixels
@@ -764,6 +771,8 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         name = self._tab_at(event.x, event.y)
         if name is not None and name != self._current:
             self.set(name)
+            if callable(self._command):
+                self._command(name)
         return "break"
 
     def _on_motion(self, event):
@@ -1015,6 +1024,9 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
 
         if "state" in kwargs:
             self.state(kwargs.pop("state"))
+
+        if "command" in kwargs:
+            self._command = kwargs.pop("command")
 
         if "side" in kwargs:
             new_side = self._check_side(kwargs.pop("side"))
