@@ -43,13 +43,25 @@ class sCTkTableviewBO(BuilderObject):
             props.pop(custom_prop, None)
         return props
 
-    def layout(self):
+    def layout(self, target=None, *args, **kwargs):
+        """
+        Lays the table out, minus any of its own properties.
+
+        ACCEPTS AND PASSES ON what pygubu sends. This was `layout(self)`,
+        with no parameters, while pygubu's own is
+        `layout(self, target=None, *, forget=False)` -- and it is not always
+        called bare. Called with a target, as when the Designer builds a
+        preview, the override raised TypeError before laying anything out.
+        Pygubu catches errors while building a preview, so the result was an
+        empty preview window and nothing on the console. sCTkNotebookbo's
+        tab takes `target` for the same reason.
+        """
         if hasattr(self, 'wmeta') and hasattr(self.wmeta, 'layout_properties'):
             clean_properties = dict(self.wmeta.layout_properties)
             for custom_prop in self.OPTIONS_CUSTOM:
                 clean_properties.pop(custom_prop, None)
             self.wmeta.layout_properties = clean_properties
-        super().layout()
+        super().layout(target, *args, **kwargs)
 
     def _process_property_value(self, name, value):
         if name == 'columns':

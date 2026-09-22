@@ -135,6 +135,16 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         self._state = state
 
         self._num_columns = int(num_columns)
+        # COLUMNS SETS THE COLUMN COUNT, as the documentation always said. It
+        # did not: only the Designer's builder and configure() applied it, so
+        # a table built in code with five column names showed three -- the
+        # default count -- and silently dropped every column after the third,
+        # headers, cells and set_column_properties() alike. Worked out here,
+        # before the per-column widths below are sized from it.
+        if isinstance(columns, str):
+            columns = parse_list_property(columns)
+        if columns and isinstance(columns, (list, tuple)):
+            self._num_columns = len(columns)
         self._num_rows = int(num_rows)
         self._show_headers = str(show_headers).replace("'", "").replace('"', "").strip().lower() in ("true", "1", "yes")
 
@@ -165,14 +175,14 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
                              or str(select_rows).strip().lower() in ("true", "1", "yes"))
         self._selected_row = None
         self._activate_callback = None
+        self._cell_editable_callback = None
         self._validation_with_row = False
         self._editor = None
         self._pending_edit = None
         self._data_matrix, self._cell_widgets, self._header_widgets = [], [], []
 
-        if isinstance(columns, str):
-            columns = parse_list_property(columns)
-        self.columns_list = list(columns) if (columns and isinstance(columns, list)) else [""] * self._num_columns
+        self.columns_list = (list(columns) if (columns and isinstance(columns, (list, tuple)))
+                             else [""] * self._num_columns)
 
         # FIX: an earlier version temporarily overwrote self.__class__.__name__
         # to "sCTkScrollableFrame" here, then restored it immediately after --
@@ -189,6 +199,8 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         # doesn't recognize them and has no **kwargs catch-all to fall back on
         # -- now prevented by sCTkScrollableFrame's own whitelist filtering of
         # its inbound kwargs before that call. Confirmed safe to call directly.
+        # The height asked for is a CEILING, not a suggestion: see load_dataset.
+        self._max_height = int(height)
         super().__init__(master=master, width=width, height=height, *args)
 
         super().configure(border_width=0, corner_radius=0, fg_color=self._cell_bg)
@@ -283,7 +295,14 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
             except Exception: pass
 
         self.update_idletasks()
-        super().configure(width=self.table_outline_frame.winfo_reqwidth() + 14, height=self.table_outline_frame.winfo_reqheight() + 18)
+        # Fits its WIDTH to the columns, and its height to the rows -- but no
+        # taller than the height it was given. Beyond that it scrolls, which
+        # is what a scrolling frame is for. It used to fit the height to every
+        # row, so a long table asked for enough room never to scroll and
+        # pushed whatever else shared its parent out of the window.
+        super().configure(width=self.table_outline_frame.winfo_reqwidth() + 14,
+                          height=min(self.table_outline_frame.winfo_reqheight() + 18,
+                                     self._max_height))
 
     # ------------------------------------------------------------------
     # Clicks
@@ -304,7 +323,7 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         if self._click_callback:
             self._click_callback(r_idx, self._data_matrix[r_idx])
         if (self._edit_trigger == "select" and was_selected
-                and self._is_editable(c_idx)):
+                and self._is_editable(r_idx, c_idx)):
             self._cancel_pending_edit()
             self._pending_edit = self.after(
                 self.EDIT_DELAY_MS, lambda: self._begin_pending_edit(r_idx, c_idx))
@@ -313,7 +332,7 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         if self._state != "normal":
             return
         self._cancel_pending_edit()
-        if self._edit_trigger == "double" and self._is_editable(c_idx):
+        if self._edit_trigger == "double" and self._is_editable(r_idx, c_idx):
             self._spawn_editor(r_idx, c_idx)
         elif self._activate_callback:
             self._activate_callback(r_idx, self._data_matrix[r_idx])
@@ -331,8 +350,17 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
                 pass
             self._pending_edit = None
 
-    def _is_editable(self, c_idx: int) -> bool:
-        return self._editable_columns is None or c_idx in self._editable_columns
+    def _is_editable(self, r_idx: int, c_idx: int) -> bool:
+        """
+        The column must be editable, and -- if a cell check is bound -- so
+        must this particular cell. A cell that may not be edited never opens
+        an editor, rather than opening one and then throwing the typing away.
+        """
+        if self._editable_columns is not None and c_idx not in self._editable_columns:
+            return False
+        if self._cell_editable_callback is not None:
+            return bool(self._cell_editable_callback(r_idx, c_idx))
+        return True
 
     @staticmethod
     def _parse_columns(value):
@@ -565,6 +593,10 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
 
         rebuild_layout = False
 
+        # A new height is a new ceiling -- and is still passed on below.
+        if "height" in kwargs:
+            self._max_height = int(kwargs["height"])
+
         if "editable_columns" in kwargs:
             self._editable_columns = self._parse_columns(kwargs.pop("editable_columns"))
         if "edit_trigger" in kwargs:
@@ -702,6 +734,16 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
 
     def bind_edit_callback(self, callback: Callable):
         self._edit_callback = callback
+
+    def bind_cell_editable_callback(self, callback: Callable):
+        """
+        callback(row_index, column_index) -> bool: whether one cell may be
+        edited, for the cases a column rule cannot express -- a column
+        editable in some rows and not others. Consulted after
+        editable_columns: a column left out there stays read-only whatever
+        this says. None removes the check.
+        """
+        self._cell_editable_callback = callback
 
     def bind_activate_callback(self, callback: Callable):
         """

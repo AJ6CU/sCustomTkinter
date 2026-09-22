@@ -37,7 +37,7 @@ sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra",
 |---|---|---|---|
 | `master` | widget | — | Parent container. |
 | `columns` | `list[str]` or `str` | `None` | Column header labels. Accepts `["Time", "Freq"]`, a bare comma-separated string, or a real list — see [List Properties](ListProperties.md). Setting this also sets `num_columns` to match. |
-| `width` / `height` | `int` | `500` / `300` | Overall widget dimensions in pixels. |
+| `width` / `height` | `int` | `500` / `300` | The width fits the columns. The height fits the rows **up to this value**; a table with more rows than that scrolls. |
 | `grid_mode` | `"zebra"` / `"grid"` / `"none"` | `"zebra"` | Row background styling. |
 | `header_line_width` | `int` | `2` | Header row's bottom border thickness. |
 | `outline_width` / `outline_radius` | `float` / `int` | `1.0` / `4` | Outer table border thickness and corner rounding. |
@@ -67,6 +67,7 @@ readings_table.pack(expand=True, fill="both", padx=20, pady=20)
 | `get_selected_row()` | `int` or `None` | The selected row's index. |
 | `clear_selection()` | — | Equivalent to `select_row(None)`. |
 | `bind_selection_callback(fn)` | — | `fn(row_index, row_values)` on every click on a row. |
+| `bind_cell_editable_callback(fn)` | — | `fn(row_index, column_index) -> bool`, for cells whose editability depends on the row. See [Editing and Selection](#editing-and-selection). |
 | `bind_activate_callback(fn)` | — | `fn(row_index, row_values)` on a double-click that does not open an editor. See [Editing and Selection](#editing-and-selection). |
 | `bind_edit_callback(fn)` | — | `fn(row_index, column_index, value)` after an edit that changed the cell. |
 | `bind_validation_callback(fn, with_row=False)` | — | Checks an edit before it is stored. See [Validating an edit](#validating-an-edit). |
@@ -86,6 +87,15 @@ By default every cell can be edited by double-clicking it, and no row is highlig
 table = sCTkTableview(panel, columns=["#", "Label", "Frequency", "Note"],
                       editable_columns=[1, 2])
 ```
+
+**Some cells in an editable column may still need to be read-only** — a column that only some rows can hold. `bind_cell_editable_callback` decides cell by cell, and a cell it refuses never opens an editor. That matters: refusing the edit afterwards, in validation, would let someone type into the cell and then throw the typing away without a word.
+
+```python
+# Only the first nine rows carry a label.
+table.bind_cell_editable_callback(lambda row, col: not (col == 1 and row >= 9))
+```
+
+It is consulted after `editable_columns`, so a column left out there stays read-only whatever the callback says.
 
 **`edit_trigger="select"`** opens the editor when you click a cell in the row that is **already selected** — the spreadsheet and file-manager convention. That frees the double-click for something else, reported through `bind_activate_callback`:
 
@@ -189,6 +199,8 @@ if __name__ == "__main__":
 
 ### Known Limitations
 
+- **`columns` passed to the constructor sets the column count.** Earlier versions only did so through the Designer or `configure()`, so a table built in code with five column names showed three — the default — and dropped the rest.
+- **A long table scrolls rather than growing.** Earlier versions sized the height to every row, so a table with many rows asked for enough room never to scroll and pushed its neighbours out of the window. The `height` given is now the most it will take.
 - **Changing `columns` clears the table.** The rebuild reloads with empty rows, the same as changing `num_columns`. Expected at design time; reload your data afterwards at runtime.
 - **Editing is by text only.** A cell has no dropdown or other editor; a value with a fixed set of choices is best set outside the table.
 - **The edit callback fires only when a value actually changes.** Retyping the same value, or leaving an editor without altering anything, is silent — as is an edit the validation callback rejects. An earlier version compared the cell against the value it had just written to that same cell, a condition that was always true, so the callback fired on every save regardless.
