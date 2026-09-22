@@ -24,7 +24,8 @@ class sCTkTableviewBO(BuilderObject):
 
     # 📐 Structural options declared first, layout payload definitions placed dead last!
     OPTIONS_CUSTOM = ('num_columns', 'num_rows', 'grid_mode', 'show_headers', 'header_line_width', 'outline_width',
-                      'outline_radius', 'state', 'cell_bg_color', 'cell_alt_bg_color', 'columns')
+                      'outline_radius', 'state', 'cell_bg_color', 'cell_alt_bg_color',
+                      'editable_columns', 'edit_trigger', 'select_rows', 'columns')
     properties = OPTIONS_CUSTOM
 
     container = False
@@ -62,8 +63,11 @@ class sCTkTableviewBO(BuilderObject):
             return None
         if name in ('num_columns', 'num_rows', 'header_line_width', 'outline_radius'):
             return int(str(value).strip())
-        if name == 'show_headers':
+        if name in ('show_headers', 'select_rows'):
             return str(value).lower() in ("true", "1", "yes")
+        # editable_columns stays a string -- "1, 2" -- and the widget parses
+        # it, the same way it parses `columns`. Blank already returned None
+        # above, which is the widget's "every column" default.
         return str(value)
 
     def _get_init_args(self, extra_init_args=None):
@@ -83,6 +87,15 @@ class sCTkTableviewBO(BuilderObject):
             args['num_columns'] = len(args['columns'])
 
         args['show_headers'] = self._process_property_value('show_headers', w_props.get('show_headers') or True)
+
+        # Editing and selection. Absent, each keeps the widget's default --
+        # every column editable, by double-click, no row highlighted -- so a
+        # table already in a .ui file is unchanged.
+        args['editable_columns'] = self._process_property_value(
+            'editable_columns', w_props.get('editable_columns'))
+        args['edit_trigger'] = str(w_props.get('edit_trigger') or "double")
+        args['select_rows'] = bool(self._process_property_value(
+            'select_rows', w_props.get('select_rows') or "False"))
         return args
 
     def _set_property(self, backend_widget, pname, value):
@@ -142,6 +155,20 @@ register_custom_property(builder_id, 'outline_radius', 'naturalnumber')
 register_custom_property(builder_id, 'state', 'choice', values=('normal', 'disabled'))
 register_custom_property(builder_id, 'cell_bg_color', 'entry')
 register_custom_property(builder_id, 'cell_alt_bg_color', 'entry')
+
+register_custom_property(
+    builder_id, 'editable_columns', 'entry',
+    help="Which columns can be edited, by index -- e.g. 1, 2. Blank means "
+         "every column. The rest are read-only.")
+register_custom_property(
+    builder_id, 'edit_trigger', 'choice', values=('double', 'select'),
+    help="double: double-click a cell to edit it. select: click a cell in the "
+         "row that is already selected, which leaves double-click free for "
+         "bind_activate_callback.")
+register_custom_property(
+    builder_id, 'select_rows', 'choice', values=('True', 'False'),
+    help="Highlight the row last clicked. Always on with edit_trigger "
+         "'select', which needs a selection to work.")
 
 # 👑 Columns text registration placed dead last!
 register_custom_property(builder_id, 'columns', 'entry', "","Enter list of columns e.g., ['One','Two','Three']")

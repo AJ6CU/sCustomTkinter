@@ -4,6 +4,7 @@
 * [Overview](#overview)
 * [Constructor](#constructor)
 * [Methods](#methods)
+* [Editing and Selection](#editing-and-selection)
 * [Theming (sCTkThemes.json)](#theming-sctkthemesjson)
 * [Example](#example)
 * [Known Limitations](#known-limitations)
@@ -27,7 +28,9 @@ This widget inherits `sCTkScrollableFrame` directly — the same composition pat
 sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra",
               header_line_width=2, outline_width=1.0, outline_radius=4,
               state="normal", num_columns=3, num_rows=1, show_headers=True,
-              cell_bg_color=None, cell_alt_bg_color=None, *args, **kwargs)
+              cell_bg_color=None, cell_alt_bg_color=None,
+              editable_columns=None, edit_trigger="double", select_rows=False,
+              *args, **kwargs)
 ```
 
 | Parameter | Type | Default | Description |
@@ -42,6 +45,9 @@ sCTkTableview(master, columns=None, width=500, height=300, grid_mode="zebra",
 | `num_columns` / `num_rows` | `int` | `3` / `1` | Initial grid size when `columns` isn't given. |
 | `show_headers` | `bool` | `True` | Whether the header row is shown. |
 | `cell_bg_color` / `cell_alt_bg_color` | color | `None` | Overrides the theme's cell background colors for this instance specifically — see [Theming](#theming-sctkthemesjson) for how this interacts with the theme file. |
+| `editable_columns` | `list[int]` or `str` | `None` | Which columns can be edited, by index — `[1, 2]` or `"1, 2"`. `None` means every column. See [Editing and Selection](#editing-and-selection). |
+| `edit_trigger` | `"double"` / `"select"` | `"double"` | What opens a cell's editor. See [Editing and Selection](#editing-and-selection). |
+| `select_rows` | `bool` | `False` | Highlight the row last clicked. Always on when `edit_trigger` is `"select"`. |
 | `**kwargs` | — | — | Any native `CTkScrollableFrame` argument, or an override for one of the other theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
@@ -55,8 +61,62 @@ readings_table.pack(expand=True, fill="both", padx=20, pady=20)
 
 | Method | Returns | Description |
 |---|---|---|
+| `load_dataset(rows)` | — | Replaces every row, rebuilding the cells. `rows` is a list of lists; short rows are padded and long ones cut to the column count. |
+| `set_row(index, values)` | — | Replaces one row's values in place, without rebuilding. Use it for a table that changes a row at a time — `load_dataset()` recreates every cell, which is slow and flickers. |
+| `select_row(index)` | — | Selects a row from code, or clears the selection given `None`. Does **not** call the selection callback. |
+| `get_selected_row()` | `int` or `None` | The selected row's index. |
+| `clear_selection()` | — | Equivalent to `select_row(None)`. |
+| `bind_selection_callback(fn)` | — | `fn(row_index, row_values)` on every click on a row. |
+| `bind_activate_callback(fn)` | — | `fn(row_index, row_values)` on a double-click that does not open an editor. See [Editing and Selection](#editing-and-selection). |
+| `bind_edit_callback(fn)` | — | `fn(row_index, column_index, value)` after an edit that changed the cell. |
+| `bind_validation_callback(fn, with_row=False)` | — | Checks an edit before it is stored. See [Validating an edit](#validating-an-edit). |
 | `state(mode=None)` / `get_state()` | `str` | Gets or sets `"normal"`/`"disabled"`. |
 | `configure(**kwargs)` / `config(**kwargs)` | varies | Standard configuration, plus `state=...` triggers a full color/font re-application across every header and cell. `columns=...` rebuilds the header row and resizes the grid to match. |
+
+---
+
+<a name="editing-and-selection"></a>
+### Editing and Selection
+
+By default every cell can be edited by double-clicking it, and no row is highlighted — the table's original behaviour. Three options change that.
+
+**`editable_columns`** limits editing to the columns listed. The rest are read-only, which a row number, a computed value or a note needs:
+
+```python
+table = sCTkTableview(panel, columns=["#", "Label", "Frequency", "Note"],
+                      editable_columns=[1, 2])
+```
+
+**`edit_trigger="select"`** opens the editor when you click a cell in the row that is **already selected** — the spreadsheet and file-manager convention. That frees the double-click for something else, reported through `bind_activate_callback`:
+
+```python
+table = sCTkTableview(panel, columns=[...], editable_columns=[1, 2],
+                      edit_trigger="select")
+table.bind_activate_callback(lambda row, values: open_record(row))
+```
+
+A double-click starts with an ordinary click, so on the selected row that first click would open an editor just before the double-click arrived. To prevent it, a click on the selected row waits half a second (`EDIT_DELAY_MS`) before opening the editor, and a double-click arriving in the meantime cancels it — the same pause a file manager takes before renaming.
+
+With `"double"`, a double-click on an editable column edits it, and one on a read-only column goes to the activate callback instead.
+
+**`select_rows=True`** highlights the row last clicked. It is always on with `"select"`, which cannot work without a selection. `select_row()` sets the selection from code without calling the selection callback — the application already knows what it chose.
+
+**In the editor**, Return or clicking away keeps the change, and **Escape cancels it**, leaving the cell as it was. One editor is open at a time. Reloading the table with `load_dataset()` cancels an open editor rather than saving it, since the data it was editing is being replaced.
+
+<a name="validating-an-edit"></a>
+#### Validating an edit
+
+`bind_validation_callback(fn)` checks each edit before it is stored. The callback's answer decides what happens:
+
+| Returns | Result |
+|---|---|
+| a string | Accepted — and **this** is stored instead of what was typed. Use it to tidy a value: a frequency typed `14.074` stored as `14.074.000`. |
+| anything else truthy | Accepted as typed. |
+| anything falsy | Rejected — the cell keeps its old value. |
+
+By default the callback is `fn(column_index, value)`. Pass `with_row=True` to have it called as `fn(row_index, column_index, value)`, for checks that depend on the row — whether that row may hold a value at all, say. It is a separate switch, so existing two-argument callbacks keep working.
+
+A rejected edit, or one that leaves the value unchanged, does not call the edit callback.
 
 ---
 
@@ -88,7 +148,9 @@ readings_table.pack(expand=True, fill="both", padx=20, pady=20)
 }
 ```
 
-All six colors are required both at the top level and in `disabled_map` — missing any raises immediately at construction, naming the exact key. `header_font`/`cell_font` are required only at the top level; no widget in this project uses a disabled-state font variant.
+All six colors are required both at the top level and in `disabled_map` — missing any raises immediately at construction, naming the exact key.
+
+**`cell_selected_color` is optional**, at the top level and in `disabled_map` — it colours the selected row. A theme written before rows could be selected has no such key, and requiring it would break every one of them, so when it is absent the header colour stands in. That is still a theme value, never a hardcoded one. `header_font`/`cell_font` are required only at the top level; no widget in this project uses a disabled-state font variant.
 
 **`cell_bg_color`/`cell_alt_bg_color` are the two exceptions** — they can come from either the theme block *or* the constructor kwarg of the same name, so it's only a hard failure if *neither* provides a value. Whichever one this instance resolves to at construction is remembered and correctly restored on every return to `"normal"` — an earlier version always reverted to the theme's value on re-enable, silently discarding a constructor override after a disable/enable cycle.
 
@@ -128,6 +190,7 @@ if __name__ == "__main__":
 ### Known Limitations
 
 - **Changing `columns` clears the table.** The rebuild reloads with empty rows, the same as changing `num_columns`. Expected at design time; reload your data afterwards at runtime.
+- **Editing is by text only.** A cell has no dropdown or other editor; a value with a fixed set of choices is best set outside the table.
 - **The edit callback fires only when a value actually changes.** Retyping the same value, or leaving an editor without altering anything, is silent — as is an edit the validation callback rejects. An earlier version compared the cell against the value it had just written to that same cell, a condition that was always true, so the callback fired on every save regardless.
 - Missing a required theme key raises `KeyError` at construction, naming exactly which key and whether it's needed at the top level or in `disabled_map` — check the exact message if construction fails after a theme file change.
 - Calling `configure("propname")` for most single-argument property queries falls through to the native widget's `configure()`, which doesn't support arbitrary single-argument queries — the same known gap as elsewhere in this project's Pygubu-query investigation.
