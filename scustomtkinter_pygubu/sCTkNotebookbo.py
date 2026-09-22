@@ -39,11 +39,16 @@ class sCTkNotebookBO(CTkFrameBO):
         "side", "tab_width", "tab_style", "text_orientation",
         "show_page_border", "show_tab_separators", "state",
     )
-    properties = CTkFrameBO.properties + OPTIONS_CUSTOM
-
-    # Wired by pygubu after construction, through configure(command=...),
-    # rather than passed to the constructor -- so it stays out of
-    # OPTIONS_CUSTOM and realize() below.
+    # "command" IS IN properties, as well as in command_properties. The
+    # Designer lists only what is in `properties`; command_properties does
+    # not add to that list, it marks which listed properties are commands, to
+    # be connected to a callback rather than set as a value. Declared only in
+    # command_properties, it was registered and never shown. Pygubu's own
+    # Button declares its command in both.
+    #
+    # It stays out of OPTIONS_CUSTOM: pygubu connects it after construction,
+    # through configure(command=...), so realize() below does not pass it.
+    properties = CTkFrameBO.properties + OPTIONS_CUSTOM + ("command",)
     command_properties = ("command",)
 
     OPTIONS_CUSTOM_DEFAULTS = {
