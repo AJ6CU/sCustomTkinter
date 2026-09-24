@@ -315,7 +315,10 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
         scroll. Without one, the height follows the content.
         """
         self._fitted_height = None
+        self._fit_chrome = None
         self._fit_attempts = 0
+        self._fitting = False
+        self._fit_scheduled = False
         self._height_is_fixed = explicit_height is not None
         outer = getattr(self, "_parent_frame", None)
         if outer is None:                       # not the structure expected
@@ -330,12 +333,34 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
                 pass
             return
 
-        # Every time the content's own size changes, take the new height.
-        self.bind("<Configure>", lambda event: self.fit_to_content(), add="+")
+        # The content's size changing is the signal to measure again -- but
+        # NOT NOW: this fires during the layout that is still happening, and
+        # our own resize fires it too. _ask_to_fit defers it to one pass on
+        # the next tick.
+        self.bind("<Configure>", lambda event: self._ask_to_fit(), add="+")
+        self._ask_to_fit()
+
+    def _ask_to_fit(self) -> None:
+        """
+        Asks for ONE measuring pass shortly, however many times it is called.
+
+        Everything about this widget's own resizing arrives in bursts -- a
+        row added, the window resized, our own height write coming back as
+        another Configure -- and measuring inside any of them reads a
+        half-finished layout. Coalescing them into one pass afterwards is
+        what makes the answer stable.
+        """
+        if self._height_is_fixed or self._fit_scheduled:
+            return
+        self._fit_scheduled = True
         try:
-            self.after(_FIT_RETRY_MS, self.fit_to_content)
+            self.after(_FIT_RETRY_MS, self._fit_now)
         except Exception:
-            pass
+            self._fit_scheduled = False
+
+    def _fit_now(self) -> None:
+        self._fit_scheduled = False
+        self.fit_to_content()
 
     def fit_to_content(self) -> None:
         """
@@ -348,46 +373,47 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
 
         Does nothing when a height was given explicitly.
 
-        THE CHROME IS MEASURED, NOT CALCULATED. The panel needs room for its
-        contents PLUS the title bar, its padding and the border -- and those
-        came to about 66 points, not the ~34 a first version worked out from
-        the label's own height and the border width. The arithmetic looked
-        right and drew one row short, which is worse than an obvious mistake.
-        The difference between the outer frame and the canvas inside it IS
-        that chrome, whatever it is made of, and it stays the same as the
-        height changes.
+        THE CHROME IS MEASURED ONCE, NOT CALCULATED. The panel needs room for
+        its contents PLUS the title bar, its padding and the border -- about
+        66 points, not the ~34 a first version worked out from the label's own
+        height and the border width. That arithmetic looked right and drew
+        every panel one row short. The difference between the outer frame and
+        the canvas inside it IS that chrome, whatever it is made of.
+
+        Measured ONCE because measuring it again mid-resize reads a
+        half-updated canvas, gives a different answer, and sets the height
+        again -- which resizes the canvas, which arrives back here. That
+        recursed until Python stopped it.
         """
-        if getattr(self, "_height_is_fixed", False):
+        if getattr(self, "_height_is_fixed", False) or getattr(self, "_fitting", False):
             return
         outer = getattr(self, "_parent_frame", None)
         canvas = getattr(self, "_parent_canvas", None) or self.master
         if outer is None or canvas is None:
             return
+
+        self._fitting = True
         try:
             content = self.winfo_reqheight()
             if content <= 1:                    # not laid out yet
+                self._retry_fit()
                 return
-            outer_height = outer.winfo_height()
-            canvas_height = canvas.winfo_height()
-            if outer_height <= 1 or canvas_height <= 1:
-                # NOTHING IS DRAWN YET, so the chrome cannot be measured. Try
-                # again shortly -- on a TIMER, not after_idle, and not for
-                # ever.
-                #
-                # after_idle here spun: it queues work for the next idle
-                # moment, and queueing it again from inside that work means Tk
-                # never becomes idle, so the window is never drawn, so the
-                # sizes are never known. The window simply never appeared.
-                self._fit_attempts += 1
-                if self._fit_attempts <= _FIT_MAX_ATTEMPTS:
-                    self.after(_FIT_RETRY_MS, self.fit_to_content)
-                return
-            self._fit_attempts = 0
-            chrome = max(0, outer_height - canvas_height)
-            wanted = content + chrome
-            # ONLY WHEN IT CHANGES. Setting the height resizes the canvas,
-            # which resizes this frame, which arrives back here -- so an
-            # unguarded write would loop for as long as the window is open.
+
+            if self._fit_chrome is None:
+                outer_height = outer.winfo_height()
+                canvas_height = canvas.winfo_height()
+                if outer_height <= 1 or canvas_height <= 1:
+                    # NOTHING IS DRAWN YET, so the chrome cannot be measured.
+                    # Try again shortly -- on a TIMER, not after_idle, and not
+                    # for ever. after_idle here spun: it queues work for the
+                    # next idle moment, and queueing it again from inside that
+                    # work means Tk never becomes idle, so the window is never
+                    # drawn, so the sizes are never known.
+                    self._retry_fit()
+                    return
+                self._fit_chrome = max(0, outer_height - canvas_height)
+
+            wanted = content + self._fit_chrome
             if wanted != self._fitted_height:
                 self._fitted_height = wanted
                 outer.configure(height=wanted)
@@ -395,6 +421,16 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
                 outer.grid_propagate(False)
         except Exception:
             pass
+        finally:
+            self._fitting = False
+
+    def _retry_fit(self) -> None:
+        """Waits and measures again -- a limited number of times."""
+        self._fit_attempts += 1
+        if self._fit_attempts > _FIT_MAX_ATTEMPTS:
+            return                              # hidden, or destroyed
+        self._fit_scheduled = False
+        self._ask_to_fit()
 
     def winfo_children(self, include_private: bool = False) -> list:
         """
