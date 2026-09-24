@@ -78,16 +78,26 @@ def report():
 
 
 def add_row():
-    """The panel should grow by one row's height."""
+    """
+    The panel should grow by one row's height.
+
+    CHECKED AFTER A PAUSE. The panel measures itself a moment after the
+    content changes -- deliberately, so a burst of changes becomes one
+    measurement -- so looking immediately reports "did not grow" for a panel
+    that grows a moment later. An earlier version of this test did exactly
+    that, and called it a failure.
+    """
     before = measure("grows when a row is added")[0]
     count = panels["grows when a row is added"][1] + 1
     sCTkLabelSecondary(grown, text=f"row {count}").pack(anchor="w", padx=8, pady=2)
     panels["grows when a row is added"] = (grown, count)
-    grown.fit_to_content()          # only needed when Tk does not notice itself
-    root.update_idletasks()
-    after = measure("grows when a row is added")[0]
-    print(f"  added a row: {before} -> {after}   "
-          f"({'grew' if after > before else 'DID NOT GROW'})")
+
+    def look():
+        after = measure("grows when a row is added")[0]
+        print(f"  added a row: {before} -> {after}   "
+              f"({'grew' if after > before else 'DID NOT GROW'})")
+
+    root.after(200, look)
 
 
 sCTkButtonPrimary(page, text="add a row", command=add_row).grid(

@@ -320,7 +320,12 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
         half-finished layout. Coalescing them into one pass afterwards is
         what makes the answer stable.
         """
-        if self._height_is_fixed or self._fit_scheduled:
+        # NOT WHILE MEASURING. Settling the layout and setting the height both
+        # raise Configure events of our own making; treating those as new
+        # requests means every pass schedules the next one, for ever -- a
+        # timer waking up every 50ms doing nothing, which writes no height
+        # and so would never have shown on screen.
+        if self._height_is_fixed or self._fit_scheduled or getattr(self, "_fitting", False):
             return
         self._fit_scheduled = True
         try:
@@ -364,6 +369,15 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
 
         self._fitting = True
         try:
+            # SETTLE THE LAYOUT FIRST. Called by hand straight after a row is
+            # added -- which is what this method is public for -- Tk has not
+            # yet recomputed what the content asks for, so measuring now reads
+            # the height from before the row. Re-entry is guarded above, so
+            # letting Tk catch up here is safe.
+            try:
+                self.update_idletasks()
+            except Exception:
+                pass
             content = self.winfo_reqheight()
             if content <= 1:                    # not laid out yet
                 self._retry_fit()
