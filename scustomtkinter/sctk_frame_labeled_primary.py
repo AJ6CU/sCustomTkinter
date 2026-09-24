@@ -310,23 +310,35 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
         and then the caller needs a way to say "measure again".
 
         Does nothing when a height was given explicitly.
+
+        THE CHROME IS MEASURED, NOT CALCULATED. The panel needs room for its
+        contents PLUS the title bar, its padding and the border -- and those
+        came to about 66 points, not the ~34 a first version worked out from
+        the label's own height and the border width. The arithmetic looked
+        right and drew one row short, which is worse than an obvious mistake.
+        The difference between the outer frame and the canvas inside it IS
+        that chrome, whatever it is made of, and it stays the same as the
+        height changes.
         """
         if getattr(self, "_height_is_fixed", False):
             return
         outer = getattr(self, "_parent_frame", None)
-        if outer is None:
+        canvas = getattr(self, "_parent_canvas", None) or self.master
+        if outer is None or canvas is None:
             return
         try:
             content = self.winfo_reqheight()
             if content <= 1:                    # not laid out yet
                 return
-            label = getattr(self, "_label", None)
-            title = label.winfo_reqheight() if label is not None and label.winfo_ismapped() else 0
-            try:
-                border = int(super().cget("border_width") or 0) * 2
-            except Exception:
-                border = 0
-            wanted = content + title + border + 4
+            outer_height = outer.winfo_height()
+            canvas_height = canvas.winfo_height()
+            if outer_height <= 1 or canvas_height <= 1:
+                # Nothing has been drawn yet, so the chrome cannot be
+                # measured. Ask again once it has.
+                self.after_idle(self.fit_to_content)
+                return
+            chrome = max(0, outer_height - canvas_height)
+            wanted = content + chrome
             # ONLY WHEN IT CHANGES. Setting the height resizes the canvas,
             # which resizes this frame, which arrives back here -- so an
             # unguarded write would loop for as long as the window is open.
