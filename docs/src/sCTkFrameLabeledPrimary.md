@@ -15,6 +15,8 @@
 
 `sCTkFrameLabeledPrimary` is a themeable, high-emphasis labeled container panel — the more prominent of the library's two labeled frame tiers (see also `sCTkFrameLabeledSecondary`). It's built on `customtkinter.CTkScrollableFrame`, but deliberately used purely for its native title-label feature — the model here is `ttk.LabelFrame`, which never scrolls. Scrolling is intentionally suppressed; this is a labeled, bordered panel, not a scroll viewport.
 
+**The panel is as tall as what is in it.** `ttk.LabelFrame` behaves this way, and so does this — while `CTkScrollableFrame`, which it's built on, defaults to 200 points high whatever it holds. Give it a `height` and that's honoured instead, with anything past it clipped, since this panel doesn't scroll.
+
   ![sCTkFrameLabeledPrimary in dark mode](images/sCTkFrameLabeledPrimary_Dark.png)&emsp; &emsp; &emsp; &emsp;
  ![sCTkFrameLabeledPrimary in light mode](images/sCTkFrameLabeledPrimary_Light.png)
 
@@ -29,6 +31,7 @@ sCTkFrameLabeledPrimary(master=None, **kwargs)
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `master` | widget | `None` | Parent container. |
+| `height` | `int` | content | How tall the panel is. Left out, it follows its contents. Given, it's honoured exactly — including when the contents are taller, which are then clipped rather than scrolled. |
 | `**kwargs` | — | — | Any native `CTkScrollableFrame` argument (most usefully `label_text`, the panel's title), or an override for one of the theme keys listed under [Theming](#theming-sctkthemesjson). |
 
 ```python
@@ -51,6 +54,7 @@ channel_panel.pack(expand=True, fill="both", padx=25, pady=25)
 | `winfo_children(include_private=False)` | `list` | By default, filters out children whose exact class name is `"CTkLabel"`, `"Label"`, `"CTkFrame"`, or `"Frame"` — internal furniture `CTkScrollableFrame` creates for its own title row and canvas wrapper. Pass `include_private=True` for the raw, unfiltered list. **Known limitation:** this is a class-name check, not an identity check — a plain, un-themed `customtkinter.CTkLabel`/`CTkFrame` added directly as a child would be filtered out too, since its class name matches. Themed `sCTk`-prefixed widgets are unaffected. |
 | `get_children()` | `list` | Equivalent to `winfo_children(include_private=False)`. |
 | `get_all_children()` | `list` | Equivalent to `winfo_children(include_private=True)`. |
+| `fit_to_content()` | `None` | Re-measures the contents and takes their height. Happens automatically as content changes; call it when rows are added long after construction and the panel hasn't noticed. Does nothing when a `height` was given. |
 | `get_container()` | `self` | Returns the widget itself. Provided for API symmetry with composite widgets (like `sCTkOptionMenuSecondary`) that wrap a separate inner container. |
 
 ---
@@ -87,6 +91,8 @@ That is a dead end rather than an open bug. `CTkScrollableFrame` — which this 
     }
 }
 ```
+
+**On sizing, and why it was not the caller's job.** `CTkScrollableFrame` is three widgets — an outer frame, a canvas inside it, and the inner frame your content goes into — and the object you hold is the innermost. So `widget.master` is the *canvas*, not the frame on screen, and a height set on the widget is recorded (it reads back correctly) and then overridden when the outer frame resizes to what the canvas asks for. Sizing one from outside meant knowing all of that, and setting the height on `_parent_frame` with propagation off. The widget now does it.
 
 **On the internal scrollbar:** since this widget is built on `CTkScrollableFrame`, a scrollbar exists internally even though scrolling isn't the intent. It's suppressed by matching its colors to the frame's background and collapsing its width to `0`. This is a workaround, not a true disable — confirmed by direct investigation, CustomTkinter's native scrollbar has no disabled state to lock in the first place, even on an unwrapped `CTkScrollableFrame`. Matching colors and zeroing width is the closest achievable approximation.
 
@@ -140,6 +146,7 @@ if __name__ == "__main__":
 - The internal scrollbar cannot be truly disabled (a CustomTkinter limitation, confirmed by direct investigation, not something this wrapper can work around) — only visually hidden via color-matching and zero width.
 - `winfo_children()`'s default filtering is a class-name check, not an identity check — see the Methods table above for the specific edge case this can miss.
 - **Fixed:** `configure("fg_color")` used to return `str(value)` of a `(light, dark)` tuple rather than a resolved colour. The shared query helper now resolves the pair.
+- **Fixed:** the panel took `CTkScrollableFrame`'s 200-point default height however little it held, and a `height` passed to it was recorded and then overridden — it had to go on `_parent_frame`, with propagation off, which callers had no way to know. It now sizes to its contents, and honours a `height` when given.
 - **Not selectable by clicking on the design canvas** — see [In Pygubu Designer](#designer).
 
 [Return to Table of Contents](#contents)

@@ -33,6 +33,10 @@ The model here is ttk.LabelFrame, which doesn't scroll at all. The scrollbar
 is suppressed by matching its colors to the frame background and collapsing
 its width to 0, which removes the visible/interactive scrollbar entirely.
 Confirmed by the maintainer: this is the intended design, not a gap.
+SIZED TO ITS CONTENTS, for the same reason: a ttk.LabelFrame is as tall as
+what is in it, while CTkScrollableFrame defaults to 200 points high whatever
+it holds. Give it a `height` and that is honoured instead, with anything past
+it clipped -- this panel does not scroll. See _begin_content_sizing().
 """
 import customtkinter as ctk
 from typing import Any, Optional
@@ -123,6 +127,11 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
         # 1. Fire our shared theme logic first. This resolves final_kw
         # (construction-time properties) and the disabled color map. See
         # ThemeableWidget.__init__ for what actually happens here.
+        # Noted BEFORE the theme logic runs, which merges the theme's own keys
+        # into the same dictionary: what matters is whether the CALLER asked
+        # for a height, not whether one ends up in final_kw.
+        asked_height = kwargs.get("height")
+
         ThemeableWidget.__init__(self, kwargs)
 
         # 2. Deep-copy the resolved map onto this instance, so later changes
@@ -144,6 +153,10 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
 
         # 5. Register lifecycle handshake hook, notifying Pygubu-style consumers
         # that construction is complete.
+        # Sized to its contents unless the caller said otherwise -- see
+        # _begin_content_sizing for why this is not the caller's job.
+        self._begin_content_sizing(asked_height)
+
         self._finalize_themeable_lifecycle()
 
     def _set_appearance_mode(self, mode_string: str) -> None:
@@ -237,6 +250,93 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
     # would silently skip this entire override and land on the native widget's
     # configure() directly, bypassing theming and state handling entirely.
     config = configure
+
+
+    # ------------------------------------------------------------------
+    # Sizing: as tall as its contents, like the ttk.LabelFrame it models
+    # ------------------------------------------------------------------
+    def _begin_content_sizing(self, explicit_height: Any) -> None:
+        """
+        Makes the panel as tall as what is in it.
+
+        WHY THIS EXISTS. This widget is a labeled PANEL -- see the module
+        docstring -- but it is built on CTkScrollableFrame, which is sized for
+        scrolling: it defaults to 200 points high whatever it holds. A panel
+        that stands half empty, or clips its last row, is wrong in a way the
+        caller cannot easily put right, because the height has to go on a
+        frame the caller never sees.
+
+        THE THREE WIDGETS. CTkScrollableFrame is an outer frame, a canvas
+        inside it, and the inner frame the content goes into -- and the object
+        the caller holds is the innermost. So `self.master` is the CANVAS, and
+        a height set on the widget or on its master is recorded and then
+        overridden when the outer frame resizes to what the canvas asks for.
+        `_parent_frame` is the one on screen, and propagation off is what
+        makes a height set there stick.
+
+        An explicit height is honoured as given -- the caller has said what
+        they want, and content beyond it is clipped, since this panel does not
+        scroll. Without one, the height follows the content.
+        """
+        self._fitted_height = None
+        self._height_is_fixed = explicit_height is not None
+        outer = getattr(self, "_parent_frame", None)
+        if outer is None:                       # not the structure expected
+            return
+
+        if self._height_is_fixed:
+            try:
+                outer.configure(height=int(explicit_height))
+                outer.pack_propagate(False)
+                outer.grid_propagate(False)
+            except Exception:
+                pass
+            return
+
+        # Every time the content's own size changes, take the new height.
+        self.bind("<Configure>", lambda event: self.fit_to_content(), add="+")
+        try:
+            self.after_idle(self.fit_to_content)
+        except Exception:
+            pass
+
+    def fit_to_content(self) -> None:
+        """
+        Sets the panel's height to what its contents come to.
+
+        Called automatically as the content changes. Public because content
+        added long after construction -- a row appended to a settings group,
+        say -- may not change the inner frame's own size in a way Tk reports,
+        and then the caller needs a way to say "measure again".
+
+        Does nothing when a height was given explicitly.
+        """
+        if getattr(self, "_height_is_fixed", False):
+            return
+        outer = getattr(self, "_parent_frame", None)
+        if outer is None:
+            return
+        try:
+            content = self.winfo_reqheight()
+            if content <= 1:                    # not laid out yet
+                return
+            label = getattr(self, "_label", None)
+            title = label.winfo_reqheight() if label is not None and label.winfo_ismapped() else 0
+            try:
+                border = int(super().cget("border_width") or 0) * 2
+            except Exception:
+                border = 0
+            wanted = content + title + border + 4
+            # ONLY WHEN IT CHANGES. Setting the height resizes the canvas,
+            # which resizes this frame, which arrives back here -- so an
+            # unguarded write would loop for as long as the window is open.
+            if wanted != self._fitted_height:
+                self._fitted_height = wanted
+                outer.configure(height=wanted)
+                outer.pack_propagate(False)
+                outer.grid_propagate(False)
+        except Exception:
+            pass
 
     def winfo_children(self, include_private: bool = False) -> list:
         """
