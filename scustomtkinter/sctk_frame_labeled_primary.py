@@ -43,6 +43,12 @@ from typing import Any, Optional
 from .themeable_widget import ThemeableWidget
 
 
+# How long to wait before measuring again when nothing has been drawn yet,
+# and how many times to bother. A second in all: if the panel is not on
+# screen by then it is hidden or destroyed, and its height does not matter.
+_FIT_RETRY_MS = 50
+_FIT_MAX_ATTEMPTS = 20
+
 class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
     """Themeable, high-emphasis labeled scrollable container.
 
@@ -279,6 +285,7 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
         scroll. Without one, the height follows the content.
         """
         self._fitted_height = None
+        self._fit_attempts = 0
         self._height_is_fixed = explicit_height is not None
         outer = getattr(self, "_parent_frame", None)
         if outer is None:                       # not the structure expected
@@ -296,7 +303,7 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
         # Every time the content's own size changes, take the new height.
         self.bind("<Configure>", lambda event: self.fit_to_content(), add="+")
         try:
-            self.after_idle(self.fit_to_content)
+            self.after(_FIT_RETRY_MS, self.fit_to_content)
         except Exception:
             pass
 
@@ -333,10 +340,19 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
             outer_height = outer.winfo_height()
             canvas_height = canvas.winfo_height()
             if outer_height <= 1 or canvas_height <= 1:
-                # Nothing has been drawn yet, so the chrome cannot be
-                # measured. Ask again once it has.
-                self.after_idle(self.fit_to_content)
+                # NOTHING IS DRAWN YET, so the chrome cannot be measured. Try
+                # again shortly -- on a TIMER, not after_idle, and not for
+                # ever.
+                #
+                # after_idle here spun: it queues work for the next idle
+                # moment, and queueing it again from inside that work means Tk
+                # never becomes idle, so the window is never drawn, so the
+                # sizes are never known. The window simply never appeared.
+                self._fit_attempts += 1
+                if self._fit_attempts <= _FIT_MAX_ATTEMPTS:
+                    self.after(_FIT_RETRY_MS, self.fit_to_content)
                 return
+            self._fit_attempts = 0
             chrome = max(0, outer_height - canvas_height)
             wanted = content + chrome
             # ONLY WHEN IT CHANGES. Setting the height resizes the canvas,
