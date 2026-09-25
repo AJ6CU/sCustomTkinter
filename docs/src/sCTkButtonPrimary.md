@@ -65,31 +65,75 @@ Four visual states, not two, with a fixed precedence when more than one could ap
     "sCTkButtonPrimary": {
         "width": 140,
         "height": 34,
-        "font": ["Arial", 15, "normal"],
-        "fg_color": ["#1A4375", "#2471A3"],
-        "hover_color": ["#112A4B", "#1F618D"],
-        "text_color": ["#FFFFFF", "#FFFFFF"],
+        "font": [
+            "Arial",
+            15,
+            "normal"
+        ],
+        "fg_color": [
+            "#4F75A2",
+            "#2B4C7E"
+        ],
+        "hover_color": [
+            "#3A5C85",
+            "#3A5F8C"
+        ],
+        "text_color": [
+            "#FFFFFF",
+            "#FFFFFF"
+        ],
         "corner_radius": 6,
         "disabled_map": {
-            "fg_color": ["#E5E7EB", "#374151"],
-            "hover_color": ["#E5E7EB", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"]
+            "fg_color": [
+                "#E5E7EB",
+                "#374151"
+            ],
+            "hover_color": [
+                "#E5E7EB",
+                "#374151"
+            ],
+            "text_color": [
+                "#94A3B8",
+                "#64748B"
+            ]
         },
         "pressed_map": {
-            "fg_color": ["#3B5984", "#2E4A75"],
-            "hover_color": ["#3B5984", "#2E4A75"],
-            "text_color": ["#FFFFFF", "#FFFFFF"]
+            "fg_color": [
+                "#1A4375",
+                "#3A6FA2"
+            ],
+            "hover_color": [
+                "#1A4375",
+                "#3A6FA2"
+            ],
+            "text_color": [
+                "#FFFFFF",
+                "#FFFFFF"
+            ]
         },
         "alarm_map": {
-            "fg_color": ["#990000", "#E74C3C"],
-            "hover_color": ["#990000", "#E74C3C"],
-            "text_color": ["#FFFFFF", "#FFFFFF"]
+            "fg_color": [
+                "#990000",
+                "#E74C3C"
+            ],
+            "hover_color": [
+                "#990000",
+                "#E74C3C"
+            ],
+            "text_color": [
+                "#FFFFFF",
+                "#FFFFFF"
+            ]
         }
     }
 }
 ```
 
 Note there's no `border_color` anywhere in this block — this button style has no themed border by design (it's a solid-fill button). The widget checks for `border_color` in every state's color swap for consistency with the other themed widgets, but that lookup always resolves to nothing here and is simply skipped.
+
+**Engaged moves in one direction, library-wide.** A control that is selected, latched or otherwise engaged shifts from its own resting colour **darker in light mode, lighter in dark** — never sideways, and never to the same value as its hover colour, or a button under the pointer would be indistinguishable from one that is on. See [Theming](Theming.md#engaged-states) for the rule and the values.
+
+**This tier shares the segmented button's palette exactly** — the same resting, hover and engaged colours — so a latched primary button and a selected segment look alike, because they mean the same thing. Its resting fill moved off `#1A4375` to free that value: nothing may REST on the colour that means engaged, or an ordinary button would wear it while doing nothing.
 
 **A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 

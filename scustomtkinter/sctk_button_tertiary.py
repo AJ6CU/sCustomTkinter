@@ -6,7 +6,7 @@ A theme-compliant tertiary (outline-style) action button widget -- the
 lowest-emphasis of the library's three button tiers (see also
 sCTkButtonPrimary, sCTkButtonSecondary). Inherits directly from ctk.CTkButton
 so CustomTkinter handles native rendering; this class layers automatic
-light/dark theme resolution and a three-state visual model
+light/dark theme resolution and a four-state visual model
 (normal/disabled/pressed) on top. Unlike sCTkButtonPrimary, there is no
 "alarm" state here.
 
@@ -66,7 +66,7 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
             master: Parent container.
             **kw: Any native CTkButton argument, or a theme-key override (see
                 the "sCTkButtonTertiary" block in sCTkThemes.json, including
-                its disabled_map and pressed_map sub-blocks).
+                its disabled_map, pressed_map and alarm_map sub-blocks).
         """
         # 1. Fire our shared theme logic first. This resolves final_kw
         # (construction-time properties) and the disabled/pressed color maps.
@@ -85,11 +85,13 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
         self._local_defaults = dict(self.final_kw)
         self._custom_disabled_map = dict(self._widget_disabled_map)
         self._custom_pressed_map = dict(self._widget_pressed_map)
+        self._custom_alarm_map = dict(self._widget_alarm_map)
 
         # 3. Initialize CustomTkinter natively with the clean final kwargs array.
         super().__init__(master, **self.final_kw)
 
         self.is_pressed = False
+        self.is_alarm = False
         self._custom_current_state = "normal"
         self._update_current_visual_state()
 
@@ -108,7 +110,7 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
                   (name, name, name, default, current) tuple.
                 - one of "fg_color"/"border_color"/"text_color"/"hover_color":
                   returns the same style of tuple, with `current` reflecting
-                  whichever of disabled/pressed/normal is currently active.
+                  whichever of disabled/alarm/pressed/normal is currently active.
                   Note the returned value is str(value), where value may
                   itself be a (light, dark) tuple rather than a single
                   resolved color -- a known limitation shared with the wider
@@ -143,6 +145,8 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
                     current_state = str(self.state()).lower()
                     if current_state == "disabled" and self._custom_disabled_map:
                         val = self._custom_disabled_map.get(pname)
+                    elif getattr(self, "is_alarm", False) and self._custom_alarm_map:
+                        val = self._custom_alarm_map.get(pname)
                     elif getattr(self, "is_pressed", False) and self._custom_pressed_map:
                         val = self._custom_pressed_map.get(pname)
                     else:
@@ -255,21 +259,40 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
         """
         Toggles the visual "pressed" state.
 
-        No-op while disabled.
+        No-op while disabled or in the alarm state -- see the precedence
+        order on _update_current_visual_state().
 
         Args:
             pressed: True to show the pressed-state colors, False to return to
-                normal (assuming not disabled).
+                normal (assuming not disabled or in alarm).
+        """
+        if getattr(self, "_custom_current_state", "normal") == "disabled" or self.is_alarm:
+            return
+        self.is_pressed = pressed
+        self._update_current_visual_state()
+
+    def set_alarm_state(self, active: bool) -> None:
+        """
+        Forces the button into (or out of) a high-visibility alarm state.
+
+        No-op while disabled. Turning alarm on clears any current "pressed"
+        state, since alarm takes visual precedence -- see
+        _update_current_visual_state().
+
+        Args:
+            active: True to enter the alarm state, False to leave it.
         """
         if getattr(self, "_custom_current_state", "normal") == "disabled":
             return
-        self.is_pressed = pressed
+        self.is_alarm = active
+        if self.is_alarm:
+            self.is_pressed = False
         self._update_current_visual_state()
 
     def _update_current_visual_state(self) -> None:
         """
         Recomputes and applies this widget's colors from the theme file, based
-        on the current state. Precedence: disabled > pressed > normal -- only
+        on the current state. Precedence: disabled > alarm > pressed > normal -- only
         the first matching branch applies.
 
         Called after construction, on every state()/set_pressed() change, and
@@ -287,7 +310,7 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
 
         Only the normal (final else) branch also reapplies border_width,
         corner_radius, and font -- these don't vary between
-        disabled/pressed/normal, so there's no need to repeat them in every
+        disabled/alarm/pressed/normal, so there's no need to repeat them in every
         branch; they're set once here and otherwise left alone.
         """
         if getattr(self, "_custom_current_state", "normal") == "disabled":
@@ -318,7 +341,16 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
                 super().configure(**config_payload)
             return
 
-        if getattr(self, "is_pressed", False):
+        if getattr(self, "is_alarm", False):
+            config_payload = {}
+            for key in ("fg_color", "hover_color", "border_color", "text_color"):
+                val = self._custom_alarm_map.get(key)
+                if val is not None:
+                    config_payload[key] = val
+            config_payload["hover"] = False
+            super().configure(**config_payload)
+
+        elif getattr(self, "is_pressed", False):
             config_payload = {}
             for key in ("fg_color", "border_color", "hover_color", "text_color"):
                 val = self._custom_pressed_map.get(key)

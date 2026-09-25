@@ -13,7 +13,7 @@
 
 ### Overview
 
-`sCTkButtonSecondary` is a themeable subclass of `customtkinter.CTkButton` — a lower-emphasis sibling of `sCTkButtonPrimary` (see also `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a three-state visual model (normal, disabled, and pressed — no "alarm" state, unlike Primary), and Pygubu Designer property introspection.
+`sCTkButtonSecondary` is a themeable subclass of `customtkinter.CTkButton` — a lower-emphasis sibling of `sCTkButtonPrimary` (see also `sCTkButtonTertiary`). It adds automatic light/dark theme resolution from `sCTkThemes.json`, a four-state visual model (normal, disabled, pressed and alarm), and Pygubu Designer property introspection.
 
   ![sCTkButtonSecondary_Dark.png](images/sCTkButtonSecondary_Dark.png)&emsp; &emsp; &emsp; &emsp;
   ![sCTkButtonSecondary_Light.png](images/sCTkButtonSecondary_Light.png)
@@ -49,13 +49,14 @@ cancel_button.pack(fill="x", padx=40, pady=10)
 | `state(mode=None)` | `str` | Gets or sets the widget's enabled/disabled state. Only the literal string `"disabled"` (case-insensitive) disables it; `"normal"`, `"enabled"`, or `"active"` all enable it. Any other value matches neither branch and leaves the state unchanged. Disabling uses CTk's native `state="disabled"`, confirmed by direct testing to correctly block both clicks and hover color changes. |
 | `get_state()` | `str` | Equivalent to calling `state()` with no argument. |
 | `set_pressed(pressed)` | `None` | Forces the visual "pressed" look on or off. No-op while disabled. |
+| `set_alarm_state(active)` | `None` | Forces a high-visibility alarm look on or off. No-op while disabled. Turning alarm **on** clears any active "pressed" state, since alarm takes visual precedence. |
 | `configure(**kwargs)` / `config(**kwargs)` | varies | Standard widget configuration, plus: passing `state=...` routes to `state()` rather than the native option; calling `configure("propname")` with a single property name returns a Tkinter-style `(name, name, name, default, current)` tuple for `state`, `fg_color`, `border_color`, `text_color`, and `hover_color`, with `current` reflecting whichever state (disabled/pressed/normal) is presently active. Queries for any other property name fall through to the native `CTkButton.configure`. |
 
 ---
 
 ### Theming (`sCTkThemes.json`)
 
-Three visual states, with precedence **disabled > pressed > normal** when both could apply.
+Four visual states, with precedence **disabled > alarm > pressed > normal** when more than one could apply.
 
 - **Applied once, at construction** — every key in the widget's theme block, including `font` and `corner_radius`, is merged with any matching keyword arguments and applied when the widget is built.
 - **Re-applied on every state change** — `fg_color`, `hover_color`, `border_color`, and `text_color` are recomputed from whichever map matches the current state every time you call `state()` or `set_pressed()`. `border_width`, `corner_radius`, and `font` are **not** re-applied on state changes — they don't vary between states.
@@ -63,30 +64,94 @@ Three visual states, with precedence **disabled > pressed > normal** when both c
 ```json
 {
     "sCTkButtonSecondary": {
-        "font": ["Arial", 15, "normal"],
-        "fg_color": ["#E5E7EB", "#374151"],
-        "hover_color": ["#D1D5DB", "#4B5563"],
-        "text_color": ["#1F2937", "#F9FAFB"],
+        "font": [
+            "Arial",
+            15,
+            "normal"
+        ],
+        "fg_color": [
+            "#E5E7EB",
+            "#374151"
+        ],
+        "hover_color": [
+            "#D1D5DB",
+            "#4B5563"
+        ],
+        "text_color": [
+            "#1F2937",
+            "#F9FAFB"
+        ],
         "border_width": 2,
-        "border_color": ["#9CA3AF", "#4B5563"],
+        "border_color": [
+            "#9CA3AF",
+            "#4B5563"
+        ],
         "corner_radius": 6,
         "disabled_map": {
-            "fg_color": ["#F3F4F6", "#1F2937"],
-            "hover_color": ["#F3F4F6", "#1F2937"],
-            "border_color": ["#E5E7EB", "#374151"],
-            "text_color": ["#94A3B8", "#64748B"]
+            "fg_color": [
+                "#F3F4F6",
+                "#1F2937"
+            ],
+            "hover_color": [
+                "#F3F4F6",
+                "#1F2937"
+            ],
+            "border_color": [
+                "#E5E7EB",
+                "#374151"
+            ],
+            "text_color": [
+                "#94A3B8",
+                "#64748B"
+            ]
         },
         "pressed_map": {
-            "fg_color": ["#CBD5E1", "#1F2937"],
-            "hover_color": ["#CBD5E1", "#1F2937"],
-            "border_color": ["#475569", "#94A3B8"],
-            "text_color": ["#0F172A", "#FFFFFF"]
+            "fg_color": [
+                "#9CA3AF",
+                "#6B7280"
+            ],
+            "hover_color": [
+                "#9CA3AF",
+                "#6B7280"
+            ],
+            "border_color": [
+                "#475569",
+                "#94A3B8"
+            ],
+            "text_color": [
+                "#0F172A",
+                "#FFFFFF"
+            ]
+        },
+        "alarm_map": {
+            "fg_color": [
+                "#990000",
+                "#E74C3C"
+            ],
+            "hover_color": [
+                "#990000",
+                "#E74C3C"
+            ],
+            "border_color": [
+                "#990000",
+                "#E74C3C"
+            ],
+            "text_color": [
+                "#FFFFFF",
+                "#FFFFFF"
+            ]
         }
     }
 }
 ```
 
 Unlike `sCTkButtonPrimary` (which has no themed border at all, being a solid-fill button), this style does define `border_color` at every tier — normal, pressed, and disabled all have their own distinct border color.
+
+**On the alarm colours.** Filled like the normal state, so the alarm reads at a glance across a row of controls.
+
+**Engaged moves in one direction, library-wide.** A control that is selected, latched or otherwise engaged shifts from its own resting colour **darker in light mode, lighter in dark** — never sideways, and never to the same value as its hover colour, or a button under the pointer would be indistinguishable from one that is on. See [Theming](Theming.md#engaged-states) for the rule and the values.
+
+**Engaged is a step from this tier's own greys**, not the blue Primary and the segmented button share — the direction is what is common, not the colour. **Fixed:** in dark mode the engaged fill used to be darker than the resting one, the opposite of the rule.
 
 **A colour set at runtime survives a state change,** and clearing it returns to the theme's value rather than to whatever was set before. See [Theming](Theming.md#changing-values-at-runtime) for the general rule.
 

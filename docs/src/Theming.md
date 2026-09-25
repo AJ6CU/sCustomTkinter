@@ -6,6 +6,7 @@ Every colour, font, and several structural values in this library come from a si
 * [Block structure](#block-structure)
 * [State maps](#state-maps)
 * [Light and dark](#light-and-dark)
+* [Engaged states](#engaged-states)
 * [Changing values at runtime](#changing-values-at-runtime)
 * [Things that will break your theme](#things-that-will-break-your-theme)
 * [Adding a theme block for your own widget](#adding-a-theme-block-for-your-own-widget)
@@ -70,7 +71,7 @@ Nested inside a block, a state map overrides specific keys when the widget is in
 | Map | Applies when |
 |---|---|
 | `disabled_map` | The widget is disabled via `state("disabled")` or `configure(state="disabled")`. |
-| `pressed_map` | A button is being held down, **or** a latching dial is armed. Two different meanings in two different widget families: momentary for the buttons, latched for the dials. |
+| `pressed_map` | A control is **engaged** — a button latched with `set_pressed(True)`, a dial armed. Not click feedback, despite the name: CustomTkinter has no press colour at all, and what you see while clicking is the hover colour. See [Engaged states](#engaged-states). |
 | `alarm_map` | A widget is in an alert condition. |
 | `readonly_map` | An entry or spinbox is readonly — arrows still work, typing is blocked. |
 
@@ -116,6 +117,67 @@ This is **not** something the theme file can fix, and not specific to this libra
 The only real fix would be replacing the native menu with a CustomTkinter-drawn one — a `CTkToplevel` holding themed buttons. That is a widget-level project, not a theme change, and it hasn't been done.
 
 If your application sets an appearance mode explicitly rather than following the system, expect this mismatch on those three widgets.
+
+---
+
+<a name="engaged-states"></a>
+## Engaged states
+
+A control can be **engaged**: a segment selected, a button latched with
+`set_pressed(True)`, a toggle switched on. Whatever the widget calls it, the
+operator is asking one question — *is this one on?* — so it has one answer
+across the library.
+
+**Engaged moves in one direction: darker than its resting colour in light
+mode, lighter in dark.** Never sideways, and never to a value the widget
+already uses for something else.
+
+**Nothing rests on the engaged colour.** `sCTkButtonPrimary` used to rest on
+`#1A4375`, which is the segmented button's *selected* colour — so an ordinary
+primary button, doing nothing at all, wore the colour that means on. Its
+resting fill moved to `#4F75A2` to free the value.
+
+**Engaged is never the same as hover.** A button under the pointer and a
+button that is switched on must not look alike; on a radio panel that is the
+difference between "my mouse is here" and "Split is on". `sCTkButtonTertiary`
+failed this exactly — its engaged fill was its hover colour, to the digit.
+
+### The blue tiers share values
+
+`sCTkButtonPrimary` and `sCTkSegmentedButton` use the same three colours, so a
+latched button and a selected segment look alike because they mean alike:
+
+| | light | dark |
+| :--- | :--- | :--- |
+| rest | `#4F75A2` | `#2B4C7E` |
+| hover | `#3A5C85` | `#3A5F8C` |
+| **engaged** | `#1A4375` | `#3A6FA2` |
+
+### The other tiers share the direction, not the values
+
+`sCTkButtonSecondary` and `sCTkButtonTertiary` step from their own resting
+colours the same way. What is common is the DIRECTION; the colour belongs to
+the tier.
+
+| | light: rest → hover → engaged | dark: rest → hover → engaged |
+| :--- | :--- | :--- |
+| Secondary | `#E5E7EB` → `#D1D5DB` → `#9CA3AF` | `#374151` → `#4B5563` → `#6B7280` |
+| Tertiary | transparent → `#E2E8F0` → `#CBD5E1` | transparent → `#1E293B` → `#334155` |
+
+### Where "engaged" lives in the precedence order
+
+**disabled > alarm > engaged (`pressed_map`) > normal.** Disabled outranks
+everything because a control that cannot be used should not advertise its
+setting; alarm outranks engaged because something being wrong matters more
+than something being on.
+
+### A note on the name
+
+The state is called `pressed` in the code and `pressed_map` in the theme, but
+it is **not** click feedback: `set_pressed()` is something the application
+turns on and leaves on. CustomTkinter has no press colour at all — what you
+see while clicking is the hover colour — so the name has never described a
+press. Read `pressed_map` as "engaged".
 
 ---
 

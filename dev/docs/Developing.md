@@ -153,6 +153,22 @@ Every one was invisible because the substituted colour looked plausible. A loud 
 
 Read from `self._widget_disabled_map`, **not** from `final_kw` or `_local_defaults` — `ThemeableWidget` excludes `disabled_map` from `final_kw` deliberately, so reading it there yields `{}` and every disabled lookup silently falls through.
 
+### A selected or latched state follows the engaged-state rule
+
+A widget with a state meaning *this one is on* — a selected segment, a latched
+button — does not choose its own direction. The rule is in
+[Theming.md](Theming.md#engaged-states): engaged moves **darker than its
+resting colour in light mode, lighter in dark**, never sideways, and never to
+a value the widget already uses for hover, or a control under the pointer
+looks identical to one that is switched on.
+
+The values live there too; do not copy them into a widget page, where they
+would drift. `sCTkButtonPrimary` and `sCTkSegmentedButton` share theirs
+exactly, because a latched button and a selected segment mean the same thing.
+
+The state is called `pressed` for historical reasons. It is not click
+feedback.
+
 ### Runtime overrides must survive the repaint
 
 If your widget has a repaint routine that re-pushes colours from stored defaults — most do, for appearance-mode switches and state changes — then a value set through `configure()` has to be written into those defaults, or the repaint reverts it on the next line.
