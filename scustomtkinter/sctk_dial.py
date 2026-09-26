@@ -23,10 +23,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     # a VFO knob and turning the wheel should turn the knob.
     _CONSUMES_SCROLL = True
 
-    # FIX: width and height default to None -- "not asked for". At 120 a
-    # caller's own width could not be told from the default, so
-    # _default_canvas_size() never saw one as explicit.
-    def __init__(self, master=None, divisions=24, state="normal", width=None, height=None, **kw):
+    def __init__(self, master=None, divisions=24, state="normal", width=120, height=120, **kw):
         # Pulled out BEFORE the theme pass, so it is not merged into final_kw
         # and forwarded to the native constructor, which would reject it.
         # None means "use the theme's label_font".
@@ -107,11 +104,8 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
 
         FRAME_VALID_KEYS = {"width", "height", "fg_color", "border_color", "border_width", "corner_radius", "bg_color"}
         frame_kwargs = {k: self._local_defaults[k] for k in FRAME_VALID_KEYS if k in self._local_defaults and self._local_defaults[k] is not None}
-        # FIX: the size worked out above wins -- it already put the caller's
-        # before the theme's. setdefault let the theme's override a size the
-        # caller passed.
-        frame_kwargs["width"] = width
-        frame_kwargs["height"] = height
+        frame_kwargs.setdefault("width", width)
+        frame_kwargs.setdefault("height", height)
         frame_kwargs.setdefault("fg_color", "transparent")
 
         super().__init__(master, **frame_kwargs)
@@ -268,38 +262,25 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         knob_diameter still produces a usable dial without the caller having to
         pass three numbers.
 
-        Precedence, per dimension: the caller's (a width or height passed to
-        the constructor), then the theme's, then knob_diameter plus the label
-        margin -- no smaller than 120, the old default.
-
         Labels longer or larger than the default margin allows are CLIPPED,
         deliberately: widening the canvas is the caller's decision, and
         shrinking the knob instead would make dials sharing a knob_diameter
         look different from one another.
 
         Args:
-            width: The width the caller asked for, or None.
-            height: The height the caller asked for, or None.
+            width: The width asked for, or the class default.
+            height: The height asked for.
 
         Returns:
             (width, height) to build the canvas with.
         """
         needed = self._knob_diameter + (2 * self.DEFAULT_LABEL_MARGIN)
-        theme = self._local_defaults
-
-        # FIX: the caller's size was tested for in _local_defaults, where a
-        # constructor argument never lands -- width and height are named
-        # parameters, not part of kw. So an explicit size was always treated
-        # as absent and enlarged to knob + 2 * DEFAULT_LABEL_MARGIN: a 30px
-        # knob asked for on a 40px canvas got 110px.
-        def pick(asked, key):
-            if asked is not None and str(asked).strip():
-                return int(asked)
-            if theme.get(key) is not None:
-                return int(theme[key])
-            return max(120, needed)
-
-        return pick(width, "width"), pick(height, "height")
+        explicit = self._local_defaults
+        if explicit.get("width") is None:
+            width = max(int(width or 0), needed)
+        if explicit.get("height") is None:
+            height = max(int(height or 0), needed)
+        return width, height
 
     def _label_placement(self, angle_rad, knob_radius):
         """
@@ -756,21 +737,12 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         if len(args) == 1 and isinstance(args[0], dict):
             kwargs = {**args[0], **kwargs}
 
-        # FIX: a blank width or height gets what it gets at construction --
-        # the theme's, else the knob plus the label margin -- not a flat 120.
-        # The Designer re-sends every property on any change, blanks
-        # included, so a dial built without a size at 200px (a 120px knob)
-        # shrank to 120 the moment anything else was edited, clipping its
-        # ticks. A subclass applies a new knob_diameter before this runs,
-        # so the size follows the knob it is about to draw.
-        if "width" in kwargs or "height" in kwargs:
-            fitted_width, fitted_height = self._default_canvas_size(None, None)
         if "width" in kwargs:
             w = kwargs["width"]
-            kwargs["width"] = int(w) if (w and str(w).strip()) else fitted_width
+            kwargs["width"] = int(w) if (w and str(w).strip()) else 120
         if "height" in kwargs:
             h = kwargs["height"]
-            kwargs["height"] = int(h) if (h and str(h).strip()) else fitted_height
+            kwargs["height"] = int(h) if (h and str(h).strip()) else 120
 
         if "label_font" in kwargs:
             # Empty restores the theme's label_font, matching the query above
