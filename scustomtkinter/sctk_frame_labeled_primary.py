@@ -544,41 +544,6 @@ class sCTkFrameLabeledPrimary(ctk.CTkScrollableFrame, ThemeableWidget):
                 )
         except Exception:
             pass
-        self._clear_right_border()
-
-
-    def _clear_right_border(self) -> None:
-        """
-        FIX: keeps the right-hand border visible below the title.
-
-        CTkScrollableFrame grids its canvas with spacing on the LEFT only --
-        padx=(border_spacing, 0) -- and leaves the right to the scrollbar,
-        which it grids in the next column with no spacing at all, out to the
-        frame's outer edge. Hidden by width 0 and the background colour, the
-        scrollbar still filled that strip, and painted over the border from
-        the title down: every group's right edge stopped below its title bar,
-        the left edge whole, the bottom corner back again.
-
-        So the scrollbar comes out of the grid, and the canvas gets the same
-        spacing on the right as on the left. Called from
-        _hide_internal_scrollbars(), which runs after construction and after
-        every configure() -- the native configure re-grids both.
-        """
-        try:
-            if getattr(self, "_orientation", "vertical") != "vertical":
-                return
-            scrollbar = getattr(self, "_scrollbar", None)
-            if scrollbar is not None:
-                scrollbar.grid_remove()
-            frame = getattr(self, "_parent_frame", None)
-            canvas = getattr(self, "_parent_canvas", None)
-            if frame is None or canvas is None:
-                return
-            spacing = self._apply_widget_scaling(
-                frame.cget("corner_radius") + frame.cget("border_width"))
-            canvas.grid_configure(padx=(spacing, spacing))
-        except Exception:
-            pass
 
     def get_container(self):
         """Returns self. Provided for API symmetry with composite widgets that wrap a separate inner container."""
