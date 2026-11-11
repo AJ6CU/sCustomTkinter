@@ -9,7 +9,7 @@ The vast majority of the widgets provided by `sCustomTkinter` are based on the o
 
 However, this design has been architected to allow you to add your own widgets, or subclass mine for your purposes. The key to the themes is sCTkThemes.json. Don't like my color choices (understandable as I am a little red/brown color blind...) , copy this file from Github, modify it and put it in your applications directory. It will be found before the common one in scustomtkinter/assets.  The format of this file, is very similar to the original Themes definition file of `CustomTkinter` (it has additions that would give the standard `CustomTkinter` theme processor problems in addition to the new widgets that might cause a few runtime exceptions). 
 
-Want to add a widget? Create it, add `ThemeableWidget` as a second base class, and see [dev/docs/Developing.md](dev/docs/Developing.md) — it covers the theme contract, the traps in forwarding properties to the underlying `CustomTkinter` widget, and the bugs that have turned up repeatedly in this library so you can avoid repeating them.
+Want to add a widget? Create it, add `ThemeableWidget` as a second base class, and see [dev/docs/Developing.md](https://github.com/AJ6CU/sCustomTkinter/blob/main/dev/docs/Developing.md) — it covers the theme contract, the traps in forwarding properties to the underlying `CustomTkinter` widget, and the bugs that have turned up repeatedly in this library so you can avoid repeating them.
 
 
 
@@ -29,20 +29,27 @@ Want to add a widget? Create it, add `ThemeableWidget` as a second base class, a
 
 ### sCustomTkinter Installation
 
-Install this library straight from your terminal drive path using pip:
-
-
-```bash
-pip install git+https://github.com/aj6cu/sCustomTkinter/ 
-
-```
-
-Or from the Pycharm Library manager, Select the Gear option, and click "Install from VCS" when asked for the URL, enter
-
+Install it from PyPI:
 
 ```bash
-https://github.com/aj6cu/sCustomTkinter/
+pip install scustomtkinter
 ```
+
+With the Pygubu Designer plugin and the Designer itself:
+
+```bash
+pip install "scustomtkinter[designer]"
+```
+
+In PyCharm, search for `scustomtkinter` in the Python Packages window.
+
+The latest development version, ahead of the last release, comes straight from GitHub (this needs git):
+
+```bash
+pip install git+https://github.com/aj6cu/sCustomTkinter/
+```
+
+Tkinter itself comes with Python, not from pip. The python.org installers include it; with Homebrew's Python run `brew install python-tk@3.x` (your version), and on Debian or Ubuntu `sudo apt install python3-tk`.
 
 
 ### Library Test Script
@@ -68,7 +75,7 @@ root.mainloop()
 
 ### Pygubu-Designer Installation
 
-    1. Install Pygubu-Designer into your virtual environment after installing sCustomTkinter. It is "pygubu-designer" and can be installed using the same tools as sCustomTkinter above.
+    1. Install Pygubu-Designer into the same virtual environment: `pip install "scustomtkinter[designer]"` installs it with the plugin's needs, or `pip install pygubu-designer` beside an existing install.
     2. Start Pygubu-Designer, you will see the sCustomTkinter widgets at the bottom of the Components on the left.
 	3. Add a sCTK root or a sCTkToplevel and go!
 
@@ -80,7 +87,7 @@ Every colour and font in this library comes from one file, `sCTkThemes.json`. No
 
 The format extends CustomTkinter's own theme file with per-state colour maps and additional widget blocks. Colours are `[light_mode, dark_mode]` pairs and follow appearance-mode switches automatically.
 
-**See [Theming](docs/Theming.md)** for the full reference, including state maps, runtime overrides, and the several ways a hand-edited JSON file can break.
+**See [Theming](https://github.com/AJ6CU/sCustomTkinter/blob/main/docs/src/Theming.md)** for the full reference, including state maps, runtime overrides, and the several ways a hand-edited JSON file can break.
 
 ---
 
@@ -92,7 +99,7 @@ For most cases use `sCTkScrollableFrame`, which manages its own scrollbar. Use `
 
 Scroll speed is controlled by three constants that can be changed globally or per widget. If a wheel click moves too far or too little — particularly on macOS, where a wheel mouse and a Magic Mouse report wildly different values — that's what to adjust.
 
-**See [Scrolling](docs/Scrolling.md)** for the widget comparison, the tuning constants, and how disabling interacts with scroll state.
+**See [Scrolling](https://github.com/AJ6CU/sCustomTkinter/blob/main/docs/src/Scrolling.md)** for the widget comparison, the tuning constants, and how disabling interacts with scroll state.
 
 ---
 
@@ -102,7 +109,7 @@ Several widgets take a list of strings — a table's column headings, a menu's i
 
 The bracketed form is the one to prefer, and the only one that can hold a value containing a comma.
 
-**See [List Properties](docs/src/ListProperties.md)** for which properties use it and why seven separate parsers became one.
+**See [List Properties](https://github.com/AJ6CU/sCustomTkinter/blob/main/docs/src/ListProperties.md)** for which properties use it and why seven separate parsers became one.
 
 ---
 
@@ -110,13 +117,13 @@ The bracketed form is the one to prefer, and the only one that can hold a value 
 
 Notes for working in Pygubu Designer: how images resolve at runtime, what clearing a field does, which widgets can only be selected from the widget tree, and what the light green background means.
 
-**See [Designer Hints](docs/src/DesignerHints.md).** Skip it if you build your interfaces in code.
+**See [Designer Hints](https://github.com/AJ6CU/sCustomTkinter/blob/main/docs/src/DesignerHints.md).** Skip it if you build your interfaces in code.
 
 ---
 
 ## Comprehensive Component Catalog
 
-The reference manual for this library is provided [here](docs/README.md) and the [pdf](docs/sCustomTkinterReferenceManual.pdf) The following is a summary of the library:
+The reference manual for this library is provided [here](https://github.com/AJ6CU/sCustomTkinter/blob/main/docs/README.md) and the [pdf](https://github.com/AJ6CU/sCustomTkinter/blob/main/docs/sCustomTkinterReferenceManual.pdf) The following is a summary of the library:
 
 
 ### Standard CustomTkinter Widgets
@@ -258,8 +265,8 @@ All of the following are subclassed from their respective CTk. For example, sCTk
 ```text
 sCustomTkinter/                   (The GitHub repository root)
 ├── README.md                     (This file)
-├── setup.py
-├── requirements.txt
+├── pyproject.toml                (Package metadata and dependencies)
+├── LICENSE
 │
 ├── scustomtkinter/               (The library package)
 │   ├── __init__.py               (Top-level import map)
@@ -267,7 +274,8 @@ sCustomTkinter/                   (The GitHub repository root)
 │   ├── sctk_core.py              (sCTk, the root window)
 │   ├── sctk_<widget>.py          (One module per widget)
 │   └── assets/
-│       └── sCTkThemes.json       (Master stylesheet)
+│       ├── sCTkThemes.json       (Master stylesheet)
+│       └── images/               (Message box icons)
 │
 ├── scustomtkinter_pygubu/        (Pygubu Designer integration)
 │   ├── sCTk<Widget>bo.py         (One builder object per widget)
@@ -277,22 +285,24 @@ sCustomTkinter/                   (The GitHub repository root)
 │
 ├── docs/
 │   ├── README.md                 (The built manual, one file)
-│   ├── src/                      (Per-widget and shared source pages)
-│   └── images/                   (Light and dark screenshots)
+│   ├── sCustomTkinterReferenceManual.pdf
+│   └── src/                      (Per-widget and shared source pages)
+│       └── images/               (Light and dark screenshots)
 │
-├── dev/docs/
-│   └── Developing.md             (Notes for extending the library)
+├── dev/
+│   ├── docs/Developing.md        (Notes for extending the library)
+│   └── attic/                    (Retired code kept for reference, not packaged)
 │
 ├── examples/                     (Runnable test harnesses)
 │
 └── tools/
-    └── build_docs.sh             (Concatenates docs/src into docs/README.md)
+    └── buildDoc.sh               (Concatenates docs/src into docs/README.md)
 ```
 ---
 
 ## License
 
-`sCustomTkinter` is released under the MIT License. See [LICENSE](LICENSE) for the full text.
+`sCustomTkinter` is released under the MIT License. See [LICENSE](https://github.com/AJ6CU/sCustomTkinter/blob/main/LICENSE) for the full text.
 
 This project builds on [CustomTkinter](https://customtkinter.tomschimansky.com/) by Tom Schimansky, also MIT licensed. Individual widgets derived from other MIT-licensed community work carry their attribution in the source file's module docstring.
 

@@ -4,3 +4,6 @@ __pycache__/
 *.pyc
 *.pyc
 /scustomtkinter/__pycache__
+dist/
+build/
+*.egg-info/
