@@ -360,12 +360,10 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
             return
 
         if self._height_is_fixed:
-            try:
-                outer.configure(height=int(explicit_height))
-                outer.pack_propagate(False)
-                outer.grid_propagate(False)
-            except Exception:
-                pass
+            # Once Tk has worked out the width: _freeze_outer reads it before
+            # turning propagation off, and at construction it is not known.
+            # explicit_height is in CustomTkinter units already.
+            defer(self, "idle", lambda: self._freeze_outer(int(explicit_height), scaled=True))
             return
 
         # The content's size changing is the signal to measure again -- but
@@ -465,13 +463,55 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
             wanted = content + self._fit_chrome
             if wanted != self._fitted_height:
                 self._fitted_height = wanted
-                outer.configure(height=wanted)
-                outer.pack_propagate(False)
-                outer.grid_propagate(False)
+                self._freeze_outer(wanted)
         except Exception:
             pass
         finally:
             self._fitting = False
+
+    def _freeze_outer(self, height, scaled: bool = False) -> None:
+        """
+        Gives the outer frame a fixed height, keeping its width.
+
+        FIX (2026-11-11), the Designer's collapsed labelled frame: a height
+        only sticks with propagation off, and propagation off fixes BOTH
+        dimensions at the frame's own width/height options. CustomTkinter
+        creates the outer frame with width 0 -- it takes its size from the
+        canvas inside -- so turning propagation off left it 0 wide. Packed or
+        gridded to fill, as in an application, the parent's width hid that;
+        packed plainly, as in Pygubu Designer's preview, the panel collapsed
+        to a sliver with its content off to one side. So the width it had
+        while propagating is read first, ONCE (afterwards it would only read
+        back what was set), and set alongside the height.
+
+        `height` is in pixels as measured, unless `scaled` says it is already
+        in CustomTkinter units; CTkFrame.configure() applies the widget
+        scaling itself, so pixels are converted back first -- otherwise a
+        scaled display (Windows at 150 %) got every fitted height scaled
+        twice.
+        """
+        outer = getattr(self, "_parent_frame", None)
+        if outer is None:
+            return
+        try:
+            if not outer.winfo_exists():
+                return
+            unscale = getattr(outer, "_reverse_widget_scaling", None) or (lambda v: v)
+            if getattr(self, "_outer_width", None) is None:
+                try:
+                    outer.update_idletasks()
+                except Exception:
+                    pass
+                width_px = max(outer.winfo_reqwidth(), outer.winfo_width())
+                self._outer_width = unscale(width_px) if width_px > 1 else None
+            settings = {"height": height if scaled else unscale(height)}
+            if self._outer_width:
+                settings["width"] = self._outer_width
+            outer.configure(**settings)
+            outer.pack_propagate(False)
+            outer.grid_propagate(False)
+        except Exception:
+            pass
 
     def _retry_fit(self) -> None:
         """Waits and measures again -- a limited number of times."""
