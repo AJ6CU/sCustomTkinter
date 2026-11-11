@@ -11,7 +11,7 @@ import os
 import math
 
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, defer
 
 class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
     # Required at the TOP LEVEL of the theme block. inactive_color is distinct
@@ -327,13 +327,44 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
             try: super()._set_appearance_mode(mode_string)
             except Exception: pass
         if hasattr(self, "canvas") and self.canvas.winfo_exists():
-            self.after(15, self._update_theme_colors)
+            defer(self, 15, self._update_theme_colors)
 
     def _update_theme_colors(self):
         """Refreshes the canvas widget background color directly from your asset maps."""
         bg_color = self._resolve_color(self._theme_bg_raw)
         self.canvas.configure(bg=bg_color)
         self._draw_meter()
+
+    def _scaled_font(self, font):
+        """
+        A theme font with its size scaled for the display.
+
+        A canvas text item takes a plain font tuple, which CustomTkinter's own
+        font scaling never sees -- so without this the meter's captions and
+        scale stayed the same size while everything around them grew on a
+        scaled display. Same as sCTkNotebook and sCTkFrequencyDisplay.
+
+        THE WHOLE TUPLE GOES IN, not the size: _apply_font_scaling raises on
+        a bare integer, and a try/except around that mistake would quietly
+        stop scaling. A named font (a string) is left as it is.
+        """
+        if not isinstance(font, (list, tuple)):
+            return font
+        try:
+            return self._apply_font_scaling(tuple(font))
+        except Exception:
+            return tuple(font)
+
+    def _set_scaling(self, *args, **kwargs):
+        """
+        Redraws when the scaling changes (CustomTkinter calls this on every
+        widget when the window moves to a display with another scale, or the
+        app sets one): the canvas text is drawn, so nothing else would
+        update it.
+        """
+        super()._set_scaling(*args, **kwargs)
+        if getattr(self, "canvas", None) is not None and self.canvas.winfo_exists():
+            self._draw_meter()
 
     @staticmethod
     def _font_metrics(font):
@@ -357,7 +388,8 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         except Exception:
             size = 10
             try:
-                size = int(font[1])
+                # abs(): a scaled font's size is negative (pixels).
+                size = abs(int(font[1])) or 10
             except Exception:
                 pass
             return int(size * 1.4), (lambda text: int(len(str(text)) * size * 0.6))
@@ -375,8 +407,8 @@ class sCTkSMeterBar(ctk.CTkFrame, ThemeableWidget):
         red_color = self._resolve_color(self._themed("alarm_color"))
         led_on_color = self._resolve_color(self._themed("led_on_color"))
         led_off_color = self._resolve_color(self._themed("led_off_color"))
-        label_font = self._local_defaults.get("font")
-        scale_font = self._local_defaults.get("scale_font")
+        label_font = self._scaled_font(self._local_defaults.get("font"))
+        scale_font = self._scaled_font(self._local_defaults.get("scale_font"))
         # FIX: was a fully hardcoded self._resolve_color(("#94A3B8", "#334155"))
         # with no theme lookup at all -- the only colour in this widget the
         # theme could not reach.
