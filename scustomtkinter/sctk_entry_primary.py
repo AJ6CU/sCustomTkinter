@@ -38,7 +38,7 @@ against that same failure mode.
 """
 from typing import Any, Optional
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, defer
 
 
 class sCTkEntryPrimary(ctk.CTkEntry, ThemeableWidget):
@@ -354,7 +354,7 @@ class sCTkEntryPrimary(ctk.CTkEntry, ThemeableWidget):
             super().configure(state="disabled")
         else:
             super().configure(state=current)
-            self.after_idle(self._reset_cursor_if_showing_placeholder)
+            defer(self, "idle", self._reset_cursor_if_showing_placeholder)
 
     def _reset_cursor_if_showing_placeholder(self) -> None:
         """

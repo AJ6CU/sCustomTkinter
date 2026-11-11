@@ -7,7 +7,7 @@ Inherits cleanly from sCTkScrollableFrame and ThemeableWidget to manage
 dense telemetry spreadsheets safely with full live theme repaint loops.
 """
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget, parse_list_property
+from .themeable_widget import ThemeableWidget, parse_list_property, defer, cancel_deferred
 
 from typing import List, Optional, Callable, Any, Literal
 
@@ -348,8 +348,8 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         if (self._edit_trigger == "select" and was_selected
                 and self._is_editable(r_idx, c_idx)):
             self._cancel_pending_edit()
-            self._pending_edit = self.after(
-                self.EDIT_DELAY_MS, lambda: self._begin_pending_edit(r_idx, c_idx))
+            self._pending_edit = defer(
+                self, self.EDIT_DELAY_MS, lambda: self._begin_pending_edit(r_idx, c_idx))
 
     def _on_cell_double(self, r_idx: int, c_idx: int):
         if self._state != "normal":
@@ -367,10 +367,7 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
 
     def _cancel_pending_edit(self):
         if self._pending_edit is not None:
-            try:
-                self.after_cancel(self._pending_edit)
-            except Exception:
-                pass
+            cancel_deferred(self, self._pending_edit)
             self._pending_edit = None
 
     def _is_editable(self, r_idx: int, c_idx: int) -> bool:
@@ -449,7 +446,7 @@ class sCTkTableview(sCTkScrollableFrame, ThemeableWidget):
         menu.bind("<Escape>", lambda e: self._cancel_editor(menu))
         self._editor = (menu, r_idx, c_idx)
         # Open the list at once, so choosing takes one click, like typing.
-        self.after_idle(lambda: self._open_choice_list(menu, r_idx, c_idx))
+        defer(self, "idle", lambda: self._open_choice_list(menu, r_idx, c_idx))
 
     def _open_choice_list(self, menu, r_idx, c_idx):
         """

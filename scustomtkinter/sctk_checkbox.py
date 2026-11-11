@@ -17,7 +17,7 @@ its own runtime color-swapping logic.
 """
 from typing import Any, Optional
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, defer
 
 
 class sCTkCheckBox(ctk.CTkCheckBox, ThemeableWidget):
@@ -232,7 +232,7 @@ class sCTkCheckBox(ctk.CTkCheckBox, ThemeableWidget):
         is_disabled = getattr(self, "_custom_current_state", "normal") == "disabled"
 
         super().configure(state="disabled" if is_disabled else "normal")
-        self.after_idle(self._apply_theme_colors)
+        defer(self, "idle", self._apply_theme_colors)
 
     def _apply_theme_colors(self) -> None:
         """

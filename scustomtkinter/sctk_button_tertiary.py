@@ -20,7 +20,7 @@ its own runtime color-swapping logic.
 """
 from typing import Any, Optional
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, defer
 
 
 class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
@@ -237,7 +237,7 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
             # immediate call here and silently overwrite fresh colors back to
             # something stale. Queuing our reapply via after_idle lets CTk's
             # own pending repaint settle first, so ours wins the final paint.
-            self.after_idle(self._update_current_visual_state)
+            defer(self, "idle", self._update_current_visual_state)
 
         elif mode == "disabled":
             self._custom_current_state = "disabled"
@@ -251,7 +251,7 @@ class sCTkButtonTertiary(ctk.CTkButton, ThemeableWidget):
             # canvas.unbind() never reached it. Don't reintroduce manual event
             # unbinding here.
             super().configure(state="disabled", hover=False)
-            self.after_idle(self._update_current_visual_state)
+            defer(self, "idle", self._update_current_visual_state)
 
         return self._custom_current_state
 

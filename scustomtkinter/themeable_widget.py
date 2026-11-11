@@ -51,6 +51,50 @@ import customtkinter as ctk
 GLOBAL_THEME_REGISTRY = {}
 
 
+# ----------------------------------------------------------------------
+# Deferred calls that survive their widget being destroyed
+# ----------------------------------------------------------------------
+def defer(widget, ms, callback):
+    """
+    widget.after(ms, callback) -- or after_idle when ms is "idle" -- that is
+    safe if the widget is destroyed before it runs.
+
+    FIX (2026-11-11): closing a Designer preview printed
+    `invalid command name "...<lambda>"` for every widget with a call still
+    pending. tkinter registers a deferred callback as a Tcl command OF THE
+    WIDGET, and destroying the widget deletes that command -- so a check
+    inside the callback cannot help: there is no callback left to run. The
+    call is registered with the application's root instead, which outlives
+    the widget, and only reaches `callback` while the widget still exists.
+
+    Returns the id, for cancel_deferred(). Errors in `callback` are NOT
+    swallowed; only the widget's own disappearance is.
+    """
+    root = widget._root()
+
+    def run():
+        try:
+            alive = widget.winfo_exists()
+        except tk.TclError:
+            return
+        if alive:
+            callback()
+
+    if ms == "idle":
+        return root.after_idle(run)
+    return root.after(ms, run)
+
+
+def cancel_deferred(widget, after_id):
+    """Cancels a call made with defer(); harmless if it already ran or is None."""
+    if after_id is None:
+        return
+    try:
+        widget._root().after_cancel(after_id)
+    except (tk.TclError, ValueError):
+        pass
+
+
 def load_initial_framework_themes():
     """Idempotent startup hook to pull themes.json safely without dropping imports."""
     global GLOBAL_THEME_REGISTRY

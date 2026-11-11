@@ -55,6 +55,7 @@ and may optionally override:
 Hosts must call _init_scroll_state() once, before any binding happens.
 """
 import sys
+from .themeable_widget import defer
 import tkinter as tk
 import platform
 
@@ -201,7 +202,7 @@ class ScrollBindingMixin:
                 pass
 
         try:
-            self.after_idle(self._activate_scroll_bindings)
+            defer(self, "idle", self._activate_scroll_bindings)
         except Exception:
             pass
 
@@ -245,7 +246,7 @@ class ScrollBindingMixin:
             return
         self._scroll_rebind_pending = True
         try:
-            self.after_idle(self._run_scheduled_scroll_rebind)
+            defer(self, "idle", self._run_scheduled_scroll_rebind)
         except Exception:
             # Widget destroyed mid-flight; nothing to rebind.
             self._scroll_rebind_pending = False

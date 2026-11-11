@@ -34,7 +34,7 @@ it clipped -- this panel does not scroll. See _begin_content_sizing().
 """
 from typing import Any, Optional
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, defer
 
 
 # How long to wait before measuring again when nothing has been drawn yet,
@@ -394,7 +394,7 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
             return
         self._fit_scheduled = True
         try:
-            self.after(_FIT_RETRY_MS, self._fit_now)
+            defer(self, _FIT_RETRY_MS, self._fit_now)
         except Exception:
             self._fit_scheduled = False
 

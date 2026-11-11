@@ -26,7 +26,7 @@ interaction; manual event-unbinding does not).
 """
 from typing import Any, Callable, Optional
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, defer
 
 
 class sCTkSlider(ctk.CTkSlider, ThemeableWidget):
@@ -83,7 +83,7 @@ class sCTkSlider(ctk.CTkSlider, ThemeableWidget):
 
         # Deferred slightly, matching this file's original startup pattern --
         # applies the initial theme colors shortly after construction.
-        self.after(10, self._apply_custom_theme_colors)
+        defer(self, 10, self._apply_custom_theme_colors)
         self._finalize_themeable_lifecycle()
 
     def configure(self, *args: Any, **kwargs: Any) -> Any:

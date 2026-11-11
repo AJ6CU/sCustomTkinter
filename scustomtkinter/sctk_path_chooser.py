@@ -10,7 +10,7 @@ import sys
 import tkinter as tk
 
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget, parse_list_property
+from .themeable_widget import ThemeableWidget, parse_list_property, defer
 
 from .sctk_file_explorer import sCTkFileExplorer
 
@@ -142,7 +142,7 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         # Re-applied once Tk is idle. At this point the entry is not mapped and
         # has no width, so xview_moveto() has nothing to scroll within -- a
         # right-justified long path came up showing its start regardless.
-        self.after_idle(self._apply_entry_view)
+        defer(self, "idle", self._apply_entry_view)
 
         # Typed input has to be acted on. The entry had NO bindings at all, so
         # a path typed straight into it was never applied: it stayed as loose
@@ -482,7 +482,7 @@ class sCTkPathChooser(ctk.CTkFrame, ThemeableWidget):
         # path stopped part-way through the filename rather than at the end.
         move()
         try:
-            self.entry.after_idle(move)
+            defer(self.entry, "idle", move)
         except Exception:
             pass
 

@@ -11,7 +11,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget, parse_list_property
+from .themeable_widget import ThemeableWidget, parse_list_property, defer
 from .sctk_scroll_mixin import ScrollBindingMixin
 
 from typing import Literal, Optional, Union, Tuple
@@ -187,7 +187,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         # Scroll state and activation, owned by ScrollBindingMixin.
         # _init_scroll_state() must run before any binding happens.
         #
-        # FIX: this was previously deferred with self.after(10, ...) -- an
+        # FIX: this was previously deferred with defer(self, 10, ...) -- an
         # arbitrary delay chosen to let the widget hierarchy settle. The mixin
         # activates via after_idle() instead, which fires when Tk is actually
         # idle rather than after a guessed interval, plus <Map> on this widget
@@ -196,7 +196,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         self._init_scroll_state()
         self._install_scroll_activation(content_widget=self.explorer_frame)
 
-        self.after(10, self._finalize_split_bindings)
+        defer(self, 10, self._finalize_split_bindings)
         self._process_live_theme_repaint()
 
         # 🔑 REGISTER LIFECYCLE HANDSHAKE HOOK: Maps registration signals back up to Pygubu windows cleanly
@@ -309,7 +309,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         if hasattr(self, "path_to_show"): self._fill_explorer()
 
     def _configure_frame(self, event=None):
-        self.after(10, self._update_scrollregion)
+        defer(self, 10, self._update_scrollregion)
 
     def _update_scrollregion(self):
         """
@@ -378,7 +378,7 @@ class sCTkFileExplorer(ctk.CTkFrame, ScrollBindingMixin, ThemeableWidget):
         # filename instead of at the end.
         move()
         try:
-            entry.after_idle(move)
+            defer(entry, "idle", move)
         except Exception:
             pass
 

@@ -18,7 +18,7 @@ its own runtime color-swapping logic.
 """
 from typing import Any, Optional
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, defer
 
 
 class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
@@ -229,7 +229,7 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
             # buttons stayed visually "disabled" after re-enabling). Queuing
             # our reapply via after_idle lets CTk's own pending repaint settle
             # first, so ours is the one that actually wins the final paint.
-            self.after_idle(self._update_current_visual_state)
+            defer(self, "idle", self._update_current_visual_state)
 
         elif mode == "disabled":
             self._custom_current_state = "disabled"
@@ -246,7 +246,7 @@ class sCTkButtonPrimary(ctk.CTkButton, ThemeableWidget):
             # Native state="disabled" is what actually blocks interaction;
             # don't replace this with manual event unbinding again.
             super().configure(state="disabled", hover=False)
-            self.after_idle(self._update_current_visual_state)
+            defer(self, "idle", self._update_current_visual_state)
 
         return self._custom_current_state
 

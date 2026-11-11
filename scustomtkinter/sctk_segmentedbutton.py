@@ -20,7 +20,7 @@ docstring); this widget owns all of its own runtime color-swapping logic.
 from typing import Any, Callable, Optional
 import tkinter as tk
 import customtkinter as ctk
-from .themeable_widget import ThemeableWidget
+from .themeable_widget import ThemeableWidget, defer
 
 
 class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
@@ -117,7 +117,7 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         # moment super().__init__() returns above. _apply_custom_theme_colors()
         # bails out early if _buttons_dict isn't populated, so calling it
         # immediately here would silently do nothing.
-        self.after(15, self._apply_custom_theme_colors)
+        defer(self, 15, self._apply_custom_theme_colors)
         self._finalize_themeable_lifecycle()
 
     def configure(self, *args: Any, **kwargs: Any) -> None:
@@ -338,7 +338,7 @@ class sCTkSegmentedButton(ctk.CTkSegmentedButton, ThemeableWidget):
         on the current enabled/disabled state and which segment (if any) is
         selected.
 
-        Called: after construction (via the deferred self.after(15, ...) in
+        Called: after construction (via the deferred defer(self, 15, ...) in
         __init__), on every state() change, on every set(), and on every click.
 
         Passes raw (light, dark) tuples straight through to configure() instead
