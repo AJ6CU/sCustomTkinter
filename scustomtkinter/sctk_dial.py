@@ -10,7 +10,7 @@ import math
 import time
 import customtkinter as ctk
 from . import themeable_widget as _tw
-from .themeable_widget import ThemeableWidget, parse_list_property
+from .themeable_widget import ThemeableWidget, parse_list_property, defer
 class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
     """Abstract Base Class for theme-adaptive mechanical rotary encoder widgets."""
 
@@ -174,7 +174,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         self.canvas.bind("<Shift-B1-Motion>", self._on_button_motion)
         self._apply_input_bindings()
         self.canvas.bind("<Configure>", lambda e: self._draw_dial_base())
-        self.after(50, self._inject_private_layer_bindings)
+        defer(self, 50, self._inject_private_layer_bindings)
 
     # Keys every dial reads, required at the TOP LEVEL of its theme block.
     _REQUIRED_THEME_KEYS = (
@@ -607,7 +607,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             try: super()._set_appearance_mode(mode_string)
             except Exception: pass
         if hasattr(self, "canvas") and self.canvas.winfo_exists():
-            self.after(20, self._process_theme_repaint)
+            defer(self, 20, self._process_theme_repaint)
 
     def _process_theme_repaint(self):
         """🔑 TRANSPARENCY SHIELD FIXED: Resolves transparent settings to parent hex values."""
@@ -671,6 +671,76 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                 pass
             parent = getattr(parent, "master", None)
         return self._opaque_fallback()
+
+    # ------------------------------------------------------------------
+    # Clicks, drags, the wheel and the trackpad -- shared by all three dials
+    # ------------------------------------------------------------------
+    # FIX (2026-11-11): these were copied into each of sCTkDialContinuous,
+    # sCTkDialSelector and sCTkDialRange, and had already drifted apart
+    # once. Each dial now says only how it takes one step (_step) and how far
+    # a drag must travel for one (_DRAG_THRESHOLD_PX); the handling is here.
+
+    # Pixels of vertical drag per step. The selector's is larger: its
+    # positions are few and far apart, so a small drag should not skip one.
+    _DRAG_THRESHOLD_PX = 2
+
+    def _step(self, delta: int):
+        """Moves the dial by `delta` positions (+1 or -1). Each dial defines it."""
+        raise NotImplementedError
+
+    def _on_left_click_step(self, event):
+        if self._state == "disabled": return
+        if self._left_click_callback is not None: self._left_click_callback()
+        else: self._step(-1)
+
+    def _on_right_click_step(self, event):
+        if self._state == "disabled": return
+        if self._right_click_callback is not None: self._right_click_callback()
+        else: self._step(1)
+
+    def _on_button_press(self, event): self._last_y = event.y
+
+    def _on_button_motion(self, event):
+        if self._state == "disabled": return
+        delta_y = self._last_y - event.y
+        if abs(delta_y) > self._DRAG_THRESHOLD_PX:
+            self._step(1 if delta_y > 0 else -1)
+            self._last_y = event.y
+
+    def _process_mac_touchpad_scroll(self, event):
+        if self._state == "disabled": return "break"
+        current_time = time.time()
+        if current_time - self._last_scroll_time < self._scroll_cooldown_seconds: return "break"
+        delta_y = self._decode_mac_touchpad_delta(event.delta)
+        if delta_y != 0:
+            self._last_scroll_time = current_time
+            self._step(1 if delta_y > 0 else -1)
+        return "break"
+
+    def _process_scroll_wheel(self, event):
+        """
+        One wheel detent, once.
+
+        RETURNS "break", and must. The scroll handlers are installed on THREE
+        layers -- the drawing canvas, the widget, and CTkFrame's own
+        background canvas -- so an event that is not consumed propagates to
+        each in turn and the dial steps two or three times for one notch.
+
+        The symptom is subtle where a caller coalesces its commands and
+        obvious where it does not: a receive frequency ran away at roughly
+        2.5 steps per detent while a transmit one, whose writes were being
+        merged, looked correct.
+        """
+        if self._state == "disabled":
+            return "break"
+        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0):
+            d = 1
+        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0):
+            d = -1
+        else:
+            return "break"
+        self._step(d)
+        return "break"
 
     def _decode_mac_touchpad_delta(self, raw_delta):
         raw = raw_delta & 0xFFFFFFFF
@@ -1231,58 +1301,10 @@ class sCTkDialContinuous(sCTKDialBase):
         if self.canvas.winfo_exists(): self._redraw_indicator()
         if self._command is not None and self._state == "normal": self._command(int(step_delta))
 
-    def _on_left_click_step(self, event):
-        if self._state == "disabled": return
-        if self._left_click_callback is not None: self._left_click_callback()
-        else: self.set_position_index(-1)
+    def _step(self, delta: int):
+        self.set_position_index(delta)
 
-    def _on_right_click_step(self, event):
-        if self._state == "disabled": return
-        if self._right_click_callback is not None: self._right_click_callback()
-        else: self.set_position_index(1)
 
-    def _on_button_press(self, event): self._last_y = event.y
-    def _on_button_motion(self, event):
-        if self._state == "disabled": return
-        delta_y = self._last_y - event.y
-        if abs(delta_y) > 2:
-            self.set_position_index(1 if delta_y > 0 else -1)
-            self._last_y = event.y
-
-    def _process_mac_touchpad_scroll(self, event):
-        if self._state == "disabled": return "break"
-        current_time = time.time()
-        if current_time - self._last_scroll_time < self._scroll_cooldown_seconds: return "break"
-        delta_y = self._decode_mac_touchpad_delta(event.delta)
-        if delta_y != 0:
-            self._last_scroll_time = current_time
-            self.set_position_index(1 if delta_y > 0 else -1)
-        return "break"
-
-    def _process_scroll_wheel(self, event):
-        """
-        One wheel detent, once.
-
-        RETURNS "break", and must. The scroll handlers are installed on THREE
-        layers -- the drawing canvas, the widget, and CTkFrame's own
-        background canvas -- so an event that is not consumed propagates to
-        each in turn and the dial steps two or three times for one notch.
-
-        The symptom is subtle where a caller coalesces its commands and
-        obvious where it does not: a receive frequency ran away at roughly
-        2.5 steps per detent while a transmit one, whose writes were being
-        merged, looked correct.
-        """
-        if self._state == "disabled":
-            return "break"
-        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0):
-            d = 1
-        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0):
-            d = -1
-        else:
-            return "break"
-        self.set_position_index(d)
-        return "break"
 class sCTkDialSelector(sCTKDialBase):
     # This variant draws a plain line pointer rather than a dimple, so it
     # requires pointer_color instead of pointer_glow_color. pointer_color was
@@ -1367,52 +1389,13 @@ class sCTkDialSelector(sCTKDialBase):
         if self._command is not None and self._state == "normal": self._command(self._current_value)
 
     def get(self): return self._current_value
-    def _on_left_click_step(self, event):
-        if self._state == "disabled": return
-        if self._left_click_callback is not None: self._left_click_callback()
-        else: self.set(self._current_value - 1)
+    # Few positions, far apart: a small drag should not skip one.
+    _DRAG_THRESHOLD_PX = 25
 
-    def _on_right_click_step(self, event):
-        if self._state == "disabled": return
-        if self._right_click_callback is not None: self._right_click_callback()
-        else: self.set(self._current_value + 1)
+    def _step(self, delta: int):
+        self.set(self._current_value + delta)
 
-    def _on_button_press(self, event): self._last_y = event.y
-    def _on_button_motion(self, event):
-        if self._state == "disabled": return
-        delta_y = self._last_y - event.y
-        if abs(delta_y) > 25:
-            self.set(self._current_value + (1 if delta_y > 0 else -1))
-            self._last_y = event.y
 
-    def _process_mac_touchpad_scroll(self, event):
-        if self._state == "disabled": return "break"
-        current_time = time.time()
-        if current_time - self._last_scroll_time < self._scroll_cooldown_seconds: return "break"
-        delta_y = self._decode_mac_touchpad_delta(event.delta)
-        if delta_y != 0:
-            self._last_scroll_time = current_time
-            self.set(self._current_value + (1 if delta_y > 0 else -1))
-        return "break"
-
-    def _process_scroll_wheel(self, event):
-        """
-        One wheel detent, once.
-
-        Returns "break" on every path. The handler is bound on three layers --
-        the drawing canvas, the widget, and CTkFrame's own background
-        canvas -- so an unconsumed event steps the dial once per layer.
-        """
-        if self._state == "disabled":
-            return "break"
-        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0):
-            d = 1
-        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0):
-            d = -1
-        else:
-            return "break"
-        self.set(self._current_value + d)
-        return "break"
 class sCTkDialRange(sCTKDialBase):
     # This variant draws a plain line pointer rather than a dimple, so it
     # requires pointer_color instead of pointer_glow_color. pointer_color was
@@ -1485,49 +1468,5 @@ class sCTkDialRange(sCTKDialBase):
             if self._command is not None and self._state == "normal": self._command(self._current_value)
 
     def get(self): return self._current_value
-    def _on_left_click_step(self, event):
-        if self._state == "disabled": return
-        if self._left_click_callback is not None: self._left_click_callback()
-        else: self.set(self._current_value - 1)
-
-    def _on_right_click_step(self, event):
-        if self._state == "disabled": return
-        if self._right_click_callback is not None: self._right_click_callback()
-        else: self.set(self._current_value + 1)
-
-    def _on_button_press(self, event): self._last_y = event.y
-    def _on_button_motion(self, event):
-        if self._state == "disabled": return
-        delta_y = self._last_y - event.y
-        if abs(delta_y) > 2:
-            self.set(self._current_value + (1 if delta_y > 0 else -1))
-            self._last_y = event.y
-
-    def _process_mac_touchpad_scroll(self, event):
-        if self._state == "disabled": return "break"
-        current_time = time.time()
-        if current_time - self._last_scroll_time < self._scroll_cooldown_seconds: return "break"
-        delta_y = self._decode_mac_touchpad_delta(event.delta)
-        if delta_y != 0:
-            self._last_scroll_time = current_time
-            self.set(self._current_value + (1 if delta_y > 0 else -1))
-        return "break"
-
-    def _process_scroll_wheel(self, event):
-        """
-        One wheel detent, once.
-
-        Returns "break" on every path. The handler is bound on three layers --
-        the drawing canvas, the widget, and CTkFrame's own background canvas
-        -- so an unconsumed event steps the dial once per layer.
-        """
-        if self._state == "disabled":
-            return "break"
-        if getattr(event, "num", 0) == 4 or (hasattr(event, "delta") and event.delta > 0):
-            d = 1
-        elif getattr(event, "num", 0) == 5 or (hasattr(event, "delta") and event.delta < 0):
-            d = -1
-        else:
-            return "break"
-        self.set(self._current_value + d)
-        return "break"
+    def _step(self, delta: int):
+        self.set(self._current_value + delta)
