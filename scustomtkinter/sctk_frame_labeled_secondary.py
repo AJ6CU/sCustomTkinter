@@ -411,7 +411,18 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
             return
         self._fit_scheduled = True
         try:
-            defer(self, _FIT_RETRY_MS, self._fit_now)
+            # FIX (2026-11-11): THE FIRST PASS AT IDLE, retries on the timer.
+            # Pygubu Designer builds a form, lets Tk settle (update_idletasks)
+            # and then measures the window once to size its design canvas; a
+            # first fit 50 ms later came after that, so the canvas kept the
+            # unfitted size and the next widget down was squashed. Idle work
+            # is done during that settling. Only the FIRST pass: an idle pass
+            # that queued another idle pass spun for ever -- see
+            # fit_to_content -- so a retry still waits on the timer.
+            if self._fit_attempts == 0:
+                defer(self, "idle", self._fit_now)
+            else:
+                defer(self, _FIT_RETRY_MS, self._fit_now)
         except Exception:
             self._fit_scheduled = False
 
@@ -465,6 +476,17 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
                 self._retry_fit()
                 return
 
+            if self._fit_chrome is None and not getattr(self, "_outer_frozen", False):
+                # FIX (2026-11-11): BEFORE THE HEIGHT IS FROZEN the outer frame
+                # still asks for exactly the canvas plus the chrome, so the
+                # requested sizes give the chrome without anything being drawn
+                # -- which the first pass, at idle, needs. Once frozen, the
+                # outer frame asks for what was set, so a re-measure (a new
+                # title) reads the drawn heights below instead.
+                outer_req = outer.winfo_reqheight()
+                canvas_req = canvas.winfo_reqheight()
+                if outer_req > 1 and canvas_req > 1 and outer_req > canvas_req:
+                    self._fit_chrome = outer_req - canvas_req
             if self._fit_chrome is None:
                 outer_height = outer.winfo_height()
                 canvas_height = canvas.winfo_height()
@@ -529,6 +551,7 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
             outer.configure(**settings)
             outer.pack_propagate(False)
             outer.grid_propagate(False)
+            self._outer_frozen = True
         except Exception:
             pass
 
