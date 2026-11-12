@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scustomtkinter"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
     { name = "Mark J. Hatch (AJ6CU)" }
 ]
@@ -23,7 +23,10 @@ classifiers = [
     "Topic :: Software Development :: Widget Sets",
 ]
 dependencies = [
-    "customtkinter",
+    # 6.0 is what the library is developed and tested against; it subclasses
+    # CustomTkinter's widgets and uses some of their internals, so an older
+    # major version is not assumed to work.
+    "customtkinter>=6.0",
     "Pillow",
 ]
 
@@ -41,12 +44,15 @@ Issues = "https://github.com/AJ6CU/sCustomTkinter/issues"
 scustomtkinter = 'scustomtkinter_pygubu'
 
 [tool.setuptools]
-packages = ["scustomtkinter", "scustomtkinter_pygubu", "scustomtkinter_pygubu.designer"]
 include-package-data = true
 
+# Found, not listed: assets/ and assets/images/ hold no Python, so they are
+# namespace packages, and listing only the code packages made setuptools warn
+# that they "would be ignored" (they were packaged anyway, as data).
+[tool.setuptools.packages.find]
+include = ["scustomtkinter*"]
+namespaces = true
+
 [tool.setuptools.package-data]
-scustomtkinter = [
-    "assets/*.json",
-    "assets/images/*.png",
-    "assets/images/*.ico",
-]
+"scustomtkinter.assets" = ["*.json"]
+"scustomtkinter.assets.images" = ["*.png"]

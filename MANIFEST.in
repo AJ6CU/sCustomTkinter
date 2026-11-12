@@ -1,2 +1,2 @@
 recursive-include scustomtkinter/assets *.json
-recursive-include scustomtkinter/assets/images *.png *.ico
+recursive-include scustomtkinter/assets/images *.png
