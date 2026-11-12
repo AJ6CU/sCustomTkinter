@@ -198,8 +198,27 @@ class sCTkFrameLabeledSecondary(ctk.CTkScrollableFrame, ThemeableWidget):
         if kwargs:
             result = super().configure(**kwargs)
             self._hide_internal_scrollbars()
+            # FIX (2026-11-11): the title row, its font or the border changed,
+            # so the chrome around the content did -- measure it again. It is
+            # measured once and kept (see fit_to_content), so without this a
+            # title given after the content (as in Pygubu Designer) left the
+            # panel a title-row short until the content next changed.
+            if any(k in kwargs for k in self._CHROME_OPTIONS):
+                self._refit_chrome()
             return result
         return None
+
+    # Options that change the room around the content -- see _refit_chrome.
+    _CHROME_OPTIONS = ("label_text", "label_font", "border_width", "corner_radius")
+
+    def _refit_chrome(self) -> None:
+        """Forgets the measured chrome and fits again, unless the height is fixed."""
+        if getattr(self, "_height_is_fixed", True):
+            return
+        self._fit_chrome = None
+        self._fitted_height = None
+        self._fit_attempts = 0
+        self._ask_to_fit()
 
     # Tkinter/CTk convention binds .config to .configure as a SEPARATE class
     # attribute -- it does not automatically track whichever configure() a
