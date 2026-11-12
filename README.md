@@ -35,11 +35,13 @@ Install it from PyPI:
 pip install scustomtkinter
 ```
 
-With the Pygubu Designer plugin and the Designer itself:
+To lay out windows in Pygubu Designer as well, add the `designer` extra, which also installs Pygubu and Pygubu Designer:
 
 ```bash
 pip install "scustomtkinter[designer]"
 ```
+
+The widgets themselves never need Pygubu, so a program that only uses them needs just the first command. Keep the quotation marks: zsh, the macOS shell, otherwise reads the square brackets as a file pattern and stops with `no matches found`.
 
 In PyCharm, search for `scustomtkinter` in the Python Packages window.
 
@@ -75,9 +77,11 @@ root.mainloop()
 
 ### Pygubu-Designer Installation
 
-    1. Install Pygubu-Designer into the same virtual environment: `pip install "scustomtkinter[designer]"` installs it with the plugin's needs, or `pip install pygubu-designer` beside an existing install.
-    2. Start Pygubu-Designer, you will see the sCustomTkinter widgets at the bottom of the Components on the left.
-	3. Add a sCTK root or a sCTkToplevel and go!
+1. Install into a virtual environment with the `designer` extra: `pip install "scustomtkinter[designer]"`. With sCustomTkinter already installed, the same command adds just Pygubu and the Designer.
+2. Start it from that environment with `pygubu-designer`. The sCustomTkinter widgets are at the bottom of the component list on the left.
+3. Add an sCTk root or an sCTkToplevel, and build from there.
+
+Run the Designer from the same virtual environment as the library. A `pygubu-designer` installed somewhere else, such as a global Python, loads that environment's packages instead; `which pygubu-designer` shows which one starts.
 
 ## Theming
 
