@@ -160,7 +160,13 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         # assigning that name here replaces the frame's reference to it and
         # its _draw() would then paint on this widget's canvas instead. The
         # dials and the S-meters use the bare name for exactly this reason.
-        self.canvas = ctk.CTkCanvas(self, highlightthickness=0, bd=0)
+        # FIX (2026-11-13): width/height 1. A canvas given no size asks for
+        # Tk's default, 10 x 7 cm -- measured in physical units, so it grows
+        # with the display's DPI apart from CustomTkinter's scaling -- and the
+        # notebook asked for at least that whatever its pages needed (394x276
+        # at 1x for a 300x200 page). The canvas only draws the strip and the
+        # page border over whatever room the pages give it.
+        self.canvas = ctk.CTkCanvas(self, highlightthickness=0, bd=0, width=1, height=1)
         # GRIDDED, not placed, and lowered behind the pages.
         #
         # place() takes a widget out of the geometry negotiation entirely: a
@@ -308,6 +314,14 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
             value = getattr(self, self._THEMEABLE_GEOMETRY[key])
         return self._apply_widget_scaling(float(value))
 
+    def _geom_unscaled(self, key):
+        """A geometry value as the theme or class gives it, before scaling --
+        for options CustomTkinter scales itself (padx/pady to its grid())."""
+        value = self._local_defaults.get(key)
+        if value is None:
+            value = getattr(self, self._THEMEABLE_GEOMETRY[key])
+        return float(value)
+
     def _sx(self, value):
         """Scales a dimension for drawing. Used on every geometry constant."""
         return self._apply_widget_scaling(value)
@@ -392,7 +406,13 @@ class sCTkNotebook(ctk.CTkFrame, ThemeableWidget):
         notebook's own -- see the note where the canvas is gridded.
         """
         strip = int(self._sx(self._tab_width))
-        pad = int(self._geom("page_inset") + self._geom("border_width")) \
+        # FIX (2026-11-13): UNSCALED. The page host is a CustomTkinter frame,
+        # whose grid() scales padx/pady itself; scaled here as well, the inset
+        # was scaled twice -- 10 px at 1x, 40 px at 2x instead of 20 (found
+        # checking every widget at 200 % for uBITX CEC Desktop on Windows).
+        # The same at 1x, which is why it never showed. The strip's column
+        # minsize below is Tk's own and takes real pixels, so it stays scaled.
+        pad = int(self._geom_unscaled("page_inset") + self._geom_unscaled("border_width")) \
             if self._show_page_border else 0
 
         strip_col, page_col = (0, 1) if self._side == "left" else (1, 0)

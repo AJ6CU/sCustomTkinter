@@ -385,6 +385,26 @@ class sCTkFrequencyDisplay(ctk.CTkFrame, ThemeableWidget):
         except Exception:
             pass
 
+    def _set_scaling(self, *args, **kwargs):
+        """
+        Resizes and redraws when the scaling changes.
+
+        FIX (2026-11-13): THE DIGITS WERE CUT OFF AT 200 % ON WINDOWS (Mark,
+        ThinkPad X1 Carbon, uBITX CEC Desktop). The readout measures the room
+        it needs once, when it is made, from the font at that scale -- and on
+        Windows the display's scale reaches CustomTkinter a moment later.
+        The digits were then drawn at the new size in a canvas still sized for
+        the old one: "13.991." with the rest off the edge. CustomTkinter calls
+        this on every widget when the scaling changes (the display's scale
+        arriving, the window moving to another display, or the app setting
+        one), and the canvas is drawn, so nothing else would update it -- the
+        S-meters do the same.
+        """
+        super()._set_scaling(*args, **kwargs)
+        if getattr(self, "canvas", None) is not None and self.canvas.winfo_exists():
+            self._resize_to_fit()
+            self._draw_display()
+
     # ------------------------------------------------------------------
     # Drawing
     # ------------------------------------------------------------------
