@@ -38,6 +38,7 @@ positions, a proportional font makes 1 and 8 different widths, so a digit
 changing shifts the ink inside its own cell.
 """
 import tkinter as tk
+import sys
 import tkinter.font as tkfont
 
 import customtkinter as ctk
@@ -251,6 +252,22 @@ class sCTkFrequencyDisplay(ctk.CTkFrame, ThemeableWidget):
                     chosen = "Courier"
         except Exception:
             chosen = "Courier"
+
+        # FIX (2026-11-13): NOT WINDOWS' BITMAP COURIER. On Windows "Courier"
+        # IS installed -- as the old raster font, drawn for a few fixed sizes,
+        # so at a readout's size the digits came out jagged (Mark, uBITX CEC
+        # Desktop on a ThinkPad X1 Carbon at 200 %). Its TrueType relatives
+        # are used instead: Consolas, else Courier New. Elsewhere Courier is
+        # an outline font and stays.
+        if sys.platform == "win32" and chosen.lower() == "courier":
+            try:
+                installed = {f.lower() for f in tkfont.families()}
+                for candidate in ("Consolas", "Courier New"):
+                    if candidate.lower() in installed:
+                        chosen = candidate
+                        break
+            except Exception:
+                pass
 
         self.__class__._resolved_family = (preferred, chosen)
         return chosen
