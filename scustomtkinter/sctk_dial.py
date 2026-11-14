@@ -229,6 +229,60 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             font = (font[0], font[1], *styles) if styles else (font[0], font[1])
         return font
 
+    def _sx(self, value):
+        """
+        A length in the dial's own units, in canvas pixels at the current scale.
+
+        FIX (2026-11-14): THE KNOBS WERE SMALL AT 150 % AND 200 % ON WINDOWS
+        (Mark, ThinkPad X1 Carbon, uBITX CEC Desktop). CustomTkinter scales the
+        widget -- the frame, and so the canvas, is width x height times the
+        scale -- but the knob, its ticks, the label gap and the label text were
+        drawn at their unscaled pixel sizes inside it. At 200 % a 118 px knob
+        sat in a canvas built for a 236 px one, half the size of the frequency
+        readout beside it that does scale. On a Mac the system does the scaling
+        and CustomTkinter's is 1, which is why it looked right there.
+
+        Everything drawn now goes through this (or _scaled_label_font), so the
+        dial is the same picture at every scale. At a scale of 1 nothing
+        changes.
+        """
+        return value * self._get_widget_scaling()
+
+    def _scaled_label_font(self):
+        """
+        The label font at the current scale.
+
+        The point size is multiplied, and stays in points: at a scale of 1 the
+        labels are exactly what they were on every system. (CustomTkinter's
+        own _apply_font_scaling turns the size into pixels, which would make
+        9 pt labels smaller on Windows and Linux at 100 %.) Tk does not scale
+        points for the display on Windows here -- Tk measures the display
+        before CustomTkinter makes the program DPI aware -- so this is the only
+        scaling the text gets.
+        """
+        font = self._label_font()
+        scale = self._get_widget_scaling()
+        if scale == 1 or not isinstance(font, (tuple, list)) or len(font) < 2:
+            return font
+        try:
+            size = float(font[1])
+        except (TypeError, ValueError):
+            return font
+        scaled = round(size * scale)
+        if scaled == 0:
+            scaled = -1 if size < 0 else 1
+        return (font[0], int(scaled), *font[2:])
+
+    def _set_scaling(self, *args, **kwargs):
+        """
+        Redraws at a new scale (FIX 2026-11-14, see _sx). The canvas usually
+        changes size with the frame and redraws itself through <Configure>,
+        but not when it is held at its size by a layout, so draw anyway.
+        """
+        super()._set_scaling(*args, **kwargs)
+        if getattr(self, "canvas", None) is not None and self.canvas.winfo_exists():
+            self._draw_dial_base()
+
     # Room left around the knob for labels when only knob_diameter is given.
     #
     # 40, not the 28 the old fixed layout used. At 9pt a default Selector label
@@ -320,7 +374,8 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             size = 9
 
         # 9pt keeps the original 18px gap, so existing dials are unchanged.
-        offset = knob_radius + 9 + size
+        # FIX (2026-11-14): scaled with the dial -- see _sx().
+        offset = knob_radius + self._sx(9 + size)
 
         cos_a, sin_a = math.cos(angle_rad), math.sin(angle_rad)
 
@@ -1017,11 +1072,11 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             lit_start, shade_start = (225, 45) if not recessed else (45, 225)
             self.canvas.create_arc(cx - radius, cy - radius, cx + radius, cy + radius,
                                    start=lit_start, extent=180, style="arc",
-                                   outline=rim_light, width=2.5, tags=tag)
+                                   outline=rim_light, width=self._sx(2.5), tags=tag)
             if rim_shadow:
                 self.canvas.create_arc(cx - radius, cy - radius, cx + radius, cy + radius,
                                        start=shade_start, extent=180, style="arc",
-                                       outline=rim_shadow, width=2.5, tags=tag)
+                                       outline=rim_shadow, width=self._sx(2.5), tags=tag)
 
     def _redraw_indicator(self):
         """
@@ -1050,7 +1105,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         if not indicator_only:
             self.canvas.delete("all")
         width, height = self.canvas.winfo_width(), self.canvas.winfo_height()
-        if width < 10 or height < 10: width = height = int(self.cget("width") if hasattr(self, "cget") else 120)
+        if width < 10 or height < 10: width = height = int(self._apply_widget_scaling(self.cget("width")) if hasattr(self, "cget") else 120)
 
         # Resolved, not the class name: a preview or user subclass must draw
         # as the variant it derives from, or it renders as the generic base.
@@ -1128,7 +1183,8 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
         #
         # Labels that do not fit are clipped. Widen the canvas -- see
         # _default_canvas_size() for what a bare knob_diameter reserves.
-        knob_radius = self._knob_diameter / 2.0
+        # FIX (2026-11-14): at the current scale -- see _sx().
+        knob_radius = self._sx(self._knob_diameter) / 2.0
 
         # Never larger than the canvas: a knob bigger than its widget would
         # draw outside the visible area with no indication why.
@@ -1153,8 +1209,9 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                 angle_deg = start_deg + (fraction * arc_sweep)
                 angle_rad = math.radians(-angle_deg)
                 x1, y1 = center_x + knob_radius * math.cos(angle_rad), center_y - knob_radius * math.sin(angle_rad)
-                x2, y2 = center_x + (knob_radius + 6) * math.cos(angle_rad), center_y - (knob_radius + 6) * math.sin(angle_rad)
-                self.canvas.create_line(x1, y1, x2, y2, fill=text_color, width=2.0)
+                tick = knob_radius + self._sx(6)
+                x2, y2 = center_x + tick * math.cos(angle_rad), center_y - tick * math.sin(angle_rad)
+                self.canvas.create_line(x1, y1, x2, y2, fill=text_color, width=self._sx(2.0))
 
                 if child_classname == "sCTkDialSelector" and i < len(self._labels):
                     label_offset, label_anchor = self._label_placement(angle_rad, knob_radius)
@@ -1162,7 +1219,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                         center_x + label_offset * math.cos(angle_rad),
                         center_y - label_offset * math.sin(angle_rad),
                         text=str(self._labels[i]), fill=text_color,
-                        font=self._label_font(), anchor=label_anchor)
+                        font=self._scaled_label_font(), anchor=label_anchor)
                 elif child_classname == "sCTkDialRange":
                     from_val, to_val = getattr(self, "_from", 0), getattr(self, "_to", 100)
                     range_val = int(from_val + (to_val - from_val) * fraction)
@@ -1171,22 +1228,22 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                         center_x + label_offset * math.cos(angle_rad),
                         center_y - label_offset * math.sin(angle_rad),
                         text=str(range_val), fill=text_color,
-                        font=self._label_font(), anchor=label_anchor)
+                        font=self._scaled_label_font(), anchor=label_anchor)
 
-            self.canvas.create_oval(center_x - knob_radius + 1, center_y - knob_radius + 4, center_x + knob_radius + 4, center_y + knob_radius + 4, fill=shadow_paint, outline="")
+            self.canvas.create_oval(center_x - knob_radius + self._sx(1), center_y - knob_radius + self._sx(4), center_x + knob_radius + self._sx(4), center_y + knob_radius + self._sx(4), fill=shadow_paint, outline="")
 
             if child_classname == "sCTkDialContinuous":
                 num_side_teeth = 72
                 teeth_shadow = "#000000" if is_dark_mode else "#334155"
                 for k in range(num_side_teeth):
                     k_angle = math.radians(-(k * (360.0 / num_side_teeth)))
-                    self.canvas.create_line(center_x + knob_radius * math.cos(k_angle), center_y - knob_radius * math.sin(k_angle), center_x + (knob_radius - 3) * math.cos(k_angle), center_y - (knob_radius - 3) * math.sin(k_angle), fill=teeth_shadow, width=1.5)
+                    self.canvas.create_line(center_x + knob_radius * math.cos(k_angle), center_y - knob_radius * math.sin(k_angle), center_x + (knob_radius - self._sx(3)) * math.cos(k_angle), center_y - (knob_radius - self._sx(3)) * math.sin(k_angle), fill=teeth_shadow, width=self._sx(1.5))
 
             # The knob body: a stack of concentric ovals stepping from
             # dial_shadow_color at the rim to dial_highlight_color off-centre,
             # replacing what used to be a single flat fill with two hardcoded
             # outline rings. See _draw_shaded_disc().
-            self._draw_shaded_disc(center_x, center_y, knob_radius - 2,
+            self._draw_shaded_disc(center_x, center_y, knob_radius - self._sx(2),
                                    knob_shadow, knob_highlight, "knob_body",
                                    rim_light=rim_light, rim_shadow=rim_shadow)
 
@@ -1203,8 +1260,8 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
             # rim, which is how these knobs are actually marked. The previous
             # version drew an arrowhead and a centre cap; both are gone, along
             # with the cap's two hardcoded outline colours.
-            px = center_x + (knob_radius - self.POINTER_RIM_INSET) * math.cos(pointer_rad)
-            py = center_y - (knob_radius - self.POINTER_RIM_INSET) * math.sin(pointer_rad)
+            px = center_x + (knob_radius - self._sx(self.POINTER_RIM_INSET)) * math.cos(pointer_rad)
+            py = center_y - (knob_radius - self._sx(self.POINTER_RIM_INSET)) * math.sin(pointer_rad)
             pointer_key = "pointer_color"
             if self._state == "disabled":
                 raw_pointer = (self._custom_disabled_map.get(pointer_key)
@@ -1221,7 +1278,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                                or self._local_defaults.get("text_color"))
             self.canvas.create_line(center_x, center_y, px, py,
                                     fill=self._resolve_color(raw_pointer),
-                                    width=self.POINTER_WIDTH, capstyle="round",
+                                    width=self._sx(self.POINTER_WIDTH), capstyle="round",
                                     tags="indicator")
         else:
             # Continuous only: the finger dimple a VFO operator spins the dial
@@ -1249,7 +1306,7 @@ class sCTKDialBase(ctk.CTkFrame, ThemeableWidget):
                                    "indicator", rim_light=rim_shadow,
                                    rim_shadow=rim_light, recessed=True)
             self.canvas.create_oval(dx - ind_radius, dy - ind_radius, dx + ind_radius, dy + ind_radius,
-                                    fill="", outline=pointer_glow, width=1.5, tags="indicator")
+                                    fill="", outline=pointer_glow, width=self._sx(1.5), tags="indicator")
 class sCTkDialContinuous(sCTKDialBase):
     # Only this variant draws the finger dimple, so only it requires the glow
     # ring colour -- see _draw_dial_base()'s indicator branch.
